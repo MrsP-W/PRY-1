@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -31,7 +31,6 @@ from my_ai_employee.connectors.imap import IMAPConnector  # noqa: E402
 from my_ai_employee.core import keychain  # noqa: E402
 
 from .mock_imap import MockIMAPClient, install_mock, make_envelope  # noqa: E402
-
 
 # ===== Fixtures =====
 
@@ -112,12 +111,44 @@ def test_healthcheck_no_credential(monkeypatch) -> None:
     assert "Keychain" in status.error
 
 
+def test_healthcheck_triggers_circuit_breaker(monkeypatch) -> None:
+    """healthcheck 失败也会进入熔断计数（P1-2 review 修复）。
+
+    连续 3 次失败 → 熔断开启。
+    """
+    mock = MockIMAPClient()
+    mock.login_should_fail = True
+    conn = IMAPConnector(provider="qq", email="test@qq.com")
+    install_mock(monkeypatch, conn, mock)
+    monkeypatch.setattr(
+        keychain,
+        "get_imap_password",
+        lambda email: keychain.KeychainResult(ok=True, value="wrong"),
+    )
+
+    for i in range(CIRCUIT_BREAKER_THRESHOLD):
+        status = asyncio.run(conn.healthcheck())
+        assert status.ok is False, f"第 {i+1} 次 healthcheck 应失败"
+
+    # 第 3 次失败后，熔断应已开启
+    assert conn.circuit_state["is_open"] is True
+    assert conn.circuit_state["consecutive_failures"] == CIRCUIT_BREAKER_THRESHOLD
+
+
+def test_connect_calls_select_folder_inbox(
+    installed_connector: IMAPConnector, mock_client: MockIMAPClient
+) -> None:
+    """登录后必须 select_folder('INBOX', readonly=True)（P0-1 review 修复）。"""
+    asyncio.run(installed_connector.connect())
+    assert mock_client.select_folder_calls == [("INBOX", True)]
+
+
 # ===== fetch + safe_fetch =====
 
 
 def test_fetch_no_new_emails(installed_connector: IMAPConnector) -> None:
     """search 返回空：fetch 返回空 list。"""
-    since = datetime.now(timezone.utc) - timedelta(days=7)
+    since = datetime.now(UTC) - timedelta(days=7)
     result = asyncio.run(installed_connector.fetch(since))
     assert result == []
 
@@ -126,13 +157,13 @@ def test_fetch_returns_envelope_dicts(
     installed_connector: IMAPConnector, mock_client: MockIMAPClient
 ) -> None:
     """search 返回 2 个 UID，fetch 返回 2 个 envelope dict。"""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     mock_client.search_uids = [1, 2]
     mock_client.fetch_data = {
         **make_envelope(1, subject="First", sender="a@x.com", received_at=now),
         **make_envelope(2, subject="Second", sender="b@x.com", received_at=now - timedelta(hours=1)),
     }
-    since = datetime.now(timezone.utc) - timedelta(days=7)
+    since = datetime.now(UTC) - timedelta(days=7)
     result = asyncio.run(installed_connector.fetch(since))
     assert len(result) == 2
     # source 字段
@@ -161,7 +192,7 @@ def test_safe_fetch_isolates_failure(monkeypatch) -> None:
 
     monkeypatch.setattr(mock, "search", boom)
 
-    since = datetime.now(timezone.utc) - timedelta(days=1)
+    since = datetime.now(UTC) - timedelta(days=1)
     result = asyncio.run(conn.safe_fetch(since))
     assert result == []
     # 熔断计数 +1
@@ -182,7 +213,7 @@ def test_safe_fetch_circuit_breaker_opens(monkeypatch) -> None:
         mock, "search", lambda _c: (_ for _ in ()).throw(ConnectionError("boom"))
     )
 
-    since = datetime.now(timezone.utc) - timedelta(days=1)
+    since = datetime.now(UTC) - timedelta(days=1)
     for _ in range(CIRCUIT_BREAKER_THRESHOLD):
         asyncio.run(conn.safe_fetch(since))
 
@@ -214,7 +245,7 @@ def test_safe_fetch_circuit_skips_when_open(monkeypatch) -> None:
 
     monkeypatch.setattr(mock, "search", track)
 
-    since = datetime.now(timezone.utc) - timedelta(days=1)
+    since = datetime.now(UTC) - timedelta(days=1)
     result = asyncio.run(conn.safe_fetch(since))
     assert result == []
     assert called["search"] == 0  # 没调用 search
@@ -227,7 +258,7 @@ def test_safe_fetch_success_resets_counter(
     installed_connector._circuit.consecutive_failures = 2  # 模拟之前失败过
     installed_connector._client = mock_client  # 已连上
 
-    since = datetime.now(timezone.utc) - timedelta(days=1)
+    since = datetime.now(UTC) - timedelta(days=1)
     result = asyncio.run(installed_connector.safe_fetch(since))
     assert result == []
     assert installed_connector.circuit_state["consecutive_failures"] == 0

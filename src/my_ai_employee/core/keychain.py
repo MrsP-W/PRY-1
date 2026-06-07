@@ -26,7 +26,6 @@ from typing import Final
 
 from loguru import logger
 
-
 # Keychain 中的 service 名（统一前缀）
 SERVICE_PREFIX: Final[str] = "my-ai-employee"
 SERVICE_DB: Final[str] = f"{SERVICE_PREFIX}.db"
@@ -78,18 +77,17 @@ def set_password(service: str, account: str, password: str) -> KeychainResult:
     if not is_available():
         return KeychainResult(ok=False, error="当前平台不支持 Keychain（非 macOS）")
 
-    # 先删后增（保证覆盖语义）
-    delete_password(service, account)
-
+    # 原位更新（`security add-generic-password -U` 本身能覆盖已有项）
+    # — 不再"先删后增"，避免 delete 成功但 add 失败导致旧凭证丢失
     try:
-        proc = subprocess.run(
+        subprocess.run(
             [
                 "security",
                 "add-generic-password",
                 "-a", account,
                 "-s", service,
                 "-w", password,
-                "-U",  # 如果已存在则更新
+                "-U",  # 关键：-U 表示"如果已存在则更新"
             ],
             capture_output=True,
             text=True,

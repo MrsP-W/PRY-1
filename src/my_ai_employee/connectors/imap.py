@@ -30,16 +30,14 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from email.utils import parsedate_to_datetime
-from typing import Any, ClassVar
+from datetime import UTC, datetime
+from typing import Any, Final
 
 from imapclient import IMAPClient
 from loguru import logger
 
 from my_ai_employee.connectors.base import BaseConnector, HealthStatus
 from my_ai_employee.core import keychain
-
 
 # ===== 服务器配置 =====
 
@@ -54,7 +52,7 @@ class IMAPServerConfig:
     description: str
 
 
-SERVER_CONFIGS: ClassVar[dict[str, IMAPServerConfig]] = {
+SERVER_CONFIGS: Final[dict[str, IMAPServerConfig]] = {
     "qq": IMAPServerConfig(
         host="imap.qq.com",
         port=993,
@@ -131,7 +129,14 @@ class IMAPConnector(BaseConnector):
             raise ConnectionError(f"IMAP 连接失败: {e!r}") from e
 
     def _connect_sync(self, password: str) -> None:
-        """同步连接（D2 收窄版用 imapclient 的同步 API）。"""
+        """同步连接（D2 收窄版用 imapclient 的同步 API）。
+
+        流程（参考 IMAPClient 官方示例）：
+            1. IMAPClient() — 建立 SSL socket
+            2. .login(user, password) — 鉴权
+            3. .select_folder("INBOX", readonly=True) — 进入收件箱
+               readonly=True → 不会修改已读/未读状态，避免误标邮件
+        """
         self._client = IMAPClient(
             host=self._config.host,
             port=self._config.port,
@@ -140,8 +145,11 @@ class IMAPConnector(BaseConnector):
         )
         # imapclient.login 在鉴权失败时抛 `IMAP4.error`
         self._client.login(self._email, password)
+        # 官方示例：登录后必须显式 select_folder，否则 search 会因"未选中邮箱"失败
+        # readonly=True 防止意外标记已读（D2 阶段只读不写）
+        self._client.select_folder("INBOX", readonly=True)
         logger.info(
-            f"IMAP 登录成功: provider={self._provider} "
+            f"IMAP 登录成功 + INBOX 已选中: provider={self._provider} "
             f"host={self._config.host} email={self._email}"
         )
 
@@ -161,7 +169,7 @@ class IMAPConnector(BaseConnector):
 
         assert self._client is not None
         # imapclient 的 search 需要 naive UTC 时间
-        since_naive = since.astimezone(timezone.utc).replace(tzinfo=None)
+        since_naive = since.astimezone(UTC).replace(tzinfo=None)
         try:
             uids = await asyncio.to_thread(
                 self._client.search, ["SINCE", since_naive]
@@ -231,22 +239,33 @@ class IMAPConnector(BaseConnector):
         }
 
     async def healthcheck(self) -> HealthStatus:
-        """IMAP 健康检查：复用 connect（登录成功即健康）。"""
+        """IMAP 健康检查：复用 connect（登录成功即健康）。
+
+        失败语义：healthcheck 失败也会进入熔断计数（连续 3 次失败 → 30 min 冷却）。
+        这样：
+            - safe_fetch 失败 → 计数（一次失败信号）
+            - healthcheck 失败 → 计数（独立的失败信号，多次累计也会熔断）
+        调度器（如 09:00 / 21:00 跑 healthcheck）能独立触发熔断。
+        """
         import time as _time
 
         start = _time.perf_counter()
         try:
             await self.connect()
-            latency = (_time.perf_counter() - start) * 1000
-            return HealthStatus(ok=True, latency_ms=latency)
         except Exception as e:
             latency = (_time.perf_counter() - start) * 1000
+            # healthcheck 失败 → 计入熔断（与 safe_fetch 一致）
+            self._record_failure(e)
             return HealthStatus(
                 ok=False,
                 latency_ms=latency,
                 error=str(e),
                 circuit_open=self._is_circuit_open(),
             )
+        latency = (_time.perf_counter() - start) * 1000
+        # 健康检查成功也重置计数（避免历史失败持续累积）
+        self._record_success()
+        return HealthStatus(ok=True, latency_ms=latency)
 
     async def close(self) -> None:
         """关闭连接（优雅退出）。"""

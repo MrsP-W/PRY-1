@@ -35,18 +35,16 @@ import argparse
 import asyncio
 import getpass
 import sys
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
 
 # 允许脚本被直接 `python scripts/test_imap.py` 跑（无需安装包）
 _SRC_DIR = Path(__file__).resolve().parent.parent / "src"
 if str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from my_ai_employee.connectors.imap import IMAPConnector, SERVER_CONFIGS  # noqa: E402
+from my_ai_employee.connectors.imap import IMAPConnector  # noqa: E402
 from my_ai_employee.core import keychain  # noqa: E402
-
 
 # ===== 输出辅助（应急版范本）=====
 
@@ -95,7 +93,7 @@ async def cmd_fetch_latest(
     email: str, provider: str, days: int, limit: int
 ) -> int:
     """拉取最近 N 天的邮件。"""
-    since = datetime.now(timezone.utc) - timedelta(days=days)
+    since = datetime.now(UTC) - timedelta(days=days)
     connector = IMAPConnector(provider=provider, email=email)
     _print(f"📬 拉取邮件: provider={provider} email={email} since={since.isoformat()}")
     try:
@@ -112,7 +110,7 @@ async def cmd_fetch_latest(
 
     # 按时间倒序
     emails.sort(
-        key=lambda e: e.get("received_at") or datetime.min.replace(tzinfo=timezone.utc),
+        key=lambda e: e.get("received_at") or datetime.min.replace(tzinfo=UTC),
         reverse=True,
     )
     for i, e in enumerate(emails[:limit], 1):
@@ -152,7 +150,7 @@ def cmd_delete_password(email: str, provider: str) -> int:
     if provider == "qq":
         result = keychain.delete_password(keychain.SERVICE_IMAP_QQ, email)
     else:
-        _print_err(f"--delete-password 当前只支持 qq")
+        _print_err("--delete-password 当前只支持 qq")
         return 1
     if not result.ok:
         _print_err(f"删除失败: {result.error}")
@@ -181,6 +179,9 @@ def build_parser() -> argparse.ArgumentParser:
   # 拉取最近 7 天最近 10 封
   python scripts/test_imap.py --fetch-latest --email your@qq.com \\
       --days 7 --limit 10
+
+D2 仅实现 QQ 邮箱（授权码模式）。Outlook/Gmail 需 OAuth 2.0，
+推后到 D2.5 spike；如需，请联系维护者确认启动窗口。
 """,
     )
     parser.add_argument(
@@ -189,9 +190,9 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--provider",
-        choices=list(SERVER_CONFIGS),
+        choices=["qq"],  # D2 阶段只允许 qq；Outlook/Gmail 推后 D2.5
         default="qq",
-        help="邮箱服务商（默认 qq，D2 唯一实现）",
+        help="邮箱服务商（D2 仅 qq，Outlook/Gmail 推后 D2.5）",
     )
     parser.add_argument(
         "--days",

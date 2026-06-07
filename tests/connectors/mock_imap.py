@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from imapclient.response_types import Address, Envelope
@@ -48,12 +48,22 @@ class MockIMAPClient:
         self.logout_called: bool = False
         self.connected_host: str | None = None
         self.connected_port: int | None = None
+        self.select_folder_calls: list[tuple[str, bool]] = []  # (folder, readonly)
+        self.select_folder_should_fail: bool = False
 
     def login(self, username: str, password: str) -> tuple[str, list[bytes]]:
         """Mock login。失败抛 MockIMAPError。"""
         if self.login_should_fail:
             raise MockIMAPError(f"Mock: login failed for {username}")
         return "OK", [b"CAPABILITY IMAP4rev1"]
+
+    def select_folder(self, folder: str, readonly: bool = False) -> dict[str, Any]:
+        """Mock select_folder。记录调用参数；失败可注入。"""
+        self.select_folder_calls.append((folder, readonly))
+        if self.select_folder_should_fail:
+            raise MockIMAPError(f"Mock: select_folder({folder}) failed")
+        # 真实 imapclient 返回 {b'SEQUENCEID': ..., b'UIDNEXT': ..., b'FLAGS': (...)...}
+        return {b"FLAGS": [b"\\Seen"], b"EXISTS": 0, b"RECENT": 0, b"UIDVALIDITY": 1}
 
     def search(self, criteria: list[Any]) -> list[int]:
         """Mock search。返回预设 UID 列表。"""
@@ -103,7 +113,7 @@ def make_envelope(
     返回的 dict 格式：`{uid: {b"ENVELOPE": Envelope(...), b"RFC822.SIZE": size}}`
     """
     if received_at is None:
-        received_at = datetime.now(timezone.utc)
+        received_at = datetime.now(UTC)
     if message_id is None:
         message_id = f"<test-{uid}@example.com>"
 
@@ -139,6 +149,9 @@ def install_mock(monkeypatch, target: Any, mock: MockIMAPClient) -> None:
 
         def login(self, username: str, password: str):
             return mock.login(username, password)
+
+        def select_folder(self, folder: str, readonly: bool = False):
+            return mock.select_folder(folder, readonly)
 
         def search(self, criteria):
             return mock.search(criteria)
