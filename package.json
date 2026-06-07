@@ -1,0 +1,16 @@
+{
+  "name": "my-ai-employee-lint",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Markdown lint 工具 — markdownlint-cli2 固定版本（避免 npx 走网络）",
+  "scripts": {
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\""
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.22.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

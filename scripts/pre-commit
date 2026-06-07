@@ -2,6 +2,9 @@
 # 我的AI员工 - pre-commit hook
 # 提交前自动检查 Markdown 格式（0 错误才放行）
 # 安装：make install-hooks
+#
+# D1.1 修复：原版在 markdownlint-cli2 缺失时静默跳过（虚假的"安全"）
+# 修复：缺失时显式失败 + 提示安装命令
 
 set -e
 
@@ -15,11 +18,20 @@ if [ -z "$STAGED_MD" ]; then
     exit 0
 fi
 
-# 跑 markdownlint
-if command -v markdownlint-cli2 >/dev/null 2>&1; then
+# 跑 markdownlint（3 级 fallback：项目 node_modules > 全局 > 失败）
+if [ -x node_modules/.bin/markdownlint-cli2 ]; then
+    echo "$STAGED_MD" | xargs node_modules/.bin/markdownlint-cli2
+    echo "✅ Markdown 格式检查通过（项目 node_modules）"
+elif command -v markdownlint-cli2 >/dev/null 2>&1; then
     echo "$STAGED_MD" | xargs markdownlint-cli2
-    echo "✅ Markdown 格式检查通过"
+    echo "✅ Markdown 格式检查通过（全局）"
 else
-    echo "⚠️  markdownlint-cli2 未安装，跳过（运行 'poetry install' 安装）"
-    exit 0
+    echo "❌ markdownlint-cli2 未安装 — 拒绝提交" >&2
+    echo "" >&2
+    echo "  安装方式（任选其一）：" >&2
+    echo "    1. 项目级（推荐）：make install-npm" >&2
+    echo "    2. 全局：         npm install -g markdownlint-cli2@0.22.1" >&2
+    echo "" >&2
+    echo "  或者本次跳过：SKIP_MD_LINT=1 git commit ..." >&2
+    exit 1
 fi

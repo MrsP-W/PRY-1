@@ -56,11 +56,14 @@
 
 可运行的 Python 项目 + 第一个 `make hello` 命令 + 完整目录结构。
 
-### 任务清单
+### 任务清单（D1 现状快照）
 
-| # | 任务 | 状态 | 产出 |
+> ⚠️ **本表是 D1 当天状态**。D1.1 已做重要重构（PEP 621 + Python 3.12 + 包名重构），
+> 详见下方 **D1.1 修正记录** 段。**以 D1.1 为准**。
+
+| # | 任务 | D1 状态 | 产出 |
 |---|------|------|------|
-| 1.1 | `git init` + 初始 commit | ⏳ 待 git | git 仓库 |
+| 1.1 | `git init` + 初始 commit | ✅ | git 仓库（commits: a4189bf, 42ce240, 765fc4b）|
 | 1.2 | 写 `pyproject.toml`（Python 3.11+ / poetry 依赖）| ✅ | 项目元数据 |
 | 1.3 | 写 `Makefile`（help/hello/dev/test/lint/run/clean/lock/info）| ✅ | 命令入口 |
 | 1.4 | 写 `.gitignore`（data/、.env、`__pycache__/`、*.db）| ✅ | 忽略规则 |
@@ -71,81 +74,110 @@
 | 1.9 | 写 `.env.example`（所有需要的环境变量模板）| ✅ | 配置模板 |
 | 1.10 | 验证 `make hello` 跑通 + `make lint` 0 错误 | ✅ | 验收 |
 
-**总耗时**：约 1.5 小时（不含 brew install poetry 等待）
+**D1 当天总耗时**：约 1.5 小时（不含 brew install poetry 等待）
 
-### 验收标准
+### D1 验收标准（回顾）
 
 - [x] `python -m src.main` 输出 "Hello, 我的AI员工" 退出码 0
 - [x] `make lint` 0 错误（基于 `.markdownlint.json`）
 - [x] 目录结构与 [architecture.md §1](architecture.md#1-5-层架构总览) 一致
 - [x] main.py 在 rich 缺失时**降级到原生 print**（应急版范本）
 - [x] 命令统一用 `python -m src.main`（避免 main.py 冲突）
-- [ ] `poetry install` 跑通（**待 brew 装好 poetry 后**）
-- [ ] 初始 git commit 干净（无 `__pycache__`、`.env`）
+- [x] 初始 git commit 干净（无 `__pycache__`、`.env`）
 
-### 关键决策与发现
+### D1 关键决策与发现
 
 1. **降级模式**（应急版范本 L3）— `main.py` 检测 `rich` 是否安装，缺失时用纯文本输出
 2. **命令模式** — `python -m src.main` 而非 `python src/main.py`（避免 main.py 冲突）
 3. **环境** — Python 3.14.4 已装，pip3 受 PEP 668 限制，**需 poetry**（brew 安装中）
 4. **依赖锁定** — 全部依赖在 `pyproject.toml`，poetry.lock 首次 install 后生成
 
-### 📌 下一棒 → D2
+### D1.1 修正记录（2026-06-07 17:00+ — D2 启动前必读）
 
-- 项目骨架已立（含降级模式）
-- 下棒需要：邮箱源 + 凭证（QQ 邮箱优先，spike 验证 OAuth 2.0）
-- 关键决策：是否需要在 D2 同步把邮件入库？— 我建议**分批入库**（避免 SQLite 锁）
+> **背景**：D1 收官后用户给了 6 条优先修改建议（依赖策略/Python 版本/lint 工具/包名/测试/文档/范围）。
+> D1.1 一次性修正完毕。**本表是 D1 之后的实际状态**。
+
+| 维度 | D1 原状 | D1.1 修正 | 理由 |
+|------|---------|-----------|------|
+| **依赖格式** | Poetry（`[tool.poetry.*]`）| **PEP 621**（`[project]` + `[project.optional-dependencies] dev`）| 行业标准、uv/pip/pdm/poetry 全部识别 |
+| **装包工具** | `uv pip install -e ".[dev]"`（不识别 poetry group）| `uv sync --extra dev` + `uv pip install -e .` | uv 原生命令、可复现（uv.lock 提交）|
+| **Python 版本** | `^3.11`（实际跑 3.14.4）| **`>=3.12,<3.13`**（3.12.13 固定 + `.python-version` 锁）| pysqlcipher3 在 3.14 wheel 缺失 |
+| **SQLCipher 包** | `pysqlcipher3>=1.2.0`（wheel 缺失，源包 setup.py 空）| **`sqlcipher3>=0.6.2`**（coleifer 维护的活跃 fork）| 装得上、API 兼容、DB 文件可互迁 |
+| **包结构** | `from src import ...`（`include = "src"`）| **`from my_ai_employee import ...`**（`src/my_ai_employee/`）| 标准 Python 命名空间、避免 `src` 命名空间污染 |
+| **Lint 工具** | npx markdownlint-cli2（网络/版本都不固定）| **`package.json` 锁 0.22.1** + `make install-npm` 项目级安装 | 可复现 + 离线也能跑 |
+| **Pre-commit** | 缺失工具时**静默跳过**（虚假安全）| **缺失时显式失败** + 提示安装命令 | 强制 0 错误、避免"提交了但没检查" |
+| **测试覆盖** | 6 测试全 subprocess，覆盖率 **0%** | 18 测试（9 纯函数 + 2 冒烟 + 2 元数据 + 5 参数化），覆盖率 **61.9%** | 可单测 + 真覆盖 |
+| **D2 范围** | QQ + Outlook + Gmail + OAuth + Keychain + mock + 健康检查（5h）| **QQ IMAP 授权码优先 + BaseConnector + Keychain + mock + 健康检查**；Outlook/Gmail 降级为 spike | 1 天能完成、不被 OAuth 复杂度卡住 |
+
+**D1.1 总耗时**：约 1 小时
+
+### D1.1 验收标准（当前事实）
+
+- [x] `uv sync --extra dev` 跑通（31 个依赖装上）
+- [x] `uv pip install -e .` 装上 `my_ai_employee` 包
+- [x] `.venv/bin/python -m my_ai_employee.main` 输出 "Hello, 我的AI员工"
+- [x] `make test` 18/18 通过，覆盖率 61.9%
+- [x] `uv.lock` 118KB 已生成
+- [x] `package.json` 锁 markdownlint-cli2 0.22.1
+- [x] pre-commit hook 缺失工具时**显式失败**（不再静默跳过）
+- [x] `make lint` 0 错误（基于 markdownlint-cli2 项目级）
+- [x] git 状态干净（仅 D1.1 改动未提交）
+
+### 📌 下一棒 → D2（2026-06-08）
+
+- D1.1 修正完毕，包结构稳态
+- 下棒需要：QQ 邮箱 IMAP 授权码（用户进 QQ 邮箱网页生成）
+- D2 范围**收窄**：BaseConnector + QQ IMAP 授权码 + Keychain + mock + 健康检查（详见下方 D2 段）
 
 ---
 
-## D2 — IMAP 适配器
+## D2 — IMAP 适配器（D1.1 收窄范围）
+
+> **D1.1 收窄**：原 D2 计划同时做 QQ/Outlook/Gmail + OAuth 2.0 + Keychain + mock + 健康检查
+> （约 5 小时），对单日工作偏满。**D1.1 收窄到**：
+>
+> - **D2 主任务**：BaseConnector + QQ IMAP 授权码连接 + Keychain 存取 + mock IMAP server + 健康检查
+> - **D2.5 Spike**：Outlook / Gmail 连通性记录（不强制 D2 当天完整实现）
+> - 完整 OAuth 2.0 推到 D2.5 或 D2.1 延后日
 
 ### 目标
 
-通用 IMAP 连接器，支持 QQ / Outlook / Gmail（OAuth 2.0 + 密码双模式）。
+通用 IMAP 连接器基类 + QQ 邮箱 IMAP 授权码连通 + Keychain 凭证 + mock 测试 + 健康检查。
 
 ### 任务清单
 
 | # | 任务 | 预计耗时 | 产出 |
 |---|------|----------|------|
-| 2.1 | 写 `connectors/base.py`（抽象基类 + safe_fetch 失败隔离）| 30 min | 接口契约 |
-| 2.2 | 写 `connectors/imap.py`（imapclient + OAuth + 密码双模式）| 90 min | IMAP 适配器 |
-| 2.3 | 写 `scripts/test_imap.py` CLI（连任意邮箱测试）| 30 min | 测试入口 |
-| 2.4 | 写 OAuth 2.0 凭证获取向导（首次运行引导）| 60 min | 用户引导 |
-| 2.5 | **Spike**：QQ / Outlook / Gmail 三源连通性测试 | 60 min | 兼容性报告 |
-| 2.6 | 写 `tests/connectors/test_imap.py`（pytest，含 mock IMAP server）| 30 min | 单元测试 |
-| 2.7 | 写健康检查 `connectors/imap.py::healthcheck()` | 15 min | 熔断依据 |
+| 2.1 | 写 `my_ai_employee/connectors/base.py`（抽象基类 + safe_fetch 失败隔离）| 30 min | 接口契约 |
+| 2.2 | 写 `my_ai_employee/connectors/imap.py`（imapclient + 授权码模式）| 60 min | IMAP 适配器（仅 QQ 优先）|
+| 2.3 | 写 `my_ai_employee/core/keychain.py`（macOS Keychain 包装）| 30 min | 凭证存储 |
+| 2.4 | 写 `scripts/test_imap.py` CLI（连 QQ 邮箱测试）| 30 min | 测试入口 |
+| 2.5 | 写 mock IMAP server（`tests/connectors/mock_imap.py`）| 30 min | 离线测试 |
+| 2.6 | 写健康检查 `connectors/imap.py::healthcheck()` | 15 min | 熔断依据 |
+| 2.7 | 写 `tests/connectors/test_imap.py`（pytest + mock）| 30 min | 单元测试（覆盖率 ≥ 70%）|
+| 2.8 | **Spike**：Outlook / Gmail OAuth 2.0 流程记录 | 30 min | 兼容性报告（不强制当天实现）|
 
-**总耗时**：约 5 小时
+**总耗时**：约 4 小时
 
-### 验收标准
+### 验收标准（D1.1 收窄版）
 
-- [ ] `python scripts/test_imap.py` 能连 QQ 邮箱
-- [ ] `python scripts/test_imap.py` 能连 Outlook
-- [ ] `python scripts/test_imap.py` 能连 Gmail
-- [ ] 单元测试覆盖率 ≥ 70%
-- [ ] OAuth 凭证存在 Keychain（不落盘 .env）
+- [ ] `python scripts/test_imap.py --email your@qq.com` 能连 QQ 邮箱
+- [ ] 凭证存 macOS Keychain（**不落盘** .env）
+- [ ] mock IMAP server 单元测试覆盖率 ≥ 70%
 - [ ] 失败时进入熔断（30 min 后再试）
+- [ ] 写 `docs/spike-imap-compat.md` 记录 QQ 已通 + Outlook/Gmail 待办
 
-### 风险点
+### 风险点（D1.1 收窄后）
 
-- **OAuth 2.0 复杂度**：Gmail 用 XOAUTH2 / Outlook 用 XOAUTH2 + AAD / QQ 用授权码
-- **mitm 风险**：imapclient 默认 `verify=True`，但 macOS 证书链有时不完整
-
-### Spike 输出（必备）
-
-写 `docs/spike-imap-compat.md` 记录：
-
-- 3 个邮箱连通性结果
-- OAuth 流程截图
-- 凭证存储位置
-- 已知限制
+- **QQ 授权码**：需用户进 QQ 邮箱网页手动生成（不是密码）
+- **mitm 风险**：imapclient 默认 `verify=True`，macOS 证书链有时不完整
+- **Outlook/Gmail 推后**：OAuth 2.0 流程复杂度高，留 D2.5 或后续
 
 ### 📌 下一棒 → D3
 
-- IMAP 适配器已就绪
-- 下棒需要：邮箱源 + 凭证（在 Keychain）
-- 关键决策：是否需要在 D3 同步把邮件入库？— 我建议**分批入库**（避免 SQLite 锁）
+- IMAP 适配器（QQ）已就绪
+- D3 任务：SQLCipher 数据层 + 邮件入库（分批）
+- 关键决策：分批入库 vs 全量？— 我建议**分批**（避免 SQLite 锁）
 
 ---
 

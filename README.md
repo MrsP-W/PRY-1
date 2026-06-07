@@ -49,24 +49,29 @@
 ```
 我的AI员工/
 ├── README.md                 # 本文件
-├── pyproject.toml            # 依赖管理（poetry）
-├── poetry.lock               # 锁定版本（自动生成）
+├── pyproject.toml            # 依赖管理（PEP 621 + uv）
+├── uv.lock                   # 锁定版本（自动生成，提交）
+├── package.json              # npm 依赖（markdownlint-cli2 锁版本）
+├── package-lock.json         # npm 锁文件（提交）
+├── .python-version           # Python 3.12 锁定
 ├── Makefile                  # 命令入口
 ├── .env.example              # 环境变量模板
 ├── .markdownlint.json        # 文档规范
 ├── .gitignore                # 忽略规则
-├── src/                      # 主代码
-│   ├── main.py               # 入口（make hello）
-│   ├── connectors/           # L1 适配器层（IMAP/CalDAV/账单/Notes）
-│   ├── core/                 # L2 数据层（SQLite/schema/models）
-│   ├── ai/                   # L3 智能层（分类/草稿/财务/笔记）
-│   ├── agents/               # L4 Agent 层（@管家/@审计员 + Agent Assistant 软链）
-│   └── menu_bar/             # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试
+├── src/
+│   └── my_ai_employee/       # 主代码（D1.1 重构：去 src/ 顶层）
+│       ├── main.py           # 入口（make hello）
+│       ├── connectors/       # L1 适配器层（IMAP/CalDAV/账单/Notes）
+│       ├── core/             # L2 数据层（SQLite/schema/models）
+│       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
+│       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 软链）
+│       └── menu_bar/         # Mac 菜单栏 UI
+├── tests/                    # pytest 单元测试（18 个，覆盖率 62%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
 │   └── week2-mvp.md          # Week 2 计划
+├── reports/                  # 阶段报告归档（D1 报告等）
 └── data/                     # 运行时数据（gitignore）
     ├── data.db               # SQLite 加密
     ├── health.log            # 适配器健康
@@ -77,48 +82,60 @@
 
 ## 🚀 快速开始
 
+> **D1.1 决策**：依赖管理从 **Poetry → uv**（PEP 621 标准格式），Python 固定 **3.12**。
+>
+> 旧 `poetry install` 命令已弃用，请用 `uv sync` 或 `make install`。
+
 ### 1. 安装依赖
 
 ```bash
 cd ~/Documents/DesktopOrganizer/我的AI员工
-poetry install
+make install    # 内部 = uv sync --extra dev + pip install -e .
+```
+
+或者手动：
+
+```bash
+uv sync --extra dev
+uv pip install -e .
 ```
 
 ### 2. 验证项目跑通
 
 ```bash
-poetry run make hello   # 输出 "Hello, 我的AI员工" + 当前时间
+make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ```
 
 ### 3. 跑测试
 
 ```bash
-poetry run make test    # pytest 单元测试
+make test    # pytest 单元测试（18 个，覆盖率 ~62%）
 ```
 
 ### 4. 文档 lint
 
 ```bash
-poetry run make lint    # markdownlint
+make install-npm    # 首次跑：装 markdownlint-cli2（项目级）
+make lint           # 检查 .md 格式
 ```
 
 ### 5. 全部命令
 
 ```bash
-poetry run make help
+make help
 ```
 
 ### 6. 直接运行（不通过 make）
 
 ```bash
-poetry run python -m src.main            # Hello 信息
-poetry run python -m src.main --info     # 项目详情
-poetry run python -m src.main --version  # 版本号
-poetry run python -m src.main --help     # 帮助
+.venv/bin/python -m my_ai_employee.main            # Hello 信息
+.venv/bin/python -m my_ai_employee.main --info     # 项目详情
+.venv/bin/python -m my_ai_employee.main --version  # 版本号
+.venv/bin/python -m my_ai_employee.main --help     # 帮助
 ```
 
-> **说明**：用 `python -m src.main` 而不是 `python src/main.py`，
-> 避免 Python 把 `main.py` 当成顶层脚本而非 `src` 包的一部分。
+> **说明**：用 `python -m my_ai_employee.main` 而不是 `python src/my_ai_employee/main.py`，
+> 避免 Python 把 main.py 当成顶层脚本而非包的一部分（D1.1 包名重构）。
 
 输出示例：
 
@@ -155,14 +172,14 @@ poetry run python -m src.main --help     # 帮助
 
 | 维度 | 选择 | 备注 |
 |------|------|------|
-| Python | 3.11+（3.14.4 已装）| poetry 自动锁版本 |
-| 依赖管理 | **poetry** | `pyproject.toml` + `poetry.lock` |
-| 数据库 | SQLite + **pysqlcipher3** | 加密 + 本地 |
+| Python | **3.12**（D1.1 固定，避开 3.14 wheel 风险）| `.python-version` 锁定 |
+| 依赖管理 | **PEP 621 + uv**（D1.1 从 Poetry 切换）| `pyproject.toml` + `uv.lock`（提交）|
+| 数据库 | SQLite + **sqlcipher3**（D1.1 从 pysqlcipher3 切换）| 加密 + 本地（coleifer 维护的活跃 fork）|
 | LLM | **minimax M3**（统一链路）| 通过 Claude Code SDK |
 | 邮件 | imapclient + OAuth 2.0 | Keychain 凭证 |
 | CalDAV | iCloud 优先 | Week 1 D5 |
 | GUI | rumps（Mac 菜单栏）| Phase 2 加 Web Dashboard |
-| 测试 | pytest | 真实数据脱敏 |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% |
 | 调度 | APScheduler + launchd | launchd 保活 |
 
 ---
@@ -171,7 +188,7 @@ poetry run python -m src.main --help     # 帮助
 
 | # | 决策 | 选择 |
 |---|------|------|
-| 1 | 依赖管理 | **poetry** |
+| 1 | 依赖管理 | **PEP 621 + uv**（D1.1 从 Poetry 切换）|
 | 2 | CalDAV 优先 | **iCloud**（Apple 生态）|
 | 3 | 本地 LLM | **跳过**（统一 minimax M3）|
 | 4 | SQLite 加密 | **pysqlcipher3** |
@@ -215,6 +232,6 @@ poetry run python -m src.main --help     # 帮助
 
 ---
 
-**最后更新**：2026-06-07（D1 脚手架完成）
+**最后更新**：2026-06-07（D1.1 脚手架重构：PEP 621 + uv + Python 3.12 + 包名重构）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
