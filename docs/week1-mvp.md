@@ -34,8 +34,8 @@
 
 | 风险 | 概率 | 影响 | 缓解 |
 |------|------|------|------|
-| pysqlcipher3 在 Python 3.14 安装失败 | 高 | 数据库全废 | D3 末 spike；不通过则降级到 Python 3.12 |
-| IMAP OAuth 2.0 复杂度 | 高 | 主流邮箱全卡 | D2 末做 QQ/Outlook/Gmail 三源 spike |
+| ~~pysqlcipher3 在 Python 3.14 安装失败~~ | ~~高~~ | ~~数据库全废~~ | **D1.1 已解决**：改用 sqlcipher3（coleifer 活跃 fork），Python 3.12 |
+| IMAP OAuth 2.0 复杂度 | 中 | Outlook/Gmail 卡 | D2.5 spike：QQ 优先（授权码），OAuth 推到 D2.5 |
 | minimax M3 调用不稳定 | 中 | 智能功能挂 | 规则引擎 fallback（关键词/正则）|
 | launchd 后台被杀 | 中 | 定时任务失效 | D5 末做保活 spike + 用户保活清单 |
 
@@ -191,7 +191,7 @@ SQLite 加密 schema + IMAP 邮件入库 + 检索能力。
 
 | # | 任务 | 预计耗时 | 产出 |
 |---|------|----------|------|
-| 3.1 | 写 `core/db.py`（pysqlcipher3 封装 + 密码从 Keychain 取）| 60 min | 数据库连接 |
+| 3.1 | 写 `core/db.py`（**sqlcipher3 封装** + `PRAGMA key` 流程 + 密码从 Keychain 取）| 60 min | 数据库连接 |
 | 3.2 | 写 `core/schema.sql`（emails / events / transactions / notes / health_log）| 30 min | 表结构 |
 | 3.3 | 写 `core/models.py`（SQLAlchemy ORM + 加密字段）| 60 min | ORM 模型 |
 | 3.4 | 写 `core/migrations/`（alembic 初始化 + 首次迁移）| 30 min | 迁移框架 |
@@ -212,8 +212,9 @@ SQLite 加密 schema + IMAP 邮件入库 + 检索能力。
 
 ### 风险点
 
-- **pysqlcipher3 安装**：Python 3.14 兼容性差，**降级方案**：用 Python 3.12 venv
-- **加密开销**：首次批量入库可能慢 2-3x，需做性能 spike
+- ~~**pysqlcipher3 安装**：Python 3.14 兼容性差~~ → **D1.1 已解决**：用 sqlcipher3（coleifer 维护，Python 3.12 wheel 齐全）+ `PRAGMA key` 加密
+- **加密开销**：sqlcipher3 加密 PRAGMA key 校验 + AES-256 加密使入库慢 2-3x，需做性能 spike
+- **首次 Keychain 凭证缺失**：D3 启动前用户需在 Keychain 写入 `my-ai-employee.db.password`（D2.3 keychain.py 提供 `set_db_password()` 助手）
 
 ### 📌 下一棒 → D4
 
