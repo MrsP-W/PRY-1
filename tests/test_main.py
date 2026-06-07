@@ -1,10 +1,11 @@
 """D1.1 测试：覆盖可单测的纯函数，subprocess 只留 2 个 CLI 冒烟。
 
 D1 旧版：6 个测试全用 subprocess，覆盖率 0%
-D1.1 新版：14 个测试
-  - 9 个直接 import 测纯函数（覆盖率提升到 ~80%）
+D1.1 新版：**18 个测试**（实测覆盖率 61.9%）
+  - 9 个直接 import 测纯函数（build_parser × 3、_strip_rich_tags × 2、render_*_body × 4）
+  - 5 个参数化测试（_strip_rich_tags 边界情况）
   - 2 个 subprocess 冒烟（hello + --version 真实跑）
-  - 3 个 my_ai_employee 包元数据
+  - 2 个 my_ai_employee 包元数据
 
 D2+ 实际业务测试会在 tests/connectors/、tests/core/、tests/ai/ 下扩展。
 """

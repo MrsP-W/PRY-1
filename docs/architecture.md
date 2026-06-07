@@ -2,7 +2,7 @@
 
 > **目的**：把 5 层架构、关键决策理由、适配器契约、数据流、安全模型、失败模式讲清楚，作为 D1+ 所有编码的参考。
 >
-> **状态**：D1 脚手架已通过，架构待 Week 1 验证。
+> **状态**：D1.1 脚手架重构完成（PEP 621 + uv + Python 3.12 + sqlcipher3 + 包名重构 + 覆盖率 62%），架构待 Week 1 验证。
 
 ---
 
@@ -17,7 +17,7 @@
 │  L3 智能层 — minimax M3（统一 LLM）+ 规则引擎 fallback        │
 │  (分类/草稿/对账/结构化 — 关键路径 fallback 到本地规则)        │
 ├─────────────────────────────────────────────────────────────┤
-│  L2 数据层 — SQLite 加密（pysqlcipher3）+ 向量索引（sqlite-vss）│
+│  L2 数据层 — SQLite 加密（sqlcipher3，coleifer 活跃 fork）+ 向量索引（sqlite-vss）│
 │  (邮件/日程/账本/笔记 — 全部本地存储)                        │
 ├─────────────────────────────────────────────────────────────┤
 │  L1 适配器层 — IMAP/CalDAV/AppleScript/微信账单/银行 webhook │
@@ -119,7 +119,7 @@ CREATE TABLE emails (
     subject TEXT,
     sender TEXT,
     received_at TIMESTAMP,
-    body_encrypted BLOB,            -- pysqlcipher3 加密
+    body_encrypted BLOB,            -- sqlcipher3 AES-256 加密
     body_plaintext_hash TEXT,       -- 用于去重
     category TEXT,                  -- 'work' / 'finance' / 'subscription' / 'spam' / 'pending'
     priority INTEGER DEFAULT 0,
@@ -240,13 +240,14 @@ CREATE TABLE health_log (
 
 | 决策 | 选择 | 拒绝方案 | 理由 |
 |------|------|----------|------|
-| **数据库** | SQLite 加密（pysqlcipher3）| PostgreSQL / MySQL | 零运维 + 跨设备同步用 iCloud Drive + 单用户场景 |
+| **数据库** | SQLite 加密（**sqlcipher3**，D1.1 从 pysqlcipher3 切换）| PostgreSQL / MySQL | 零运维 + 跨设备同步用 iCloud Drive + 单用户场景 |
 | **LLM 主路由** | **minimax M3**（统一）| 多 LLM 路由 | 与 Agent Assistant 链路统一 + 减少复杂度 |
 | **LLM Fallback** | 规则引擎（关键词/正则）| 本地 Ollama | 隐私数据"跳过 LLM"而非"走本地" + 减少安装量 |
 | **GUI** | Mac 菜单栏（rumps）+ Web Dashboard | Electron / Tauri | 菜单栏省注意力 + Web 适合深度操作 |
 | **任务调度** | APScheduler + launchd | Celery / cron | 单机场景 + Python 生态 + launchd 保活 |
 | **凭证管理** | macOS Keychain | .env / config.json | 系统级加密 + 跨应用隔离 |
-| **依赖管理** | poetry | pip / uv | 用户已选 + 锁定版本 + 团队标准 |
+| **依赖管理** | **PEP 621 + uv**（D1.1 从 Poetry 切换）| Poetry / pip | 标准 pyproject 格式 + uv.lock 提交可复现 + 比 Poetry 快 10× |
+| **Python** | **3.12**（D1.1 固定，避开 3.14 wheel 风险）| 3.11 / 3.13 / 3.14 | sqlcipher3/keyring/rumps 在 3.12 上 wheel 齐全 |
 | **CalDAV 优先** | iCloud | Google Calendar | 用户已选 + Apple 生态整合 + iCloud 同步更稳 |
 | **测试** | pytest + 真实数据脱敏 | mock / fixture | 财务/邮件场景 mock 失真 |
 
@@ -325,7 +326,7 @@ CREATE TABLE health_log (
 
 | 层级 | 措施 |
 |------|------|
-| **存储** | pysqlcipher3 AES-256 加密（密码从 Keychain 取）|
+| **存储** | **sqlcipher3** AES-256 加密（密码从 Keychain 取，D1.1 替代 pysqlcipher3）|
 | **传输** | TLS 1.3+（IMAP/OAuth/CalDAV）|
 | **凭证** | Keychain 加密 + 进程级缓存（不落盘）|
 | **日志** | 敏感字段脱敏（身份证 → 110***********0023）|
@@ -389,8 +390,8 @@ CREATE TABLE health_log (
 
 ## 8. 不确定项（待 Week 1 验证）
 
-- [ ] pysqlcipher3 在 Python 3.14 上的安装（可能需要降级到 3.12）
-- [ ] IMAP OAuth 2.0 跨邮箱复杂度
+- [x] ~~pysqlcipher3 在 Python 3.14 上的安装~~ → **D1.1 已解决**：改用 sqlcipher3，Python 3.12
+- [ ] IMAP OAuth 2.0 跨邮箱复杂度（**D2.5 spike**：Outlook/Gmail 推到 spike 阶段）
 - [ ] minimax M3 调用稳定性（已知可用，待持续监控）
 - [ ] sqlite-vss 向量索引中文支持
 - [ ] launchd 保活效果（macOS 18+ 后台策略更严格）
@@ -399,6 +400,6 @@ CREATE TABLE health_log (
 
 ---
 
-**最后更新**：2026-06-07（D1 脚手架通过，LLM 决策：minimax M3 + 规则 fallback）
-**状态**：D1 已完成
+**最后更新**：2026-06-07（D1.1 脚手架重构：PEP 621 + uv + Python 3.12 + sqlcipher3 + 包名重构 + 覆盖率 62%，LLM 决策：minimax M3 + 规则 fallback）
+**状态**：D1.1 已完成（D2 启动就绪）
 **维护者**：Mr-PRY

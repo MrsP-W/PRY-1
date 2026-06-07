@@ -27,8 +27,8 @@ MANIFEST
 
 # Node（markdownlint-cli2 锁定）
 node_modules/
-# package-lock.json 提交（锁版本）
-package.json  # 提交
+# package.json 提交（锁 markdownlint-cli2 版本）
+# package-lock.json 提交（npm 锁文件）
 
 # Environment
 .env

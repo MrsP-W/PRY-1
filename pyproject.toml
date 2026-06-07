@@ -7,9 +7,6 @@ authors = [
 ]
 readme = "README.md"
 license = "MIT"
-homepage = "https://github.com/Mr-PRY/my-ai-employee"
-repository = "https://github.com/Mr-PRY/my-ai-employee"
-documentation = "https://github.com/Mr-PRY/my-ai-employee/blob/main/docs/architecture.md"
 keywords = ["personal-os", "ai-assistant", "imap", "caldav", "privacy-first"]
 requires-python = ">=3.12,<3.13"
 classifiers = [
@@ -21,8 +18,6 @@ classifiers = [
     "Topic :: Office/Business",
     "Topic :: Utilities",
 ]
-
-# ===== 运行时依赖（Week 1+2 MVP）=====
 dependencies = [
     # Week 1 D2 - IMAP
     "imapclient>=3.0.1",          # IMAP 协议（含 OAuth 2.0 XOAUTH2）
@@ -50,6 +45,15 @@ dependencies = [
     "rumps>=0.4.0",                   # Mac 菜单栏 UI
 ]
 
+# D1.1.1 修复：把 [project.urls] 移到 [project.optional-dependencies] 之前，
+# 保持 [project] 主块作用域连贯（D1 阶段把 urls 块错位放在了 dependencies 之前，
+# 导致 hatchling 误把 dependencies 当成 [project.urls] 的子字段）
+[project.urls]
+Homepage = "https://github.com/Mr-PRY/my-ai-employee"
+Repository = "https://github.com/Mr-PRY/my-ai-employee"
+Documentation = "https://github.com/Mr-PRY/my-ai-employee/blob/main/docs/architecture.md"
+Issues = "https://github.com/Mr-PRY/my-ai-employee/issues"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.4",              # 单元测试
@@ -60,14 +64,18 @@ dev = [
     "mypy>=1.13.0",               # 类型检查
     "watchdog>=6.0.0",            # hot reload（D5 dev 模式用）
     "faker>=30.3.0",              # 测试数据生成
+    "hatchling>=1.25.0",          # 包构建后端（uv build 需要本地可解析）
 ]
 
 # 注意：markdownlint-cli2 是 npm 包，详见 package.json
 # 安装：npm install（项目级），无需全局
 
 # ===== 构建系统 =====
+# hatchling 既是 build-system.requires（远程 wheel 打包用），
+# 也是 dev 依赖（uv build 本地构建时需要）
+# 两者版本必须一致 — 改一处记得改另一处
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.25.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]

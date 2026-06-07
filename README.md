@@ -23,7 +23,7 @@
 | 数据源 | 公开信息（新闻/SAP 知识）| 个人数据（邮件/日程/账本/笔记）|
 | 存储 | Markdown 文档 | SQLite 加密 + 向量索引 |
 | 接口 | 文档产出 | 菜单栏 + Web Dashboard + 移动伴侣 |
-| 隐私 | 公开 | 本地优先（pysqlcipher3）|
+| 隐私 | 公开 | 本地优先（**sqlcipher3**，D1.1 替代 pysqlcipher3）|
 | 复用 | 提供 13 角色 | 软链接 + 委派 |
 
 ---
@@ -191,7 +191,7 @@ make help
 | 1 | 依赖管理 | **PEP 621 + uv**（D1.1 从 Poetry 切换）|
 | 2 | CalDAV 优先 | **iCloud**（Apple 生态）|
 | 3 | 本地 LLM | **跳过**（统一 minimax M3）|
-| 4 | SQLite 加密 | **pysqlcipher3** |
+| 4 | SQLite 加密 | **sqlcipher3**（D1.1 从 pysqlcipher3 切换）|
 | 5 | 启动向导语言 | **中文** |
 
 **LLM 路由策略修正**（与原 architecture.md 不同）：
