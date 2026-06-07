@@ -44,7 +44,7 @@ class MockIMAPClient:
     def __init__(self) -> None:
         self.login_should_fail: bool = False
         self.search_uids: list[int] = []
-        self.fetch_data: dict[int, dict[str, Any]] = {}
+        self.fetch_data: dict[int, dict[bytes, Any]] = {}
         self.logout_called: bool = False
         self.connected_host: str | None = None
         self.connected_port: int | None = None
@@ -57,19 +57,22 @@ class MockIMAPClient:
             raise MockIMAPError(f"Mock: login failed for {username}")
         return "OK", [b"CAPABILITY IMAP4rev1"]
 
-    def select_folder(self, folder: str, readonly: bool = False) -> dict[str, Any]:
-        """Mock select_folder。记录调用参数；失败可注入。"""
+    def select_folder(self, folder: str, readonly: bool = False) -> dict[bytes, Any]:
+        """Mock select_folder。记录调用参数；失败可注入。
+
+        真实 imapclient 返回 `dict[bytes, Any]`：key 是 b'FLAGS' / b'EXISTS' / b'RECENT' / b'UIDVALIDITY' 等大写响应码
+        （参考 imapclient.IMAPClient.select_folder 源码）。
+        """
         self.select_folder_calls.append((folder, readonly))
         if self.select_folder_should_fail:
             raise MockIMAPError(f"Mock: select_folder({folder}) failed")
-        # 真实 imapclient 返回 {b'SEQUENCEID': ..., b'UIDNEXT': ..., b'FLAGS': (...)...}
         return {b"FLAGS": [b"\\Seen"], b"EXISTS": 0, b"RECENT": 0, b"UIDVALIDITY": 1}
 
     def search(self, criteria: list[Any]) -> list[int]:
         """Mock search。返回预设 UID 列表。"""
         return list(self.search_uids)
 
-    def fetch(self, uids: list[int], parts: list[str]) -> dict[int, dict[str, Any]]:
+    def fetch(self, uids: list[int], parts: list[str]) -> dict[int, dict[bytes, Any]]:
         """Mock fetch。返回预设 envelope 数据。"""
         result = {}
         for uid in uids:
@@ -107,10 +110,12 @@ def make_envelope(
     message_id: str | None = None,
     received_at: datetime | None = None,
     size: int = 1024,
-) -> dict[int, dict[str, Any]]:
+) -> dict[int, dict[bytes, Any]]:
     """构造真实 imapclient `Envelope` 对象（不是 list）。
 
     返回的 dict 格式：`{uid: {b"ENVELOPE": Envelope(...), b"RFC822.SIZE": size}}`
+    内层 dict 的 key 是 bytes（与 imapclient.fetch 真实响应一致，参考
+    imapclient.IMAPClient._fetch_command）。
     """
     if received_at is None:
         received_at = datetime.now(UTC)

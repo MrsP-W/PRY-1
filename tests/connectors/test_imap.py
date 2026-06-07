@@ -70,6 +70,18 @@ def test_connector_unknown_provider_raises() -> None:
         IMAPConnector(provider="unknown", email="x@x.com")  # type: ignore[arg-type]
 
 
+def test_connector_outlook_raises_not_implemented() -> None:
+    """Outlook provider 抛 NotImplementedError（D2 阶段白名单）。"""
+    with pytest.raises(NotImplementedError, match="outlook"):
+        IMAPConnector(provider="outlook", email="x@outlook.com")
+
+
+def test_connector_gmail_raises_not_implemented() -> None:
+    """Gmail provider 抛 NotImplementedError（D2 阶段白名单）。"""
+    with pytest.raises(NotImplementedError, match="gmail"):
+        IMAPConnector(provider="gmail", email="x@gmail.com")
+
+
 # ===== 健康检查 =====
 
 
@@ -95,6 +107,8 @@ def test_healthcheck_auth_failure(monkeypatch) -> None:
     )
     status = asyncio.run(conn.healthcheck())
     assert status.ok is False
+    # mypy 类型守卫：error 是 Optional，必须先断言非 None 再做子串检查
+    assert status.error is not None
     assert "登录" in status.error or "login" in status.error.lower()
 
 
@@ -108,6 +122,8 @@ def test_healthcheck_no_credential(monkeypatch) -> None:
     )
     status = asyncio.run(conn.healthcheck())
     assert status.ok is False
+    # mypy 类型守卫：error 是 Optional，必须先断言非 None 再做子串检查
+    assert status.error is not None
     assert "Keychain" in status.error
 
 
@@ -133,6 +149,20 @@ def test_healthcheck_triggers_circuit_breaker(monkeypatch) -> None:
     # 第 3 次失败后，熔断应已开启
     assert conn.circuit_state["is_open"] is True
     assert conn.circuit_state["consecutive_failures"] == CIRCUIT_BREAKER_THRESHOLD
+
+
+def test_healthcheck_closes_connection(
+    installed_connector: IMAPConnector, mock_client: MockIMAPClient
+) -> None:
+    """healthcheck 成功后 close 连接（避免多次调用累积 IMAP 连接）。"""
+    asyncio.run(installed_connector.healthcheck())
+    # 无论 healthcheck 成功/失败，close 都会被调用
+    assert mock_client.logout_called is True
+    # 二次 healthcheck 应能再次连接（验证连接确实被释放）
+    mock_client.logout_called = False
+    status2 = asyncio.run(installed_connector.healthcheck())
+    assert status2.ok is True
+    assert mock_client.logout_called is True
 
 
 def test_connect_calls_select_folder_inbox(

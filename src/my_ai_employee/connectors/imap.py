@@ -97,6 +97,15 @@ class IMAPConnector(BaseConnector):
             raise ValueError(
                 f"未知 provider: {provider!r}（支持：{list(SERVER_CONFIGS)}）"
             )
+        # D2 阶段白名单：仅 QQ 邮箱走授权码模式。
+        # Outlook/Gmail 需 OAuth 2.0，留给 D2.5 spike；提前构造就报错（fail-fast）
+        # 避免 D3 误用。
+        if provider != "qq":
+            raise NotImplementedError(
+                f"IMAPConnector 当前只实现 provider='qq'（D2 阶段）。"
+                f"provider={provider!r} 需 OAuth 2.0，留 D2.5 spike 重启。"
+                f"详见 docs/spike-imap-compat.md。"
+            )
         self._provider = provider
         self._email = email
         self._config = SERVER_CONFIGS[provider]
@@ -242,30 +251,32 @@ class IMAPConnector(BaseConnector):
         """IMAP 健康检查：复用 connect（登录成功即健康）。
 
         失败语义：healthcheck 失败也会进入熔断计数（连续 3 次失败 → 30 min 冷却）。
-        这样：
-            - safe_fetch 失败 → 计数（一次失败信号）
-            - healthcheck 失败 → 计数（独立的失败信号，多次累计也会熔断）
-        调度器（如 09:00 / 21:00 跑 healthcheck）能独立触发熔断。
+        连接生命周期：try/finally 关闭，避免多次 healthcheck 累积 IMAP 连接。
         """
         import time as _time
 
         start = _time.perf_counter()
         try:
-            await self.connect()
-        except Exception as e:
+            try:
+                await self.connect()
+            except Exception as e:
+                latency = (_time.perf_counter() - start) * 1000
+                # healthcheck 失败 → 计入熔断（与 safe_fetch 一致）
+                self._record_failure(e)
+                return HealthStatus(
+                    ok=False,
+                    latency_ms=latency,
+                    error=str(e),
+                    circuit_open=self._is_circuit_open(),
+                )
             latency = (_time.perf_counter() - start) * 1000
-            # healthcheck 失败 → 计入熔断（与 safe_fetch 一致）
-            self._record_failure(e)
-            return HealthStatus(
-                ok=False,
-                latency_ms=latency,
-                error=str(e),
-                circuit_open=self._is_circuit_open(),
-            )
-        latency = (_time.perf_counter() - start) * 1000
-        # 健康检查成功也重置计数（避免历史失败持续累积）
-        self._record_success()
-        return HealthStatus(ok=True, latency_ms=latency)
+            # 健康检查成功也重置计数（避免历史失败持续累积）
+            self._record_success()
+            return HealthStatus(ok=True, latency_ms=latency)
+        finally:
+            # 无论成功失败都关闭连接，避免 healthcheck 反复调用时连接累积
+            # （close 内部已用 try/except 处理"已断开"场景）
+            await self.close()
 
     async def close(self) -> None:
         """关闭连接（优雅退出）。"""
