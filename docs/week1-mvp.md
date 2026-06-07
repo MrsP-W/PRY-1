@@ -225,20 +225,21 @@ SQLCipher 加密 DB 封装 + 6 张表 schema + 完整测试覆盖。
 
 **代码/测试/DDL**：
 
-- [x] `src/my_ai_employee/core/db.py` — Database 封装（sqlcipher3 + Keychain + dict_factory + quick_check）
+- [x] `src/my_ai_employee/core/db.py` — Database 封装（sqlcipher3 + Keychain + dict_factory + quick_check + **受控 `connection` property**）
 - [x] `src/my_ai_employee/core/schema.sql` — 6 张表 + 9 个索引（含 D3.1.1 增的 idx_emails_message_id）
-- [x] `tests/core/test_db.py` — 20 个测试（15 + D3.1.1 增 5 个）
+- [x] `tests/core/test_db.py` — **23 个测试**（15 v1 + D3.1.1 +5 + D3.1.2 +3 connection property）
 - [x] `scripts/spike_sqlcipher.py` — 5 分钟加密往返 spike
 - [x] PRAGMA 矩阵：key + foreign_keys=ON + **journal_mode=WAL** + busy_timeout=5000 + synchronous=NORMAL
 - [x] 去重键：`UNIQUE(source, uid)`（D3.1.1 修正：用 IMAP UID 而非 Message-ID）
 - [x] 字段可空：`message_id` / `received_at`（D3.1.1 修正：兼容 IMAP 邮件无 Message-ID / 无 Date 头）
 - [x] Keychain 凭证：**首次启动自动生成 32 字节随机串写入 Keychain**（service=`my-ai-employee.db`，account=`data.db`），不要求用户手动
+- [x] 受控 `connection` 入口（D3.1.2 增）：alembic 走 `Database.open().connection` 而非私有 `_conn`（避免封装泄漏）
 
 **质量门**：
 
-- [x] pytest 57 passed（37 D2 + 20 D3.1）
+- [x] pytest **60 passed**（37 D2 + 23 D3.1）
 - [x] ruff / mypy / `make lint` 0 errors
-- [x] db.py 覆盖率 97.4%
+- [x] db.py 覆盖率 **97.5%**
 
 #### 风险点（已解决）
 
