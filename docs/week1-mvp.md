@@ -161,15 +161,25 @@
 
 ### 验收标准（D1.1 收窄版）
 
-- [ ] `python scripts/test_imap.py --email your@qq.com` 能连 QQ 邮箱
-- [ ] 凭证存 macOS Keychain（**不落盘** .env）
-- [ ] mock IMAP server 单元测试覆盖率 ≥ 70%
-- [ ] 失败时进入熔断（30 min 后再试）
-- [ ] 写 `docs/spike-imap-compat.md` 记录 QQ 已通 + Outlook/Gmail 待办
+**代码/mock/文档项**（D2 收尾已完成）：
+
+- [x] `src/my_ai_employee/connectors/base.py` — 抽象基类 + 熔断 + 失败隔离
+- [x] `src/my_ai_employee/connectors/imap.py` — IMAPConnector（QQ 优先，登录后 `select_folder("INBOX", readonly=True)`）
+- [x] `src/my_ai_employee/core/keychain.py` — macOS Keychain 凭证（**add -U 原位更新**，不先删后增）
+- [x] `scripts/test_imap.py` — CLI 入口（4 互斥子命令，`--provider` 仅允许 `qq`）
+- [x] `tests/connectors/test_imap.py` — 16 个测试（**imap.py 覆盖率 94.9%**，验收 ≥70%）
+- [x] 失败时进入熔断（30 min 后再试）；healthcheck 失败也计数
+- [x] `docs/spike-imap-compat.md` — QQ 完成 + Outlook/Gmail 推后决策（**Gmail 改 2025 口径**）
+
+**真实连通**（待用户提供授权码后手动验收）：
+
+- [ ] `python scripts/test_imap.py --set-password your@qq.com` 写入 Keychain（用户提供 16 位授权码）
+- [ ] `python scripts/test_imap.py --check --email your@qq.com` 返回 `✅ 健康检查通过`
+- [ ] `python scripts/test_imap.py --fetch-latest --email your@qq.com --days 7` 拉到真实邮件
 
 ### 风险点（D1.1 收窄后）
 
-- **QQ 授权码**：需用户进 QQ 邮箱网页手动生成（不是密码）
+- **QQ 授权码**：需用户进 QQ 邮箱网页手动生成（不是密码）— **D2 启动前置依赖**
 - **mitm 风险**：imapclient 默认 `verify=True`，macOS 证书链有时不完整
 - **Outlook/Gmail 推后**：OAuth 2.0 流程复杂度高，留 D2.5 或后续
 

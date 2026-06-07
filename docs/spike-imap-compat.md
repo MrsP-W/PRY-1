@@ -83,7 +83,7 @@ python scripts/test_imap.py --check --email your@qq.com
 
 ### 为什么推后（比 Outlook 更严）
 
-- **2026-05-30 Google 永久封禁 "不够安全的应用"**（[Google 公告](https://support.google.com/accounts/answer/6010255)）
+- **Google 自 2025 年起逐步停用 "不够安全的应用" 访问**（[Google Account Help](https://support.google.com/accounts/answer/6010255) / [Workspace Admin Help](https://support.google.com/a/answer/14114704)）；Workspace 管理员对 IMAP/POP/SMTP 的基本认证最终弃用时间因域名配置而异
 - **Basic Auth（邮箱 + 密码 / 应用专用密码）已完全失效**
 - **必须用 OAuth 2.0**：Web 授权流程 + refresh_token 持久化
 - **scope 复杂**：`https://mail.google.com/`（全权限）或 `https://www.googleapis.com/auth/gmail.readonly`（只读）
