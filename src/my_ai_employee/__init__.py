@@ -7,8 +7,8 @@
   L3 智能层 — minimax M3 LLM
   L4 Agent 层 — @管家/@审计员 + Agent Assistant 软链
 
-当前状态：D1.1 脚手架重构完成（PEP 621 + uv + Python 3.12 + 包名重构 + 18 测试 + 62% 覆盖率）
-下一棒：D2 IMAP 适配器（范围已收窄：BaseConnector + QQ + Keychain + mock + 健康检查）
+当前状态：D2 IMAP 适配器完成（QQ 授权码模式 + Keychain 凭证 + 熔断 + mock + 14 个测试 + 32/32 套件 + 71.2% 覆盖率）
+下一棒：D3 数据层（SQLCipher 加密 SQLite + 邮件入库）
 """
 
 __version__ = "0.1.0"
