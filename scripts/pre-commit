@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# 我的AI员工 - pre-commit hook
+# 提交前自动检查 Markdown 格式（0 错误才放行）
+# 安装：make install-hooks
+
+set -e
+
+echo "🔍 [pre-commit] 检查 Markdown 格式..."
+
+# 仅检查本次改动的 .md 文件
+STAGED_MD=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.md$' || true)
+
+if [ -z "$STAGED_MD" ]; then
+    echo "✅ 无 .md 改动，跳过检查"
+    exit 0
+fi
+
+# 跑 markdownlint
+if command -v markdownlint-cli2 >/dev/null 2>&1; then
+    echo "$STAGED_MD" | xargs markdownlint-cli2
+    echo "✅ Markdown 格式检查通过"
+else
+    echo "⚠️  markdownlint-cli2 未安装，跳过（运行 'poetry install' 安装）"
+    exit 0
+fi
