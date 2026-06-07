@@ -193,40 +193,123 @@
 
 ## D3 — 数据层 + IMAP 同步
 
-### 目标
+> **D3 拆分**（2026-06-07 D3.1 收尾时确认）：D3 范围过大（8 任务 / 6 小时），
+> 拆成 3 phase，每天 1 phase：
+>
+> - **D3.1 — 数据层基础**（DB 封装 + 6 表 schema + 测试）— ✅ 已完成
+> - **D3.2 — ORM + Migrations**（SQLAlchemy 2.0 + alembic）— 待启动
+> - **D3.3 — 同步脚本 + 性能 Spike**（IMAP 入库 + 1 万封 < 30s）— 待启动
+>
+> FTS5 / sqlite-vss 全文+向量索引 → 推到 D4 智能层（与 LLM 分类一起做）
 
-SQLite 加密 schema + IMAP 邮件入库 + 检索能力。
+---
 
-### 任务清单
+### D3.1 — 数据层基础 ✅ 已完成（2026-06-07）
+
+#### 目标
+
+SQLCipher 加密 DB 封装 + 6 张表 schema + 完整测试覆盖。
+
+#### 任务清单
 
 | # | 任务 | 预计耗时 | 产出 |
 |---|------|----------|------|
-| 3.1 | 写 `core/db.py`（**sqlcipher3 封装** + `PRAGMA key` 流程 + 密码从 Keychain 取）| 60 min | 数据库连接 |
-| 3.2 | 写 `core/schema.sql`（emails / events / transactions / notes / health_log）| 30 min | 表结构 |
-| 3.3 | 写 `core/models.py`（SQLAlchemy ORM + 加密字段）| 60 min | ORM 模型 |
-| 3.4 | 写 `core/migrations/`（alembic 初始化 + 首次迁移）| 30 min | 迁移框架 |
-| 3.5 | 写 `scripts/sync_imap.py`（增量同步到 SQLite）| 60 min | 同步入口 |
-| 3.6 | **Spike**：1 万封邮件批量入库性能（目标 < 30s）| 30 min | 性能报告 |
-| 3.7 | 写 `core/indexer.py`（FTS5 全文索引 + sqlite-vss 向量索引）| 60 min | 索引能力 |
-| 3.8 | 写 `tests/core/test_db.py`（事务/加密/并发）| 30 min | 单元测试 |
+| 3.1.1 | 写 `core/db.py`（sqlcipher3 封装 + `PRAGMA key` + Keychain 密码 + WAL/busy_timeout/synchronous）| 60 min | 数据库连接 |
+| 3.1.2 | 写 `core/schema.sql`（emails / attachments / labels / email_labels / sync_state / audit_log）| 30 min | 表结构 |
+| 3.1.3 | 写 `tests/core/test_db.py`（Keychain/加密/Schema/CRUD/上下文管理器/PRAGMA 断言/字段可空）| 30 min | 单元测试 |
+| 3.1.4 | 写 `scripts/spike_sqlcipher.py`（5 分钟加密往返 spike，验证装包）| 5 min | spike 脚本 |
 
-**总耗时**：约 6 小时
+**总耗时**：约 2 小时（实测）
 
-### 验收标准
+#### 验收标准（全部 ✅）
 
-- [ ] 数据库文件存在 `~/Library/Application Support/我的AI员工/data.db`（加密）
+**代码/测试/DDL**：
+
+- [x] `src/my_ai_employee/core/db.py` — Database 封装（sqlcipher3 + Keychain + dict_factory + quick_check）
+- [x] `src/my_ai_employee/core/schema.sql` — 6 张表 + 9 个索引（含 D3.1.1 增的 idx_emails_message_id）
+- [x] `tests/core/test_db.py` — 20 个测试（15 + D3.1.1 增 5 个）
+- [x] `scripts/spike_sqlcipher.py` — 5 分钟加密往返 spike
+- [x] PRAGMA 矩阵：key + foreign_keys=ON + **journal_mode=WAL** + busy_timeout=5000 + synchronous=NORMAL
+- [x] 去重键：`UNIQUE(source, uid)`（D3.1.1 修正：用 IMAP UID 而非 Message-ID）
+- [x] 字段可空：`message_id` / `received_at`（D3.1.1 修正：兼容 IMAP 邮件无 Message-ID / 无 Date 头）
+- [x] Keychain 凭证：**首次启动自动生成 32 字节随机串写入 Keychain**（service=`my-ai-employee.db`，account=`data.db`），不要求用户手动
+
+**质量门**：
+
+- [x] pytest 57 passed（37 D2 + 20 D3.1）
+- [x] ruff / mypy / `make lint` 0 errors
+- [x] db.py 覆盖率 97.4%
+
+#### 风险点（已解决）
+
+- ~~**pysqlcipher3 安装**：Python 3.14 兼容性差~~ → **D1.1 已解决**：用 sqlcipher3（coleifer 维护，Python 3.12 wheel 齐全）
+- ~~**首次 Keychain 凭证缺失**：用户需手动写~~ → **D3.1.1 已解决**：`Database.open()` 首次启动自动生成 + 写入
+- **4 个 SQLCipher 雷区**：见 [reports/D3.1-数据层基础完成.md](../../我的AI员工/reports/D3.1-数据层基础完成.md) §4
+
+#### 📌 下一棒 → D3.2
+
+- 数据层基础就绪
+- 下棒任务：SQLAlchemy 2.0 DeclarativeBase 6 Model + alembic 迁移框架
+- 关键决策：alembic env.py 集成 SQLCipher 密码（调 `Database.open().connection` — D3.1.2 新增的受控 property，避免依赖私有 `_conn`）
+
+---
+
+### D3.2 — ORM + Migrations（待启动，预计 2-3 小时）
+
+#### 目标
+
+SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 SQLCipher 密码）。
+
+#### 任务清单
+
+| # | 任务 | 预计耗时 | 产出 |
+|---|------|----------|------|
+| 3.2.1 | 写 `core/models.py`（SQLAlchemy 2.0 DeclarativeBase，6 个 Model 类）| 60 min | ORM 模型 |
+| 3.2.2 | `alembic init core/migrations` + 改 `env.py` 集成 SQLCipher 密码 | 30 min | alembic 入口 |
+| 3.2.3 | 写 `core/migrations/versions/0001_initial.py`（从 schema.sql 翻译成 alembic op）| 30 min | 首次迁移 |
+| 3.2.4 | 写 `tests/core/test_models.py`（CRUD + relationship + cascade）| 30 min | ORM 测试 |
+
+**总耗时**：约 2.5 小时
+
+#### 验收标准
+
+- [ ] 6 个 Model 类（Email / Attachment / Label / EmailLabel / SyncState / AuditLog）mirror schema.sql
+- [ ] `alembic upgrade head` 跑通（首次迁移应用 schema）
+- [ ] ORM CRUD 测试全过 + 关系 + 级联删除测试
+- [ ] db.py / models.py / migrations/ 覆盖率 ≥ 80%
+
+#### 📌 下一棒 → D3.3
+
+- ORM + 迁移框架就绪
+- 下棒任务：scripts/sync_imap.py（IMAPConnector.safe_fetch + Database 分批入库）+ 1 万封 spike
+
+---
+
+### D3.3 — 同步脚本 + 性能 Spike（待启动，预计 3-4 小时）
+
+#### 目标
+
+IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证。
+
+#### 任务清单
+
+| # | 任务 | 预计耗时 | 产出 |
+|---|------|----------|------|
+| 3.3.1 | 写 `scripts/sync_imap.py`（IMAPConnector.safe_fetch + Database 分批入库 100/批）| 90 min | 同步入口 |
+| 3.3.2 | 写 `tests/core/test_sync.py`（mock IMAPConnector + 真实 DB）| 60 min | 同步测试 |
+| 3.3.3 | **Spike**：1 万封 mock 邮件 < 30s 入库（faker 生成 + Database 批量 insert）| 30 min | 性能报告 |
+
+**总耗时**：约 3 小时
+
+#### 验收标准
+
 - [ ] 1 万封邮件入库 < 30s
-- [ ] FTS5 搜索 "SAP" 命中 < 100ms
-- [ ] sqlite-vss 语义搜索"财务相关"命中 < 200ms
-- [ ] WAL 模式开启（多读单写不阻塞）
+- [ ] 增量同步：基于 `sync_state.last_uid` 只拉新邮件
+- [ ] 失败隔离：单封失败不阻塞后续（D3.3 应急版范本）
+- [ ] received_at 缺失时 fallback 到 fetched_at（D3.1.1 决策）
+- [ ] 100 封/批 commit，避免 SQLite 长事务锁
 
-### 风险点
-
-- ~~**pysqlcipher3 安装**：Python 3.14 兼容性差~~ → **D1.1 已解决**：用 sqlcipher3（coleifer 维护，Python 3.12 wheel 齐全）+ `PRAGMA key` 加密
-- **加密开销**：sqlcipher3 加密 PRAGMA key 校验 + AES-256 加密使入库慢 2-3x，需做性能 spike
-- **首次 Keychain 凭证缺失**：D3 启动前用户需在 Keychain 写入 `my-ai-employee.db.password`（D2.3 keychain.py 提供 `set_db_password()` 助手）
-
-### 📌 下一棒 → D4
+#### 📌 下一棒 → D4
 
 - 数据层就绪
 - 下棒需要：已入库的邮件（500+ 真实数据）

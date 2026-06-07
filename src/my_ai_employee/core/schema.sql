@@ -1,33 +1,42 @@
--- D3.1 — SQLCipher 数据库 schema（v1）
--- 文件：my-ai-employee.db（位于 ~/Library/Application Support/my-ai-employee/data.db）
--- 加密：PRAGMA key = <32 字节随机串，存 Keychain service=my-ai-employee.db account=master>
+-- D3.1 — SQLCipher 数据库 schema（v1.1 — D3.1.1 修正）
+-- 文件：data.db（位于 ~/Library/Application Support/my-ai-employee/data.db）
+-- 加密：PRAGMA key = <32 字节随机串>
+--       Keychain service=my-ai-employee.db account=data.db
+--       首次启动自动生成 + 写入 Keychain（D3.1.1 决策，不再要求用户手动）
 -- 迁移：alembic（D3.2 引入）— 本文件是 v1 起点，alembic 后续基于本 schema 增量
 -- 幂等：所有 CREATE 都用 IF NOT EXISTS，重复跑不爆（覆盖式 init 路径）
 
 -- ===== emails =====
 -- 邮件主表。
--- 唯一性：UNIQUE(source, message_id) — 同一邮件不会重复入库
+-- 唯一性：UNIQUE(source, uid) — IMAP UID 是协议级唯一键（D3.1.1 修正）
+--   原因：RFC 5322 Message-ID 经常缺失（垃圾邮件 / 某些 server 不生成），
+--   用 (source, message_id) 当唯一键会导致无 message_id 邮件互相冲突。
+--   IMAP UID 是协议分配的递增整数，server 内单调递增，无缺失风险。
+-- message_id 改为可空：保留为普通索引（部分查询用）。
+-- received_at 改为可空：D2 IMAPConnector.envelope.date 可能为 None，
+--   D3.3 入库映射层 fallback 到 fetched_at（D3.1.1 决策）。
 -- 索引：received_at 倒序检索是热路径
 CREATE TABLE IF NOT EXISTS emails (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     source          TEXT    NOT NULL,                    -- "qq" / "outlook" / "gmail"
-    uid             INTEGER NOT NULL,                    -- IMAP UID
-    message_id      TEXT    NOT NULL,                    -- RFC 5322 Message-ID
+    uid             INTEGER NOT NULL,                    -- IMAP UID（协议级唯一）
+    message_id      TEXT,                                -- RFC 5322 Message-ID（可空）
     subject         TEXT    NOT NULL DEFAULT '',         -- 解码后的主题
     sender          TEXT    NOT NULL DEFAULT '',         -- 发件人（mailbox@host）
     recipients      TEXT    NOT NULL DEFAULT '[]',       -- JSON array（D3 阶段先存空）
-    received_at     INTEGER NOT NULL,                    -- Unix epoch ms（IMAP 协议无 tz）
+    received_at     INTEGER,                             -- Unix epoch ms（可空 — envelope date 可能缺失）
     raw_size        INTEGER NOT NULL DEFAULT 0,          -- 字节数
     body_text       TEXT    NOT NULL DEFAULT '',         -- plain text（D3 阶段先不下载 body）
     body_html       TEXT    NOT NULL DEFAULT '',         -- html（D3 阶段先不下载 body）
-    fetched_at      INTEGER NOT NULL,                    -- 入库时间（Unix epoch ms）
+    fetched_at      INTEGER NOT NULL,                    -- 入库时间（Unix epoch ms，received_at 缺失时 fallback）
     labels          TEXT    NOT NULL DEFAULT '[]',       -- JSON array of label names
-    UNIQUE(source, message_id)
+    UNIQUE(source, uid)
 );
 
 CREATE INDEX IF NOT EXISTS idx_emails_received_at ON emails(received_at DESC);
 CREATE INDEX IF NOT EXISTS idx_emails_source_received ON emails(source, received_at DESC);
 CREATE INDEX IF NOT EXISTS idx_emails_sender ON emails(sender);
+CREATE INDEX IF NOT EXISTS idx_emails_message_id ON emails(message_id);
 
 
 -- ===== attachments =====
