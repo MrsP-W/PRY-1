@@ -196,8 +196,8 @@
 > **D3 拆分**（2026-06-07 D3.1 收尾时确认）：D3 范围过大（8 任务 / 6 小时），
 > 拆成 3 phase，每天 1 phase：
 >
-> - **D3.1 — 数据层基础**（DB 封装 + 6 表 schema + 测试）— ✅ 已完成
-> - **D3.2 — ORM + Migrations**（SQLAlchemy 2.0 + alembic）— 待启动
+> - **D3.1 — 数据层基础**（DB 封装 + 6 表 schema + 测试）— ✅ 已完成（v3.1.3 锁定）
+> - **D3.2 — ORM + Migrations**（SQLAlchemy 2.0 + alembic）— ✅ 已完成（v1.0 锁定）
 > - **D3.3 — 同步脚本 + 性能 Spike**（IMAP 入库 + 1 万封 < 30s）— 待启动
 >
 > FTS5 / sqlite-vss 全文+向量索引 → 推到 D4 智能层（与 LLM 分类一起做）
@@ -255,7 +255,7 @@ SQLCipher 加密 DB 封装 + 6 张表 schema + 完整测试覆盖。
 
 ---
 
-### D3.2 — ORM + Migrations（待启动，预计 2-3 小时）
+### D3.2 — ORM + Migrations ✅ 已完成（v1.0 锁定 — 2026-06-08）
 
 #### 目标
 
@@ -263,26 +263,56 @@ SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 S
 
 #### 任务清单
 
-| # | 任务 | 预计耗时 | 产出 |
-|---|------|----------|------|
-| 3.2.1 | 写 `core/models.py`（SQLAlchemy 2.0 DeclarativeBase，6 个 Model 类）| 60 min | ORM 模型 |
-| 3.2.2 | `alembic init core/migrations` + 改 `env.py` 集成 SQLCipher 密码 | 30 min | alembic 入口 |
-| 3.2.3 | 写 `core/migrations/versions/0001_initial.py`（从 schema.sql 翻译成 alembic op）| 30 min | 首次迁移 |
-| 3.2.4 | 写 `tests/core/test_models.py`（CRUD + relationship + cascade）| 30 min | ORM 测试 |
+| # | 任务 | 预计耗时 | 实际 | 产出 |
+|---|------|----------|------|------|
+| 3.2.1 | 写 `core/models.py`（SQLAlchemy 2.0 DeclarativeBase，6 个 Model 类 + list_tables / to_dict）| 60 min | ~50 min | ORM 模型 |
+| 3.2.2 | `alembic init core/migrations` + 改 `env.py` 集成 SQLCipher 密码（走 D3.1.2 受控 `connection`）| 30 min | ~30 min | alembic 入口 |
+| 3.2.3 | 写 `core/migrations/versions/0001_initial.py`（从 schema.sql 翻译成 alembic op，render_as_batch=True）| 30 min | ~25 min | 首次迁移 |
+| 3.2.4 | 写 `tests/core/test_models.py`（CRUD + relationship + cascade + UNIQUE + server_default）| 30 min | ~30 min | ORM 测试 |
+| 3.2.5 | 写 `core/sqlcipher_compat.py`（SA engine creator 适配层）| — | ~15 min | 适配层 |
 
 **总耗时**：约 2.5 小时
 
-#### 验收标准
+#### 验收标准（全部 ✅）
 
-- [ ] 6 个 Model 类（Email / Attachment / Label / EmailLabel / SyncState / AuditLog）mirror schema.sql
-- [ ] `alembic upgrade head` 跑通（首次迁移应用 schema）
-- [ ] ORM CRUD 测试全过 + 关系 + 级联删除测试
-- [ ] db.py / models.py / migrations/ 覆盖率 ≥ 80%
+**代码/测试/DDL**：
+
+- [x] `src/my_ai_employee/core/models.py` — 6 个 Model 类（Email / Attachment / Label / EmailLabel / SyncState / AuditLog）+ 9 索引 + UNIQUE(source, uid) / UNIQUE(name, source) / UNIQUE(source)
+- [x] `src/my_ai_employee/core/sqlcipher_compat.py` — SA engine creator 走 SQLCipher（100% 覆盖）
+- [x] `src/my_ai_employee/core/migrations/env.py` — alembic env.py 集成 SQLCipher 密码（online 模式调 `make_sqlalchemy_creator` + `render_as_batch=True`）
+- [x] `src/my_ai_employee/core/migrations/versions/0001_initial.py` — 首次迁移（6 `op.create_table` + 9 `op.create_index`）
+- [x] `src/my_ai_employee/core/migrations/script.py.mako` — alembic 标准模板
+- [x] `alembic.ini`（项目根）— `script_location = core/migrations` + `prepend_sys_path = src`
+- [x] `src/my_ai_employee/core/db.py` — **D3.2 关键调整**：`row_factory` 从 `Database.open()` 推到 `execute/fetch_*` 方法入口（SA dialect 探针天然 OK）
+- [x] `tests/core/test_models.py` — **16 个测试**（metadata / 6 Model CRUD / 关系 / 级联 / UNIQUE / server_default / 联合查询）
+- [x] JSON 字段用 SA 内置 `JSON` 类型：`Email.recipients` / `Email.labels` 自动 list ↔ JSON 文本
+- [x] **server_default 配 default=**：所有有默认值的字段都加 `server_default=`（满足 raw SQL INSERT 也能用默认）
+
+**质量门**：
+
+- [x] pytest **76 passed**（37 D2 + 23 D3.1 + **16 D3.2**）
+- [x] ruff / mypy / `make lint` **0 errors**
+- [x] models.py 覆盖率 **93.8%**
+- [x] sqlcipher_compat.py 覆盖率 **100%**
+- [x] db.py 覆盖率 **97.9%**（保持 D3.1 水平）
+
+#### 风险点（已解决 — 4 个 SQLAlchemy + sqlcipher3 雷区）
+
+- ~~**SA dialect 探针 KeyError: 0**：D3.1 设 `conn.row_factory = _dict_factory` 后 SA `get_isolation_level` 抛 KeyError~~ → **D3.2 已解决**：`row_factory` 推到方法入口临时设 + finally 立即还原
+- ~~**server_default 缺失导致 NOT NULL**：仅 `default=` 不生成 SQL DEFAULT 子句~~ → **D3.2 已解决**：每个 default 字段都加 `server_default=`
+- ~~**sqlcipher3 Cursor 不支持 `with`**：`with conn.execute(...) as cur:` 抛 TypeError~~ → **D3.2 已解决**：SA 2.0 SQLite dialect 不调 `with cursor()`，直接 `cur = conn.execute(...)`
+- **D3.1.2 测试断言需修**：`db.connection` row 从 dict 变 tuple（row_factory 调整）→ 改 `row[0].lower() == "wal"` tuple 解构
+
+**完整踩坑分析**：见 [reports/D3.2-ORM与迁移框架完成.md](../../我的AI员工/reports/D3.2-ORM与迁移框架完成.md) §2 / §4 / §9
 
 #### 📌 下一棒 → D3.3
 
-- ORM + 迁移框架就绪
-- 下棒任务：scripts/sync_imap.py（IMAPConnector.safe_fetch + Database 分批入库）+ 1 万封 spike
+- ORM + alembic 迁移框架就绪（D3.2 v1.0 锁定）
+- 下棒任务：scripts/sync_imap.py（IMAPConnector.safe_fetch + SQLAlchemy Session 批量入库 100/批）+ 1 万封 spike
+- 关键决策：
+  - D3.3 同步入库走 ORM（`session.add(Email(...))` 100/批 commit）— 简单优先
+  - 性能不达标再切 `session.bulk_save_objects` 走 bulk 模式
+  - **received_at 缺失 fallback 到 fetched_at**（D3.1.1 决策 — D3.3 入库映射层落实）
 
 ---
 

@@ -7,6 +7,6 @@
   - indexer.py  FTS5 全文索引 + sqlite-vss 向量索引（D4 智能层引入 — 与 LLM 分类一起做）
 
 D3.1 = db.py + schema.sql（D3 阶段起步，2026-06-07 完成）。
-D3.2 = models.py + migrations/（待启动）。
+D3.2 = models.py + migrations/（D3.2 启动 — ORM + alembic 迁移框架）。
 D4+ = indexer.py（与 LLM 分类同步推进）。
 """

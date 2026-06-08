@@ -149,10 +149,13 @@ class Database:
                 f"PRAGMA busy_timeout = 5000; "
                 f"PRAGMA synchronous = NORMAL;"
             )
-            # 行工厂：sqlcipher3 的 cursor 不是 sqlite3.Cursor 子类，
-            # 标准 sqlite3.Row 工厂会爆 "Row() argument 1 must be sqlite3.Cursor"
-            # 用 dict_factory 等价效果：fetchall 返回 list[dict[列名, 值]]，row["col"] 可用
-            conn.row_factory = _dict_factory
+            # 行工厂（D3.2 调整）：
+            #   D3.1 决策设 conn.row_factory = _dict_factory（让业务代码 fetch_one
+            #   返回 dict）。但 D3.2 引入 SQLAlchemy 后，SA SQLite dialect 在
+            #   first_connect 钩子调 get_isolation_level 期望 tuple-like row。
+            #   D3.2 决定把 row_factory 推到方法入口临时设（execute/fetch_* 方法
+            #   内 set），conn.row_factory 常态是 None — 这样 SA 探针 OK，
+            #   业务代码 db.fetch_all() 仍拿 dict。
             # 主动触发密码校验（SQLCipher 是懒校验的 — PRAGMA key 本身不读加密页，
             # 第一次读加密 B-tree 页才校验）。
             # 实测多种触发：
@@ -180,34 +183,66 @@ class Database:
         path = schema_path or SCHEMA_PATH
         sql = path.read_text(encoding="utf-8")
         # executescript 会自动 commit（DDL 不能回滚）
+        # 注：不设 row_factory — DDL 不需要
         self._conn.executescript(sql)
         logger.info(f"schema 已应用: {path}")
 
     def execute(
         self, sql: str, params: tuple[Any, ...] = ()
     ) -> sqlcipher3.Cursor:
-        """执行单条 SQL（不自动 commit）。"""
-        return self._conn.execute(sql, params)
+        """执行单条 SQL（不自动 commit）。
+
+        D3.2 改进：临时设 `row_factory = _dict_factory` 后 execute，
+        execute 完**立即**还原为 None。理由：
+        - cursor 是惰性 fetchall — execute 时 row_factory 影响 cursor 内部
+        - 但我们 execute 后立刻还 row_factory = None（cursor 已绑定那个 factory）
+        - 业务代码拿到的 cursor 后续 .fetchall() 仍用 dict_factory
+        - conn.row_factory 常态 None 满足 SA 探针
+        """
+        self._conn.row_factory = _dict_factory
+        cursor = self._conn.execute(sql, params)
+        # 还原：cursor 已"绑定"了 dict_factory
+        self._conn.row_factory = None
+        return cursor
 
     def executemany(
         self, sql: str, params_list: list[tuple[Any, ...]]
     ) -> sqlcipher3.Cursor:
         """批量执行（不自动 commit，性能优于 N 次 execute）。"""
-        return self._conn.executemany(sql, params_list)
+        self._conn.row_factory = _dict_factory
+        cursor = self._conn.executemany(sql, params_list)
+        self._conn.row_factory = None
+        return cursor
 
     def fetch_all(
         self, sql: str, params: tuple[Any, ...] = ()
     ) -> list[dict[str, Any]]:
-        """跑 SELECT，返回所有行（每行 = dict[列名, 值]）。"""
-        # cast: sqlcipher3 没类型标注，mypy 推断为 list[Any]
-        return cast(list[dict[str, Any]], self._conn.execute(sql, params).fetchall())
+        """跑 SELECT，返回所有行（每行 = dict[列名, 值]）。
+
+        D3.2 实现：临时设 row_factory，execute 后**立即**还原为 None
+        （cursor.fetchall() 内部已用 dict_factory 生成 row，row_factory
+        对 cursor 的影响在 fetchall 时一次性读取）。
+        """
+        self._conn.row_factory = _dict_factory
+        cursor = self._conn.execute(sql, params)
+        try:
+            # cast: sqlcipher3 没类型标注，mypy 推断为 list[Any]
+            return cast(list[dict[str, Any]], cursor.fetchall())
+        finally:
+            # 还原：conn.row_factory 常态是 None（满足 SA 探针）
+            self._conn.row_factory = None
 
     def fetch_one(
         self, sql: str, params: tuple[Any, ...] = ()
     ) -> dict[str, Any] | None:
         """跑 SELECT，返回第一行 dict（无则 None）。"""
-        # cast: sqlcipher3 没类型标注，mypy 推断为 Any
-        return cast(dict[str, Any] | None, self._conn.execute(sql, params).fetchone())
+        self._conn.row_factory = _dict_factory
+        cursor = self._conn.execute(sql, params)
+        try:
+            # cast: sqlcipher3 没类型标注，mypy 推断为 Any
+            return cast(dict[str, Any] | None, cursor.fetchone())
+        finally:
+            self._conn.row_factory = None
 
     def commit(self) -> None:
         """显式 commit。"""

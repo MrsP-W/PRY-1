@@ -367,16 +367,21 @@ def test_connection_property_returns_raw_connection(
 
     设计：alembic 迁移需要 raw connection 调 `connection.run_sync(...)`，
     但直接用私有 `_conn` 是封装泄漏。`connection` property 是受控入口。
+
+    D3.2 调整：row_factory 常态是 None（D3.2 决策：让 SA dialect 探针天然 OK），
+    `db.fetch_*` 方法临时设 dict_factory（业务代码用），但 `db.connection`
+    这个**受控入口**直接拿 conn — row 是 tuple（D3.2 新行为）。
     """
     with Database.open(db_path=tmp_db_path) as db:
         raw = db.connection
         # 应是 sqlcipher3.Connection 实例（不是 sqlite3.Connection）
         assert isinstance(raw, sqlcipher3.Connection)
         # 验证能正常跑 SQL（说明 PRAGMA key / WAL 都生效）
-        # 注：Database.open() 把 conn.row_factory 设为 _dict_factory，row 是 dict 不是 tuple
+        # 注：D3.2 起 conn.row_factory 常态是 None，row 是 tuple（不是 dict）
         row = raw.execute("PRAGMA journal_mode").fetchone()
         assert row is not None
-        assert row["journal_mode"].lower() == "wal"
+        # row 是 tuple — (journal_mode,) 解构
+        assert row[0].lower() == "wal"
 
 
 def test_connection_property_raises_after_close(
