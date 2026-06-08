@@ -63,6 +63,7 @@ htmlcov/
 .tox/
 .cache
 coverage.xml
+coverage.json
 *.cover
 
 # MyPy

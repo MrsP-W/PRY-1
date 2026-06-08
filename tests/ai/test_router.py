@@ -32,7 +32,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
+import respx
 
 # 让 tests/ 目录能 import 兄弟包(参考 tests/connectors/test_imap.py 风格)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -51,6 +53,8 @@ from my_ai_employee.ai.fallback import (  # noqa: E402
     get_chain,
 )
 from my_ai_employee.ai.providers import (  # noqa: E402
+    LLMAPIError,
+    LLMError,
     LLMRequest,
     LLMResponse,
     OpenAICompatibleProvider,
@@ -250,29 +254,31 @@ class TestProviderFactory:
         )
         assert p.healthcheck() is False
 
-    def test_openai_compatible_chat_http_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """D4.1.1 边界: D4.1.0 的 NotImplementedError 测试已废弃, 改为验证真实 HTTP 错误处理.
+    def test_openai_compatible_chat_http_error(self) -> None:
+        """D4.1.1 阻塞修复: 真实网络/无效 API key 测试改 respx mock, 不依赖网络.
 
-        真实场景: 无 API Key → DeepSeek 返回 401 → LLMAPIError(由 router 触发 fallback).
-        此测试只验证抛错行为, 不验证 fallback 决策(fallback 决策在 test_router.py).
+        旧版本: 真实发 HTTP → 401 或 connection error, CI/离线环境会抖.
+        新版本: respx 拦截 httpx.post, 模拟 401 → 验证 LLMAPIError 抛错.
         """
         p = OpenAICompatibleProvider(
             provider_type=Provider.DEEPSEEK,
             base_url="https://api.deepseek.com/v1",
-            api_key="invalid-key",  # 故意给错, 让真实 DeepSeek 返回 401
+            api_key="invalid-key",
         )
-        request = LLMRequest(
-            model_full_id="deepseek/deepseek-chat",
-            messages=[{"role": "user", "content": "ping"}],
-        )
-        # 用 monkeypatch 限制超时(避免测试卡住)
-        monkeypatch.setattr(p, "_timeout", 5.0)
-        # 此测试依赖网络可达(可达则 401, 不可达则 LLMConnectionError)
-        # 两种都接受: 都属于"业务异常 → 应 fallback" 的范畴
-        from my_ai_employee.ai.providers import LLMError
-
-        with pytest.raises(LLMError):
-            p.chat(request)
+        with respx.mock:
+            respx.post("https://api.deepseek.com/v1/chat/completions").mock(
+                return_value=httpx.Response(401, text='{"error": "unauthorized"}')
+            )
+            with pytest.raises(LLMError) as exc_info:
+                p.chat(
+                    LLMRequest(
+                        model_full_id="deepseek/deepseek-chat",
+                        messages=[{"role": "user", "content": "ping"}],
+                    )
+                )
+        # 401 → LLMAPIError
+        assert isinstance(exc_info.value, LLMAPIError)
+        assert exc_info.value.status_code == 401
 
 
 # ============================================================
@@ -331,10 +337,10 @@ class TestRouterDecision:
         assert mock.calls[0].model_full_id == "deepseek/deepseek-chat"
 
     def test_primary_fails_falls_to_secondary(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """主选失败 → 走 secondary."""
+        """主选业务异常 → 走 secondary."""
         mock = _MockProviderResult(
             {
-                "deepseek/deepseek-chat": RuntimeError("deepseek down"),
+                "deepseek/deepseek-chat": LLMError("deepseek down"),
                 "qwen/qwen3-max": LLMResponse(
                     content="classify result (secondary)",
                     model_full_id="qwen/qwen3-max",
@@ -357,12 +363,12 @@ class TestRouterDecision:
         assert mock.calls[1].model_full_id == "qwen/qwen3-max"
 
     def test_all_fail_raises_runtime_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """全链失败 → RuntimeError(包含任务类型和 last_error)."""
+        """全链业务异常 → RuntimeError(包含任务类型和 last_error)."""
         mock = _MockProviderResult(
             {
-                "deepseek/deepseek-chat": RuntimeError("p1 fail"),
-                "qwen/qwen3-max": RuntimeError("p2 fail"),
-                "minimax/MiniMax-M3": RuntimeError("p3 fail"),
+                "deepseek/deepseek-chat": LLMError("p1 fail"),
+                "qwen/qwen3-max": LLMError("p2 fail"),
+                "minimax/MiniMax-M3": LLMError("p3 fail"),
             }
         )
         monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
@@ -483,10 +489,10 @@ class TestRouterDecision:
         assert stats["primary_success_rate"] == 1.0
 
     def test_stats_tracking_with_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """统计: 主选失败 1 次 + 备选成功 1 次."""
+        """统计: 主选业务异常 + 备选成功."""
         mock = _MockProviderResult(
             {
-                "deepseek/deepseek-chat": RuntimeError("p1 fail"),
+                "deepseek/deepseek-chat": LLMError("p1 fail"),
                 "qwen/qwen3-max": LLMResponse(
                     content="ok",
                     model_full_id="qwen/qwen3-max",
@@ -526,3 +532,101 @@ class TestRouterDecision:
         assert router._breaker("deepseek/deepseek-chat").is_open()
         router.reset_breakers()
         assert not router._breaker("deepseek/deepseek-chat").is_open()
+
+
+# ============================================================
+# Router 异常收窄(锁 D3.3.3 教训: 编程错误透传)
+# ============================================================
+
+
+class TestRouterExceptionNarrowing:
+    """D4.1.1 阻塞修复: router 只 catch LLMError, 编程错误直接透传.
+
+    教训来源: D3.3.3 "异常范围要窄化到真要处理的类型".
+    """
+
+    def test_programming_error_passes_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """ValueError(编程错误)从 chat() 抛出 → router 不 catch, 直接透传.
+
+        反向验证: 不再变成 RuntimeError("所有 fallback 都失败").
+        """
+        mock = _MockProviderResult(
+            {
+                "deepseek/deepseek-chat": ValueError("model_full_id 格式错误"),
+                "qwen/qwen3-max": LLMResponse(  # secondary 备好也不该用
+                    content="should not reach",
+                    model_full_id="qwen/qwen3-max",
+                    input_tokens=10,
+                    output_tokens=5,
+                    latency_ms=100,
+                ),
+            }
+        )
+        monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+        router = LLMRouter()
+        with pytest.raises(ValueError, match="格式错误"):
+            router.route(
+                task_type=TaskType.CLASSIFY,
+                messages=[{"role": "user", "content": "test"}],
+            )
+        # 关键: 只调了 primary, secondary 没被触发
+        assert len(mock.calls) == 1
+        assert mock.calls[0].model_full_id == "deepseek/deepseek-chat"
+
+    def test_type_error_passes_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """TypeError 同样透传(双保险)."""
+        mock = _MockProviderResult(
+            {
+                "deepseek/deepseek-chat": TypeError("messages 类型错"),
+            }
+        )
+        monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+        router = LLMRouter()
+        with pytest.raises(TypeError, match="messages"):
+            router.route(
+                task_type=TaskType.CLASSIFY,
+                messages=[{"role": "user", "content": "test"}],
+            )
+        assert len(mock.calls) == 1
+
+    def test_llm_error_subclass_triggers_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """LLMError 子类(LLMTimeoutError / LLMConnectionError / LLMAPIError / LLMResponseError)
+        都被 router 当业务异常处理, 走 fallback 链.
+
+        这是 D3.3.3 "窄化但不能漏" 的对偶断言 — 业务异常必须被 catch.
+        """
+        from my_ai_employee.ai.providers import (
+            LLMAPIError,
+            LLMConnectionError,
+            LLMResponseError,
+            LLMTimeoutError,
+        )
+
+        for business_exc in (
+            LLMTimeoutError("timeout"),
+            LLMConnectionError("conn fail"),
+            LLMAPIError("api err", status_code=500, body="x"),
+            LLMResponseError("parse fail"),
+        ):
+            mock = _MockProviderResult(
+                {
+                    "deepseek/deepseek-chat": business_exc,
+                    "qwen/qwen3-max": LLMResponse(
+                        content="recovered",
+                        model_full_id="qwen/qwen3-max",
+                        input_tokens=10,
+                        output_tokens=5,
+                        latency_ms=100,
+                    ),
+                }
+            )
+            monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+            router = LLMRouter()
+            response = router.route(
+                task_type=TaskType.CLASSIFY,
+                messages=[{"role": "user", "content": "test"}],
+            )
+            assert response.content == "recovered", f"{type(business_exc).__name__} 没走 fallback"

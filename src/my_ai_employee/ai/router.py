@@ -37,6 +37,7 @@ from .fallback import (
     get_chain,
 )
 from .providers import (
+    LLMError,
     LLMRequest,
     LLMResponse,
     get_provider,
@@ -180,11 +181,10 @@ class LLMRouter:
                     f"task_type={task_type.value}"
                 )
                 return response
-            except Exception as e:
-                # 业务错误(HTTP 4xx/5xx/超时) → 熔断 + 走链上下一档
-                # 编程错误(参数错/类型错) 不应到这里(provider 自己抛)
-                # D3.3.3 教训: 不要 catch-all 兜底 — 这里 catch 后只走链,
-                # 编程错误由 provider 自己抛(不 catch)
+            except LLMError as e:
+                # 业务错误(超时/连接/HTTP 4xx/5xx/响应解析)→ 熔断 + 走链上下一档
+                # 编程错误(ValueError/TypeError) 不 catch — 直接透传,
+                # 让调用方知道是"代码 bug"而非"网络问题"(D3.3.3 教训).
                 breaker.record_failure()
                 last_error = e
                 logger.warning(
