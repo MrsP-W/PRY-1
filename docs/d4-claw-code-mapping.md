@@ -101,8 +101,8 @@
 
 | D-step | 主题 | 优先参考 |
 |--------|------|---------|
-| D4.3 | Events 表契约 | `g004-events-reports-contract.md` + `g004-events-reports-verification-map.md` |
-| D4.4 | 任务策略板 | `g006-task-policy-board-verification-map.md` |
+| D4.3 | Events 表契约 | `g004-events-reports-contract.md` + `g004-events-reports-verification-map.md` (✅ §4 落地) |
+| D4.4 | 任务策略板 | `g006-task-policy-board-verification-map.md` (✅ §5 落地) |
 | D4.5 | release readiness | `personal-assistant-roadmap.md` + `g012-final-release-readiness-report.md` |
 | D4.6-D4.9 | 实际写 classifier/drafter | 用 `router.route()` 调 LLM,无新参考 |
 
@@ -183,7 +183,88 @@
 
 ---
 
-**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段)
+## 5. D4.4 任务策略板(✅ 2026-06-08 v1.0 锁定)
+
+> 落地 claw-code `g006-task-policy-board-verification-map.md` 的 4 大核心组件:TaskPacket 8 字段契约 + PolicyEngine 6 决策 + LaneBoard 3 lanes + Heartbeat 3 状态。
+
+### 5.1 claw-code 优先参考
+
+| 关注点 | claw-code 参考 | 提炼原则 | 落地位置 |
+|--------|---------------|---------|---------|
+| TaskPacket 8 必含字段 | `g006-task-policy-board-verification-map.md` §Task packet | objective / scope / resources / acceptance_criteria / model / provider / permission_profile / recovery_policy | `src/my_ai_employee/policy/task_packet.py` 8 字段 dataclass + `field(default=...)` 全部 default |
+| 6 决策规则 | `g006-task-policy-board-verification-map.md` §Executable policy decisions | retry / rebase / stale_cleanup / approval_token / merge / escalate | `src/my_ai_employee/policy/policy_engine.py` `PolicyDecisionKind` 6 枚举 + 6 rule 方法 |
+| 3 lanes + 状态转换 | `g006-task-policy-board-verification-map.md` §Active lane board | active / blocked / finished + ACTIVE↔BLOCKED→FINISHED 转换矩阵 | `src/my_ai_employee/policy/lane_board.py` `LaneStatus` 3 枚举 + `_assert_valid_transition` |
+| 3 状态心跳 | `g006-task-policy-board-verification-map.md` §Liveness heartbeat | healthy / stalled / transport_dead + 优先级 TRANSPORT_DEAD 最高 | `src/my_ai_employee/policy/heartbeat.py` `Liveness` 3 枚举 + `evaluate()` 优先级 |
+| PolicyDecisionEvent 落地 | (D4.3 复用, 不重复) | 复用 `EventStore.insert()` + 6 必含 metadata + 7 业务字段 | `policy_engine.py` `_emit_decision_event()` + 2 个 EventType 扩展 |
+
+### 5.2 不照搬的部分
+
+1. **不照搬 g006 §"policy.rs" 的 Rust trait object 多态** — Python 端用 `PolicyDecisionKind` StrEnum + 字典映射等价(避免引入 `abc.ABC` 复杂度)
+2. **不照搬 g006 §"status JSON" 完整 schema** — 只导出 `to_status_json()` 最小集(lanes / freshness / total / idle_threshold_ms),CLI 渲染留 D4.5+
+3. **不照搬 g006 §"approval_token_id" 的链式签名** — 只留字符串字段,token 实际生成/校验由 D4.5+ 业务层做(policy 层不引入密钥管理)
+4. **不照搬 g006 §"lane board 持久化"** — LaneBoard 是 in-memory,不落 events 表(与 EventStore 解耦),跨进程可见性留 D4.4.1+
+
+### 5.3 故意不学的部分
+
+1. **不学 g006 的 "policy 失败自动重试整个任务"** — D4.4 只声明 `EscalateRequired`,实际重试/升级由 caller 决定(D3.3.3 教训:异常窄化,不替 caller 决定)
+2. **不学 g006 的 "merge 触发后自动 push to main"** — D4.4 只声明 `MergeRequired`,实际 git 操作由 D4.5+ 执行(policy 层不依赖 git)
+3. **不学 g006 的 "transport_dead 自动重连"** — D4.4 只暴露 `assert_alive()` 抛错,重连由 transport 层(D4.2 MCP)自己处理
+
+### 5.4 实施子任务(2026-06-08 当日完成)
+
+| 子任务 | 文件 | 行数 |
+|--------|------|------|
+| 1. TaskPacket 8 字段契约 + JSON 双向 + Builder | `src/my_ai_employee/policy/task_packet.py` | 287 |
+| 2. Heartbeat 3 状态 + 优先级 + 便捷方法 | `src/my_ai_employee/policy/heartbeat.py` | 157 |
+| 3. LaneBoard 3 lanes + 状态转换矩阵 | `src/my_ai_employee/policy/lane_board.py` | 362 |
+| 4. PolicyEngine 6 决策 + EventStore 集成 | `src/my_ai_employee/policy/policy_engine.py` | 453 |
+| 5. 5 类业务异常 + PolicyError 基类 | `src/my_ai_employee/policy/exceptions.py` | 71 |
+| 6. 26 个公共 API 顶层导出 | `src/my_ai_employee/policy/__init__.py` | 95 |
+| 7. 2 个 EventType 扩展(复用 D4.3) | `src/my_ai_employee/events/models.py` | +2 |
+| 8. 5 个测试文件 + 167 测试 | `tests/policy/` | 1720 |
+| 9. D4.4 完成报告 | `reports/D4.4-任务策略板完成.md` | 540+ |
+
+**总产出**:6 src 模块(1425 行) + 1 enum 扩展 + 1 测试修复 + 5 测试文件(1720 行) + 1 报告(540 行) + 1 mapping 段(本段)。
+
+### 5.5 验证 anchor(等价于 g006 verification map 6 个 cargo test)
+
+| 验证项 | 测试文件 | 测试数 |
+|--------|----------|--------|
+| 5 子类层级 + raise/catch | `tests/policy/test_exceptions.py` | 10 |
+| 8 字段契约 + JSON 双向 + 向后兼容 | `tests/policy/test_task_packet.py` | 29 |
+| 3 状态 + 优先级 + now_ms 注入 | `tests/policy/test_heartbeat.py` | 27 |
+| 3 lanes + 状态转换矩阵 + freshness | `tests/policy/test_lane_board.py` | 50 |
+| 6 决策 + EventStore 集成 + fingerprint dedupe | `tests/policy/test_policy_engine.py` | 41 |
+| **总计** | | **157 passed** (含 10 conftest setup) |
+
+### 5.6 关键设计决策(D3.3.3 + D3.2 教训应用)
+
+| 决策 | 理由 | 教训来源 |
+|------|------|---------|
+| 8 字段全 `field(default=...)` | 旧 JSON 缺字段仍能 `from_dict()`,向后兼容 | g006 §Task packet "serde(default)" 强调 |
+| 5 类业务异常 + PolicyError 基类 | 异常窄化:每类对应一类业务错误,`except PolicyError` 可兜底 | D3.3.3 教训应用 |
+| 编程错误 (ValueError) 透传 | 不包装编程错误,避免掩盖问题 | D3.3.3 教训应用 |
+| Heartbeat 优先级 TRANSPORT_DEAD > STALLED > HEALTHY | transport 断连 = 必失败,优先于 idle 超时 | g006 §Liveness 段 |
+| LaneBoard 状态转换合法性矩阵 | 显式列出合法转换,非法抛 PolicyLaneError | g006 §Lane board 段 |
+| 6 决策 priority 排序 (escalate 100 > approval 80 > retry 70 > rebase 60 > stale_cleanup 50 > merge 40) | caller 按 priority 降序执行 | g006 §Executable policy decisions |
+| 复用 D4.3 EventStore (新增 2 EventType) | 不引入新表,统一事件流 | D4.3 单一职责延续 |
+| now_ms 时间注入 | 测试可控,避免 sleep/time 漂移 | D4.3 模式延续 |
+| LaneBoard in-memory,不落 events 表 | 与 EventStore 解耦,简化 D4.4 范围 | 单一职责原则 |
+| ApprovalToken 仅字符串字段 | token 生成/校验由 D4.5+ 业务层做 | 关注点分离 |
+
+### 5.7 已知限制(D4.4.1+ 复检 P 项)
+
+| 限制 | D4.4.1+ 改进方向 |
+|------|-----------------|
+| 6 决策是"声明式评估",不替 caller 执行 | 提供 executor pattern(D4.5+ 业务层) |
+| LaneBoard in-memory,跨进程不可见 | D4.4.1+ 落 events 表(lane.entry.added / status_changed) |
+| ApprovalToken 无独立存储 | D4.4.1+ 引入 token 签发/校验(基于 events 表 audit log) |
+| Status JSON 未接 CLI | D4.5+ 加 `mmx policy status` 子命令 |
+| Policy 失败 fallback 是 escalate | D4.4.1+ 加 retry policy for 评估本身 |
+
+---
+
+**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
