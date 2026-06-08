@@ -121,25 +121,15 @@ class Email(Base):
     source: Mapped[str] = mapped_column(Text, nullable=False)
     uid: Mapped[int] = mapped_column(Integer, nullable=False)
     message_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    subject: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    sender: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
+    subject: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    sender: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     recipients: Mapped[list[str]] = mapped_column(
         JSONList, nullable=False, default=list, server_default="[]"
     )
     received_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    raw_size: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
-    body_text: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    body_html: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
+    raw_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    body_text: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    body_html: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     fetched_at: Mapped[int] = mapped_column(Integer, nullable=False)
     labels: Mapped[list[str]] = mapped_column(
         JSONList, nullable=False, default=list, server_default="[]"
@@ -175,7 +165,9 @@ class Email(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Email id={self.id} source={self.source!r} uid={self.uid} subject={self.subject!r}>"
+        return (
+            f"<Email id={self.id} source={self.source!r} uid={self.uid} subject={self.subject!r}>"
+        )
 
 
 # ===== 2. Attachment =====
@@ -207,21 +199,11 @@ class Attachment(Base):
         ForeignKey("emails.id", ondelete="CASCADE"),
         nullable=False,
     )
-    filename: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    content_type: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    size: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
-    local_path: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    sha256: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
+    filename: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    content_type: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    local_path: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    sha256: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
 
     # 关系
     email: Mapped[Email] = relationship("Email", back_populates="attachments")
@@ -360,15 +342,11 @@ class SyncState(Base):
     last_sync_at: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
-    last_uid: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, server_default="0"
-    )
+    last_uid: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     last_status: Mapped[str] = mapped_column(
         Text, nullable=False, default="pending", server_default="pending"
     )
-    last_error: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
+    last_error: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     consecutive_failures: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
@@ -403,12 +381,8 @@ class AuditLog(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     event: Mapped[str] = mapped_column(Text, nullable=False)
-    source: Mapped[str] = mapped_column(
-        Text, nullable=False, default="", server_default=""
-    )
-    detail: Mapped[str] = mapped_column(
-        Text, nullable=False, default="{}", server_default="{}"
-    )
+    source: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    detail: Mapped[str] = mapped_column(Text, nullable=False, default="{}", server_default="{}")
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
 
     # 索引（DESC 倒序与 D3.1 schema.sql 对齐：审计日志热路径"按时间倒序取最近事件"）

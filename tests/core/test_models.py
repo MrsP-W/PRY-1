@@ -149,8 +149,12 @@ def test_email_message_id_nullable(session_factory) -> None:  # type: ignore[no-
     """Email.message_id 可空（D3.1.1 修正）。"""
     with session_factory() as session:
         e = Email(
-            source="qq", uid=1, subject="no-mid", sender="x@y.com",
-            received_at=1000, fetched_at=2000,
+            source="qq",
+            uid=1,
+            subject="no-mid",
+            sender="x@y.com",
+            received_at=1000,
+            fetched_at=2000,
         )
         session.add(e)
         session.commit()
@@ -166,7 +170,10 @@ def test_email_received_at_nullable(session_factory) -> None:  # type: ignore[no
     """Email.received_at 可空（D3.1.1 修正）。"""
     with session_factory() as session:
         e = Email(
-            source="qq", uid=1, subject="no-date", sender="x@y.com",
+            source="qq",
+            uid=1,
+            subject="no-date",
+            sender="x@y.com",
             fetched_at=2000,
         )
         session.add(e)
@@ -219,8 +226,12 @@ def test_attachment_create_and_query(session_factory) -> None:  # type: ignore[n
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
         a = Attachment(
-            email=e, filename="a.txt", content_type="text/plain",
-            size=10, local_path="/tmp/a.txt", sha256="abc",
+            email=e,
+            filename="a.txt",
+            content_type="text/plain",
+            size=10,
+            local_path="/tmp/a.txt",
+            sha256="abc",
         )
         session.add_all([e, a])
         session.commit()
@@ -366,8 +377,10 @@ def test_audit_log_create_and_query(session_factory) -> None:  # type: ignore[no
     """AuditLog: 创建 + event/source/detail/created_at 都持久化。"""
     with session_factory() as session:
         a = AuditLog(
-            event="sync_completed", source="qq",
-            detail='{"count": 10}', created_at=4_000,
+            event="sync_completed",
+            source="qq",
+            detail='{"count": 10}',
+            created_at=4_000,
         )
         session.add(a)
         session.commit()
@@ -483,11 +496,7 @@ def test_email_label_create_and_back_populates(session_factory) -> None:  # type
         assert lbl_got.email_labels[0].email_id == eid
 
         # EmailLabel.email + EmailLabel.label 双向
-        el_got = (
-            session.query(EmailLabel)
-            .filter_by(email_id=el_eid, label_id=el_lid)
-            .one()
-        )
+        el_got = session.query(EmailLabel).filter_by(email_id=el_eid, label_id=el_lid).one()
         assert el_got.email.source == "qq"
         assert el_got.label.name == "inbox"
 
@@ -552,7 +561,10 @@ def test_jsonlist_serialize_deserialize(session_factory) -> None:  # type: ignor
     """JSONList 字段存 list[str] / 读回 list[str]（含中文 + 边界）。"""
     with session_factory() as session:
         e = Email(
-            source="qq", uid=1, sender="x@y.com", fetched_at=2000,
+            source="qq",
+            uid=1,
+            sender="x@y.com",
+            fetched_at=2000,
             recipients=["alice@example.com", "bob@example.com"],
             labels=["收件箱", "重要"],
         )
@@ -604,8 +616,7 @@ def test_emails_received_at_index_is_desc(tmp_db_path: Path, fake_keychain: dict
         # 用 raw SQL pragma 验证真实 DDL 是 DESC
         with engine.connect() as conn:
             ddl_rows = conn.exec_driver_sql(
-                "SELECT sql FROM sqlite_master "
-                "WHERE type='index' AND name='idx_emails_received_at'"
+                "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_emails_received_at'"
             ).fetchall()
             assert ddl_rows, "index not found in sqlite_master"
             ddl = ddl_rows[0][0]

@@ -65,9 +65,7 @@ def fake_keychain(monkeypatch):
 # ===== Keychain 密码管理 =====
 
 
-def test_first_open_generates_password(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_first_open_generates_password(tmp_db_path: Path, fake_keychain: dict) -> None:
     """首次启动：Keychain 缺密码 → 自动生成 32 字节随机串存进去。"""
     assert not fake_keychain  # Keychain 是空的
 
@@ -81,9 +79,7 @@ def test_first_open_generates_password(
     db.close()
 
 
-def test_keychain_password_persists_across_opens(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_keychain_password_persists_across_opens(tmp_db_path: Path, fake_keychain: dict) -> None:
     """第二次开 DB：复用 Keychain 已有密码（不重新生成）。"""
     with Database.open(db_path=tmp_db_path):
         pass
@@ -97,16 +93,13 @@ def test_keychain_password_persists_across_opens(
 # ===== 加密往返 =====
 
 
-def test_db_round_trip_with_correct_password(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_db_round_trip_with_correct_password(tmp_db_path: Path, fake_keychain: dict) -> None:
     """建库 + 写 1 行 + 关 + 用同一密码重开 + 能读出。"""
     # 1. 写
     db = Database.open(db_path=tmp_db_path)
     db.init_schema()
     db.execute(
-        "INSERT INTO sync_state (source, last_sync_at, last_uid, updated_at) "
-        "VALUES (?, ?, ?, ?)",
+        "INSERT INTO sync_state (source, last_sync_at, last_uid, updated_at) VALUES (?, ?, ?, ?)",
         ("qq", 1000, 42, 2000),
     )
     db.commit()
@@ -121,9 +114,7 @@ def test_db_round_trip_with_correct_password(
     db2.close()
 
 
-def test_db_rejects_wrong_password(
-    tmp_db_path: Path, fake_keychain: dict, monkeypatch
-) -> None:
+def test_db_rejects_wrong_password(tmp_db_path: Path, fake_keychain: dict, monkeypatch) -> None:
     """错误密码重开 → Database.open() 时主动抛 sqlcipher3.DatabaseError。
 
     设计：db.py 主动跑 PRAGMA quick_check 触发密码校验
@@ -134,7 +125,9 @@ def test_db_rejects_wrong_password(
         db.init_schema()
 
     # 2. 篡改 Keychain 密码
-    fake_keychain[(keychain.SERVICE_DB, "data.db")] = "wrong-password-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    fake_keychain[(keychain.SERVICE_DB, "data.db")] = (
+        "wrong-password-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    )
 
     # 3. 错误密码重开 → open() 主动抛 DatabaseError
     with pytest.raises(sqlcipher3.DatabaseError, match="密码错误"):
@@ -154,15 +147,11 @@ EXPECTED_TABLES = {
 }
 
 
-def test_init_schema_creates_all_tables(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_init_schema_creates_all_tables(tmp_db_path: Path, fake_keychain: dict) -> None:
     """init_schema 后，6 张表都存在。"""
     with Database.open(db_path=tmp_db_path) as db:
         db.init_schema()
-        rows = db.fetch_all(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        rows = db.fetch_all("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         table_names = {row["name"] for row in rows}
 
     # 过滤掉 sqlite 内部表（sqlite_sequence 等）
@@ -170,9 +159,7 @@ def test_init_schema_creates_all_tables(
     assert actual == EXPECTED_TABLES, f"缺表：{EXPECTED_TABLES - actual}"
 
 
-def test_init_schema_is_idempotent(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_init_schema_is_idempotent(tmp_db_path: Path, fake_keychain: dict) -> None:
     """重复调用 init_schema 不爆（IF NOT EXISTS 幂等）。"""
     with Database.open(db_path=tmp_db_path) as db:
         db.init_schema()
@@ -180,9 +167,7 @@ def test_init_schema_is_idempotent(
         db.init_schema()  # 第三遍
 
 
-def test_init_schema_creates_indexes(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_init_schema_creates_indexes(tmp_db_path: Path, fake_keychain: dict) -> None:
     """schema.sql 里的索引都创建了。"""
     with Database.open(db_path=tmp_db_path) as db:
         db.init_schema()
@@ -209,9 +194,7 @@ def test_init_schema_creates_indexes(
 # ===== CRUD 基本操作 =====
 
 
-def test_execute_and_fetch_all(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_execute_and_fetch_all(tmp_db_path: Path, fake_keychain: dict) -> None:
     """execute + fetch_all + fetch_one 基础流程。"""
     with Database.open(db_path=tmp_db_path) as db:
         db.init_schema()
@@ -233,9 +216,7 @@ def test_execute_and_fetch_all(
         assert one["source"] == "gmail"
 
 
-def test_unique_constraint_on_emails_source_uid(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_unique_constraint_on_emails_source_uid(tmp_db_path: Path, fake_keychain: dict) -> None:
     """emails 表 UNIQUE(source, uid) 约束生效（D3.1.1 修正：去重键改 IMAP UID）。
 
     原因：RFC 5322 Message-ID 经常缺失（垃圾邮件 / 某些 server 不生成），
@@ -273,9 +254,7 @@ def test_foreign_keys_enabled(tmp_db_path: Path, fake_keychain: dict) -> None:
 # ===== PRAGMA 配置（D3.1.1 增：WAL / busy_timeout / synchronous）=====
 
 
-def test_journal_mode_is_wal(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_journal_mode_is_wal(tmp_db_path: Path, fake_keychain: dict) -> None:
     """PRAGMA journal_mode = WAL 开启（多读单写不阻塞，D3.3 同步脚本并发读必要）。"""
     with Database.open(db_path=tmp_db_path) as db:
         result = db.fetch_one("PRAGMA journal_mode")
@@ -284,9 +263,7 @@ def test_journal_mode_is_wal(
         assert result["journal_mode"].lower() == "wal"
 
 
-def test_busy_timeout_is_5000(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_busy_timeout_is_5000(tmp_db_path: Path, fake_keychain: dict) -> None:
     """PRAGMA busy_timeout = 5000（DB 锁等 5s 再失败，D3.3 写并发必要）。
 
     注：PRAGMA busy_timeout 查询列名是 "timeout"（不是 "busy_timeout"）— SQLite 文档规定。
@@ -298,9 +275,7 @@ def test_busy_timeout_is_5000(
         assert result["timeout"] == 5000
 
 
-def test_synchronous_is_normal(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_synchronous_is_normal(tmp_db_path: Path, fake_keychain: dict) -> None:
     """PRAGMA synchronous = NORMAL（WAL 模式下推荐，性能/安全平衡）。"""
     with Database.open(db_path=tmp_db_path) as db:
         result = db.fetch_one("PRAGMA synchronous")
@@ -312,9 +287,7 @@ def test_synchronous_is_normal(
 # ===== 字段可空（D3.1.1 增：message_id / received_at）=====
 
 
-def test_message_id_is_nullable(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_message_id_is_nullable(tmp_db_path: Path, fake_keychain: dict) -> None:
     """emails.message_id 可空（D3.1.1 修正：IMAP 邮件可能没有 message_id）。
 
     设计：垃圾邮件 / 某些 IMAP server 不生成 Message-ID，
@@ -324,8 +297,7 @@ def test_message_id_is_nullable(
         db.init_schema()
         # 不传 message_id → 应允许
         db.execute(
-            "INSERT INTO emails (source, uid, subject, fetched_at) "
-            "VALUES (?, ?, ?, ?)",
+            "INSERT INTO emails (source, uid, subject, fetched_at) VALUES (?, ?, ?, ?)",
             ("qq", 1, "No Message-ID", 2000),
         )
         db.commit()
@@ -334,9 +306,7 @@ def test_message_id_is_nullable(
         assert row["message_id"] is None
 
 
-def test_received_at_is_nullable(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_received_at_is_nullable(tmp_db_path: Path, fake_keychain: dict) -> None:
     """emails.received_at 可空（D3.1.1 修正：envelope.date 可能 None）。
 
     设计：D2 IMAPConnector.envelope.date 可能为 None（缺 Date 头），
@@ -346,8 +316,7 @@ def test_received_at_is_nullable(
         db.init_schema()
         # 不传 received_at → 应允许（D3.3 入库映射层需 fallback 到 fetched_at）
         db.execute(
-            "INSERT INTO emails (source, uid, subject, fetched_at) "
-            "VALUES (?, ?, ?, ?)",
+            "INSERT INTO emails (source, uid, subject, fetched_at) VALUES (?, ?, ?, ?)",
             ("qq", 1, "No Date Header", 2000),
         )
         db.commit()
@@ -360,9 +329,7 @@ def test_received_at_is_nullable(
 # ===== 受控 connection 入口（D3.1.2 增：供 D3.2 alembic env.py 用）=====
 
 
-def test_connection_property_returns_raw_connection(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_connection_property_returns_raw_connection(tmp_db_path: Path, fake_keychain: dict) -> None:
     """db.connection 返回底层 sqlcipher3.Connection（D3.1.2 受控入口）。
 
     设计：alembic 迁移需要 raw connection 调 `connection.run_sync(...)`，
@@ -384,9 +351,7 @@ def test_connection_property_returns_raw_connection(
         assert row[0].lower() == "wal"
 
 
-def test_connection_property_raises_after_close(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_connection_property_raises_after_close(tmp_db_path: Path, fake_keychain: dict) -> None:
     """DB 关闭后访问 db.connection 抛 RuntimeError（避免使用半关连接）。"""
     db = Database.open(db_path=tmp_db_path)
     db.close()
@@ -407,9 +372,7 @@ def test_connection_property_raises_after_context_exit(
 # ===== 上下文管理器事务 =====
 
 
-def test_context_manager_commits_on_success(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_context_manager_commits_on_success(tmp_db_path: Path, fake_keychain: dict) -> None:
     """with 块正常退出 → 自动 commit。"""
     with Database.open(db_path=tmp_db_path) as db:
         db.init_schema()
@@ -424,9 +387,7 @@ def test_context_manager_commits_on_success(
         assert row is not None
 
 
-def test_context_manager_rolls_back_on_exception(
-    tmp_db_path: Path, fake_keychain: dict
-) -> None:
+def test_context_manager_rolls_back_on_exception(tmp_db_path: Path, fake_keychain: dict) -> None:
     """with 块抛异常 → 自动 rollback（数据不写入）。"""
     with pytest.raises(RuntimeError, match="boom"), Database.open(db_path=tmp_db_path) as db:
         db.init_schema()

@@ -75,12 +75,18 @@ def build_parser() -> argparse.ArgumentParser:
 def _strip_rich_tags(line: str) -> str:
     """降级模式：去除 rich 标签得到纯文本（拆出来便于单测）。"""
     for tag in [
-        "[bold green]", "[/bold green]",
-        "[cyan]", "[/cyan]",
-        "[dim]", "[/dim]",
-        "[yellow]", "[/yellow]",
-        "[green]", "[/green]",
-        "[bold]", "[/bold]",
+        "[bold green]",
+        "[/bold green]",
+        "[cyan]",
+        "[/cyan]",
+        "[dim]",
+        "[/dim]",
+        "[yellow]",
+        "[/yellow]",
+        "[green]",
+        "[/green]",
+        "[bold]",
+        "[/bold]",
     ]:
         line = line.replace(tag, "")
     return line
@@ -197,8 +203,7 @@ def print_info() -> None:
 def run_interactive() -> None:
     """交互模式（占位）。"""
     msg = (
-        "⏳ 交互模式尚未实现（Week 1 D5 接入菜单栏后可用）\n"
-        "当前可用的命令：hello / info / version"
+        "⏳ 交互模式尚未实现（Week 1 D5 接入菜单栏后可用）\n当前可用的命令：hello / info / version"
     )
     print(msg)
 

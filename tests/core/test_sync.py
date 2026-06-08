@@ -456,6 +456,68 @@ def test_sync_persists_jsonlist_fields(
     assert orm_email.labels == ["inbox", "important"]
 
 
+# ===== 8.5 UNIQUE(source, uid) 冲突 — D3.3.1 修复锁定测试 =====
+
+
+def test_sync_skips_duplicate_uids_without_advancing_last_uid(
+    db: Database,
+) -> None:
+    """真实 UNIQUE(source, uid) 冲突：第二次 sync 同 batch 应 skipped=len,
+    max_uid=0（不推进 last_uid，避免后续数据丢失）。
+
+    D3.3.1 修复关键：若不重置 max_uid=0，SyncState.last_uid 会跳到冲突 uid，
+    下次 sync 时 `uid > last_uid` 过滤会跳过中间未入库邮件（数据丢失）。
+
+    测试设计：
+        1. 第 1 次 sync：100 封入库 → last_uid=100
+        2. 手动重置 SyncState.last_uid=0（模拟"重新同步"场景）
+        3. 第 2 次 sync：同 100 封 → 100 个 UNIQUE 冲突
+        4. 验证：skipped=100, inserted=0, max_uid=0（不推进）
+    """
+    raw = [make_raw(uid=i + 1) for i in range(100)]
+
+    # 第 1 次 sync：100 封全部入库
+    sync1 = IMAPSync(db, FakeIMAPConnector(raw), batch_size=100)
+    try:
+        r1 = _arun(sync1.run_once())
+    finally:
+        sync1.close()
+    assert r1.inserted == 100
+    assert r1.skipped == 0
+    assert r1.new_last_uid == 100
+
+    # 手动重置 SyncState.last_uid=0（模拟"重新同步"但 DB 已有数据）
+    # 用 db.execute 直跑 SQL（避免依赖 sync1._session_factory 已被 close 置 None）
+    # ⚠️ db.execute 不自动 commit（D3.2 设计），必须显式 db.commit()
+    db.execute("UPDATE sync_state SET last_uid = 0 WHERE source = 'qq'")
+    db.commit()
+    state_rows = db.fetch_all("SELECT last_uid FROM sync_state WHERE source = 'qq'")
+    assert state_rows[0]["last_uid"] == 0  # 确认重置成功
+
+    # 第 2 次 sync：同 100 封 → 100 个 UNIQUE 冲突
+    sync2 = IMAPSync(db, FakeIMAPConnector(raw), batch_size=100)
+    try:
+        r2 = _arun(sync2.run_once())
+    finally:
+        sync2.close()
+
+    # 关键断言（D3.3.1 修复锁定）
+    assert r2.inserted == 0
+    assert r2.skipped == 100  # 整批视作 skipped
+    assert r2.failed == 0
+    # ⚠️ 关键：max_uid=0 不推进 last_uid（保持重置后的 0）
+    assert r2.new_last_uid == 0
+
+    # DB 验证：sync_state.last_uid 应保持 0（不跳到 100）
+    rows = db.fetch_all("SELECT last_uid FROM sync_state WHERE source = 'qq'")
+    assert len(rows) == 1
+    assert rows[0]["last_uid"] == 0
+
+    # DB 验证：emails 表仍只有 100 行（未重复插入）
+    rows = db.fetch_all("SELECT COUNT(*) AS cnt FROM emails WHERE source = 'qq'")
+    assert rows[0]["cnt"] == 100
+
+
 # ===== 9. 完整清理：close() 被调用 =====
 
 

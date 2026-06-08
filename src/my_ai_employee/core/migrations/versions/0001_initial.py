@@ -22,6 +22,7 @@ D3.2.3 修复（4 项阻塞问题）：
     - recipients / labels 用 `sa.Text()` + `server_default="[]"`（业务层
       JSONList TypeDecorator 处理 list ↔ JSON 文本）
 """
+
 from __future__ import annotations
 
 from collections.abc import Sequence
@@ -151,9 +152,7 @@ def upgrade() -> None:
         sa.Column("detail", sa.Text(), nullable=False, server_default="{}"),
         sa.Column("created_at", sa.Integer(), nullable=False),
     )
-    op.create_index(
-        "idx_audit_log_created_at", "audit_log", [sa.text("created_at DESC")]
-    )
+    op.create_index("idx_audit_log_created_at", "audit_log", [sa.text("created_at DESC")])
     op.create_index("idx_audit_log_event", "audit_log", ["event"])
 
 

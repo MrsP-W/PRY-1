@@ -102,9 +102,7 @@ def run_spike(n: int) -> int:
     try:
         # 2) 初始化 DB schema（用 D3.1 schema.sql — executescript 支持多语句）
         db = Database.open(db_path=tmp_db)
-        schema_path = (
-            PROJECT_ROOT / "src" / "my_ai_employee" / "core" / "schema.sql"
-        )
+        schema_path = PROJECT_ROOT / "src" / "my_ai_employee" / "core" / "schema.sql"
         if schema_path.exists():
             with open(schema_path, encoding="utf-8") as f:
                 db._conn.executescript(f.read())  # noqa: SLF001
@@ -141,14 +139,10 @@ def run_spike(n: int) -> int:
         # 5) 验收
         passed = result.duration_seconds < 30.0
         if passed:
-            _print(
-                f"\n✅ Spike 通过：{result.duration_seconds:.2f}s < 30s"
-            )
+            _print(f"\n✅ Spike 通过：{result.duration_seconds:.2f}s < 30s")
             return 0
         else:
-            _print_err(
-                f"Spike 失败：{result.duration_seconds:.2f}s ≥ 30s"
-            )
+            _print_err(f"Spike 失败：{result.duration_seconds:.2f}s ≥ 30s")
             return 1
 
     except Exception as e:
@@ -168,9 +162,7 @@ def run_spike(n: int) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="D3.3 — 1 万封 spike")
-    parser.add_argument(
-        "--n", type=int, default=10_000, help="mock 邮件数（默认 10000）"
-    )
+    parser.add_argument("--n", type=int, default=10_000, help="mock 邮件数（默认 10000）")
     args = parser.parse_args()
     return run_spike(args.n)
 

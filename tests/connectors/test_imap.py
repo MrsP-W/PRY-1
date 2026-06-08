@@ -144,7 +144,7 @@ def test_healthcheck_triggers_circuit_breaker(monkeypatch) -> None:
 
     for i in range(CIRCUIT_BREAKER_THRESHOLD):
         status = asyncio.run(conn.healthcheck())
-        assert status.ok is False, f"第 {i+1} 次 healthcheck 应失败"
+        assert status.ok is False, f"第 {i + 1} 次 healthcheck 应失败"
 
     # 第 3 次失败后，熔断应已开启
     assert conn.circuit_state["is_open"] is True
@@ -191,7 +191,9 @@ def test_fetch_returns_envelope_dicts(
     mock_client.search_uids = [1, 2]
     mock_client.fetch_data = {
         **make_envelope(1, subject="First", sender="a@x.com", received_at=now),
-        **make_envelope(2, subject="Second", sender="b@x.com", received_at=now - timedelta(hours=1)),
+        **make_envelope(
+            2, subject="Second", sender="b@x.com", received_at=now - timedelta(hours=1)
+        ),
     }
     since = datetime.now(UTC) - timedelta(days=7)
     result = asyncio.run(installed_connector.fetch(since))
@@ -216,6 +218,7 @@ def test_safe_fetch_isolates_failure(monkeypatch) -> None:
         "get_imap_password",
         lambda email: keychain.KeychainResult(ok=True, value="x"),
     )
+
     # 让 search 抛错
     def boom(_criteria):
         raise ConnectionError("Mock: network down")
@@ -239,9 +242,7 @@ def test_safe_fetch_circuit_breaker_opens(monkeypatch) -> None:
         "get_imap_password",
         lambda email: keychain.KeychainResult(ok=True, value="x"),
     )
-    monkeypatch.setattr(
-        mock, "search", lambda _c: (_ for _ in ()).throw(ConnectionError("boom"))
-    )
+    monkeypatch.setattr(mock, "search", lambda _c: (_ for _ in ()).throw(ConnectionError("boom")))
 
     since = datetime.now(UTC) - timedelta(days=1)
     for _ in range(CIRCUIT_BREAKER_THRESHOLD):

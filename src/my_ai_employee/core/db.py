@@ -167,9 +167,7 @@ class Database:
         except sqlcipher3.DatabaseError as e:
             # 关闭连接再重抛，避免半开连接泄漏
             conn.close()
-            raise sqlcipher3.DatabaseError(
-                f"DB 打开失败：密码错误或文件损坏 ({e})"
-            ) from e
+            raise sqlcipher3.DatabaseError(f"DB 打开失败：密码错误或文件损坏 ({e})") from e
         logger.info(f"DB 打开: path={path}")
 
         return cls(conn, path)
@@ -187,9 +185,7 @@ class Database:
         self._conn.executescript(sql)
         logger.info(f"schema 已应用: {path}")
 
-    def execute(
-        self, sql: str, params: tuple[Any, ...] = ()
-    ) -> sqlcipher3.Cursor:
+    def execute(self, sql: str, params: tuple[Any, ...] = ()) -> sqlcipher3.Cursor:
         """执行单条 SQL（不自动 commit）。
 
         D3.2 改进：临时设 `row_factory = _dict_factory` 后 execute，
@@ -205,18 +201,14 @@ class Database:
         self._conn.row_factory = None
         return cursor
 
-    def executemany(
-        self, sql: str, params_list: list[tuple[Any, ...]]
-    ) -> sqlcipher3.Cursor:
+    def executemany(self, sql: str, params_list: list[tuple[Any, ...]]) -> sqlcipher3.Cursor:
         """批量执行（不自动 commit，性能优于 N 次 execute）。"""
         self._conn.row_factory = _dict_factory
         cursor = self._conn.executemany(sql, params_list)
         self._conn.row_factory = None
         return cursor
 
-    def fetch_all(
-        self, sql: str, params: tuple[Any, ...] = ()
-    ) -> list[dict[str, Any]]:
+    def fetch_all(self, sql: str, params: tuple[Any, ...] = ()) -> list[dict[str, Any]]:
         """跑 SELECT，返回所有行（每行 = dict[列名, 值]）。
 
         D3.2 实现：临时设 row_factory，execute 后**立即**还原为 None
@@ -232,9 +224,7 @@ class Database:
             # 还原：conn.row_factory 常态是 None（满足 SA 探针）
             self._conn.row_factory = None
 
-    def fetch_one(
-        self, sql: str, params: tuple[Any, ...] = ()
-    ) -> dict[str, Any] | None:
+    def fetch_one(self, sql: str, params: tuple[Any, ...] = ()) -> dict[str, Any] | None:
         """跑 SELECT，返回第一行 dict（无则 None）。"""
         self._conn.row_factory = _dict_factory
         cursor = self._conn.execute(sql, params)

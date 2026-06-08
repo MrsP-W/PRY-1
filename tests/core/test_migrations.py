@@ -138,9 +138,7 @@ def test_alembic_version_records_current_revision(
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
-            version = conn.exec_driver_sql(
-                "SELECT version_num FROM alembic_version"
-            ).fetchone()
+            version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
         assert version[0] == "0001_initial"
     finally:
@@ -164,8 +162,7 @@ def test_alembic_schema_matches_d31_sql(
         with engine.connect() as conn:
             # emails.recipients 必须是 TEXT DEFAULT '[]'（不是 JSON）
             col = conn.exec_driver_sql(
-                "SELECT type, dflt_value FROM pragma_table_info('emails') "
-                "WHERE name='recipients'"
+                "SELECT type, dflt_value FROM pragma_table_info('emails') WHERE name='recipients'"
             ).fetchone()
             assert col is not None
             assert col[0] == "TEXT", f"expected TEXT, got {col[0]}"
@@ -173,8 +170,7 @@ def test_alembic_schema_matches_d31_sql(
 
             # emails.labels 同样
             col = conn.exec_driver_sql(
-                "SELECT type, dflt_value FROM pragma_table_info('emails') "
-                "WHERE name='labels'"
+                "SELECT type, dflt_value FROM pragma_table_info('emails') WHERE name='labels'"
             ).fetchone()
             assert col is not None
             assert col[0] == "TEXT"
@@ -209,8 +205,7 @@ def test_alembic_creates_desc_indexes(
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
             ddl_rows = conn.exec_driver_sql(
-                "SELECT sql FROM sqlite_master "
-                "WHERE type='index' AND name='idx_emails_received_at'"
+                "SELECT sql FROM sqlite_master WHERE type='index' AND name='idx_emails_received_at'"
             ).fetchall()
             assert ddl_rows, "idx_emails_received_at not found"
             assert "DESC" in ddl_rows[0][0]

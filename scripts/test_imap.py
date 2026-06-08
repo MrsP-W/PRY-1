@@ -79,19 +79,14 @@ async def cmd_check(email: str, provider: str) -> int:
     status = await connector.healthcheck()
     if status.ok:
         _print(
-            f"✅ 健康检查通过: latency={status.latency_ms:.1f}ms "
-            f"circuit_open={status.circuit_open}"
+            f"✅ 健康检查通过: latency={status.latency_ms:.1f}ms circuit_open={status.circuit_open}"
         )
         return 0
-    _print_err(
-        f"健康检查失败: error={status.error} latency={status.latency_ms:.1f}ms"
-    )
+    _print_err(f"健康检查失败: error={status.error} latency={status.latency_ms:.1f}ms")
     return 1
 
 
-async def cmd_fetch_latest(
-    email: str, provider: str, days: int, limit: int
-) -> int:
+async def cmd_fetch_latest(email: str, provider: str, days: int, limit: int) -> int:
     """拉取最近 N 天的邮件。"""
     since = datetime.now(UTC) - timedelta(days=days)
     connector = IMAPConnector(provider=provider, email=email)
@@ -252,9 +247,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.check:
             return asyncio.run(cmd_check(args.email, args.provider))
         if args.fetch_latest:
-            return asyncio.run(
-                cmd_fetch_latest(args.email, args.provider, args.days, args.limit)
-            )
+            return asyncio.run(cmd_fetch_latest(args.email, args.provider, args.days, args.limit))
     except KeyboardInterrupt:
         _print_err("用户中断（Ctrl-C）")
         return 130

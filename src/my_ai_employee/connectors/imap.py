@@ -94,9 +94,7 @@ class IMAPConnector(BaseConnector):
     def __init__(self, provider: str, email: str) -> None:
         super().__init__()  # 初始化熔断状态
         if provider not in SERVER_CONFIGS:
-            raise ValueError(
-                f"未知 provider: {provider!r}（支持：{list(SERVER_CONFIGS)}）"
-            )
+            raise ValueError(f"未知 provider: {provider!r}（支持：{list(SERVER_CONFIGS)}）")
         # D2 阶段白名单：仅 QQ 邮箱走授权码模式。
         # Outlook/Gmail 需 OAuth 2.0，留给 D2.5 spike；提前构造就报错（fail-fast）
         # 避免 D3 误用。
@@ -180,9 +178,7 @@ class IMAPConnector(BaseConnector):
         # imapclient 的 search 需要 naive UTC 时间
         since_naive = since.astimezone(UTC).replace(tzinfo=None)
         try:
-            uids = await asyncio.to_thread(
-                self._client.search, ["SINCE", since_naive]
-            )
+            uids = await asyncio.to_thread(self._client.search, ["SINCE", since_naive])
         except Exception as e:
             # 重新抛 → 让 safe_fetch 接住
             raise ConnectionError(f"IMAP search 失败: {e!r}") from e
@@ -212,9 +208,7 @@ class IMAPConnector(BaseConnector):
         )
         return results
 
-    def _envelope_to_dict(
-        self, uid: int | bytes, envelope: Any, size: int
-    ) -> dict[str, Any]:
+    def _envelope_to_dict(self, uid: int | bytes, envelope: Any, size: int) -> dict[str, Any]:
         """imapclient 的 ENVELOPE → 标准 dict。
 
         真实 imapclient 3.x 返回的是 `Envelope` namedtuple，字段：

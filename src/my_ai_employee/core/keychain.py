@@ -84,9 +84,12 @@ def set_password(service: str, account: str, password: str) -> KeychainResult:
             [
                 "security",
                 "add-generic-password",
-                "-a", account,
-                "-s", service,
-                "-w", password,
+                "-a",
+                account,
+                "-s",
+                service,
+                "-w",
+                password,
                 "-U",  # 关键：-U 表示"如果已存在则更新"
             ],
             capture_output=True,
@@ -95,7 +98,9 @@ def set_password(service: str, account: str, password: str) -> KeychainResult:
             check=True,
         )
     except subprocess.CalledProcessError as e:
-        return KeychainResult(ok=False, error=f"security add-generic-password 失败: {e.stderr.strip()}")
+        return KeychainResult(
+            ok=False, error=f"security add-generic-password 失败: {e.stderr.strip()}"
+        )
     except subprocess.TimeoutExpired:
         return KeychainResult(ok=False, error="security add-generic-password 超时（10s）")
     except Exception as e:  # 兜底：FileNotFoundError 等
@@ -121,8 +126,10 @@ def get_password(service: str, account: str) -> KeychainResult:
             [
                 "security",
                 "find-generic-password",
-                "-a", account,
-                "-s", service,
+                "-a",
+                account,
+                "-s",
+                service,
                 "-w",  # 只输出密码
             ],
             capture_output=True,
@@ -155,8 +162,10 @@ def delete_password(service: str, account: str) -> KeychainResult:
             [
                 "security",
                 "delete-generic-password",
-                "-a", account,
-                "-s", service,
+                "-a",
+                account,
+                "-s",
+                service,
             ],
             capture_output=True,
             text=True,

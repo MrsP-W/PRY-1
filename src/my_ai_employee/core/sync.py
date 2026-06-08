@@ -31,9 +31,10 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
+import sqlcipher3.dbapi2 as _sqlcipher_dbapi
 from loguru import logger
 from sqlalchemy import Engine, select
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from my_ai_employee.connectors.base import BaseConnector
@@ -74,13 +75,13 @@ class IMAPSync:
         # SA engine + sessionmaker（懒加载 + 复用；close() 后变 None）
         self._engine: Engine | None = make_sqlalchemy_engine(db)
         # sessionmaker 需 Engine bind（close() 前 sessionmaker 不可用）
-        self._session_factory = sessionmaker(
-            bind=self._engine, expire_on_commit=False
-        ) if self._engine is not None else None
+        self._session_factory = (
+            sessionmaker(bind=self._engine, expire_on_commit=False)
+            if self._engine is not None
+            else None
+        )
 
-    async def run_once(
-        self, since: datetime | None = None
-    ) -> SyncResult:
+    async def run_once(self, since: datetime | None = None) -> SyncResult:
         """单次同步（拉取 + 批量入库 + 更新 SyncState）。
 
         流程：
@@ -106,23 +107,16 @@ class IMAPSync:
             # ⚠️ D3.3.1 修复：直接算 UTC timestamp 再 fromtimestamp 构造 aware datetime，
             # 避免 `replace(tzinfo=None)` 把 naive datetime 视为本地时间 (Asia/Shanghai)
             # 导致 .timestamp() 偏移 8 小时
-            since = datetime.fromtimestamp(
-                datetime.now(UTC).timestamp() - 30 * 24 * 3600, tz=UTC
-            )
+            since = datetime.fromtimestamp(datetime.now(UTC).timestamp() - 30 * 24 * 3600, tz=UTC)
 
         raw_emails = await self._connector.safe_fetch(since)
         total_fetched = len(raw_emails)
-        logger.info(
-            f"safe_fetch 返回 {total_fetched} 封（source={source} "
-            f"last_uid={last_uid}）"
-        )
+        logger.info(f"safe_fetch 返回 {total_fetched} 封（source={source} last_uid={last_uid}）")
 
         # 3) 过滤旧邮件（uid <= last_uid）
         new_emails = [e for e in raw_emails if e.get("uid", 0) > last_uid]
         new_emails.sort(key=lambda e: e.get("uid", 0))
-        logger.info(
-            f"过滤后剩 {len(new_emails)} 封新邮件（last_uid={last_uid}）"
-        )
+        logger.info(f"过滤后剩 {len(new_emails)} 封新邮件（last_uid={last_uid}）")
 
         # 4) 100/批 commit ORM 入库（单批 try/except — 失败隔离）
         inserted = 0
@@ -133,26 +127,20 @@ class IMAPSync:
         for batch_start in range(0, len(new_emails), self._batch_size):
             batch = new_emails[batch_start : batch_start + self._batch_size]
             try:
-                b_inserted, b_skipped, b_max_uid = self._commit_batch(
-                    source, now_ms, batch
-                )
+                b_inserted, b_skipped, b_max_uid = self._commit_batch(source, now_ms, batch)
                 inserted += b_inserted
                 skipped += b_skipped
                 new_last_uid = max(new_last_uid, b_max_uid)
             except SQLAlchemyError as e:
                 # 整批失败（如 DB 锁）— 不阻塞下一批
                 failed += len(batch)
-                logger.error(
-                    f"批次入库失败（{len(batch)} 封）: {e!r}"
-                )
+                logger.error(f"批次入库失败（{len(batch)} 封）: {e!r}")
                 continue
 
         # 5) 更新 SyncState
         assert self._session_factory is not None  # close() 后才 None
         with self._session_factory() as session:
-            self._update_sync_state(
-                session, source, now_ms, new_last_uid, failed
-            )
+            self._update_sync_state(session, source, now_ms, new_last_uid, failed)
 
         duration = time.perf_counter() - t0
         result = SyncResult(
@@ -191,23 +179,30 @@ class IMAPSync:
                     max_uid = max(max_uid, email.uid)
                 session.commit()
                 inserted = len(batch)
-            except IntegrityError:
+            except (SQLAlchemyError, _sqlcipher_dbapi.IntegrityError):
                 # UNIQUE(source, uid) 冲突 — 已被另一个 sync 写入
-                session.rollback()
+                # ⚠️ D3.3.2 修复：SQLCipher dialect 不包装 DBAPI 异常，
+                # 实际抛出的是 `sqlcipher3.dbapi2.IntegrityError`，
+                # 不是 `sqlalchemy.exc.IntegrityError` — D3.3.1 的 `except IntegrityError`
+                # 漏掉这个类型，导致 IntegrityError 逃逸到 run_once 外层 try/except
+                # 被错认为 "整批失败"（failed=100 而非 skipped=100）
+                # ⚠️ D3.3.2 修复：rollback 显式 try/except — SQLCipher 在 session
+                # 已 abort 状态时 rollback 可能再次失败，导致 `with session` __exit__
+                # 重新抛出 IntegrityError 逃逸 try/except
+                try:
+                    session.rollback()
+                except Exception as rb_err:
+                    logger.warning(f"rollback 失败（已忽略）: {rb_err!r}")
                 # 整批视作 skipped（D3 阶段简化：单封冲突不细化）
                 # ⚠️ D3.3.1 修复：max_uid 重置为 0 — 整批回滚时未真正入库任何 uid，
                 # 若返回原 max_uid 会让 SyncState.last_uid 跳到冲突 uid，
                 # 下次 sync 时过滤 `uid > last_uid` 会跳过中间未入库邮件（数据丢失）
                 max_uid = 0
                 skipped = len(batch)
-                logger.warning(
-                    f"批次 UNIQUE 冲突（{len(batch)} 封）— 视为已存在"
-                )
+                logger.warning(f"批次 UNIQUE 冲突（{len(batch)} 封）— 视为已存在")
         return inserted, skipped, max_uid
 
-    def _raw_to_email(
-        self, source: str, raw: dict[str, Any], now_ms: int
-    ) -> Email:
+    def _raw_to_email(self, source: str, raw: dict[str, Any], now_ms: int) -> Email:
         """IMAP raw dict → Email ORM 对象（D3.3 入库映射层）。
 
         关键映射：

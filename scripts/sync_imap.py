@@ -75,31 +75,25 @@ def _print_sync_result(r: SyncResult) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(
-        description="D3.3 — IMAP 邮件同步入库 CLI"
-    )
+    parser = argparse.ArgumentParser(description="D3.3 — IMAP 邮件同步入库 CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     # sync 子命令
     sync_p = sub.add_parser("sync", help="正常同步（真 IMAP）")
-    sync_p.add_argument(
-        "--provider", required=True, choices=["qq", "outlook", "gmail"]
-    )
+    sync_p.add_argument("--provider", required=True, choices=["qq", "outlook", "gmail"])
     sync_p.add_argument("--email", required=True, help="邮箱地址")
-    sync_p.add_argument(
-        "--batch-size", type=int, default=100, help="每批 commit 大小"
-    )
+    sync_p.add_argument("--batch-size", type=int, default=100, help="每批 commit 大小")
     sync_p.set_defaults(func=cmd_sync)
 
     # spike 子命令
     spike_p = sub.add_parser("spike", help="性能 spike（mock 入库 tmp DB）")
-    spike_p.add_argument(
-        "--n", type=int, default=10_000, help="mock 邮件数（默认 1 万）"
-    )
+    spike_p.add_argument("--n", type=int, default=10_000, help="mock 邮件数（默认 1 万）")
     spike_p.set_defaults(func=cmd_spike)
 
     args = parser.parse_args()
-    return args.func(args)
+    # ⚠️ D3.3.2 修复：args.func 是 argparse set_defaults 注入的 callable，
+    # mypy 推断为 Any — main() 声明返回 int，包裹 int() 强制收窄
+    return int(args.func(args))
 
 
 if __name__ == "__main__":
