@@ -102,7 +102,7 @@ def test_alembic_upgrade_head_creates_all_six_tables(
     command.upgrade(alembic_cfg, "head")
 
     # 验证 6 张表
-    db = Database.open(db_path=str(tmp_db_path))
+    db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
@@ -134,7 +134,7 @@ def test_alembic_version_records_current_revision(
 
     command.upgrade(alembic_cfg, "head")
 
-    db = Database.open(db_path=str(tmp_db_path))
+    db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
@@ -158,7 +158,7 @@ def test_alembic_schema_matches_d31_sql(
 
     command.upgrade(alembic_cfg, "head")
 
-    db = Database.open(db_path=str(tmp_db_path))
+    db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
@@ -204,7 +204,7 @@ def test_alembic_creates_desc_indexes(
 
     command.upgrade(alembic_cfg, "head")
 
-    db = Database.open(db_path=str(tmp_db_path))
+    db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:
@@ -273,7 +273,7 @@ def test_orm_metadata_tables_match_alembic_tables(
     command.upgrade(alembic_cfg, "head")
 
     # 2) 拿真实 DB 表名
-    db = Database.open(db_path=str(tmp_db_path))
+    db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         with engine.connect() as conn:

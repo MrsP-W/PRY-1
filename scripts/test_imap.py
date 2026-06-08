@@ -110,13 +110,13 @@ async def cmd_fetch_latest(
 
     # 按时间倒序
     emails.sort(
-        key=lambda e: e.get("received_at") or datetime.min.replace(tzinfo=UTC),
+        key=lambda em: em.get("received_at") or datetime.min.replace(tzinfo=UTC),
         reverse=True,
     )
-    for i, e in enumerate(emails[:limit], 1):
+    for i, em in enumerate(emails[:limit], 1):
         _print(
-            f"  [{i}] {e.get('received_at', '?')}  "
-            f"{e.get('sender', '?')}  {e.get('subject', '?')[:60]}"
+            f"  [{i}] {em.get('received_at', '?')}  "
+            f"{em.get('sender', '?')}  {em.get('subject', '?')[:60]}"
         )
     _print(f"\n✅ 共 {len(emails)} 封（显示前 {min(limit, len(emails))} 封）")
     return 0
