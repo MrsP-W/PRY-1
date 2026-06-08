@@ -447,11 +447,12 @@ def to_dict(obj: Any) -> dict[str, Any]:
     """ORM 对象 → dict（D3.3 同步脚本批量入库用）。
 
     跳过 SQLAlchemy 内部状态（_sa_instance_state）。
-    处理 JSON 字段：recipients / labels 已经是 list[dict]，直接序列化。
+    处理 JSON 字段：recipients / labels 已由 JSONList TypeDecorator
+    转换为 list（DDL 走 TEXT，ORM 走 list ↔ JSON 文本）— 直接序列化。
     """
     result: dict[str, Any] = {}
     for col in obj.__table__.columns:
         value = getattr(obj, col.name)
-        # JSON 字段已经由 SQLAlchemy JSON 类型自动处理（list ↔ JSON 文本）
+        # JSONList TypeDecorator 已完成 list ↔ JSON 文本的转换（D3.2.3 修复）
         result[col.name] = value
     return result
