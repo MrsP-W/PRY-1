@@ -255,7 +255,7 @@ SQLCipher 加密 DB 封装 + 6 张表 schema + 完整测试覆盖。
 
 ---
 
-### D3.2 — ORM + Migrations ✅ 已完成（v1.0 锁定 — 2026-06-08 / D3.2.3 修复闭锁）
+### D3.2 — ORM + Migrations ✅ 已完成（v1.0 锁定 — 2026-06-08 / D3.2.3 + D3.2.4 修复闭环）
 
 #### 目标
 
@@ -272,6 +272,7 @@ SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 S
 | 3.2.5 | 写 `core/sqlcipher_compat.py`（SA engine creator 适配层）| — | ~15 min | 适配层 |
 | 3.2.6 | 写 `tests/core/test_migrations.py`（真 alembic upgrade head + 离线 SQL 渲染 + schema 一致性）| — | ~25 min | 迁移闭环 |
 | 3.2.3+ | **D3.2.3 修复**：4 个阻塞问题闭环（NOCASE 写法 / JSON→TEXT / DESC 索引 / EmailLabel 关系测试）| — | ~40 min | 修复版 |
+| 3.2.4 | **D3.2.4 修复**：mypy 5 个 arg-type 错误（`str(Path)` → `Path`）+ alembic 6 个 DeprecationWarning（`path_separator = os`）| — | ~10 min | 修复版 |
 
 **总耗时**：约 3.5 小时
 
@@ -296,11 +297,12 @@ SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 S
 **质量门**：
 
 - [x] pytest **91 passed**（37 D2 + 23 D3.1 + **25 D3.2 Model** + **6 D3.2 Migration**）
-- [x] ruff / mypy / `make lint` **0 errors**
+- [x] ruff / mypy / `make lint` **0 errors**（D3.2.4 闭环：mypy 0 之前有 5 个 arg-type + 3 个 test_imap 历史 bug）
 - [x] models.py 覆盖率 **92.3%**
 - [x] sqlcipher_compat.py 覆盖率 **100%**
 - [x] db.py 覆盖率 **97.9%**（保持 D3.1 水平）
 - [x] `.venv/bin/alembic upgrade head --sql` **exit 0**（D3.2.3 修复闭环 — D3.2 v1.0 时曾因 `sqlite_collation` 写法 ArgumentError）
+- [x] pytest -W error::DeprecationWarning **无 6 个 alembic path_separator 警告**（D3.2.4 修复闭环）
 
 #### 风险点（已解决 — 4 个 SQLAlchemy + sqlcipher3 雷区）
 
@@ -310,6 +312,8 @@ SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 S
 - ~~**NOCASE 写法报错**：`Column(..., sqlite_collation="NOCASE")` 抛 `ArgumentError: 'sqlite_collation' is not accepted by dialect 'sqlite'`~~ → **D3.2.3 已解决**：`sa.Text(collation="NOCASE")`（collation 是类型参数，不是 column 参数）
 - ~~**JSON 字段未 mirror D3.1 schema.sql**：D3.2 migration 走 `sa.JSON()`，schema.sql 走 `TEXT DEFAULT '[]'`~~ → **D3.2.3 已解决**：引入 `JSONList TypeDecorator`，DDL 走 TEXT，ORM 走 list，**完全 mirror schema.sql**
 - ~~**DESC 索引缺失**：D3.1 schema 是 DESC，D3.2 v1.0 是普通升序~~ → **D3.2.3 已解决**：`text("received_at DESC")` 表达
+- ~~**mypy arg-type 错误（5 处）**：`Database.open(db_path=str(tmp_db_path))` 多绕一层 str，签名是 `Path | None`~~ → **D3.2.4 已解决**：直接传 `Path`，5 处全改
+- ~~**alembic 6 个 DeprecationWarning**：`alembic.ini` 缺 `path_separator`，Alembic 升级后默认会改~~ → **D3.2.4 已解决**：显式 `path_separator = os`
 - **D3.1.2 测试断言需修**：`db.connection` row 从 dict 变 tuple（row_factory 调整）→ 改 `row[0].lower() == "wal"` tuple 解构
 
 **完整踩坑分析**：见 [reports/D3.2-ORM与迁移框架完成.md](../../我的AI员工/reports/D3.2-ORM与迁移框架完成.md) §2 / §4 / §9
