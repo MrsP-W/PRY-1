@@ -391,24 +391,61 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ## D4 — 智能层（邮件分类 + 草稿）
 
+> **2026-06-08 更新**：v2 晨报钩子（MiniMax M3 冲进 OpenRouter 前 3 + 中国大模型 6 周连续超美）触发 LLM 选型调整：原"统一 minimax M3"升级为"国内模型优先 + capability registry + 多 provider fallback"。**D4.0 LLM 路由层作为 D4 子任务的前置 D-step 先建**（v1.0 已锁定 6/8 11:30+，详见 [reports/D4.1-LLM路由层完成.md](../reports/D4.1-LLM路由层完成.md)）。
+
+### D4.0 — LLM 路由层（前置 D-step，✅ v1.0 锁定 2026-06-08）
+
+**范围**：capability registry + provider 抽象 + fallback 链 + router 决策逻辑（**不调 HTTP**——HTTP 调用在 D4.1 实施）
+
+**交付**：
+
+| 文件 | 行数 | 作用 |
+|------|------|------|
+| [src/my_ai_employee/ai/capability.py](../src/my_ai_employee/ai/capability.py) | 222 | Capability Registry（9 模型 / 6 国内 + 2 国外 + 1 本地）|
+| [src/my_ai_employee/ai/providers.py](../src/my_ai_employee/ai/providers.py) | 154 | Provider 抽象（LLMProvider 基类 + OpenAICompatibleProvider 占位 + 工厂）|
+| [src/my_ai_employee/ai/fallback.py](../src/my_ai_employee/ai/fallback.py) | 144 | Fallback 链（5 任务 → 4 异构链 + CircuitBreaker）|
+| [src/my_ai_employee/ai/router.py](../src/my_ai_employee/ai/router.py) | 231 | Router 主入口（5 步决策法 + 统计 + 单例）|
+| [tests/ai/test_router.py](../tests/ai/test_router.py) | 30 用例 | 单元测试（覆盖率 96.6%）|
+
+**质量门**（8 大门全绿）：
+
+- ruff format / check: ✅ 0 errors
+- mypy: ✅ 32 files 0 errors（D3.3.3 27 → 32，+5 D4.0 文件）
+- pytest: ✅ 132 passed（D3.3.3 102 → 132，+30 D4.0 测试）
+- 覆盖率: 87.0%（D3.3.3 83.7% → 87.0%，+3.3%）/ ai 包 96.6%
+- alembic upgrade head --sql: ✅ exit 0
+- uv build: ✅ success
+
+**v2 钩子驱动调整**（vs §0.4 原"统一 minimax M3"决策）：
+
+- 国内模型优先：DeepSeek（0.5 元/百万 token）/ MiniMax M3（冲榜验证）/ Qwen / 腾讯混元 / GLM
+- Capability Registry 数据驱动：参考 claw-code `MODEL_COMPATIBILITY.md`
+- 5 任务类型 → 5 异构 fallback 链（避免同 provider 雪崩）
+
+**D4.1（下一棒）**：HTTP 调用实施（httpx + OpenAI SDK 风格 + 6 provider API Key 环境变量模板）— 预计 60-90 min。
+
 ### 目标
 
 邮件自动分类（5 类）+ 1-click 草稿生成，端到端可用。
 
 ### 任务清单
 
-| # | 任务 | 预计耗时 | 产出 |
-|---|------|----------|------|
-| 4.1 | 写 `ai/classifier.py`（minimax M3 + 5 类标签）| 90 min | 分类服务 |
-| 4.2 | 写 `ai/drafter.py`（minimax M3 + 历史回复模式）| 90 min | 草稿服务 |
-| 4.3 | 写 `ai/prompts/classifier.txt`（中文 prompt + few-shot 5 例）| 30 min | 提示词 |
-| 4.4 | 写 `ai/prompts/drafter.txt`（中文 prompt + 角色设定）| 30 min | 提示词 |
-| 4.5 | 写 `scripts/classify_all.py`（批量分类 + 准确率统计）| 60 min | 评估脚本 |
-| 4.6 | 写 `tests/ai/test_classifier.py`（500 封真实邮件标注）| 60 min | 单元测试 |
-| 4.7 | **Spike**：100 封手标邮件做混淆矩阵 | 60 min | 准确率报告 |
-| 4.8 | 写 `core/audit.py`（LLM 调用审计日志）| 30 min | 合规依据 |
+> **2026-06-08 更新**：D4.0 LLM 路由层（前置 D-step，v1.0 锁定）已建好，本节 D4.1-D4.8 任务改用 `router.route()` 调用而非直接调 LLM SDK。
 
-**总耗时**：约 7 小时
+| # | 任务 | 预计耗时 | 产出 | 状态 |
+|---|------|----------|------|------|
+| 4.0 | LLM 路由层（capability + provider + fallback + router）| 90 min | 5 文件 + 30 测试 | ✅ v1.0 锁定（6/8）|
+| 4.1 | **HTTP 实施**：`OpenAICompatibleProvider.chat()` + httpx + 6 provider API Key 模板 | 60-90 min | httpx 调用 + 集成测试 | ⏳ 待启动 |
+| 4.2 | 写 `ai/classifier.py`（用 `router.route(CLASSIFY, ...)` + 5 类标签）| 90 min | 分类服务 | ⏳ 待启动 |
+| 4.3 | 写 `ai/drafter.py`（用 `router.route(DRAFT, ...)` + 历史回复模式）| 90 min | 草稿服务 | ⏳ 待启动 |
+| 4.4 | 写 `ai/prompts/classifier.txt`（中文 prompt + few-shot 5 例）| 30 min | 提示词 | ⏳ 待启动 |
+| 4.5 | 写 `ai/prompts/drafter.txt`（中文 prompt + 角色设定）| 30 min | 提示词 | ⏳ 待启动 |
+| 4.6 | 写 `scripts/classify_all.py`（批量分类 + 准确率统计）| 60 min | 评估脚本 | ⏳ 待启动 |
+| 4.7 | 写 `tests/ai/test_classifier.py`（500 封真实邮件标注）| 60 min | 单元测试 | ⏳ 待启动 |
+| 4.8 | **Spike**：100 封手标邮件做混淆矩阵 | 60 min | 准确率报告 | ⏳ 待启动 |
+| 4.9 | 写 `core/audit.py`（LLM 调用审计日志）| 30 min | 合规依据 | ⏳ 待启动 |
+
+**总耗时**：约 7-8 小时（4.0 路由层 + 4.1-4.9 实现）
 
 ### 验收标准
 
@@ -425,11 +462,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **token 成本**：5000 封邮件分类估算成本（按 minimax M3 单价）
 - **降级路径**：minimax M3 不可用时 → 规则引擎（关键词/正则）
 
-### 📌 下一棒 → D5
+### 📌 下一棒 → D4.1（HTTP 实施）→ D5
 
-- 智能层就绪
-- 下棒需要：500 封已分类邮件作为 LLM 训练/评估数据
-- 关键决策：是否在 D5 加 CalDAV 同步？— 我建议**必须加**（日程是用户高频）
+- D4.0 LLM 路由层已锁定（6/8 11:30）
+- 下棒任务：D4.1 `OpenAICompatibleProvider.chat()` httpx 实施 + 6 provider API Key 模板 + 集成测试
+- 再下棒：D4.2-D4.9 实际写 classifier / drafter（用 `router.route()` 调 LLM）→ D5 CalDAV
+- 关键决策：D4.1 HTTP 实施时机 = 6/9 启动（D4.0 已锁定，D4.1 可立即并行于 D4.2）
 
 ---
 
