@@ -21,6 +21,11 @@
     - lane/heartbeat 一致性: 全部 AC pass 才算"sync 成功", 否则 BLOCKED +
       transport_dead, 单一真相源 = acceptance_results
 
+  D4.5 v1.0.1 反馈修复 (P0 文档/可观测性补完):
+    - evaluate_and_emit 把 lane_entry_id + run_id 透传到 PolicyEngine.evaluate
+    - PolicyEngine._emit_decision_event 把 lane_entry_id + run_id 写入 event_metadata
+    - 便于 mmx policy history --lane 查询跨次 sync 的决策历史(反馈 #1 闭环)
+
 依赖注入 (D3.3 → D4.5 兼容):
   - IMAPSync.__init__ 新增可选参数 `event_store` (D4.3) 和 `policy_engine` (D4.4)
   - 不传时 = D3.3 行为不变 (向后兼容)
@@ -390,18 +395,23 @@ class SyncPolicyAdapter:
             now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
         )
 
-        # 3) PolicyEngine.evaluate (落事件)
+        # 3) 计算 run_id + lane_entry_id (供后续 evaluate + lane + heartbeat 复用)
+        #    D4.5 v1.0.1: run_id 透传到 event_metadata, 便于 mmx policy history --lane
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate (落事件 + 透传 lane_entry_id / run_id)
         evaluation = self._engine.evaluate(
             packet=packet,
             context=context,
             store=self._event_store,  # None 时不落地 (纯评估)
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
         )
 
-        # 4) LaneBoard 记录 — 单一真相源: acceptance_results (D4.5 P0 修复 3)
+        # 5) LaneBoard 记录 — 单一真相源: acceptance_results (D4.5 P0 修复 3)
         #    全部 AC pass → FINISHED + healthy; 否则 → BLOCKED + transport_dead
         #    (修复前: 只看 failed==0 AND inserted>0, 把空同步 + 慢同步误标)
-        rid = run_id or str(int(_time.time() * 1000))
-        lane_entry_id = self.build_lane_entry_id(rid)
         ac_results = compute_acceptance_results(
             inserted=result.inserted,
             failed=result.failed,
@@ -413,7 +423,7 @@ class SyncPolicyAdapter:
             status=LaneStatus.FINISHED if all_pass else LaneStatus.BLOCKED,
         )
 
-        # 5) Heartbeat: 同步成功 → transport_alive=True
+        # 6) Heartbeat: 同步成功 → transport_alive=True
         liveness = self.tick_heartbeat(transport_alive=all_pass, now_ms=now_ms)
 
         return SyncDecisionReport(

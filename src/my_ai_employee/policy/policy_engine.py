@@ -167,6 +167,9 @@ class PolicyEngine:
         packet: TaskPacket,
         context: dict[str, Any] | None = None,
         store: Any | None = None,
+        *,
+        lane_entry_id: str = "",
+        run_id: str = "",
     ) -> PolicyEvaluation:
         """主入口: 评估 TaskPacket 的 6 决策.
 
@@ -174,6 +177,9 @@ class PolicyEngine:
             packet: 8 必含字段 TaskPacket
             context: 决策信号 dict(缺字段有合理 default)
             store: 可选 EventStore, 提供则落地 PolicyDecisionEvent
+            lane_entry_id: 可选 — LaneBoard 关联 entry id(写进 event_metadata
+                便于 `mmx policy history --lane` 跨次评估串联,D4.5 v1.0.1 新增)
+            run_id: 可选 — 单次评估 run id(写进 event_metadata,与 lane_entry_id 配对)
 
         Returns:
             PolicyEvaluation(含 status / decisions / event_id)
@@ -216,7 +222,9 @@ class PolicyEngine:
 
         # 5. 可选: 落 events 表
         if store is not None:
-            event_id = self._emit_decision_event(evaluation, store)
+            event_id = self._emit_decision_event(
+                evaluation, store, lane_entry_id=lane_entry_id, run_id=run_id
+            )
             evaluation.event_id = event_id
 
         return evaluation
@@ -454,12 +462,21 @@ class PolicyEngine:
 
     # ===== 事件 emit =====
 
-    def _emit_decision_event(self, evaluation: PolicyEvaluation, store: Any) -> int:
+    def _emit_decision_event(
+        self,
+        evaluation: PolicyEvaluation,
+        store: Any,
+        *,
+        lane_entry_id: str = "",
+        run_id: str = "",
+    ) -> int:
         """落 1 条 PolicyDecisionEvent 到 events 表.
 
         Args:
             evaluation: 已计算好的 PolicyEvaluation
             store: EventStore 实例(D4.3 events/store.py)
+            lane_entry_id: LaneBoard entry id(写进 event_metadata, 便于 history 串联)
+            run_id: 单次评估 run id(写进 event_metadata, 与 lane_entry_id 配对)
 
         Returns:
             落地事件的 id(EventStore.insert() 返回)
@@ -479,6 +496,8 @@ class PolicyEngine:
             "approval_token_id": primary["approval_token_id"] if primary else "",
             "all_decisions": decisions_dict,
             "context_snapshot": evaluation.context_snapshot,
+            "lane_entry_id": lane_entry_id,  # D4.5 v1.0.1: 便于 mmx policy history --lane
+            "run_id": run_id,  # D4.5 v1.0.1: 与 lane_entry_id 配对
         }
         # 2. 选事件 type: succeeded → POLICY_DECISION_MADE, failed → POLICY_DECISION_DEGRADED
         event_type = (

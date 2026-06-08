@@ -264,7 +264,7 @@
 
 ---
 
-## 6. D4.5 release readiness + 业务层接入(✅ 2026-06-08 ready_for_review)
+## 6. D4.5 release readiness + 业务层接入(✅ 2026-06-08 v1.0 锁定 · P0 业务语义修复 + 文档/可观测性补完后)
 
 > **范围**:D4.4 任务策略板首次**真实业务 emit** — 选 D3.3 IMAP 同步(D2 connectors/imap.py 拉邮件 + D3.3 sync.py 入库)做第一个接入点,验证 PolicyEngine.evaluate() 真实落 `POLICY_DECISION_MADE` 事件 + LaneBoard 推进状态 + Heartbeat 探活 IMAP。
 > **不引 g007 / g012**:不引入 release CI pipeline,不写 production deploy 脚本;**只交付 ready_for_review 决策包**(5 段报告 + 等用户审批,无 push to main 动作)。
@@ -278,7 +278,7 @@
 | 业务层接入范本 | `personal-assistant-roadmap.md` §Business layer integration | 4 依赖可注入(event_store / engine / heartbeat / board),不传 = D3.3 行为不变 | `SyncPolicyAdapter.__init__(*, source, event_store=None, engine=None, heartbeat=None, board=None)` 4 可选参数 |
 | IMAP sync → policy context | (D3.3 SyncResult 字段对齐) | inserted / failed / duration_seconds → acceptance_results | `build_imap_sync_packet()` + `compute_acceptance_results()` 3 条 AC |
 | Decision event 复用 | (D4.3 复用) | 7 业务字段(rule_name / priority / kind / explanation / approval_token_id / all_decisions / context_snapshot)直接合并到 `event_metadata` 顶层 | `policy_engine._emit_decision_event` 已有,本步只触发 |
-| Context 12 字段严判 | (D4.4 P1 教训应用) | bool/int/str/list[bool] native type,`type() is bool` 严判,拒 type-coerce | `build_sync_policy_context` 12 字段全用 `bool()/int()` 显式转换 |
+| Context 12 字段严判 | (D4.4 P1 教训应用) | bool/int/str/list[bool] native type,`type() is bool` 严判,拒 type-coerce | `build_sync_policy_context` 12 字段全用 `type() is bool/int` 严判,脏输入早失败 |
 | LaneBoard entry_id 命名 | (D4.4 3 状态转换矩阵) | `sync:<source>:<run_id>` 唯一性由 caller 保证 | `SyncPolicyAdapter.build_lane_entry_id()` 工厂方法 |
 
 ### 6.2 不照搬的部分
@@ -302,13 +302,13 @@
 |--------|------|------|
 | 1. 业务层接入核心 (3 factory + 1 adapter + 1 dataclass) | `src/my_ai_employee/policy/integration.py` | ~270 |
 | 2. 5 个新增公共 API 顶层导出 | `src/my_ai_employee/policy/__init__.py` | +5 (26→31) |
-| 3. 31 个集成测试 (5 类) | `tests/policy/test_integration.py` | 397 |
+| 3. 35 个集成测试 (5 类) | `tests/policy/test_integration.py` | 397 |
 | 4. ready_for_review 5 段报告 | `reports/D4.5-release-readiness.md` | ~400 |
 | 5. mapping §6 详细段 | `docs/d4-claw-code-mapping.md` | (本段) |
 
-**总产出**:1 新增 src 模块(270 行) + 1 `__init__` 扩展(26→31 导出) + 1 新增测试(397 行 / 31 tests) + 1 报告(400 行) + 1 mapping 段。**D4.4 源文件零修改**(4 件套契约保持 v1.0)。
+**总产出**:1 新增 src 模块(270 行) + 1 `__init__` 扩展(26→31 导出) + 1 新增测试(397 行 / 35 tests,含 P0 修复 +4 + v1.0.1 文档/可观测性补完 +2) + 1 报告(400 行) + 1 mapping 段。**D4.4 源文件零修改**(4 件套契约保持 v1.0)。
 
-### 6.5 验证 anchor(8 质量门全绿,v1.0 锁定 6/9)
+### 6.5 验证 anchor(8 质量门全绿,v1.0 锁定 6/8)
 
 | 门 | 结果 |
 |----|------|
@@ -319,7 +319,7 @@
 | 5. `mypy tests/policy/` | 0 errors / 8 files(D4.4 7 + test_integration 1) |
 | 6. `alembic upgrade head --sql` | exit 0 (0003 latest) |
 | 7. `uv build` | tar.gz + .whl OK |
-| 8. `pytest` (全量) | **494 passed**(D4.3 预存隔离 6/9 早晨已修复,**0 失败**) |
+| 8. `pytest` (全量) | **494 passed**(D4.3 预存隔离 6/8 晚间已修复,**0 失败**) |
 
 ### 6.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 教训应用)
 
@@ -328,7 +328,7 @@
 | 4 依赖全可选注入 | D3.3 行为零变化,不传 = 纯评估模式 | Karpathy 原则 2(向后兼容) |
 | `evaluate_and_emit` 不替 caller 执行 6 决策 | 只 emit + 推进 lane,实际 retry/merge/escalate 由 D5+ 决定 | D3.3.3 异常窄化教训 |
 | `consecutive_failures` 必填原生 int>=0,`type() is int` 严判,透传 ValueError | 编程错误不包装,避免掩盖问题 + 拒 bool 子类 | D4.4 P1 + D4.5 P0-1 反馈 |
-| `transport_alive` 必填原生 bool,`type() is bool` 严判 | 字符串"true" 不通过,显式 `bool()` 转换,脏输入早失败 | D4.4 P1 + D4.5 P0-1 反馈 |
+| `transport_alive` 必填原生 bool,`type() is bool` 严判 | 字符串"true" 不通过,脏输入早失败 | D4.4 P1 + D4.5 P0-1 反馈 |
 | `branch_stale` / `now_ms` 入口严判(type() is bool/int) | 与 D4.4 P1 对齐,`branch_stale="false"` 等脏输入不静默转 True | D4.5 P0-1 反馈 |
 | escalate 语义:`failed > 0 AND consecutive_failures >= 3` | 达到连续失败阈值才升级;原 `failed > cf > 0` 颠倒 | D4.5 P0-2 反馈 |
 | lane/heartbeat 单一真相源 = `all(acceptance_results)` | 3 条 AC 全 pass 才算"sync 成功",与 PolicyEngine 同步 | D4.5 P0-3 反馈 |
@@ -338,6 +338,7 @@
 | `now_ms` 注入而非 time.time() 默认 | 测试可控,避免 sleep/clock 漂移 | D4.3 + D4.4 模式延续 |
 | `event_id=None` 表示纯评估模式 | 适配器不强制依赖 store,允许 dry-run | Karpathy 原则 1(think before coding) |
 | `lane_entry_id` 命名 `sync:<source>:<run_id>` | 跨次 sync 区分(每次 sync 有独立 run_id) | D4.4 lane_id 命名风格 |
+| `lane_entry_id` + `run_id` 写入 `event_metadata`(v1.0.1 反馈闭环) | 修复反馈 #1: 文档说可推算但实际 metadata 没写 → 显式写入便于 `mmx policy history --lane` 跨次串联 | D4.5 v1.0.1 P0 反馈 #1 |
 
 ### 6.7 已知限制(D4.5.1+ 复检 P 项)
 
@@ -351,7 +352,7 @@
 
 ---
 
-**最后更新**:2026-06-09(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(**v1.0 锁定 · P0 业务语义修复后**),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + P0 反馈 3 条修复)
+**最后更新**:2026-06-08 晚间(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(**v1.0 锁定 · P0 业务语义修复 + v1.0.1 文档/可观测性补完后**),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + P0 反馈 3 条修复 + v1.0.1 反馈 1 条修复)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则

@@ -541,12 +541,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **D4.0 + D4.1.1 + D4.2 + D4.3 + D4.4 五锁定**（6/8 22:00 D4.3 + 6/8 22:30 D4.4）
 - ✅ **D4.4 任务策略板 v1.0 锁定**（6/8 22:30，6 模块 + 180 policy 测试 + ~97% 覆盖率 + 8 大质量门全绿 + 全量 mypy src tests 0 errors）
 - D4.4 P1 收口：context 12 字段严格解析（23 新 test）+ 全量 mypy 10 errors → 0 errors + 总覆盖率 91.8% + 全量 459 passed
-- 下棒任务：**D4.5 release readiness + 业务层接入**（6/9 晨间链路确认后启动，参考 claw-code `g007-release-readiness-verification-map.md`）
+- 下棒任务：**D4.5 release readiness + 业务层接入**（**已完成 · 2026-06-08 v1.0 锁定**；原计划是 2026-06-09 晨间链路确认后启动,实际 6/8 晚间已闭环）
 - 再下棒：D4.5 release readiness（6/14 周末）
 
 ---
 
-### D4.5 — release readiness + 业务层接入（✅ 2026-06-08 ready_for_review）
+### D4.5 — release readiness + 业务层接入（✅ 2026-06-08 v1.0 锁定 · P0 业务语义修复 + 文档/可观测性补完后）
 
 **承接 D4.4 下一棒**：D4.4 决策引擎已锁定，本步**首次真实业务 emit**——选 D3.3 IMAP 同步（D2 connectors/imap.py 拉邮件 + D3.3 sync.py 入库）做第一个接入点。
 
@@ -557,14 +557,14 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **Release 决策包**：`reports/D4.5-release-readiness.md` 5 段 ready_for_review 报告（测试覆盖 / 质量门 / 性能 / 已知限制 / 待人工审批项）—— **不引 g007/g012**（不写 production deploy 脚本，决策包只等用户审批）
 - **D4.4 源文件零修改**（4 件套契约保持 v1.0，向后兼容）
 
-**8 大质量门**（8/8 全绿 · v1.0 锁定 6/9）：
+**8 大质量门**（8/8 全绿 · v1.0 锁定 6/8）：
 - `pytest tests/policy/ -v`: **215 passed in 0.30s**（D4.4 180 → D4.5 +35，含 P0 修复 +4）
 - `ruff check`: All checks passed / `ruff format`: 71 files already formatted
 - `mypy src/policy/`: 0 errors / 7 files（D4.4 6 + integration 1）
 - `mypy tests/policy/`: 0 errors / 8 files（D4.4 7 + test_integration 1）
 - `alembic upgrade head --sql`: exit 0 (0003 latest)
 - `uv build`: tar.gz + .whl OK
-- `pytest` 全量: **494 passed**（D4.3 预存隔离 6/9 早晨已修复，**0 失败**）
+- `pytest` 全量: **494 passed**（D4.3 预存隔离 6/8 晚间已修复，**0 失败**）
 
 **关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 教训应用）：
 - 4 依赖可注入（event_store / engine / heartbeat / board），不传 = D3.3 行为不变
@@ -589,7 +589,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：[docs/d4-claw-code-mapping.md §6](../docs/d4-claw-code-mapping.md)（D4.5 6 优先参考 + 4 不照搬 + 3 不学 + 14 决策含 P0 修复）。完整报告：[reports/D4.5-release-readiness.md](../reports/D4.5-release-readiness.md)
 
-**下一棒 → D4.6+ 业务层实现**（classifier / drafter 用 `router.route()` + D4.5 `SyncPolicyAdapter` 范本）。D4.5 **v1.0 已锁定**（6/9 早晨 P0 修复后），Week 2 业务层启动决策推迟到 6/9 晨间链路确认。
+**下一棒 → D4.6+ 业务层实现**（classifier / drafter 用 `router.route()` + D4.5 `SyncPolicyAdapter` 范本）。D4.5 **v1.0 已锁定**（2026-06-08 晚间 P0 业务语义修复 + 文档/可观测性补完后），Week 2 业务层启动决策推迟到 6/9 晨间链路确认。
 
 ---
 

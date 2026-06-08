@@ -471,10 +471,11 @@ class TestEvaluateAndEmit:
         assert report.liveness == Liveness.HEALTHY
 
     def test_full_event_payload(self, store: Any) -> None:
-        """验证 event 落地的 7 业务字段（rule_name / kind / all_decisions / context_snapshot）。"""
+        """验证 event 落地的 7 业务字段（rule_name / kind / all_decisions / context_snapshot）
+        + D4.5 v1.0.1 新增 2 字段（lane_entry_id / run_id）。"""
         a = SyncPolicyAdapter(source="qq", event_store=store)
         result = _make_sync_result(inserted=10, failed=0, duration_seconds=1.0)
-        report = a.evaluate_and_emit(result, consecutive_failures=0)
+        report = a.evaluate_and_emit(result, consecutive_failures=0, run_id="payload-001")
         assert report.event_id is not None
         ev = store.get_by_id(report.event_id)
         assert ev is not None
@@ -489,6 +490,8 @@ class TestEvaluateAndEmit:
             "approval_token_id",
             "all_decisions",
             "context_snapshot",
+            "lane_entry_id",  # D4.5 v1.0.1: 便于 mmx policy history --lane
+            "run_id",  # D4.5 v1.0.1: 与 lane_entry_id 配对
         ):
             assert k in ev.event_metadata, f"event_metadata 缺业务字段: {k}"
         # context_snapshot 必含 acceptance_results
@@ -496,3 +499,56 @@ class TestEvaluateAndEmit:
         assert "acceptance_results" in ctx
         # all_decisions 至少 1 个 (MERGE_REQUIRED)
         assert len(ev.event_metadata["all_decisions"]) >= 1
+        # lane_entry_id 与 report.lane_entry_id 一致
+        assert ev.event_metadata["lane_entry_id"] == report.lane_entry_id
+        assert ev.event_metadata["run_id"] == "payload-001"
+
+    def test_event_metadata_lane_entry_id_for_history(self, store: Any) -> None:
+        """D4.5 v1.0.1 反馈闭环: event_metadata 必含 lane_entry_id + run_id,
+        便于 mmx policy history --lane 跨次 sync 串联(修复反馈 #1 文档/可观测性).
+
+        场景:
+          - 自定义 run_id="retry-1" → event_metadata["run_id"]=="retry-1"
+          - lane_entry_id 与 SyncDecisionReport.lane_entry_id 一致
+          - 多次调用不同 run_id → events 表可按 run_id 串联
+        """
+        a = SyncPolicyAdapter(source="qq", event_store=store)
+        result = _make_sync_result(inserted=10, failed=0, duration_seconds=1.0)
+
+        # 第一次 sync
+        r1 = a.evaluate_and_emit(result, consecutive_failures=0, run_id="retry-1")
+        ev1 = store.get_by_id(r1.event_id)
+        assert ev1 is not None
+        assert ev1.event_metadata is not None
+        assert ev1.event_metadata["run_id"] == "retry-1"
+        assert ev1.event_metadata["lane_entry_id"] == "sync:qq:retry-1"
+        # 与 SyncDecisionReport.lane_entry_id 一致
+        assert ev1.event_metadata["lane_entry_id"] == r1.lane_entry_id
+
+        # 第二次 sync (重试)
+        r2 = a.evaluate_and_emit(result, consecutive_failures=1, run_id="retry-2")
+        ev2 = store.get_by_id(r2.event_id)
+        assert ev2 is not None
+        assert ev2.event_metadata is not None
+        assert ev2.event_metadata["run_id"] == "retry-2"
+        assert ev2.event_metadata["lane_entry_id"] == "sync:qq:retry-2"
+
+        # 跨次事件可按 run_id 区分(D4.5 反馈 #1 闭环的最小可观测性验证)
+        assert ev1.event_metadata["run_id"] != ev2.event_metadata["run_id"]
+
+    def test_event_metadata_lane_entry_id_omitted_when_adapter_provides_none(self) -> None:
+        """D4.5 v1.0.1: PolicyEngine.evaluate 默认 lane_entry_id="", run_id=""
+        (不传 = 空串, 写进 event_metadata 仍合法, 不破坏 D4.4 调用方)."""
+        from my_ai_employee.policy.policy_engine import PolicyEngine
+
+        result = _make_sync_result(inserted=10, failed=0, duration_seconds=1.0)
+        packet = build_imap_sync_packet(
+            source="qq",
+            inserted=result.inserted,
+            failed=result.failed,
+            duration_seconds=result.duration_seconds,
+        )
+        ctx = build_sync_policy_context(result=result, consecutive_failures=0, branch_stale=False)
+        # 默认 lane_entry_id="", run_id="" → 不报错
+        ev = PolicyEngine().evaluate(packet=packet, context=ctx, store=None)
+        assert ev.event_id is None  # 没传 store → 纯评估模式
