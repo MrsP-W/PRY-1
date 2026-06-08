@@ -12,7 +12,9 @@ Create Date: 2026-06-08
     - DDL 走 TEXT (DDL 真理之源), ORM 用 JSONDict TypeDecorator 透明处理 metadata
     - fingerprint 提为独立列(物理去重键), 与 metadata.fingerprint 冗余(应用层引用)
     - 索引顺序: created_at DESC > event > status > source > subject_id > fingerprint
-    - UNIQUE(event, source, subject_id, fingerprint) → 同 fingerprint 重复写入去重
+    - UNIQUE(fingerprint) → 全局唯一 (D4.3.1 复检 P1 修复: 旧 4 字段 UNIQUE 在 subject_id=NULL
+      时被 SQLite 视为不同行, 破坏 dedupe; 新方案: fingerprint 全局唯一键, 跨 source fallback
+      场景由 compute_fingerprint 入参含 source 保证 fingerprint 不同)
 
 D3.2 沿用约定:
     - render_as_batch=True 在 env.py 已配
@@ -56,14 +58,11 @@ def upgrade() -> None:
         sa.Column("event_metadata", sa.Text(), nullable=False, server_default="{}"),
         # created_at: Unix epoch ms (冗余于 metadata.timestamp_ms, 便于排序)
         sa.Column("created_at", sa.Integer(), nullable=False),
-        # UNIQUE 约束: 同 fingerprint 重复写入去重 (g004 不变量 4)
-        sa.UniqueConstraint(
-            "event",
-            "source",
-            "subject_id",
-            "fingerprint",
-            name="uq_events_event_source_subject_fingerprint",
-        ),
+        # UNIQUE 约束: fingerprint 全局唯一 (g004 不变量 4)
+        # D4.3.1 复检 P1 修复: 旧 4 字段 UNIQUE 在 subject_id=NULL 时被 SQLite 视为不同行,
+        # 破坏 dedupe. 改 fingerprint 全局唯一, fallback 跨源场景由 compute_fingerprint
+        # 入参含 source 保证 fingerprint 不同 (deepseek 失败 + openai 重试 → 2 个不同 fp).
+        sa.UniqueConstraint("fingerprint", name="uq_events_fingerprint"),
     )
     # 6 索引 (热路径: 倒序拉最近事件)
     op.create_index("idx_events_created_at", "events", [sa.text("created_at DESC")])

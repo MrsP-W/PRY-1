@@ -147,6 +147,78 @@ class TestDedupe:
                 on_conflict="raise",
             )
 
+    def test_dedupe_with_null_subject_id(self, store: EventStore) -> None:
+        """P1 复检回归 (D4.3.1): subject_id=None + 同 fingerprint 必须 dedupe.
+
+        旧 4 字段 UNIQUE 在 subject_id=NULL 时被 SQLite 视为不同行, 允许重复插入.
+        修复: 改 UNIQUE(fingerprint) 全局唯一. 此测试确保修复生效.
+        """
+        e1 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id=None,  # 关键: 软引用, 无关联实体
+            seq=1,
+            session_id="sess-A",
+        )
+        e2 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id=None,  # 同 None
+            seq=2,  # 不同 seq
+            session_id="sess-A",
+            timestamp_ms=1_790_000_000_000,  # 不同 timestamp
+        )
+        # 关键断言: dedupe 命中, id 相同
+        assert e2.id == e1.id
+        assert e2.fingerprint == e1.fingerprint
+        assert store.count() == 1  # 实际只插 1 行
+
+    def test_dedupe_null_subject_id_raise_mode(self, store: EventStore) -> None:
+        """P1 复检回归 (D4.3.1): subject_id=None + raise 模式必须抛冲突."""
+        store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id=None,
+            seq=1,
+        )
+        with pytest.raises(EventFingerprintConflictError):
+            store.insert(
+                event=EventType.LLM_CALL_STARTED,
+                status=EventStatus.STARTED,
+                source="minimax",
+                subject_id=None,
+                seq=2,
+                on_conflict="raise",
+            )
+
+    def test_dedupe_fallback_cross_source_allowed(self, store: EventStore) -> None:
+        """P1 修复辅助验证: fallback 跨源 (deepseek 失败 → openai 重试) 各自 1 条.
+
+        compute_fingerprint 入参含 source, 不同 source → 不同 fingerprint,
+        UNIQUE(fingerprint) 不会误判, 各允许 1 条.
+        """
+        e1 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.FAILED,  # 第一次失败
+            source="deepseek",
+            subject_id="req-1",
+            seq=1,
+        )
+        e2 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.SUCCEEDED,  # fallback 重试成功
+            source="openai",
+            subject_id="req-1",
+            seq=1,
+        )
+        # 关键: 不同 source + 不同 status → 不同 fingerprint → 2 条
+        assert e1.id != e2.id
+        assert e1.fingerprint != e2.fingerprint
+        assert store.count() == 2
+
     def test_different_status_creates_new_fingerprint(self, store: EventStore) -> None:
         """不同 status → 新 fingerprint → 新行."""
         e1 = store.insert(

@@ -53,13 +53,20 @@ class TestMetadataRegistration:
         assert cols == expected
 
     def test_events_table_has_unique_constraint(self) -> None:
-        """UNIQUE(event, source, subject_id, fingerprint)."""
+        """UNIQUE(fingerprint) 全局唯一 (D4.3.1 复检 P1 修复).
+
+        旧 4 字段 UNIQUE 在 subject_id=NULL 时被 SQLite 视为不同行, 破坏 dedupe.
+        改 fingerprint 全局唯一键. fallback 跨源场景由 compute_fingerprint 入参
+        含 source 保证 fingerprint 不同, 不被误判.
+        """
         table = Base.metadata.tables["events"]
         uq_names = [
             str(c.name) for c in table.constraints if hasattr(c, "name") and c.name is not None
         ]
         uq_names = [n for n in uq_names if "uq_" in n]
-        assert "uq_events_event_source_subject_fingerprint" in uq_names
+        assert "uq_events_fingerprint" in uq_names
+        # 旧 4 字段 UNIQUE 名称不应再出现
+        assert "uq_events_event_source_subject_fingerprint" not in uq_names
 
     def test_events_table_has_6_indexes(self) -> None:
         """6 索引 (created_at DESC + event + status + source + subject_id + fingerprint)."""

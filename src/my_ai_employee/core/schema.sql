@@ -135,9 +135,15 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_event ON audit_log(event);
 --      负向证据 first-class: status=failed/skipped/blocked + metadata.redaction_reason
 --   4. structured-event-trumps-prose — if event 存在, 不从 prose 推断; UI/CLI 优先消费 events 表
 --
--- 唯一性: UNIQUE(event, source, subject_id, fingerprint)
---   - fingerprint 提为独立列(DDL 真理之源),ORM 层 metadata.fingerprint 与 events.fingerprint 强一致
---   - SQLite UNIQUE 不支持函数表达式, 必须有独立列才能做 UNIQUE 约束
+-- 唯一性: UNIQUE(fingerprint) — 全局唯一
+--   - fingerprint = SHA-256 派生键(物理去重键), 同 fingerprint 即"同一业务事件"
+--   - g004 Rust 端 `compute_event_fingerprint(event, status, data)` 入参不含 source/subject_id,
+--     即 fingerprint = "事件身份" 与 source/subject_id 无关
+--   - 但 fallback 跨源场景(deepseek 失败 → openai 重试): compute_fingerprint 入参含 source,
+--     不同 source → 不同 fingerprint, 各自 1 条, 不被误判重复
+--   - 不用 UNIQUE(event, source, subject_id, fingerprint) 4 字段联合: SQLite UNIQUE 允许多行
+--     subject_id=NULL, 同 fingerprint 重复 subject_id=NULL 会被认为是不同行, 破坏去重 (D4.3.1 复检 P1)
+--   - fingerprint 提为独立列(DDL 真理之源), SQLite UNIQUE 不支持函数表达式
 --   - 冗余原因: fingerprint 既要"物理去重键"(DDL), 又要"应用层引用键"(metadata JSON)
 CREATE TABLE IF NOT EXISTS events (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,11 +151,11 @@ CREATE TABLE IF NOT EXISTS events (
     status          TEXT    NOT NULL,                    -- EventStatus 枚举值(7 选 1)
     source          TEXT    NOT NULL DEFAULT '',         -- 事件源头(例: "minimax" / "mcp.filesystem" / "classifier")
     subject_id      TEXT,                                -- 关联实体 ID(例: email_id / llm_request_id / task_id, 可空)
-    fingerprint     TEXT    NOT NULL DEFAULT '',         -- SHA-256 派生键(冗余于 metadata.fingerprint, 物理去重键)
+    fingerprint     TEXT    NOT NULL DEFAULT '',         -- SHA-256 派生键(冗余于 metadata.fingerprint, 物理去重键, 全局唯一)
     event_metadata  TEXT    NOT NULL DEFAULT '{}',       -- JSON 字符串(必含 6 必含字段,见上)
                                                         -- 列名 event_metadata 避开 SQLAlchemy Declarative 保留属性 metadata
     created_at      INTEGER NOT NULL,                    -- Unix epoch ms(冗余于 metadata.timestamp_ms,便于排序)
-    UNIQUE(event, source, subject_id, fingerprint)       -- 同 fingerprint 重复写入去重
+    UNIQUE(fingerprint)                                 -- fingerprint 全局唯一(同业务事件 dedupe, 与 subject_id=NULL 兼容)
 );
 
 CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);

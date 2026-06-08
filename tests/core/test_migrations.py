@@ -3,8 +3,8 @@
 覆盖（[docs/week1-mvp.md §D3.2 alembic 集成]）：
 
     - alembic upgrade head 在临时 SQLCipher DB 上成功跑通
-    - 跑完后 6 张表都存在（emails / attachments / labels / email_labels /
-      sync_state / audit_log）
+    - 跑完后 7 张表都存在（emails / attachments / labels / email_labels /
+      sync_state / audit_log / events）  # D4.3.1 复检修正: events 表 (D4.3 新增)
     - alembic_version 表记录当前 revision
     - schema 与 D3.1 schema.sql 1:1 对齐（PRAGMA table_info 验证列+类型）
     - DESC 索引 + NOCASE collation 在真实 DB 生效
@@ -90,18 +90,18 @@ def patched_database_open(tmp_db_path: Path, monkeypatch):
 # ===== 真 alembic upgrade head 测试 =====
 
 
-def test_alembic_upgrade_head_creates_all_six_tables(
+def test_alembic_upgrade_head_creates_all_seven_tables(
     tmp_db_path: Path,
     fake_keychain: dict,
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic upgrade head 跑通后 6 张表 + alembic_version 全存在。"""
+    """alembic upgrade head 跑通后 7 张表 + alembic_version 全存在 (D4.3.1 复检修正)."""
     from alembic import command
 
     command.upgrade(alembic_cfg, "head")
 
-    # 验证 6 张表
+    # 验证 7 张表
     db = Database.open(db_path=tmp_db_path)
     try:
         engine = make_sqlalchemy_engine(db)
@@ -118,6 +118,7 @@ def test_alembic_upgrade_head_creates_all_six_tables(
         assert "email_labels" in tables
         assert "sync_state" in tables
         assert "audit_log" in tables
+        assert "events" in tables  # D4.3.1 复检修正: events 表 (D4.3 新增)
         assert "alembic_version" in tables
     finally:
         db.close()

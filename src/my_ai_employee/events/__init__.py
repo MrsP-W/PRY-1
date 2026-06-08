@@ -9,6 +9,19 @@ D4.3 范围:
       EventFingerprintConflictError + EventError 基类
     - EventStore: insert / by_session / by_subject / by_event_type / by_status
 
+D4.3 契约口径 (D4.3.1 复检 P2 修正):
+    "4 大不变量在 EventStore.insert() 调用栈内保证":
+    - ✅ 业务代码走 EventStore.insert() → 不变量由 build_event_metadata +
+      assert_event_invariants + compute_fingerprint + UNIQUE(fingerprint) 联合保证
+    - ⚠️ ORM Event(...) 直写 DB → 绕过不变量校验 (D4.3 是契约层, 不强制 ORM 钩子)
+    - **业务层必须走 EventStore.insert()** (D4.4+ LLM/MCP/分类/草稿约定)
+
+D4.3 已知限制 (D4.3.1 复检 P2):
+    - by_session() 全表加载 + Python 端 filter: 5 万封规模 OK, 10 万+ 需加
+      session_id 索引列 + SQLite JSON1 表达式索引 (D4.5+ 优化)
+    - ORM 直写无 before_insert 校验: 业务层约定走 EventStore, 不在 ORM 层强制
+      (避免 ORM 钩子耦合 g004 契约, 保持层间解耦)
+
 D4.3 不含:
     - 真实 LLM/MCP/分类业务调用 — 这些是 D4.4+ 任务
     - 熔断器 (D4.4 任务策略板再加)

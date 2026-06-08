@@ -143,9 +143,9 @@ class EventStore:
                 session.rollback()
                 if on_conflict == "raise":
                     raise EventFingerprintConflictError(
-                        f"UNIQUE 冲突: event={event_value!r} status={status_value!r} "
-                        f"source={source!r} subject_id={subject_id!r} "
-                        f"fingerprint={fingerprint[:16]}..."
+                        f"UNIQUE 冲突: fingerprint={fingerprint[:16]}... "
+                        f"(event={event_value!r} status={status_value!r} "
+                        f"source={source!r} subject_id={subject_id!r})"
                     ) from err
                 # ignore 模式: 查询已存在 Event
                 existing = self.get_by_fingerprint(fingerprint)

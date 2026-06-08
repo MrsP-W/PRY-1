@@ -142,7 +142,10 @@ class Event(Base):
         - created_at:  INTEGER NOT NULL           # Unix epoch ms
 
     约束:
-        - UNIQUE(event, source, subject_id, fingerprint) → 同 fingerprint 重复写入去重
+        - UNIQUE(fingerprint) → fingerprint 全局唯一 (g004 不变量 4)
+        - D4.3.1 复检 P1 修复: 旧 4 字段 UNIQUE 在 subject_id=NULL 时被 SQLite 视为不同行,
+          破坏 dedupe. 改 fingerprint 全局唯一键. fallback 跨源场景由 compute_fingerprint
+          入参含 source 保证 fingerprint 不同, 不被误判.
 
     索引:
         - idx_events_created_at (created_at DESC)  # 热路径: 倒序拉最近事件
@@ -172,13 +175,7 @@ class Event(Base):
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint(
-            "event",
-            "source",
-            "subject_id",
-            "fingerprint",
-            name="uq_events_event_source_subject_fingerprint",
-        ),
+        UniqueConstraint("fingerprint", name="uq_events_fingerprint"),
         Index("idx_events_created_at", text("created_at DESC")),
         Index("idx_events_event", "event"),
         Index("idx_events_status", "status"),

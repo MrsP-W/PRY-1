@@ -117,7 +117,7 @@
 
 | 关注点 | 文件 | 提炼原则 | 本步骤落地 |
 |--------|------|---------|-----------|
-| Lane event 4 不变量 | `g004-events-reports-contract.md` §Lane event contract | typed event + status + 6 必含 metadata + fingerprint 去重 | `events/models.py` 4 StrEnum + `events/contract.py` 6 必含字段 + UNIQUE(event,source,subject_id,fingerprint) |
+| Lane event 4 不变量 | `g004-events-reports-contract.md` §Lane event contract | typed event + status + 6 必含 metadata + fingerprint 去重 | `events/models.py` 4 StrEnum + `events/contract.py` 6 必含字段 + **UNIQUE(fingerprint) 全局唯一** (D4.3.1 复检 P1 修复: 旧 4 字段 UNIQUE 在 `subject_id=NULL` 时被 SQLite 视为不同行, 破坏 dedupe; fallback 跨源场景由 `compute_fingerprint` 入参含 source 保证 fingerprint 不同) |
 | 6 必含 metadata 字段 | `g004-events-reports-contract.md` §Lane event contract | seq / timestamp_ms / session_id / ownership / provenance / fingerprint | `REQUIRED_METADATA_KEYS` 元组 + `build_event_metadata()` 工厂 |
 | 负向证据 first-class | (D3.3.3 教训应用) | failed/skipped/blocked/cancelled 独立状态 | `EventStatus` 7 枚举 + `by_status(FAILED)` 负向查询 |
 | Fingerprint 稳定 | `g004-events-reports-contract.md` §terminal reconciliation | SHA-256 派生 canonical JSON | `compute_fingerprint()` 排除运行时字段(timestamp_ms/seq) |
