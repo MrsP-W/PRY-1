@@ -104,6 +104,7 @@ CREATE TABLE IF NOT EXISTS sync_state (
 -- 审计日志（D3 阶段主要记 sync 事件）
 -- event: "sync_started" / "sync_completed" / "sync_failed" / "email_inserted" / "db_opened" / "db_closed"
 -- detail: JSON string（事件相关上下文）
+-- 注：D4.3 不动 audit_log — sync 审计保持简化；D4.3 新增 events 表承载 g004 4 不变量
 CREATE TABLE IF NOT EXISTS audit_log (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     event           TEXT    NOT NULL,
@@ -114,3 +115,46 @@ CREATE TABLE IF NOT EXISTS audit_log (
 
 CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_audit_log_event ON audit_log(event);
+
+
+-- ===== events (D4.3 新增) =====
+-- 结构化事件流（g004-events-reports-contract.md 4 大不变量落地）
+-- 区别于 audit_log：events 走 typed event + status + 6 必含 metadata 字段 + fingerprint 去重
+-- 职责：智能层 (LLM/MCP/分类/草稿) 的结构化事件流；audit_log 继续做 D3 sync 审计
+--
+-- 不变量（g004 4 条）:
+--   1. event — typed name (EventType StrEnum, 例: "llm.call.started" / "mcp.server.connected")
+--   2. status — 7 枚举 (EventStatus StrEnum: started/succeeded/failed/degraded/skipped/blocked/cancelled)
+--   3. metadata — JSON 必含 6 字段:
+--         seq                : 单调递增序号(同 session 内唯一)
+--         timestamp_ms       : 事件发生 Unix epoch ms
+--         session_id         : 会话身份(空字符串 = 全局)
+--         ownership          : "act" / "observe" / "ignore" (是否触发 side effect)
+--         provenance         : "live" / "test" / "replay" / "healthcheck" (数据来源)
+--         fingerprint        : SHA-256 派生键(冗余于 events.fingerprint 列,用于跨表查找)
+--      负向证据 first-class: status=failed/skipped/blocked + metadata.redaction_reason
+--   4. structured-event-trumps-prose — if event 存在, 不从 prose 推断; UI/CLI 优先消费 events 表
+--
+-- 唯一性: UNIQUE(event, source, subject_id, fingerprint)
+--   - fingerprint 提为独立列(DDL 真理之源),ORM 层 metadata.fingerprint 与 events.fingerprint 强一致
+--   - SQLite UNIQUE 不支持函数表达式, 必须有独立列才能做 UNIQUE 约束
+--   - 冗余原因: fingerprint 既要"物理去重键"(DDL), 又要"应用层引用键"(metadata JSON)
+CREATE TABLE IF NOT EXISTS events (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    event           TEXT    NOT NULL,                    -- EventType 枚举值(typed name)
+    status          TEXT    NOT NULL,                    -- EventStatus 枚举值(7 选 1)
+    source          TEXT    NOT NULL DEFAULT '',         -- 事件源头(例: "minimax" / "mcp.filesystem" / "classifier")
+    subject_id      TEXT,                                -- 关联实体 ID(例: email_id / llm_request_id / task_id, 可空)
+    fingerprint     TEXT    NOT NULL DEFAULT '',         -- SHA-256 派生键(冗余于 metadata.fingerprint, 物理去重键)
+    event_metadata  TEXT    NOT NULL DEFAULT '{}',       -- JSON 字符串(必含 6 必含字段,见上)
+                                                        -- 列名 event_metadata 避开 SQLAlchemy Declarative 保留属性 metadata
+    created_at      INTEGER NOT NULL,                    -- Unix epoch ms(冗余于 metadata.timestamp_ms,便于排序)
+    UNIQUE(event, source, subject_id, fingerprint)       -- 同 fingerprint 重复写入去重
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_created_at ON events(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_events_event ON events(event);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_source ON events(source);
+CREATE INDEX IF NOT EXISTS idx_events_subject_id ON events(subject_id);
+CREATE INDEX IF NOT EXISTS idx_events_fingerprint ON events(fingerprint);

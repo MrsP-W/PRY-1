@@ -1,0 +1,299 @@
+"""D4.3 — EventStore 测试 (insert + 4 类查询 + dedupe + 异常).
+
+覆盖:
+  - insert 正常: 返回 Event 含 id + fingerprint + event_metadata
+  - insert dedupe: 同身份 → 静默返回原 Event
+  - insert on_conflict="raise" → 抛 EventFingerprintConflictError
+  - get_by_id / get_by_fingerprint
+  - by_session / by_subject / by_event_type / by_status 4 类查询
+  - 负向证据 first-class: FAILED/SKIPPED/BLOCKED 状态可独立查询
+  - insert 异常窄化: 非法枚举 / 缺字段 → EventContractError / EventMetadataError
+"""
+
+from __future__ import annotations
+
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT / "src"))
+
+from my_ai_employee.events import (  # noqa: E402
+    EventContractError,
+    EventFingerprintConflictError,
+    EventStatus,
+    EventStore,
+    EventType,
+)
+
+
+class TestInsert:
+    def test_insert_returns_event_with_id_and_fingerprint(self, store: EventStore) -> None:
+        """insert 返回 Event, id + fingerprint + event_metadata 都填充好."""
+        e = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+            extra={"tokens": 100},
+        )
+        assert e.id is not None
+        assert e.fingerprint != ""
+        assert e.event_metadata["session_id"] == "sess-A"
+        assert e.event_metadata["tokens"] == 100
+
+    def test_insert_invalid_event_raises_contract_error(self, store: EventStore) -> None:
+        """非法 event 枚举 → EventContractError(不写入 DB)."""
+        with pytest.raises(EventContractError, match="event 非法"):
+            store.insert(
+                event="bogus.event",
+                status=EventStatus.STARTED,
+                source="minimax",
+            )
+        assert store.count() == 0
+
+    def test_insert_invalid_status_raises_contract_error(self, store: EventStore) -> None:
+        """非法 status 枚举 → EventContractError(不写入 DB)."""
+        with pytest.raises(EventContractError, match="status 非法"):
+            store.insert(
+                event=EventType.LLM_CALL_STARTED,
+                status="bogus",
+                source="minimax",
+            )
+        assert store.count() == 0
+
+    def test_insert_negative_seq_raises_value_error(self, store: EventStore) -> None:
+        """seq < 0 → ValueError(编程错误透传)."""
+        with pytest.raises(ValueError, match="seq 必须 >= 0"):
+            store.insert(
+                event=EventType.LLM_CALL_STARTED,
+                status=EventStatus.STARTED,
+                source="minimax",
+                seq=-1,
+            )
+
+
+class TestDedupe:
+    def test_dedupe_same_identity_returns_original(self, store: EventStore) -> None:
+        """同身份 fingerprint 再插 → 静默返回原 Event(ignore 模式)."""
+        e1 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+            extra={"tokens": 100, "model": "M3"},
+        )
+        # 等几毫秒, 模拟真实重试
+        time.sleep(0.01)
+        e2 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+            extra={"tokens": 100, "model": "M3"},
+        )
+        assert e2.id == e1.id  # 同一 Event
+        assert store.count() == 1  # 实际只插了 1 行
+
+    def test_dedupe_across_different_time_stays_same(self, store: EventStore) -> None:
+        """同身份 + 不同 timestamp_ms/seq 仍 dedupe(运行时字段不参与 fingerprint)."""
+        e1 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+            timestamp_ms=1_780_000_000_000,
+        )
+        e2 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=99,  # 不同 seq
+            session_id="sess-A",
+            timestamp_ms=1_790_000_000_000,  # 不同 timestamp
+        )
+        assert e2.id == e1.id
+
+    def test_dedupe_raise_mode_raises_conflict(self, store: EventStore) -> None:
+        """on_conflict='raise' 模式: UNIQUE 冲突抛 EventFingerprintConflictError."""
+        store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+        )
+        with pytest.raises(EventFingerprintConflictError, match="UNIQUE 冲突"):
+            store.insert(
+                event=EventType.LLM_CALL_STARTED,
+                status=EventStatus.STARTED,
+                source="minimax",
+                subject_id="req-1",
+                seq=1,
+                session_id="sess-A",
+                on_conflict="raise",
+            )
+
+    def test_different_status_creates_new_fingerprint(self, store: EventStore) -> None:
+        """不同 status → 新 fingerprint → 新行."""
+        e1 = store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+        )
+        e2 = store.insert(
+            event=EventType.LLM_CALL_SUCCEEDED,  # 不同 event
+            status=EventStatus.SUCCEEDED,  # 不同 status
+            source="minimax",
+            subject_id="req-1",
+            seq=2,
+        )
+        assert e2.id != e1.id
+        assert e2.fingerprint != e1.fingerprint
+        assert store.count() == 2
+
+
+class TestQueries:
+    def _seed(self, store: EventStore) -> None:
+        """测试数据: 3 events 跨 2 sessions + 2 subjects + 4 statuses."""
+        store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+        )
+        store.insert(
+            event=EventType.LLM_CALL_SUCCEEDED,
+            status=EventStatus.SUCCEEDED,
+            source="minimax",
+            subject_id="req-1",
+            seq=2,
+            session_id="sess-A",
+        )
+        store.insert(
+            event=EventType.LLM_CALL_FAILED,
+            status=EventStatus.FAILED,
+            source="minimax",
+            subject_id="req-2",
+            seq=1,
+            session_id="sess-B",
+        )
+
+    def test_get_by_id(self, store: EventStore) -> None:
+        """get_by_id 命中 + 未命中 None."""
+        self._seed(store)
+        e = store.by_subject("req-1")[0]  # 先拿 id
+        got = store.get_by_id(e.id)
+        assert got is not None
+        assert got.id == e.id
+        assert store.get_by_id(99999) is None
+
+    def test_get_by_fingerprint(self, store: EventStore) -> None:
+        """get_by_fingerprint 命中 + 未命中 None."""
+        self._seed(store)
+        e = store.by_subject("req-1")[0]
+        got = store.get_by_fingerprint(e.fingerprint)
+        assert got is not None
+        assert got.id == e.id
+        assert store.get_by_fingerprint("nonexistent") is None
+
+    def test_by_session(self, store: EventStore) -> None:
+        """by_session 只返回该 session 的 events(按 created_at DESC)."""
+        self._seed(store)
+        a = store.by_session("sess-A")
+        b = store.by_session("sess-B")
+        assert len(a) == 2
+        assert len(b) == 1
+        # 倒序: 后插的先返回(seq 在 event_metadata 内)
+        assert a[0].event_metadata["seq"] == 2
+        assert a[1].event_metadata["seq"] == 1
+        # session B 只有 1 条
+        assert b[0].subject_id == "req-2"
+
+    def test_by_session_limit(self, store: EventStore) -> None:
+        """by_session limit 参数截断."""
+        self._seed(store)
+        a = store.by_session("sess-A", limit=1)
+        assert len(a) == 1
+        assert a[0].event_metadata["seq"] == 2  # 最新那条
+
+    def test_by_subject(self, store: EventStore) -> None:
+        """by_subject 只返回该 subject 的 events."""
+        self._seed(store)
+        r1 = store.by_subject("req-1")
+        r2 = store.by_subject("req-2")
+        assert len(r1) == 2
+        assert len(r2) == 1
+        assert r2[0].status == EventStatus.FAILED.value
+
+    def test_by_event_type(self, store: EventStore) -> None:
+        """by_event_type 只返回该 type 的 events."""
+        self._seed(store)
+        started = store.by_event_type(EventType.LLM_CALL_STARTED)
+        succeeded = store.by_event_type(EventType.LLM_CALL_SUCCEEDED)
+        failed = store.by_event_type(EventType.LLM_CALL_FAILED)
+        assert len(started) == 1
+        assert len(succeeded) == 1
+        assert len(failed) == 1
+
+    def test_by_status_negative_evidence(self, store: EventStore) -> None:
+        """by_status 负向证据查询(FAILED/SKIPPED/BLOCKED 独立)."""
+        self._seed(store)
+        # 加 2 条 SKIPPED + 1 条 BLOCKED
+        store.insert(
+            event=EventType.EMAIL_CLASSIFY_FAILED,
+            status=EventStatus.SKIPPED,
+            source="classifier",
+            subject_id="req-3",
+            seq=1,
+        )
+        store.insert(
+            event=EventType.DRAFT_GENERATE_FAILED,
+            status=EventStatus.BLOCKED,
+            source="drafter",
+            subject_id="req-4",
+            seq=1,
+        )
+        failed = store.by_status(EventStatus.FAILED)
+        skipped = store.by_status(EventStatus.SKIPPED)
+        blocked = store.by_status(EventStatus.BLOCKED)
+        assert len(failed) == 1
+        assert len(skipped) == 1
+        assert len(blocked) == 1
+        # 验证 status 字段正确
+        assert failed[0].status == "failed"
+        assert skipped[0].status == "skipped"
+        assert blocked[0].status == "blocked"
+
+    def test_count(self, store: EventStore) -> None:
+        """count() 返回总行数."""
+        assert store.count() == 0
+        self._seed(store)
+        assert store.count() == 3
+        # dedupe 不增计数
+        store.insert(
+            event=EventType.LLM_CALL_STARTED,
+            status=EventStatus.STARTED,
+            source="minimax",
+            subject_id="req-1",
+            seq=1,
+            session_id="sess-A",
+        )
+        assert store.count() == 3

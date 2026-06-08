@@ -108,7 +108,82 @@
 
 ---
 
-**最后更新**:2026-06-08(D4.2 锁定,落 mapping 第二段 + 熔断口径收口)
+## 4. D4.3 Events 表契约(✅ 2026-06-08 v1.0 锁定)
+
+> **范围**:g004 4 大不变量结构化事件流 — typed event / status / 6 必含 metadata / fingerprint 去重
+> **不接业务层**:本步只建契约层(events 表 + 4 StrEnum + 6 必含 metadata + EventStore),D4.4+ 才用 `store.insert()` 真实 emit
+
+### 4.1 claw-code 优先参考
+
+| 关注点 | 文件 | 提炼原则 | 本步骤落地 |
+|--------|------|---------|-----------|
+| Lane event 4 不变量 | `g004-events-reports-contract.md` §Lane event contract | typed event + status + 6 必含 metadata + fingerprint 去重 | `events/models.py` 4 StrEnum + `events/contract.py` 6 必含字段 + UNIQUE(event,source,subject_id,fingerprint) |
+| 6 必含 metadata 字段 | `g004-events-reports-contract.md` §Lane event contract | seq / timestamp_ms / session_id / ownership / provenance / fingerprint | `REQUIRED_METADATA_KEYS` 元组 + `build_event_metadata()` 工厂 |
+| 负向证据 first-class | (D3.3.3 教训应用) | failed/skipped/blocked/cancelled 独立状态 | `EventStatus` 7 枚举 + `by_status(FAILED)` 负向查询 |
+| Fingerprint 稳定 | `g004-events-reports-contract.md` §terminal reconciliation | SHA-256 派生 canonical JSON | `compute_fingerprint()` 排除运行时字段(timestamp_ms/seq) |
+| 异常范围窄化 | (D3.3.3 教训) | 不接 SQLAlchemyError 基类,只接 IntegrityError | `store.py` `except IntegrityError as err` + `raise ... from err` |
+| Programming errors 透传 | (D3.3.3 教训) | ValueError/TypeError 不包装 | `build_event_metadata(seq=-1)` 透传 ValueError |
+
+### 4.2 不照搬的部分
+
+| claw-code 模式 | 本项目做法 | 原因 |
+|---------------|-----------|------|
+| Rust `LaneEventName` 枚举 + serde 序列化 | Python `enum.StrEnum` + SQLAlchemy ORM | Python 端用户量小,ORM 更易调试 |
+| `rust/crates/runtime/src/lane_events.rs` 终端对账 helper | Python 端 `by_session`/`by_status` 简单查询 | 5 万封规模无需 Rust 级对账,SQL 倒序查询足够 |
+| Rust 强类型 + serde 反射 | `JSONDict` TypeDecorator + 6 必含字段不变量校验 | SQLAlchemy 2.0 不允许 `metadata` 列名(保留属性),改 `event_metadata` |
+| `compute_event_fingerprint` Rust trait 方法 | Python `compute_fingerprint()` 函数 + 排除运行时字段 | 同业务事件多次重试 dedupe,fingerprint 必须跨时间稳定 |
+
+### 4.3 故意不学的
+
+- ❌ Rust 端具体 `lane_events.rs` 实现 — Python 端不抄
+- ❌ Report schema v1 (`CanonicalReportV1`/`FieldDelta`/`Projection`) — D4.4+ 任务策略板再加
+- ❌ Approval-token 链 — D4.4+ 任务策略板再加
+- ❌ Capability negotiation — 单机应用,无多版本消费者场景
+
+### 4.4 实施子任务(2026-06-08 当日完成)
+
+1. **D4.3.0 mapping + schema 同步**:
+   - `src/my_ai_employee/core/schema.sql` 扩 events 表 DDL (8 字段,含 `event_metadata` 列名规避 SA 保留)
+   - `src/my_ai_employee/core/migrations/versions/0002_events_table.py` alembic 迁移
+2. **D4.3.1 实施 5 个 src 模块**:
+   - `src/my_ai_employee/events/__init__.py` — 14 个公共导出
+   - `src/my_ai_employee/events/exceptions.py` — EventError 基类 + 3 类业务异常
+   - `src/my_ai_employee/events/models.py` — Event ORM + 4 StrEnum + JSONDict TypeDecorator
+   - `src/my_ai_employee/events/contract.py` — 6 必含 metadata 工厂 + 不变量校验 + SHA-256 fingerprint
+   - `src/my_ai_employee/events/store.py` — EventStore: insert + dedupe + 4 类查询
+3. **D4.3.2 写 56 个测试**:
+   - `tests/events/test_models.py` (18) — Event ORM + 4 StrEnum + JSONDict TypeDecorator
+   - `tests/events/test_contract.py` (18) — 6 必含字段不变量 + fingerprint 稳定性 + 异常窄化
+   - `tests/events/test_store.py` (20) — insert + dedupe + 4 类查询 + 负向证据
+4. **D4.3.3 8 大质量门 + commit + 报告**
+
+### 4.5 验证 anchor(等价于 g004 verification map 6 个 cargo test)
+
+- `pytest tests/events/ -v` 56 passed
+- `pytest` 全量 265 passed (D4.2 209 + D4.3 56, D3 老测试 2 个修断言)
+- mypy 0 errors / ruff format 0 errors / ruff check 0 errors
+- 覆盖率 events 5 模块 ≥ 88% (models 100% / exceptions 100% / store 98.6% / contract 88.7% / 测试 fixtures 共享)
+- alembic upgrade head 0002_events OK
+- uv build success
+
+### 4.6 关键设计决策(D3.3.3 + D3.2 教训应用)
+
+| 决策 | 理由 | 教训来源 |
+|------|------|---------|
+| fingerprint 排除 `timestamp_ms/seq` | 同一业务事件多次重试应 dedupe,跨时间稳定 | g004 §"ordering/deduplication hooks" |
+| fingerprint canonical JSON `sort_keys=True` | key 顺序不影响哈希 | g004 §"stable canonical" |
+| 列名 `event_metadata` 而非 `metadata` | SQLAlchemy Declarative 保留属性 | D3.2.3 NOCASE/JSON 教训 |
+| UNIQUE 4 字段 + 列上 `fingerprint` 索引 | SQLite UNIQUE 不支持函数表达式 | D3.2.3 DESC 索引教训 |
+| `except IntegrityError as err` + `raise ... from err` | 窄化异常 + 保留 stack trace | D3.3.3 过宽 except 教训 |
+| `by_session` Python 端 filter | 避免 SQLite JSON 路径查询方言差异 | D3.2.4 mypy 兼容教训 |
+| `on_conflict="ignore"` (默认) + `"raise"` (可选) | dedupe 命中是正常业务,但严格模式要透明 | D3.3.3 失败状态透明化 |
+| EventType 全部 3 段式 (`domain.entity.action`) | g004 命名风格 + 便于子动作细分 (4 段如 `email.classify.failed` 允许) | g004 §Lane event contract |
+| EventStatus 7 枚举 (含 5 个负向状态) | 负向证据 first-class: failed/skipped/blocked/cancelled/degraded 都是独立状态 | D3.3.3 教训应用 |
+| 事件流/audit_log 职责正交 | events = 智能层结构化事件流;audit_log = D3 sync 审计(不动) | 单一职责原则 |
+
+---
+
+**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则

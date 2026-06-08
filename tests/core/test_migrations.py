@@ -129,7 +129,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 revision = 0001_initial。"""
+    """alembic_version 表记录当前 head revision = 0002_events(D4.3 events 表)。"""
     from alembic import command
 
     command.upgrade(alembic_cfg, "head")
@@ -140,7 +140,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0001_initial"
+        assert version[0] == "0002_events"
     finally:
         db.close()
 

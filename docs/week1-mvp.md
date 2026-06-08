@@ -444,11 +444,18 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - API Key 优先级：`override 参数` > 专用 Key（`DEEPSEEK_API_KEY` 等）> `OPENAI_API_KEY` 兜底
 - `LLMAPIError.body` 截断到 500 字符，防止巨型错误响应爆日志
 
-**下一棒 → D4.3 Events 表契约**（6/10 启动，参考 claw-code `g004-events-reports-contract.md`）
+**下一棒 → D4.3 Events 表契约**（✅ v1.0 锁定 2026-06-08，参考 claw-code `g004-events-reports-contract.md`）
 
 ### D4.2 — MCP 抽象层（✅ v1.0 锁定 2026-06-08）
 
 **承接 D4.1.1 下一棒**：MCP 客户端基类抽象 + 生命周期 + 4 类业务异常 + DegradedReport（**不接真实 MCP server**，仅 MockTransport 留扩展）。
+
+> **📌 两套编号说明（2026-06-08 锁定）**：
+>
+> - **D4.x 智能层基础设施**（大写 D）：D4.0 LLM 路由层 / D4.1.1 HTTP 实施 / D4.2 MCP 抽象 / D4.3 Events 表契约 / D4.4 任务策略板 / D4.5 release readiness，**所有 Agent 在 D4.0 之后任何时间可启动**，目的是建立智能层底座
+> - **4.x LLM 业务层**（小写 4）：4.6 写 ai/classifier.py / 4.7 写 ai/drafter.py / 4.8 prompts / 4.9 audit，**必须 D4.3 之后才启动**（需要 events 表 + D4.0 路由 + D4.1.1 HTTP + D4.2 MCP 四个底座）
+>
+> 编号冲突源自 D4.0 启动时未整体重排，本节 D4.3 锁定时通过分段标题（"D4.x 智能层基础设施" + "4.x LLM 业务层"）保持向后兼容。
 
 **新增交付**：
 
@@ -489,7 +496,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：[docs/d4-claw-code-mapping.md](../docs/d4-claw-code-mapping.md) §2（D4.2 7 行优先参考 + 4 行不照搬）。完整报告：[reports/D4.2-MCP抽象层完成.md](../reports/D4.2-MCP抽象层完成.md)
 
-**下一棒 → D4.3 Events 表契约**（6/10 启动，参考 claw-code `g004-events-reports-contract.md`）
+**下一棒 → D4.3 Events 表契约**（✅ v1.0 锁定 2026-06-08，参考 claw-code `g004-events-reports-contract.md`）
 
 ### 目标
 

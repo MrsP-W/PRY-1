@@ -99,11 +99,19 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 # ===== Metadata / 6 个 Model 注册 =====
 
 
-def test_six_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 6 个表（mirror schema.sql）。"""
+def test_seven_models_registered_in_metadata() -> None:
+    """Base.metadata 注册了 7 个表 (6 D3 + 1 D4.3 events 表, mirror schema.sql)。"""
     tables = list_tables()
     assert tables == sorted(
-        ["emails", "attachments", "labels", "email_labels", "sync_state", "audit_log"]
+        [
+            "emails",
+            "attachments",
+            "labels",
+            "email_labels",
+            "sync_state",
+            "audit_log",
+            "events",
+        ]
     )
 
 
