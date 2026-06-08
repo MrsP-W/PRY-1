@@ -42,6 +42,13 @@ from my_ai_employee.policy.exceptions import (
     PolicyLaneError,
 )
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
+from my_ai_employee.policy.integration import (
+    SyncDecisionReport,
+    SyncPolicyAdapter,
+    build_imap_sync_packet,
+    build_sync_policy_context,
+    compute_acceptance_results,
+)
 from my_ai_employee.policy.lane_board import (
     LaneBoard,
     LaneEntry,
@@ -91,4 +98,10 @@ __all__ = [
     # Heartbeat
     "Heartbeat",
     "Liveness",
+    # D4.5 业务层接入
+    "SyncPolicyAdapter",
+    "SyncDecisionReport",
+    "build_imap_sync_packet",
+    "build_sync_policy_context",
+    "compute_acceptance_results",
 ]

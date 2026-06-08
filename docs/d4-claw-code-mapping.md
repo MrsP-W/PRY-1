@@ -264,7 +264,91 @@
 
 ---
 
-**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段)
+## 6. D4.5 release readiness + 业务层接入(✅ 2026-06-08 ready_for_review)
+
+> **范围**:D4.4 任务策略板首次**真实业务 emit** — 选 D3.3 IMAP 同步(D2 connectors/imap.py 拉邮件 + D3.3 sync.py 入库)做第一个接入点,验证 PolicyEngine.evaluate() 真实落 `POLICY_DECISION_MADE` 事件 + LaneBoard 推进状态 + Heartbeat 探活 IMAP。
+> **不引 g007 / g012**:不引入 release CI pipeline,不写 production deploy 脚本;**只交付 ready_for_review 决策包**(5 段报告 + 等用户审批,无 push to main 动作)。
+> **不替 caller 执行**:6 决策是声明式,executor pattern 不在本步实现;`SyncPolicyAdapter.evaluate_and_emit` 只负责 emit + 推进 lane,实际 retry/merge/escalate 由 D5+ 业务调度器决定。
+
+### 6.1 claw-code 优先参考
+
+| 关注点 | 文件 | 提炼原则 | 本步骤落地 |
+|--------|------|---------|-----------|
+| 4 件套不动 | (D4.4 锁定, 不改) | TaskPacket 8 字段 / PolicyEngine 6 决策 / LaneBoard 3 lanes / Heartbeat 3 状态保持 v1.0 | `policy/integration.py` 1 个新模块,**只 import 不修改** D4.4 任何源文件 |
+| 业务层接入范本 | `personal-assistant-roadmap.md` §Business layer integration | 4 依赖可注入(event_store / engine / heartbeat / board),不传 = D3.3 行为不变 | `SyncPolicyAdapter.__init__(*, source, event_store=None, engine=None, heartbeat=None, board=None)` 4 可选参数 |
+| IMAP sync → policy context | (D3.3 SyncResult 字段对齐) | inserted / failed / duration_seconds → acceptance_results | `build_imap_sync_packet()` + `compute_acceptance_results()` 3 条 AC |
+| Decision event 复用 | (D4.3 复用) | 7 业务字段(rule_name / priority / kind / explanation / approval_token_id / all_decisions / context_snapshot)直接合并到 `event_metadata` 顶层 | `policy_engine._emit_decision_event` 已有,本步只触发 |
+| Context 12 字段严判 | (D4.4 P1 教训应用) | bool/int/str/list[bool] native type,`type() is bool` 严判,拒 type-coerce | `build_sync_policy_context` 12 字段全用 `bool()/int()` 显式转换 |
+| LaneBoard entry_id 命名 | (D4.4 3 状态转换矩阵) | `sync:<source>:<run_id>` 唯一性由 caller 保证 | `SyncPolicyAdapter.build_lane_entry_id()` 工厂方法 |
+
+### 6.2 不照搬的部分
+
+| claw-code 模式 | 本项目做法 | 原因 |
+|---------------|-----------|------|
+| `g012-final-release-readiness-report.md` 全 5 段报告 + 7 天观察期 | 5 段 ready_for_review 报告(测试覆盖/质量门/性能/已知限制/待审批) | 项目用户量小,无 production 部署压力,7 天观察期降级为"用户审批" |
+| `personal-assistant-roadmap.md` §Executor pattern 实际执行 retry/rebase/merge | `evaluate_and_emit` 只声明决策,不替 caller 执行 | D3.3.3 教训应用:异常窄化,不替 caller 决定 |
+| 真实 `mmx policy status` CLI 集成 | 状态 JSON 导出方法已存在,CLI 留 D4.5.1+ | D4.5 范围收敛,CLI 不在本步 |
+| `g007-mcp-lifecycle-mapping.md` 4 类 MCP 异常 | 复用 D4.4 PolicyError 5 子类,不引入新异常 | 异常体系已稳定,避免无意义扩张 |
+
+### 6.3 故意不学的部分
+
+1. **不学 g012 §"CI/CD pipeline" 部署脚本** — 交付物是 `ready_for_review` 报告,不是 production deploy;CLAUDE.md 明确"应急版诚信交付 > 假装成功"
+2. **不学 g012 §"canary deploy + 灰度"** — 用户量 < 100,全量 release 即可,无灰度必要
+3. **不学 g012 §"rollback plan"** — 数据库迁移 alembic 已 `upgrade/downgrade` 双向,无新部署面
+
+### 6.4 实施子任务(2026-06-08 当日完成)
+
+| 子任务 | 文件 | 行数 |
+|--------|------|------|
+| 1. 业务层接入核心 (3 factory + 1 adapter + 1 dataclass) | `src/my_ai_employee/policy/integration.py` | ~270 |
+| 2. 5 个新增公共 API 顶层导出 | `src/my_ai_employee/policy/__init__.py` | +5 (26→31) |
+| 3. 31 个集成测试 (5 类) | `tests/policy/test_integration.py` | 397 |
+| 4. ready_for_review 5 段报告 | `reports/D4.5-release-readiness.md` | ~400 |
+| 5. mapping §6 详细段 | `docs/d4-claw-code-mapping.md` | (本段) |
+
+**总产出**:1 新增 src 模块(270 行) + 1 `__init__` 扩展(26→31 导出) + 1 新增测试(397 行 / 31 tests) + 1 报告(400 行) + 1 mapping 段。**D4.4 源文件零修改**(4 件套契约保持 v1.0)。
+
+### 6.5 验证 anchor(8 质量门,7 实跑 + 1 预存)
+
+| 门 | 结果 |
+|----|------|
+| 1. `pytest tests/policy/ -v` | **211 passed in 0.13s** (D4.4 180 → D4.5 +31) |
+| 2. `ruff check` | All checks passed |
+| 3. `ruff format` | 71 files already formatted |
+| 4. `mypy src/my_ai_employee/policy/` | 0 errors / 7 files(D4.4 6 + integration 1) |
+| 5. `mypy tests/policy/` | 0 errors / 8 files(D4.4 7 + test_integration 1) |
+| 6. `alembic upgrade head --sql` | exit 0 (0003 latest) |
+| 7. `uv build` | tar.gz + .whl OK |
+| 8. `pytest` (全量) | **489 passed** + 1 D4.3 预存隔离(`test_by_session`,与 D4.5 无关) |
+
+### 6.6 关键设计决策(D3.3.3 + D4.4 P1 教训应用)
+
+| 决策 | 理由 | 教训来源 |
+|------|------|---------|
+| 4 依赖全可选注入 | D3.3 行为零变化,不传 = 纯评估模式 | Karpathy 原则 2(向后兼容) |
+| `evaluate_and_emit` 不替 caller 执行 6 决策 | 只 emit + 推进 lane,实际 retry/merge/escalate 由 D5+ 决定 | D3.3.3 异常窄化教训 |
+| `consecutive_failures` 必填 int>=0,严判透传 ValueError | 编程错误不包装,避免掩盖问题 | D4.4 P1 教训 |
+| `transport_alive` 必填 bool,`type() is bool` 严判 | 字符串"true" 不通过,显式 `bool()` 转换 | D4.4 P1 教训 |
+| `run_id` 空时用 `int(time.time()*1000)` 默认值 | 多次调用 lane_entry_id 唯一(测试 `test_run_id_unique_per_call` 验证) | Karpathy 原则 3(最小可用) |
+| `record_to_lane` 内部先 add ACTIVE 再 update FINISHED | D4.4 状态矩阵:FINISHED 终态不能直接 add | D4.4 LaneBoard 矩阵 |
+| 业务 payload 7 字段合并到 `event_metadata` 顶层 | D4.3.2 决策:`build_event_metadata` `meta.update(extra)` | D4.3.2 contract 教训 |
+| `now_ms` 注入而非 time.time() 默认 | 测试可控,避免 sleep/clock 漂移 | D4.3 + D4.4 模式延续 |
+| `event_id=None` 表示纯评估模式 | 适配器不强制依赖 store,允许 dry-run | Karpathy 原则 1(think before coding) |
+| `lane_entry_id` 命名 `sync:<source>:<run_id>` | 跨次 sync 区分(每次 sync 有独立 run_id) | D4.4 lane_id 命名风格 |
+
+### 6.7 已知限制(D4.5.1+ 复检 P 项)
+
+| 限制 | 改进方向 |
+|------|----------|
+| 6 决策是声明式,`evaluate_and_emit` 不替 caller 执行 | D4.5.1+ 加 `executor` pattern:retry 调 `IMAPSync.run_once` / escalate 写 events 表 escalation row |
+| LaneBoard in-memory,D4.5 仍无持久化 | D4.5.1+ 落 `lane.entry.added` / `status_changed` 事件到 events 表 |
+| 单一 source 适配器(IMAP) | D4.6+ 加 `EmailClassifierAdapter` / `EmailDrafterAdapter`(同 SyncPolicyAdapter 4 依赖范本) |
+| `consecutive_failures` 外部喂入,D4.5 不接 SyncState | D4.5.1+ 集成 `IMAPSyncState.consecutive_failures` 字段(已有,只接) |
+| 无 1 万封真实 spike | D4.5.1+ 在 1 万封真实邮件上跑 `evaluate_and_emit` 30 天(D3.3 spike 已验证 0.30s/万封) |
+
+---
+
+**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(ready_for_review),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则

@@ -546,6 +546,45 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
+### D4.5 — release readiness + 业务层接入（✅ 2026-06-08 ready_for_review）
+
+**承接 D4.4 下一棒**：D4.4 决策引擎已锁定，本步**首次真实业务 emit**——选 D3.3 IMAP 同步（D2 connectors/imap.py 拉邮件 + D3.3 sync.py 入库）做第一个接入点。
+
+**范围**：
+- **业务层接入**：`SyncPolicyAdapter` 把 D3.3 IMAPSync 接入 D4.4 4 件套（PolicyEngine + LaneBoard + Heartbeat + EventStore）
+- **3 个业务层 TaskPacket factory**：`build_imap_sync_packet` / `compute_acceptance_results` / `build_sync_policy_context`（IMAP 同步 → 12 字段 context 严判）
+- **5 个新增公共 API 顶层导出**（policy `__init__.py` 26→31）
+- **Release 决策包**：`reports/D4.5-release-readiness.md` 5 段 ready_for_review 报告（测试覆盖 / 质量门 / 性能 / 已知限制 / 待人工审批项）—— **不引 g007/g012**（不写 production deploy 脚本，决策包只等用户审批）
+- **D4.4 源文件零修改**（4 件套契约保持 v1.0，向后兼容）
+
+**8 大质量门**（7 实跑 + 1 D4.3 预存隔离）：
+- `pytest tests/policy/ -v`: **211 passed in 0.13s**（D4.4 180 → D4.5 +31）
+- `ruff check`: All checks passed / `ruff format`: 71 files already formatted
+- `mypy src/policy/`: 0 errors / 7 files（D4.4 6 + integration 1）
+- `mypy tests/policy/`: 0 errors / 8 files（D4.4 7 + test_integration 1）
+- `alembic upgrade head --sql`: exit 0 (0003 latest)
+- `uv build`: tar.gz + .whl OK
+- `pytest` 全量: **489 passed** + 1 D4.3 预存隔离（`test_by_session`，与 D4.5 无关）
+
+**关键设计**（D3.3.3 + D4.4 P1 教训应用）：
+- 4 依赖可注入（event_store / engine / heartbeat / board），不传 = D3.3 行为不变
+- `evaluate_and_emit` 不替 caller 执行 6 决策（D3.3.3 异常窄化教训：只声明，不替业务调度器决定）
+- `consecutive_failures` 必填 int>=0 + `transport_alive` 必填 bool，严判透传 ValueError（D4.4 P1 教训）
+- `run_id` 空时用 `int(time.time()*1000)` 默认值（多次调用 lane_entry_id 唯一）
+- 业务 payload 7 字段合并到 `event_metadata` 顶层（D4.3.2 决策：`build_event_metadata` `meta.update(extra)`）
+
+**已知限制**（D4.5.1+ 复检 P 项）：
+- 6 决策是声明式 → D4.5.1+ 加 executor pattern（retry 调 `IMAPSync.run_once` / escalate 写 events 表）
+- LaneBoard in-memory 仍未持久化 → D4.5.1+ 落 `lane.entry.added` / `status_changed` 事件
+- 单一 IMAP 接入 → D4.6+ 加 `EmailClassifierAdapter` / `EmailDrafterAdapter`（同 4 依赖范本）
+- 无 1 万封真实 spike → D4.5.1+ 在 1 万封真实邮件上跑 `evaluate_and_emit` 30 天（D3.3 spike 已验证 0.30s/万封性能基线）
+
+**参考来源**：[docs/d4-claw-code-mapping.md §6](../docs/d4-claw-code-mapping.md)（D4.5 6 优先参考 + 4 不照搬 + 3 不学 + 10 决策）。完整报告：[reports/D4.5-release-readiness.md](../reports/D4.5-release-readiness.md)
+
+**下一棒 → D4.6+ 业务层实现**（classifier / drafter 用 `router.route()` + D4.5 `SyncPolicyAdapter` 范本）。D4.5 v1.0 release 决策包待用户审批（6/9 晨间链路确认）。
+
+---
+
 ## D5 — CalDAV 同步 + 菜单栏
 
 ### 目标
