@@ -108,16 +108,22 @@ class TestConnect:
         assert t.connected is False
 
     def test_connect_tools_list_malformed_closes_transport(self) -> None:
-        """D4.2.1 修复 regression: tools/list 返回坏值 → transport 应关闭."""
+        """D4.2.2 修复 regression: initialize 正常, tools/list 返回坏值
+        → transport 应关闭 + 抛 MCPResponseError."""
         t = MockTransport(server_name="fs", tools=["read_file"])
         t.start()
-        # initialize 正常, tools/list 失败
+        # initialize 正常返回, tools/list 返回 dict 但缺 result
         t.call_malformed_response = "missing_result"
+        t.malformed_methods = {"tools/list"}  # 只对 tools/list 注入
         t.connected = False
         client = MCPClient(server_name="fs", transport=t)
         with pytest.raises(MCPResponseError):
             client.connect()
+        # 关键: tools/list 阶段失败后 transport 仍被关闭
         assert t.connected is False
+        # 验证 send_log 含 1 次 initialize (成功) + 1 次 tools/list (失败)
+        methods = [r.get("method") for r in t._send_log]
+        assert methods == ["initialize", "tools/list"]
 
 
 class TestDisconnect:

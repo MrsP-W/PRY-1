@@ -101,6 +101,8 @@ class MockTransport(Transport):
         self.call_response_error: bool = False  # 缺 result 字段 (transport 层抛)
         self.call_malformed_response: str | None = None  # 响应坏值, 由 _validate_response 抛
         # 可选值: None(正常) / "non_dict"(返回 list) / "missing_result"(返回 dict 无 result)
+        # 默认全局生效, 若 malformed_methods 非空则只对这些 method 生效
+        self.malformed_methods: set[str] = set()  # D4.2.2: 按方法注入
         self.call_timeout: bool = False
 
     def start(self) -> None:
@@ -116,6 +118,12 @@ class MockTransport(Transport):
         if not self.connected:
             raise MCPConnectionError(f"MockTransport {self.server_name} 未连接")
         self._send_log.append(request)
+        method = request.get("method", "")
+        # 按 method 注入失败(只对特定 method 生效, 其他 method 正常)
+        if method in self.malformed_methods and self.call_malformed_response == "non_dict":
+            return ["malformed", "response"]  # type: ignore[return-value]
+        if method in self.malformed_methods and self.call_malformed_response == "missing_result":
+            return {"jsonrpc": "2.0", "id": request.get("id"), "no_result": True}
         # 注入失败
         if self.call_timeout:
             raise MCPTimeoutError(f"MockTransport {self.server_name} 调用超时")
@@ -127,14 +135,13 @@ class MockTransport(Transport):
         if self.call_response_error:
             # 响应结构错: 缺 result(模拟 transport 层抛响应错)
             raise MCPResponseError(f"MockTransport {self.server_name} 响应错: 缺 result 字段")
-        if self.call_malformed_response == "non_dict":
-            # 返回非 dict, 让 client._validate_response 抛 MCPProtocolError
+        if self.call_malformed_response == "non_dict" and not self.malformed_methods:
+            # 旧版全局模式(向后兼容)
             return ["malformed", "response"]  # type: ignore[return-value]
-        if self.call_malformed_response == "missing_result":
-            # 返回 dict 但缺 result, 让 client._validate_response 抛 MCPResponseError
+        if self.call_malformed_response == "missing_result" and not self.malformed_methods:
+            # 旧版全局模式(向后兼容)
             return {"jsonrpc": "2.0", "id": request.get("id"), "no_result": True}
         # 正常: 按 method 路由
-        method = request.get("method", "")
         if method == "tools/list":
             return {
                 "jsonrpc": "2.0",
