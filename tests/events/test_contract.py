@@ -72,7 +72,7 @@ class TestBuildEventMetadata:
         assert meta["timestamp_ms"] == 1_780_000_000_000
 
     def test_build_event_metadata_extra_payload(self) -> None:
-        """extra 业务字段会合并到 metadata(可覆盖 6 必含字段, 但不推荐)."""
+        """extra 业务字段会合并到 metadata(非保留字段)."""
         meta = build_event_metadata(
             seq=1,
             session_id="s",
@@ -86,6 +86,38 @@ class TestBuildEventMetadata:
         """seq < 0 抛 ValueError(编程错误透传, 不包装)."""
         with pytest.raises(ValueError, match="seq 必须 >= 0"):
             build_event_metadata(seq=-1, session_id="s")
+
+    # ===== D4.3.2 复检 P1 修复: extra 覆盖保护 =====
+    @pytest.mark.parametrize(
+        "forbidden_key",
+        ["seq", "timestamp_ms", "session_id", "ownership", "provenance", "fingerprint"],
+    )
+    def test_build_event_metadata_extra_with_required_key_raises(self, forbidden_key: str) -> None:
+        """D4.3.2 复检 P1 回归: extra 含 6 必含字段之一 → 抛 ValueError(防覆盖)."""
+        with pytest.raises(ValueError, match="extra 包含契约保留字段"):
+            build_event_metadata(
+                seq=1,
+                session_id="s",
+                extra={forbidden_key: "anything"},
+            )
+
+    def test_build_event_metadata_extra_rejects_seq_negative_override(self) -> None:
+        """D4.3.2 复检 P1 回归: 即便 extra={seq: -1} 也必须拒绝(防绕过 seq>=0 校验)."""
+        with pytest.raises(ValueError, match="extra 包含契约保留字段"):
+            build_event_metadata(
+                seq=1,
+                session_id="s",
+                extra={"seq": -1, "timestamp_ms": -5},
+            )
+
+    def test_build_event_metadata_extra_mixed_safe_and_forbidden_raises(self) -> None:
+        """D4.3.2 复检 P1 回归: extra 含业务字段 + 保留字段 → 仍拒绝(任一保留字段都拒)."""
+        with pytest.raises(ValueError, match="extra 包含契约保留字段"):
+            build_event_metadata(
+                seq=1,
+                session_id="s",
+                extra={"tokens": 100, "fingerprint": "evil-override"},
+            )
 
 
 # ===== assert_event_invariants =====

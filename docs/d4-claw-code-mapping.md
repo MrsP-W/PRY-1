@@ -159,8 +159,8 @@
 
 ### 4.5 验证 anchor(等价于 g004 verification map 6 个 cargo test)
 
-- `pytest tests/events/ -v` 56 passed
-- `pytest` 全量 265 passed (D4.2 209 + D4.3 56, D3 老测试 2 个修断言)
+- `pytest tests/events/ -v` 59 passed
+- `pytest` 全量 268 passed (D4.2 209 + D4.3 59, D3 老测试 2 个修断言)
 - mypy 0 errors / ruff format 0 errors / ruff check 0 errors
 - 覆盖率 events 5 模块 ≥ 88% (models 100% / exceptions 100% / store 98.6% / contract 88.7% / 测试 fixtures 共享)
 - alembic upgrade head 0002_events OK

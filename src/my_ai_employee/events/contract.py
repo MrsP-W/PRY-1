@@ -64,7 +64,9 @@ def build_event_metadata(
         session_id: 会话身份(空字符串 = 全局)
         ownership: 事件所有权(act/observe/ignore)
         provenance: 事件来源(live/test/replay/healthcheck)
-        extra: 业务扩展字段(可包含 task_id / tokens / latency_ms 等)
+        extra: 业务扩展字段(可包含 task_id / tokens / latency_ms 等;
+              **禁止**包含 6 必含字段 (seq/timestamp_ms/session_id/ownership/provenance/fingerprint),
+              否则抛 ValueError — D4.3.2 复检 P1 修复)
         timestamp_ms: Unix epoch ms(默认 = 当前时间, 便于测试时注入固定值)
 
     Returns:
@@ -72,7 +74,10 @@ def build_event_metadata(
         真正的 fingerprint 由 compute_fingerprint() 计算后由 caller 写回)
 
     Raises:
-        ValueError: seq < 0 / ownership 非法 / provenance 非法 (编程错误, 透传)
+        ValueError:
+            - seq < 0 (编程错误, 透传)
+            - ownership / provenance 非法枚举 (编程错误, 透传)
+            - **extra 包含契约保留字段** (D4.3.2 复检 P1 修复 — 防覆盖)
     """
     if seq < 0:
         raise ValueError(f"seq 必须 >= 0, 实际 {seq}")
@@ -89,7 +94,17 @@ def build_event_metadata(
         "provenance": prov_value,
         "fingerprint": "",  # 占位, 由 caller 调 compute_fingerprint 后写回
     }
+    # D4.3.2 复检 P1 修复 (contract.py:92): 禁止 extra 覆盖 6 必含字段
+    # 旧实现 `meta.update(extra)` 允许 extra={"seq": -1, "timestamp_ms": -5} 覆盖已校验字段,
+    # 绕过 seq>=0 / timestamp_ms 类型检查. 现拒绝包含 REQUIRED_METADATA_KEYS 的 extra.
     if extra:
+        forbidden = set(REQUIRED_METADATA_KEYS) & set(extra.keys())
+        if forbidden:
+            raise ValueError(
+                f"extra 包含契约保留字段: {sorted(forbidden)}; "
+                f"如需传 seq/timestamp_ms/session_id/ownership/provenance, "
+                f"请用 build_event_metadata 的命名参数, extra 仅用于业务 payload"
+            )
         meta.update(extra)
     return meta
 

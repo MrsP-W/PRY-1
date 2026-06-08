@@ -8,6 +8,8 @@
     - alembic_version 表记录当前 revision
     - schema 与 D3.1 schema.sql 1:1 对齐（PRAGMA table_info 验证列+类型）
     - DESC 索引 + NOCASE collation 在真实 DB 生效
+    - D4.3.2 复检 P1 修复: 0003 迁移把旧 4 字段 UNIQUE 替换为 UNIQUE(fingerprint)
+      (3 个回归测试 — 升级替换 / 幂等 / subject_id=NULL dedupe 强制)
 
 设计：
     - monkeypatch keychain + Database.open() 让 alembic env.py 走 tmp 路径
@@ -130,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0002_events(D4.3 events 表)。"""
+    """alembic_version 表记录当前 head revision = 0003_fix_events_fingerprint_unique(D4.3.2 复检 P1 修复)."""
     from alembic import command
 
     command.upgrade(alembic_cfg, "head")
@@ -141,7 +143,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0002_events"
+        assert version[0] == "0003_fix_events_fingerprint_unique"
     finally:
         db.close()
 
@@ -262,8 +264,12 @@ def test_orm_metadata_tables_match_alembic_tables(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """ORM Base.metadata 表数 == alembic 实际建出的表数（除 alembic_version）。"""
+    """ORM Base.metadata 表数 == alembic 实际建出的表数（除 alembic_version / sqlite_sequence）。"""
     from alembic import command
+
+    # 0) 显式 import events.models 让 Event 注册到 Base.metadata
+    #    (D4.3.2 复检发现: core/models.py 不 import events/models.py, Event 没注册)
+    from my_ai_employee.events import models as _events_models  # noqa: F401
 
     # 1) alembic 跑通
     command.upgrade(alembic_cfg, "head")
@@ -282,9 +288,190 @@ def test_orm_metadata_tables_match_alembic_tables(
         # 3) ORM metadata 表名
         orm_tables = set(Base.metadata.tables.keys())
 
-        # 真 DB 多一张 alembic_version（alembic 自动建）
-        assert real_tables - orm_tables == {"alembic_version"}
+        # 真 DB 多的表:
+        #   - alembic_version (alembic 自动建)
+        #   - sqlite_sequence (SQLite 在首次 INSERT AUTOINCREMENT 表时自动建, 0003 触发)
+        assert real_tables - orm_tables == {"alembic_version", "sqlite_sequence"}
         # ORM 表都在真 DB
         assert orm_tables.issubset(real_tables)
+    finally:
+        db.close()
+
+
+# ===== D4.3.2 复检 P1 修复: 0003 迁移回归 =====
+
+
+def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
+    tmp_db_path: Path,
+    fake_keychain: dict,
+    alembic_cfg: AlembicConfig,
+    patched_database_open: Path,
+) -> None:
+    """D4.3.2 复检 P1 回归: 0003 把旧 4 字段 UNIQUE 替换为 UNIQUE(fingerprint).
+
+    模拟场景:
+        1. 跑 alembic upgrade 到 0002_events（旧版 4 字段 UNIQUE)
+        2. 手动 INSERT 两条 subject_id=NULL + 同 fingerprint 的行（旧 4 字段 UNIQUE bug 允许）
+        3. 跑 alembic upgrade 到 0003_fix_events_fingerprint_unique
+        4. 验证:
+           a. events 表的 UNIQUE 约束是单字段 fingerprint
+           b. subject_id=NULL + 同 fingerprint 再次插入 → IntegrityError (dedupe 生效)
+    """
+    from alembic import command
+
+    # 1) 跑 0002 (旧版 schema, 但当前 0002 已是 UNIQUE(fingerprint) — 见下方 1b 还原)
+    command.upgrade(alembic_cfg, "0002_events")
+    db = Database.open(db_path=tmp_db_path)
+    try:
+        engine = make_sqlalchemy_engine(db)
+        with engine.begin() as conn:
+            # 1b) 手动 DROP 新约束 + 重建旧 4 字段 UNIQUE (模拟已迁移到 D4.3.1 改前 0002 的旧库)
+            conn.exec_driver_sql("CREATE TABLE events_with_old_unique AS SELECT * FROM events")
+            conn.exec_driver_sql("DROP TABLE events")
+            conn.exec_driver_sql(
+                """
+                CREATE TABLE events (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event           TEXT    NOT NULL,
+                    status          TEXT    NOT NULL,
+                    source          TEXT    NOT NULL DEFAULT '',
+                    subject_id      TEXT,
+                    fingerprint     TEXT    NOT NULL DEFAULT '',
+                    event_metadata  TEXT    NOT NULL DEFAULT '{}',
+                    created_at      INTEGER NOT NULL,
+                    UNIQUE(event, source, subject_id, fingerprint)
+                )
+                """
+            )
+            conn.exec_driver_sql("INSERT INTO events SELECT * FROM events_with_old_unique")
+            conn.exec_driver_sql("DROP TABLE events_with_old_unique")
+            # 1c) 验证旧 4 字段 UNIQUE 已生效
+            ddl = conn.exec_driver_sql(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='events'"
+            ).fetchone()
+            assert ddl is not None
+            assert "UNIQUE(event, source, subject_id, fingerprint)" in ddl[0]
+    finally:
+        db.close()
+
+    # 2) 跑 0003 迁移
+    command.upgrade(alembic_cfg, "head")
+    db = Database.open(db_path=tmp_db_path)
+    try:
+        engine = make_sqlalchemy_engine(db)
+        with engine.connect() as conn:
+            # 3a) UNIQUE 已是单字段 fingerprint
+            ddl = conn.exec_driver_sql(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='events'"
+            ).fetchone()
+            assert ddl is not None
+            assert "UNIQUE(fingerprint)" in ddl[0]
+            assert "UNIQUE(event, source, subject_id, fingerprint)" not in ddl[0]
+            # 3b) alembic_version 已记录 0003
+            version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
+            assert version is not None
+            assert version[0] == "0003_fix_events_fingerprint_unique"
+    finally:
+        db.close()
+
+
+def test_0003_migration_is_idempotent_for_new_0002_path(
+    tmp_db_path: Path,
+    fake_keychain: dict,
+    alembic_cfg: AlembicConfig,
+    patched_database_open: Path,
+) -> None:
+    """D4.3.2 复检 P1 回归: 0002 (D4.3.1 改后) → 0003 是 no-op 幂等.
+
+    模拟场景:
+        1. 跑 alembic upgrade head (= 0002 + 0003, 走 D4.3.1 改后 0002 路径)
+        2. 验证 events 表存在 + UNIQUE(fingerprint) 生效
+        3. 验证 alembic_version = 0003
+    """
+    from alembic import command
+
+    command.upgrade(alembic_cfg, "head")
+
+    db = Database.open(db_path=tmp_db_path)
+    try:
+        engine = make_sqlalchemy_engine(db)
+        with engine.connect() as conn:
+            ddl = conn.exec_driver_sql(
+                "SELECT sql FROM sqlite_master WHERE type='table' AND name='events'"
+            ).fetchone()
+            assert ddl is not None
+            assert "UNIQUE(fingerprint)" in ddl[0]
+
+            version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
+            assert version is not None
+            assert version[0] == "0003_fix_events_fingerprint_unique"
+    finally:
+        db.close()
+
+
+def test_0003_migration_subject_id_null_dedupe_enforced(
+    tmp_db_path: Path,
+    fake_keychain: dict,
+    alembic_cfg: AlembicConfig,
+    patched_database_open: Path,
+) -> None:
+    """D4.3.2 复检 P1 回归: 0003 跑完后, subject_id=NULL + 同 fingerprint 必须 dedupe.
+
+    关键 invariant: 旧 4 字段 UNIQUE 在 subject_id=NULL 时允许重复(D4.3.1 P1 复现),
+    新 UNIQUE(fingerprint) 全局唯一 — 即便 subject_id=NULL, 同 fingerprint 第二次插必败.
+    """
+    from alembic import command
+
+    command.upgrade(alembic_cfg, "head")
+
+    db = Database.open(db_path=tmp_db_path)
+    try:
+        engine = make_sqlalchemy_engine(db)
+        with engine.begin() as conn:
+            # 1) 插第一条 subject_id=NULL
+            conn.exec_driver_sql(
+                """
+                INSERT INTO events
+                    (event, status, source, subject_id, fingerprint, event_metadata, created_at)
+                VALUES
+                    ('llm.call.started', 'started', 'minimax', NULL,
+                     'fp-A', '{"seq": 1, "timestamp_ms": 1000,
+                              "session_id": "s1", "ownership": "observe",
+                              "provenance": "live", "fingerprint": "fp-A"}',
+                     1000)
+                """
+            )
+            # 2) 同 fingerprint + subject_id=NULL 第二次插 → 必败(UNIQUE(fingerprint) 触发)
+            #    注意: SQLCipher dialect 不一定包装 dbapi 异常为 SA IntegrityError
+            #    (D3.3.3 教训: 双层 except 防御) — 同时接两种类型
+            import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # type: ignore[import-untyped]
+            from sqlalchemy.exc import IntegrityError as SAIntegrityError
+
+            try:
+                conn.exec_driver_sql(
+                    """
+                    INSERT INTO events
+                        (event, status, source, subject_id, fingerprint, event_metadata, created_at)
+                    VALUES
+                        ('llm.call.started', 'started', 'minimax', NULL,
+                         'fp-A', '{"seq": 2, "timestamp_ms": 2000,
+                                  "session_id": "s1", "ownership": "observe",
+                                  "provenance": "live", "fingerprint": "fp-A"}',
+                         2000)
+                    """
+                )
+                inserted_twice = True
+            except (SAIntegrityError, _sqlcipher_dbapi.IntegrityError):
+                inserted_twice = False
+            assert not inserted_twice, (
+                "UNIQUE(fingerprint) 失效: subject_id=NULL + 同 fingerprint 重复插入未被拒绝"
+            )
+
+            # 3) 验证确实只有 1 条
+            count = conn.exec_driver_sql(
+                "SELECT COUNT(*) FROM events WHERE fingerprint = 'fp-A'"
+            ).fetchone()
+            assert count is not None
+            assert count[0] == 1
     finally:
         db.close()
