@@ -28,6 +28,12 @@ D4.4 不含:
     - CLI 集成(status JSON 导出接口已留 to_status_json(), CLI 留 D4.5+)
     - 任务调度器(何时 evaluate → 留 D4.4.1+ 任务调度板)
 
+D4.6 业务层复用(D4.5 范本扩展 — EmailClassifierAdapter):
+    - 复用 SyncPolicyAdapter 4 依赖可注入范本
+    - EmailClassifier.classify() → 喂 PolicyEngine.evaluate
+    - lane_entry_id 命名 "classify:<source>:<run_id>"
+    - 业务层调用方显式注入 event_store / engine
+
 注: audit_log 表 (D3 sync 审计) 与 PolicyDecisionEvent (events 表) 职责正交, 互不替代.
 """
 
@@ -43,11 +49,16 @@ from my_ai_employee.policy.exceptions import (
 )
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.integration import (
+    ClassifyDecisionReport,
+    EmailClassifierAdapter,
     SyncDecisionReport,
     SyncPolicyAdapter,
+    build_classify_packet,
+    build_classify_policy_context,
     build_imap_sync_packet,
     build_sync_policy_context,
     compute_acceptance_results,
+    compute_classification_acceptance,
 )
 from my_ai_employee.policy.lane_board import (
     LaneBoard,
@@ -104,4 +115,10 @@ __all__ = [
     "build_imap_sync_packet",
     "build_sync_policy_context",
     "compute_acceptance_results",
+    # D4.6 业务层接入(邮件分类)
+    "EmailClassifierAdapter",
+    "ClassifyDecisionReport",
+    "build_classify_packet",
+    "build_classify_policy_context",
+    "compute_classification_acceptance",
 ]

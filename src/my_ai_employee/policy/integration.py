@@ -26,6 +26,12 @@
     - PolicyEngine._emit_decision_event 把 lane_entry_id + run_id 写入 event_metadata
     - 便于 mmx policy history --lane 查询跨次 sync 的决策历史(反馈 #1 闭环)
 
+  D4.6 业务层复用 (D4.5 范本扩展 — EmailClassifierAdapter):
+    - 复用 SyncPolicyAdapter 4 依赖可注入范本 (event_store / engine / heartbeat / board)
+    - EmailClassifier.classify() → 类别 + 置信度 → 喂 PolicyEngine.evaluate
+    - lane_entry_id 命名 "classify:<source>:<run_id>"(与 sync: 区分)
+    - 便于 mmx policy history --lane 跨次分类查询决策历史
+
 依赖注入 (D3.3 → D4.5 兼容):
   - IMAPSync.__init__ 新增可选参数 `event_store` (D4.3) 和 `policy_engine` (D4.4)
   - 不传时 = D3.3 行为不变 (向后兼容)
@@ -37,6 +43,11 @@ SyncPolicyAdapter 是 D4.5 的核心:
   - `record_to_lane()` — 同步结果 → LaneEntry.add() / .update()
   - `tick_heartbeat()` — IMAP healthcheck 成功 → Heartbeat.update()
   - `evaluate_and_emit()` — 主入口: evaluate() + EventStore 落地 1 条事件
+
+EmailClassifierAdapter 是 D4.6 业务层接入点:
+  - `build_packet()` — 邮件上下文 → TaskPacket (8 必含字段, model=classifier_used)
+  - `build_context()` — ClassificationResult → PolicyEngine context (12 字段, 严判)
+  - `classify_and_emit()` — 主入口: classify() + PolicyEngine.evaluate() + 落 1 条事件
 """
 
 from __future__ import annotations
@@ -434,6 +445,406 @@ class SyncPolicyAdapter:
         )
 
 
+# ===== D4.6 邮件分类适配器 =====
+
+
+# 分类结果 → 验收标准(3 条 AC,D4.5 P0-3 单一真相源范本应用)
+# AC[0] confidence >= 0.7 (高置信度,业务可用)
+# AC[1] category 不是 SPAM(SPAM 后续单独处理,不进入主流程)
+# AC[2] LLM 响应延迟 < 5000ms (5s 内必须有结果,超时就 BLOCKED)
+
+
+def compute_classification_acceptance(
+    *, category_value: str, confidence: float, latency_ms: int
+) -> list[bool]:
+    """由 ClassificationResult 计算 3 条 acceptance_criteria 是否 pass.
+
+    3 条 AC(与 PolicyEngine 12 字段 acceptance_results 对齐):
+      [0] confidence >= 0.7 (高置信度,业务可用)
+      [1] category != SPAM (SPAM 单独走"低优先级"分支,不阻塞主决策)
+      [2] latency_ms < 5000 (5s 内出结果)
+
+    Returns:
+        list[bool](PolicyEngine 严判 type() is bool,D4.4 P1 + D4.5 P0 教训应用)
+    """
+    return [
+        bool(confidence >= 0.7),
+        bool(category_value != "SPAM"),
+        bool(latency_ms < 5000),
+    ]
+
+
+def build_classify_packet(
+    *,
+    email_id: int,
+    source: str,
+    category_value: str,
+    model_full_id: str,
+    confidence: float,
+) -> TaskPacket:
+    """D4.6 业务模板: 邮件分类任务 → TaskPacket (8 必含字段).
+
+    Args:
+        email_id: 邮件主键(emails.id, D3.2 ORM)
+        source: 邮件来源 "qq" / "outlook" / "gmail"
+        category_value: 5 类枚举值 (URGENT / TODO / FYI / SPAM / PERSONAL)
+        model_full_id: 实际调用的 provider/model (如 "deepseek/deepseek-chat")
+        confidence: 0-1 浮点
+
+    Returns:
+        TaskPacket(8 字段,与 SyncPolicyAdapter 范本对齐)
+    """
+    if type(email_id) is not int or isinstance(email_id, bool) or email_id < 0:
+        raise ValueError(
+            f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+        )
+    if type(source) is not str or not source:
+        raise ValueError(f"source 必填非空 str, 实际 {type(source).__name__}")
+    if type(category_value) is not str or not category_value:
+        raise ValueError(f"category_value 必填非空 str, 实际 {type(category_value).__name__}")
+    if type(model_full_id) is not str or not model_full_id:
+        raise ValueError(f"model_full_id 必填非空 str, 实际 {type(model_full_id).__name__}")
+    if type(confidence) is bool or not isinstance(confidence, (int, float)):
+        raise ValueError(f"confidence 必须是数字(非 bool), 实际 {type(confidence).__name__}")
+    if confidence < 0.0 or confidence > 1.0:
+        raise ValueError(f"confidence 必须在 0-1 之间, 实际 {confidence}")
+
+    return TaskPacket(
+        objective=f"email_classify:source={source}:id={email_id}",
+        scope=["ai/classifier.py", "core/models.py"],
+        resources=["db:sqlcipher", "llm:router"],
+        acceptance_criteria=[
+            f"category={category_value}",
+            f"confidence>={confidence:.2f}",
+            "latency<5000ms",
+        ],
+        model=model_full_id,
+        provider=model_full_id.split("/", 1)[0] if "/" in model_full_id else "unknown",
+        permission_profile=PermissionProfile.READ_ONLY.value,
+        recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
+    )
+
+
+def build_classify_policy_context(
+    *,
+    category_value: str,
+    confidence: float,
+    latency_ms: int,
+    consecutive_classify_failures: int = 0,
+    branch_stale: bool = False,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """ClassificationResult → PolicyEngine context (12 字段严判).
+
+    字段映射(对照 build_sync_policy_context 范本):
+      - last_error_recoverable: failed=LLMError, consecutive_classify_failures < 3
+        (LLM 网络/超时,重试)
+      - current_attempts: 1(分类不重试,重试由 caller)
+      - max_attempts: 3
+      - branch_stale: 由 caller 决定
+      - last_heartbeat_ms / stale_threshold_ms / now_ms: 默认 0
+      - action_sensitive: False(分类是 READ_ONLY,不发邮件)
+      - has_approval_token: True(分类无需审批)
+      - approval_token_id: ""
+      - acceptance_results: [conf>=0.7, category!=SPAM, latency<5000]
+      - policy_eval_failed: 连续分类失败 >= 3 时升级
+
+    ⚠️ 严判入口(D4.5 P0 教训应用):
+      - consecutive_classify_failures: type() is int >= 0(排除 bool 子类)
+      - branch_stale: type() is bool
+      - now_ms: type() is int 或 None
+    """
+    import time
+
+    # 严判入口(D4.5 P0 修复 1: 拒 type-coerce,与 D4.4 P1 对齐)
+    if type(consecutive_classify_failures) is not int or consecutive_classify_failures < 0:
+        raise ValueError(
+            f"consecutive_classify_failures 必须是原生 int >= 0, 实际 "
+            f"{type(consecutive_classify_failures).__name__}={consecutive_classify_failures!r}"
+        )
+    if type(branch_stale) is not bool:
+        raise ValueError(
+            f"branch_stale 必须是原生 bool, 实际 {type(branch_stale).__name__}={branch_stale!r}"
+        )
+    if now_ms is not None and type(now_ms) is not int:
+        raise ValueError(f"now_ms 必须是 int 或 None, 实际 {type(now_ms).__name__}={now_ms!r}")
+
+    recoverable = bool(consecutive_classify_failures > 0 and consecutive_classify_failures < 3)
+    policy_eval_failed = bool(consecutive_classify_failures >= 3)
+
+    return {
+        "last_error_recoverable": recoverable,
+        "current_attempts": 1,
+        "max_attempts": 3,
+        "branch_stale": branch_stale,
+        "last_heartbeat_ms": 0,
+        "stale_threshold_ms": 60_000,
+        "now_ms": now_ms if now_ms is not None else int(time.time() * 1000),
+        "action_sensitive": False,
+        "has_approval_token": True,
+        "approval_token_id": "",
+        "acceptance_results": compute_classification_acceptance(
+            category_value=category_value,
+            confidence=confidence,
+            latency_ms=latency_ms,
+        ),
+        "policy_eval_failed": policy_eval_failed,
+    }
+
+
+@dataclass(frozen=True)
+class ClassifyDecisionReport:
+    """D4.6 业务层接入的可观测报告.
+
+    Attributes:
+        evaluation: PolicyEngine.evaluate() 完整结果
+        event_id: 落地到 events 表的 PolicyDecisionEvent id
+        lane_entry_id: LaneBoard 中本次分类的 entry_id
+        liveness: Heartbeat 评估的 Liveness
+        category: 5 类枚举(决策结果)
+        confidence: 置信度
+    """
+
+    evaluation: PolicyEvaluation
+    event_id: int | None
+    lane_entry_id: str
+    liveness: Liveness
+    # 以下字段是 D4.6 业务侧关心的(与 SyncDecisionReport 差异)
+    category: str  # EmailCategory.value
+    confidence: float
+
+
+class EmailClassifierAdapter:
+    """D4.6 业务层接入适配器 — EmailClassifier 接入 PolicyEngine 4 件套.
+
+    复用 SyncPolicyAdapter 4 依赖可注入范本:
+      - event_store: 落 PolicyDecisionEvent(D4.3)
+      - engine: PolicyEngine(D4.4 决策引擎)
+      - heartbeat: Heartbeat(LLM 探活)
+      - board: LaneBoard(分类任务看板)
+
+    用法(生产):
+        from my_ai_employee.ai.classifier import EmailClassifier
+        from my_ai_employee.policy import (
+            EmailClassifierAdapter, EventStore, PolicyEngine,
+        )
+
+        classifier = EmailClassifier()
+        adapter = EmailClassifierAdapter(
+            source="qq",
+            event_store=event_store,
+            engine=PolicyEngine(),
+        )
+        result = classifier.classify(
+            subject="[紧急] 客户投诉",
+            sender="client@example.com",
+            body_excerpt="...",
+        )
+        report = adapter.classify_and_emit(
+            email_id=123,
+            classification=result,
+            consecutive_classify_failures=0,
+        )
+
+    设计要点(沿用 D4.5 P0 + v1.0.1):
+      - EmailClassifier 在外层调(classify 决策独立可测)
+      - 4 依赖可注入(None = 跳过该环节, 测试用)
+      - lane_entry_id 命名 "classify:<source>:<run_id>"(与 sync: 区分)
+    """
+
+    def __init__(
+        self,
+        *,
+        source: str,
+        event_store: EventStore | None = None,
+        engine: PolicyEngine | None = None,
+        heartbeat: Heartbeat | None = None,
+        board: LaneBoard | None = None,
+    ) -> None:
+        if not isinstance(source, str) or not source:
+            raise ValueError(f"source 必填非空 str, 实际 {type(source).__name__}={source!r}")
+        self._source = source
+        self._event_store = event_store
+        self._engine = engine or PolicyEngine()
+        self._heartbeat = heartbeat or Heartbeat(idle_threshold_ms=30_000)
+        self._board = board or LaneBoard(idle_threshold_ms=60_000)
+
+    def build_lane_entry_id(self, run_id: str) -> str:
+        """生成 LaneBoard entry_id: 'classify:<source>:<run_id>'."""
+        if not isinstance(run_id, str) or not run_id:
+            raise ValueError(f"run_id 必填非空 str, 实际 {type(run_id).__name__}={run_id!r}")
+        return f"classify:{self._source}:{run_id}"
+
+    def record_to_lane(
+        self,
+        *,
+        run_id: str,
+        status: LaneStatus,
+        objective: str = "",
+        owner: str = "email_classifier",
+    ) -> LaneEntry:
+        """LaneBoard 记录: add (ACTIVE/BLOCKED) 或 update (FINISHED).
+
+        与 SyncPolicyAdapter.record_to_lane 同逻辑(D4.5 范本复用)。
+        """
+        entry_id = self.build_lane_entry_id(run_id)
+        if not objective:
+            objective = f"Email classify source={self._source}"
+        existing: LaneEntry | None = None
+        try:
+            existing = self._board.get(entry_id)
+        except Exception:
+            existing = None
+        if existing is None:
+            if status == LaneStatus.FINISHED:
+                self._board.add(
+                    LaneEntry(
+                        entry_id=entry_id,
+                        objective=objective,
+                        status=LaneStatus.ACTIVE,
+                        owner=owner,
+                    )
+                )
+                return self._board.update(entry_id, status=LaneStatus.FINISHED, owner=owner)
+            self._board.add(
+                LaneEntry(
+                    entry_id=entry_id,
+                    objective=objective,
+                    status=status,
+                    owner=owner,
+                )
+            )
+            return self._board.get(entry_id)
+        return self._board.update(entry_id, status=status, owner=owner)
+
+    def tick_heartbeat(
+        self,
+        *,
+        transport_alive: bool = True,
+        now_ms: int | None = None,
+    ) -> Liveness:
+        """刷新心跳(LLM 路由成功 → alive=True)."""
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        self._heartbeat.update(transport_alive=transport_alive, now_ms=now_ms)
+        return self._heartbeat.evaluate(now_ms=now_ms)
+
+    def classify_and_emit(
+        self,
+        *,
+        email_id: int,
+        classification: Any,  # ClassificationResult(避免循环 import,用 duck type)
+        consecutive_classify_failures: int = 0,
+        run_id: str = "",
+        now_ms: int | None = None,
+    ) -> ClassifyDecisionReport:
+        """主入口: 评估分类结果 + 落 1 条 PolicyDecisionEvent.
+
+        Args:
+            email_id: 邮件主键(emails.id)
+            classification: EmailClassifier.classify() 的返回(duck type, 严判字段)
+            consecutive_classify_failures: 连续分类失败次数(喂 RetryAvailable/Escalate)
+            run_id: LaneBoard entry 唯一 ID(空 = 用 now_ms 字符串)
+            now_ms: 注入时间(默认 int(time.time() * 1000))
+
+        Returns:
+            ClassifyDecisionReport
+
+        Raises:
+            ValueError: 参数 type 错(D4.5 P0 严判)
+            PolicyContractError: build_classify_packet 8 字段不全
+            PolicyDecisionError: build_classify_policy_context 类型非法
+            EventContractError / EventMetadataError: EventStore.insert 失败
+        """
+        import time as _time
+
+        # 严判 email_id(D4.5 P0 严判入口范本)
+        if type(email_id) is not int or isinstance(email_id, bool) or email_id < 0:
+            raise ValueError(
+                f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+            )
+        if type(consecutive_classify_failures) is not int or consecutive_classify_failures < 0:
+            raise ValueError(
+                f"consecutive_classify_failures 必须是原生 int >= 0, 实际 "
+                f"{type(consecutive_classify_failures).__name__}="
+                f"{consecutive_classify_failures!r}"
+            )
+
+        # 严判 classification duck type(D4.5 P0 范本: 不 catch-all 兜底,字段错就让 KeyError 透传)
+        category_value = classification.category.value  # EmailCategory
+        confidence = float(classification.confidence)
+        model_full_id = classification.model_full_id
+        latency_ms = int(classification.latency_ms)
+
+        # 1) 构造 TaskPacket
+        packet = build_classify_packet(
+            email_id=email_id,
+            source=self._source,
+            category_value=category_value,
+            model_full_id=model_full_id,
+            confidence=confidence,
+        )
+
+        # 2) 构造 context (12 字段严判)
+        context = build_classify_policy_context(
+            category_value=category_value,
+            confidence=confidence,
+            latency_ms=latency_ms,
+            consecutive_classify_failures=consecutive_classify_failures,
+            now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
+        )
+
+        # 3) run_id + lane_entry_id(D4.5 v1.0.1 透传范本)
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate(落事件 + 透传 lane_entry_id / run_id + 业务 payload)
+        #    D4.6 新增: 业务字段(category / confidence / model_full_id / email_id / source)
+        #    透传到 event_metadata 顶层,便于 `mmx policy history` 跨业务类型查询
+        extra_business_payload = {
+            "category": category_value,
+            "confidence": confidence,
+            "model_full_id": model_full_id,
+            "email_id": email_id,
+            "source": self._source,
+        }
+        evaluation = self._engine.evaluate(
+            packet=packet,
+            context=context,
+            store=self._event_store,
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
+            extra_business_payload=extra_business_payload,
+        )
+
+        # 5) LaneBoard 记录(单一真相源 = acceptance_results,D4.5 P0-3 范本)
+        ac_results = compute_classification_acceptance(
+            category_value=category_value,
+            confidence=confidence,
+            latency_ms=latency_ms,
+        )
+        all_pass = bool(all(ac_results))
+        self.record_to_lane(
+            run_id=rid,
+            status=LaneStatus.FINISHED if all_pass else LaneStatus.BLOCKED,
+        )
+
+        # 6) Heartbeat(分类成功 → transport_alive=True)
+        liveness = self.tick_heartbeat(transport_alive=all_pass, now_ms=now_ms)
+
+        return ClassifyDecisionReport(
+            evaluation=evaluation,
+            event_id=evaluation.event_id,
+            lane_entry_id=lane_entry_id,
+            liveness=liveness,
+            category=category_value,
+            confidence=confidence,
+        )
+
+
 # ===== 模块导出 =====
 
 
@@ -443,4 +854,9 @@ __all__ = [
     "build_imap_sync_packet",
     "build_sync_policy_context",
     "compute_acceptance_results",
+    "EmailClassifierAdapter",
+    "ClassifyDecisionReport",
+    "build_classify_packet",
+    "build_classify_policy_context",
+    "compute_classification_acceptance",
 ]

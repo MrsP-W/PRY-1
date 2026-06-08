@@ -170,6 +170,7 @@ class PolicyEngine:
         *,
         lane_entry_id: str = "",
         run_id: str = "",
+        extra_business_payload: dict[str, Any] | None = None,
     ) -> PolicyEvaluation:
         """主入口: 评估 TaskPacket 的 6 决策.
 
@@ -180,6 +181,10 @@ class PolicyEngine:
             lane_entry_id: 可选 — LaneBoard 关联 entry id(写进 event_metadata
                 便于 `mmx policy history --lane` 跨次评估串联,D4.5 v1.0.1 新增)
             run_id: 可选 — 单次评估 run id(写进 event_metadata,与 lane_entry_id 配对)
+            extra_business_payload: 可选 — 业务层透传字段(D4.6 新增,EmailClassifierAdapter
+                传 {category, confidence, model_full_id, email_id, source} 5 项,便于
+                `mmx policy history` 跨业务类型查询时不只看到决策,还能反查业务结果)
+                透传字段必须 key 是 str, value 是 JSON 可序列化(由 EventStore 严判)
 
         Returns:
             PolicyEvaluation(含 status / decisions / event_id)
@@ -223,7 +228,11 @@ class PolicyEngine:
         # 5. 可选: 落 events 表
         if store is not None:
             event_id = self._emit_decision_event(
-                evaluation, store, lane_entry_id=lane_entry_id, run_id=run_id
+                evaluation,
+                store,
+                lane_entry_id=lane_entry_id,
+                run_id=run_id,
+                extra_business_payload=extra_business_payload,
             )
             evaluation.event_id = event_id
 
@@ -469,6 +478,7 @@ class PolicyEngine:
         *,
         lane_entry_id: str = "",
         run_id: str = "",
+        extra_business_payload: dict[str, Any] | None = None,
     ) -> int:
         """落 1 条 PolicyDecisionEvent 到 events 表.
 
@@ -477,6 +487,11 @@ class PolicyEngine:
             store: EventStore 实例(D4.3 events/store.py)
             lane_entry_id: LaneBoard entry id(写进 event_metadata, 便于 history 串联)
             run_id: 单次评估 run id(写进 event_metadata, 与 lane_entry_id 配对)
+            extra_business_payload: 可选 — 业务层透传字段(D4.6 新增),合并到
+                event_metadata 顶层(与 lane_entry_id / run_id 同一级)。D4.3.2
+                决策:`build_event_metadata` `meta.update(extra)`,所以业务字段
+                也走"6 必含 + 业务 payload"扩展模式。EmailClassifierAdapter
+                传 5 字段(category / confidence / model_full_id / email_id / source)。
 
         Returns:
             落地事件的 id(EventStore.insert() 返回)
@@ -499,6 +514,18 @@ class PolicyEngine:
             "lane_entry_id": lane_entry_id,  # D4.5 v1.0.1: 便于 mmx policy history --lane
             "run_id": run_id,  # D4.5 v1.0.1: 与 lane_entry_id 配对
         }
+        # 1.5 业务层透传字段合并(D4.6 新增,EmailClassifierAdapter 透传
+        #     category/confidence/model_full_id/email_id/source 5 项)。
+        #     业务字段不覆盖 9 个 policy 标准字段(优先级 = 业务字段后写,
+        #     但如果业务字段 key 冲突则记录 warning 并保留 policy 标准字段值)。
+        if extra_business_payload:
+            reserved = set(extra_payload.keys())
+            for k, v in extra_business_payload.items():
+                if k in reserved:
+                    # 业务字段与 policy 标准字段冲突 → 保留 policy 值, 静默跳过
+                    # (D3.3.3 教训: 不抛业务异常, 避免破坏 evaluate 主流程)
+                    continue
+                extra_payload[k] = v
         # 2. 选事件 type: succeeded → POLICY_DECISION_MADE, failed → POLICY_DECISION_DEGRADED
         event_type = (
             EventType.POLICY_DECISION_MADE

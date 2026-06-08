@@ -593,6 +593,51 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
+### D4.6 — 邮件分类器（✅ 2026-06-08 v1.0 锁定）
+
+**承接 D4.5 业务层范本**：D4.5 `SyncPolicyAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 5 步主入口，在 D4.6 第二个真实业务场景上**复用**。
+
+**范围**：
+- **业务层**：`ai/classifier.py` 实现 `EmailClassifier`（`classify` / `classify_batch`） + `_parse_classification_response` 严判 LLM 响应 + 5 类 StrEnum `EmailCategory`
+- **Prompt 模板**：`ai/prompts/classify.py` 5 类 SYSTEM prompt + `build_user_message` 拼接
+- **业务层接入**：`EmailClassifierAdapter` 复用 D4.5 范本，`classify_and_emit` 5 步主入口（evaluate + EventStore + LaneBoard + Heartbeat）
+- **业务字段透传**：D4.6 新增 `_emit_decision_event` 可选 kwargs `extra_business_payload`，透传 `category / confidence / model_full_id / email_id / source` 5 项到 event_metadata 顶层
+- **lane_entry_id 命名**：`classify:<source>:<run_id>`（与 `sync:` 区分，便于 `mmx policy history --lane` 跨次分类串联）
+- **5 类标签**：URGENT（紧急）/ TODO（待办）/ FYI（知晓）/ SPAM（垃圾）/ PERSONAL（私人）
+- **D4.5 兼容度**：`SyncPolicyAdapter` 5 步主入口 + `evaluate()` `_emit_decision_event` 旧 kwargs 全保留（`extra_business_payload=None` 旧行为零变化）
+- **D4.4 兼容度**：D4.4 6 个源文件零修改，仅 `_emit_decision_event` 新增可选 kwargs
+
+**8 大质量门**（8/8 全绿 · v1.0 锁定 6/8 晚间）：
+- `pytest tests/ai/ -v`: **92 passed**（D4.1.1 62 → D4.6 +30）
+- `pytest tests/policy/ -v`: **249 passed in 0.97s**（D4.5 v1.0.1 217 → D4.6 +32）
+- `ruff check`: All checks passed / `ruff format`: 81 files already formatted
+- `mypy src/ tests/`: 0 errors / 76 files（D4.5 28 + D4.6 48）
+- `alembic upgrade head --sql`: exit 0 (0003 latest)
+- `uv build`: tar.gz + .whl OK
+- `pytest` 全量: **559 passed**（D4.5 v1.0.1 累计 +63，**0 失败**）
+- 覆盖率：`policy/integration.py` 99.4% + `ai/classifier.py` 96.4% + `ai/prompts/classify.py` 100%
+
+**关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 + D4.5 v1.0.1 教训应用）：
+- 复用 `router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链（`fallback.FALLBACK_CHAINS` 已配）
+- 严判 LLM 响应：必须严格 JSON `{"category": "<枚举>", "confidence": <0-1 float>}` 拒 markdown / 拒 bool（陷阱）/ 拒越界 / 拒非法 category
+- 复用 `SyncPolicyAdapter` 4 依赖可注入范本，`classify_and_emit` 5 步主入口
+- 业务字段（category / confidence / model_full_id / email_id / source）透传到 event_metadata 顶层，便于 `mmx policy history` 跨业务类型查询
+- 正文 > 2000 字符自动截断（防御巨型 body 撑爆 prompt）
+- batch 单条响应脏 → 异常入 results 列表，不阻塞后续（D3.3.3 教训：不 catch-all 兜底）
+
+**已知限制**（D4.6.1+ 复检 P 项）：
+- 5 类硬编码（暂不支持扩展到 6+ 类如 NEWSLETTER） → D4.6.1+ 扩 NEWSLETTER / INVOICE 等
+- `classify_batch` 顺序串行（100 封 ≈ 50-300s） → D4.6.1+ 改 asyncio + httpx async
+- 无 1 千封真实 spike → D4.6.1+ 在 1 千封真实邮件上跑端到端，验证 LLM 准确率 / fallback 触发率
+- CLI 集成未做 → D4.6.1+ 加 `mmx classify` 子命令
+- 业务字段口径锁定 5 项 → D4.7+ drafter 按需透传（协议已留好）
+
+**参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.5 v1.0.1 反馈闭环模式。完整报告：[reports/D4.6-邮件分类器.md](../reports/D4.6-邮件分类器.md)
+
+**下一棒 → D4.7+ drafter / classifier_v2**（D4.5 范本 + D4.6 EmailClassifierAdapter 复用）。D4.6 **v1.0 已锁定**（2026-06-08 晚间），W2 业务层启动决策推迟到 6/9 晨间链路确认。D4 智能层底座 6 步全锁定 + 业务层接入范本复用 1 次。
+
+---
+
 ## D5 — CalDAV 同步 + 菜单栏
 
 ### 目标
