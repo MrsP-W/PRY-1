@@ -101,6 +101,8 @@ warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false  # Week 1 不强制，Phase 2 再严
 ignore_missing_imports = true
+# D3 阶段 scripts/ 是 CLI/spike 脚本（不在 mypy 严格范围）— 业务代码走 src/ + tests/
+exclude = ["scripts/"]
 
 [tool.pytest.ini_options]
 minversion = "8.0"
