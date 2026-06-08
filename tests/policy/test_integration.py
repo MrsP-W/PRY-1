@@ -160,18 +160,70 @@ class TestFactoryFunctions:
         assert ctx["last_error_recoverable"] is False
 
     def test_build_sync_policy_context_escalate_logic(self) -> None:
-        """escalate 逻辑: failed > consecutive_failures > 0 → True（已超阈值,升级）。"""
-        # failed=10, consecutive_failures=5 → escalate
-        ctx = build_sync_policy_context(result=_make_sync_result(failed=10), consecutive_failures=5)
+        """escalate 语义 (D4.5 P0 修复): failed > 0 AND consecutive_failures >= 3 → True。
+
+        之前错的: failed > consecutive_failures > 0 (failed=10,cf=1 会升级; failed=1,cf=3 反而不升级)
+        修复后: 达到连续失败阈值才升级 (cf >= 3)
+        """
+        # failed>0 + cf=3 → escalate (达到阈值)
+        ctx = build_sync_policy_context(result=_make_sync_result(failed=5), consecutive_failures=3)
         assert ctx["policy_eval_failed"] is True
 
-        # failed=5, consecutive_failures=10 → 不 escalate（失败次数 < 累计次数,矛盾但不发升级）
-        ctx = build_sync_policy_context(result=_make_sync_result(failed=5), consecutive_failures=10)
+        # failed>0 + cf=4 → escalate
+        ctx = build_sync_policy_context(result=_make_sync_result(failed=1), consecutive_failures=4)
+        assert ctx["policy_eval_failed"] is True
+
+        # failed>0 + cf=2 → 不 escalate (未达阈值, 应先重试)
+        ctx = build_sync_policy_context(result=_make_sync_result(failed=10), consecutive_failures=2)
         assert ctx["policy_eval_failed"] is False
 
-        # failed=0 → 不 escalate
+        # failed=0 → 不 escalate (无失败谈不上升级)
         ctx = build_sync_policy_context(result=_make_sync_result(failed=0), consecutive_failures=5)
         assert ctx["policy_eval_failed"] is False
+
+    def test_build_sync_policy_context_strict_type_rejection(self) -> None:
+        """D4.5 P0 严判: 拒 type-coerce 输入, 与 D4.4 P1 对齐。
+
+        - consecutive_failures: 拒 bool/str/float/负数
+        - branch_stale: 拒 "true"/"false" 字符串 (bool 字面是唯一接受)
+        - now_ms: 拒 str/float
+        """
+        result = _make_sync_result()
+
+        # consecutive_failures 严判
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
+            build_sync_policy_context(result=result, consecutive_failures=True)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
+            build_sync_policy_context(result=result, consecutive_failures="3")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
+            build_sync_policy_context(result=result, consecutive_failures=-1)
+
+        # branch_stale 严判 (核心修复: "false" 字符串不应通过)
+        with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="false")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="true")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale=1)  # type: ignore[arg-type]
+
+        # now_ms 严判
+        with pytest.raises(ValueError, match="now_ms 必须是 int 或 None"):
+            build_sync_policy_context(result=result, consecutive_failures=0, now_ms="12345")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="now_ms 必须是 int 或 None"):
+            build_sync_policy_context(result=result, consecutive_failures=0, now_ms=12345.0)  # type: ignore[arg-type]
+
+    def test_build_sync_policy_context_accepts_native_types(self) -> None:
+        """D4.5 P0: 原生 bool/int 必须通过严判, 不抛 ValueError。"""
+        result = _make_sync_result()
+        # 原生 int / bool 必须通过
+        ctx = build_sync_policy_context(
+            result=result,
+            consecutive_failures=0,  # 原生 int
+            branch_stale=False,  # 原生 bool
+            now_ms=1_700_000_000_000,  # 原生 int
+        )
+        assert type(ctx["branch_stale"]) is bool
+        assert type(ctx["now_ms"]) is int
 
 
 # ===== 2. SyncPolicyAdapter 初始化 =====
@@ -282,10 +334,12 @@ class TestTickHeartbeat:
         assert hb.evaluate(now_ms=70_000) == Liveness.STALLED
 
     def test_tick_rejects_non_bool_transport(self) -> None:
-        """transport_alive 严判 bool（D4.4 编程错误透传）。"""
+        """transport_alive 严判原生 bool（D4.5 P0 修复, 与 D4.4 P1 一致）。"""
         a = SyncPolicyAdapter(source="qq")
-        with pytest.raises(ValueError, match="transport_alive 必须是 bool"):
+        with pytest.raises(ValueError, match="transport_alive 必须是原生 bool"):
             a.tick_heartbeat(transport_alive="true")  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="transport_alive 必须是原生 bool"):
+            a.tick_heartbeat(transport_alive=1)  # type: ignore[arg-type]
 
 
 # ===== 5. evaluate_and_emit 主入口测试 =====
@@ -335,12 +389,22 @@ class TestEvaluateAndEmit:
         assert report.evaluation.has_decision(PolicyDecisionKind.RETRY_AVAILABLE)
 
     def test_escalate_when_consecutive_failures_high(self, store: Any) -> None:
-        """failed > consecutive_failures 阈值 → EscalateRequired 触发。"""
+        """D4.5 P0 修复: failed > 0 AND cf >= 3 → EscalateRequired 触发。"""
         a = SyncPolicyAdapter(source="qq", event_store=store)
         result = _make_sync_result(inserted=0, failed=10, duration_seconds=1.0)
-        # consecutive_failures=2 < failed=10 → policy_eval_failed=True
-        report = a.evaluate_and_emit(result, consecutive_failures=2)
+        # cf=3 (达到阈值) + failed>0 → escalate
+        report = a.evaluate_and_emit(result, consecutive_failures=3)
         assert report.evaluation.has_decision(PolicyDecisionKind.ESCALATE_REQUIRED)
+
+    def test_no_escalate_below_threshold(self, store: Any) -> None:
+        """D4.5 P0 修复: cf < 3 (未达阈值) + failed>0 → 不升级, 只 RETRY。"""
+        a = SyncPolicyAdapter(source="qq", event_store=store)
+        result = _make_sync_result(inserted=0, failed=10, duration_seconds=1.0)
+        report = a.evaluate_and_emit(result, consecutive_failures=2)
+        # 不应升级
+        assert not report.evaluation.has_decision(PolicyDecisionKind.ESCALATE_REQUIRED)
+        # 应触发重试 (cf<3 + failed>0 → recoverable)
+        assert report.evaluation.has_decision(PolicyDecisionKind.RETRY_AVAILABLE)
 
     def test_run_id_unique_per_call(self, store: Any) -> None:
         """不传 run_id → 用 now_ms str 当默认, 多次调用 lane_entry_id 不同。"""
@@ -362,11 +426,49 @@ class TestEvaluateAndEmit:
         assert report.lane_entry_id == "sync:qq:custom-rid-001"
 
     def test_rejects_negative_consecutive_failures(self) -> None:
-        """consecutive_failures 必填 int>=0（编程错误透传）。"""
+        """consecutive_failures 必填原生 int>=0（D4.5 P0 严判, 拒 bool/str/负数）。"""
         a = SyncPolicyAdapter(source="qq")
         result = _make_sync_result()
-        with pytest.raises(ValueError, match="consecutive_failures 必须是 int >= 0"):
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             a.evaluate_and_emit(result, consecutive_failures=-1)
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
+            a.evaluate_and_emit(result, consecutive_failures=True)  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
+            a.evaluate_and_emit(result, consecutive_failures="2")  # type: ignore[arg-type]
+
+    def test_acceptance_consistency_lane_heartbeat(self, store: Any) -> None:
+        """D4.5 P0 修复 3: lane/heartbeat 成功判定用 acceptance_results, 单一真相源。
+
+        场景:
+          - 慢同步 (duration=35s) → AC[2]=False → 应 BLOCKED + transport_dead
+            (修复前会误判 FINISHED + healthy)
+          - 空同步 (inserted=0, failed=0) → AC[0]=False → 应 BLOCKED + transport_dead
+            (修复前会误判 BLOCKED + transport_dead, 巧合正确, 但语义不一致)
+          - 完美同步 (inserted>0, failed=0, duration<30s) → AC=[T,T,T] → FINISHED + healthy
+        """
+        a = SyncPolicyAdapter(source="qq", event_store=store)
+
+        # 场景 1: 慢同步 (duration=35s)
+        slow = _make_sync_result(inserted=10, failed=0, duration_seconds=35.0)
+        report = a.evaluate_and_emit(slow, consecutive_failures=0, run_id="slow-1")
+        assert (
+            report.evaluation.has_decision(PolicyDecisionKind.MERGE_REQUIRED) is False
+        )  # AC[2] fail
+        assert a._board.get(report.lane_entry_id).status == LaneStatus.BLOCKED
+        assert report.liveness == Liveness.TRANSPORT_DEAD
+
+        # 场景 2: 空同步
+        empty = _make_sync_result(inserted=0, failed=0, duration_seconds=1.0)
+        report = a.evaluate_and_emit(empty, consecutive_failures=0, run_id="empty-1")
+        assert a._board.get(report.lane_entry_id).status == LaneStatus.BLOCKED
+        assert report.liveness == Liveness.TRANSPORT_DEAD
+
+        # 场景 3: 完美同步
+        perfect = _make_sync_result(inserted=10, failed=0, duration_seconds=1.0)
+        report = a.evaluate_and_emit(perfect, consecutive_failures=0, run_id="perfect-1")
+        assert report.evaluation.has_decision(PolicyDecisionKind.MERGE_REQUIRED)
+        assert a._board.get(report.lane_entry_id).status == LaneStatus.FINISHED
+        assert report.liveness == Liveness.HEALTHY
 
     def test_full_event_payload(self, store: Any) -> None:
         """验证 event 落地的 7 业务字段（rule_name / kind / all_decisions / context_snapshot）。"""

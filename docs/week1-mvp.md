@@ -557,19 +557,21 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **Release 决策包**：`reports/D4.5-release-readiness.md` 5 段 ready_for_review 报告（测试覆盖 / 质量门 / 性能 / 已知限制 / 待人工审批项）—— **不引 g007/g012**（不写 production deploy 脚本，决策包只等用户审批）
 - **D4.4 源文件零修改**（4 件套契约保持 v1.0，向后兼容）
 
-**8 大质量门**（7 实跑 + 1 D4.3 预存隔离）：
-- `pytest tests/policy/ -v`: **211 passed in 0.13s**（D4.4 180 → D4.5 +31）
+**8 大质量门**（8/8 全绿 · v1.0 锁定 6/9）：
+- `pytest tests/policy/ -v`: **215 passed in 0.30s**（D4.4 180 → D4.5 +35，含 P0 修复 +4）
 - `ruff check`: All checks passed / `ruff format`: 71 files already formatted
 - `mypy src/policy/`: 0 errors / 7 files（D4.4 6 + integration 1）
 - `mypy tests/policy/`: 0 errors / 8 files（D4.4 7 + test_integration 1）
 - `alembic upgrade head --sql`: exit 0 (0003 latest)
 - `uv build`: tar.gz + .whl OK
-- `pytest` 全量: **489 passed** + 1 D4.3 预存隔离（`test_by_session`，与 D4.5 无关）
+- `pytest` 全量: **494 passed**（D4.3 预存隔离 6/9 早晨已修复，**0 失败**）
 
-**关键设计**（D3.3.3 + D4.4 P1 教训应用）：
+**关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 教训应用）：
 - 4 依赖可注入（event_store / engine / heartbeat / board），不传 = D3.3 行为不变
 - `evaluate_and_emit` 不替 caller 执行 6 决策（D3.3.3 异常窄化教训：只声明，不替业务调度器决定）
-- `consecutive_failures` 必填 int>=0 + `transport_alive` 必填 bool，严判透传 ValueError（D4.4 P1 教训）
+- 严判入口（**D4.5 P0-1 修复**）：`branch_stale` / `consecutive_failures` / `now_ms` 必须原生 bool/int，拒 type-coerce
+- escalate 语义（**D4.5 P0-2 修复**）：`failed > 0 AND consecutive_failures >= 3`（达到阈值才升级）
+- lane/heartbeat 单一真相源（**D4.5 P0-3 修复**）：`all(acceptance_results)` 判定，与 PolicyEngine 同步
 - `run_id` 空时用 `int(time.time()*1000)` 默认值（多次调用 lane_entry_id 唯一）
 - 业务 payload 7 字段合并到 `event_metadata` 顶层（D4.3.2 决策：`build_event_metadata` `meta.update(extra)`）
 
@@ -579,9 +581,15 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - 单一 IMAP 接入 → D4.6+ 加 `EmailClassifierAdapter` / `EmailDrafterAdapter`（同 4 依赖范本）
 - 无 1 万封真实 spike → D4.5.1+ 在 1 万封真实邮件上跑 `evaluate_and_emit` 30 天（D3.3 spike 已验证 0.30s/万封性能基线）
 
-**参考来源**：[docs/d4-claw-code-mapping.md §6](../docs/d4-claw-code-mapping.md)（D4.5 6 优先参考 + 4 不照搬 + 3 不学 + 10 决策）。完整报告：[reports/D4.5-release-readiness.md](../reports/D4.5-release-readiness.md)
+**P0 业务语义修复闭环**（D4.5 ready_for_review → v1.0）：
+- **P0-1 严判入口**：原 `bool("false")` 静默转 True 触发误升级 → 改 `type() is bool/int` 严判，3 类脏输入抛 ValueError
+- **P0-2 escalate 语义**：原 `failed > cf > 0` 颠倒（failed=10,cf=1 升级 / failed=1,cf=3 不升级）→ 改 `failed > 0 AND cf >= 3`
+- **P0-3 lane/heartbeat 单一真相源**：原 `failed==0 AND inserted>0` 把慢同步 / 空同步误标成功 → 改 `all(acceptance_results)`
+- 7 个新测试覆盖（`test_build_sync_policy_context_strict_type_rejection` / `test_acceptance_consistency_lane_heartbeat` 等）
 
-**下一棒 → D4.6+ 业务层实现**（classifier / drafter 用 `router.route()` + D4.5 `SyncPolicyAdapter` 范本）。D4.5 v1.0 release 决策包待用户审批（6/9 晨间链路确认）。
+**参考来源**：[docs/d4-claw-code-mapping.md §6](../docs/d4-claw-code-mapping.md)（D4.5 6 优先参考 + 4 不照搬 + 3 不学 + 14 决策含 P0 修复）。完整报告：[reports/D4.5-release-readiness.md](../reports/D4.5-release-readiness.md)
+
+**下一棒 → D4.6+ 业务层实现**（classifier / drafter 用 `router.route()` + D4.5 `SyncPolicyAdapter` 范本）。D4.5 **v1.0 已锁定**（6/9 早晨 P0 修复后），Week 2 业务层启动决策推迟到 6/9 晨间链路确认。
 
 ---
 

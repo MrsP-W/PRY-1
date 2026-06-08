@@ -1,6 +1,6 @@
 """D4.5 — 业务层接入: IMAP 同步 → PolicyEngine + LaneBoard + Heartbeat.
 
-设计 (D4.5 release readiness + 业务层接入, ready_for_review 状态):
+设计 (D4.5 v1.0 锁定, P0 业务语义修复后):
 
   D4.4 落地的 4 件套 (TaskPacket / PolicyEngine / LaneBoard / Heartbeat) 在 D4.4
   报告中明说"业务层 (classifier / drafter) 才真实调用 evaluate()". D4.5 第一个
@@ -8,11 +8,18 @@
   入库到 SQLCipher DB) 接入决策引擎, 让 sync 流程具备:
 
     1. **可观测**: 每次 sync 落 1 条 PolicyDecisionEvent 到 events 表
-    2. **可重试决策**: failed > 0 + last_error_recoverable=True → 触发 RetryAvailable
-    3. **可合并决策**: inserted > 0 + failed = 0 → 触发 MergeRequired
-    4. **可升级决策**: failed > consecutive_failures 阈值 → 触发 EscalateRequired
-    5. **可看**: LaneBoard 记录每次 sync 状态 (ACTIVE → FINISHED, 失败时 BLOCKED)
-    6. **可探活**: Heartbeat 记录 transport 状态 (IMAP 连接成功 = alive)
+    2. **可重试决策**: failed > 0 + consecutive_failures < 3 → 触发 RetryAvailable
+    3. **可合并决策**: 全部 AC pass → 触发 MergeRequired
+    4. **可升级决策**: failed > 0 + consecutive_failures >= 3 → 触发 EscalateRequired
+    5. **可看**: LaneBoard 记录每次 sync 状态 (FINISHED if 全 AC pass, else BLOCKED)
+    6. **可探活**: Heartbeat 记录 transport 状态 (全 AC pass = alive)
+
+  D4.5 P0 业务语义修复 (D4.5 ready_for_review → v1.0 锁定):
+    - 严判入口: branch_stale / now_ms / consecutive_failures 必须是原生 bool/int
+      (与 D4.4 P1 修复对齐, 拒绝 type-coerce, 脏输入早失败)
+    - escalate 语义: failed > 0 AND consecutive_failures >= 3 (达到阈值才升级)
+    - lane/heartbeat 一致性: 全部 AC pass 才算"sync 成功", 否则 BLOCKED +
+      transport_dead, 单一真相源 = acceptance_results
 
 依赖注入 (D3.3 → D4.5 兼容):
   - IMAPSync.__init__ 新增可选参数 `event_store` (D4.3) 和 `policy_engine` (D4.4)
@@ -21,7 +28,7 @@
 
 SyncPolicyAdapter 是 D4.5 的核心:
   - `build_packet()` — IMAP 同步上下文 → TaskPacket (8 必含字段)
-  - `build_context()` — SyncResult → PolicyEngine context (12 字段)
+  - `build_context()` — SyncResult → PolicyEngine context (12 字段, 严判)
   - `record_to_lane()` — 同步结果 → LaneEntry.add() / .update()
   - `tick_heartbeat()` — IMAP healthcheck 成功 → Heartbeat.update()
   - `evaluate_and_emit()` — 主入口: evaluate() + EventStore 落地 1 条事件
@@ -129,21 +136,46 @@ def build_sync_policy_context(
       - has_approval_token: True (IMAP 同步无需审批)
       - approval_token_id: "" (空 — 同步不需要)
       - acceptance_results: [inserted>0, failed=0, duration<30s]
-      - policy_eval_failed: failed > consecutive_failures (已超阈值, 升级)
+      - policy_eval_failed: failed > 0 AND consecutive_failures >= 3
+        (达到连续失败阈值 = 应升级, 修复 D4.5 ready_for_review 反馈的语义问题)
 
-    ⚠️ 类型必须 native bool/int/str/list[bool] (D4.4 P1 修复 — 拒绝 type-coerce)
+    ⚠️ 严判入口 (D4.5 P0 修复, 拒绝 type-coerce, 与 D4.4 P1 对齐):
+      - consecutive_failures: type() is int (排除 bool 子类), >= 0
+      - branch_stale: type() is bool (拒绝 "false"/"true" 字符串)
+      - now_ms: type() is int 或 None (若传)
+
+    失败抛 ValueError (D4.4 P1 + D3.3.3 异常窄化教训 — 编程错误透传, 不静默 coerce)
     """
     import time
 
+    # 严判入口 (D4.5 P0 修复 1: 拒 type-coerce, 与 D4.4 P1 对齐)
+    if type(consecutive_failures) is not int or consecutive_failures < 0:
+        # 注意: bool 是 int 子类, type(True) is int=False → 排除
+        raise ValueError(
+            f"consecutive_failures 必须是原生 int >= 0, 实际 "
+            f"{type(consecutive_failures).__name__}={consecutive_failures!r}"
+        )
+    if type(branch_stale) is not bool:
+        raise ValueError(
+            f"branch_stale 必须是原生 bool, 实际 {type(branch_stale).__name__}={branch_stale!r}"
+        )
+    if now_ms is not None and type(now_ms) is not int:
+        raise ValueError(f"now_ms 必须是 int 或 None, 实际 {type(now_ms).__name__}={now_ms!r}")
+
+    # 修复 2: escalate 语义 — 达到阈值才升级 (D4.5 P0 反馈)
+    # 之前: failed > consecutive_failures > 0
+    # 现在: result.failed > 0 AND consecutive_failures >= 3
     recoverable = bool(result.failed > 0 and consecutive_failures < 3)
+    policy_eval_failed = bool(result.failed > 0 and consecutive_failures >= 3)
+
     return {
         "last_error_recoverable": recoverable,
         "current_attempts": 1,
         "max_attempts": 3,
-        "branch_stale": bool(branch_stale),
+        "branch_stale": branch_stale,  # 已严判, 直接用
         "last_heartbeat_ms": 0,  # Heartbeat 单独管理, sync context 不强制注入
         "stale_threshold_ms": 60_000,
-        "now_ms": int(now_ms) if now_ms is not None else int(time.time() * 1000),
+        "now_ms": now_ms if now_ms is not None else int(time.time() * 1000),
         "action_sensitive": False,
         "has_approval_token": True,
         "approval_token_id": "",
@@ -152,7 +184,7 @@ def build_sync_policy_context(
             failed=result.failed,
             duration_seconds=result.duration_seconds,
         ),
-        "policy_eval_failed": bool(result.failed > consecutive_failures > 0),
+        "policy_eval_failed": policy_eval_failed,
     }
 
 
@@ -301,8 +333,11 @@ class SyncPolicyAdapter:
         Returns:
             评估后的 Liveness
         """
-        if not isinstance(transport_alive, bool):
-            raise ValueError(f"transport_alive 必须是 bool, 实际 {type(transport_alive).__name__}")
+        # D4.5 P0 修复: type() is bool 严判 (与 D4.4 P1 一致, 拒 "true" 字符串)
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 {type(transport_alive).__name__}={transport_alive!r}"
+            )
         self._heartbeat.update(transport_alive=transport_alive, now_ms=now_ms)
         return self._heartbeat.evaluate(now_ms=now_ms)
 
@@ -328,12 +363,17 @@ class SyncPolicyAdapter:
         Raises:
             PolicyContractError: build_imap_sync_packet 失败 (8 字段不全)
             PolicyDecisionError: build_sync_policy_context 失败 (类型非法)
+            ValueError: consecutive_failures / now_ms 严判失败 (D4.5 P0 严判入口)
             EventContractError / EventMetadataError: EventStore.insert 失败
         """
         import time as _time
 
-        if not isinstance(consecutive_failures, int) or consecutive_failures < 0:
-            raise ValueError(f"consecutive_failures 必须是 int >= 0, 实际 {consecutive_failures!r}")
+        # 严判 consecutive_failures (D4.5 P0 修复 — type() is int 排除 bool 子类)
+        if type(consecutive_failures) is not int or consecutive_failures < 0:
+            raise ValueError(
+                f"consecutive_failures 必须是原生 int >= 0, 实际 "
+                f"{type(consecutive_failures).__name__}={consecutive_failures!r}"
+            )
 
         # 1) 构造 TaskPacket
         packet = build_imap_sync_packet(
@@ -357,10 +397,17 @@ class SyncPolicyAdapter:
             store=self._event_store,  # None 时不落地 (纯评估)
         )
 
-        # 4) LaneBoard 记录 (FINISHED if 全部 AC pass, else BLOCKED)
+        # 4) LaneBoard 记录 — 单一真相源: acceptance_results (D4.5 P0 修复 3)
+        #    全部 AC pass → FINISHED + healthy; 否则 → BLOCKED + transport_dead
+        #    (修复前: 只看 failed==0 AND inserted>0, 把空同步 + 慢同步误标)
         rid = run_id or str(int(_time.time() * 1000))
         lane_entry_id = self.build_lane_entry_id(rid)
-        all_pass = bool(result.failed == 0 and result.inserted > 0)
+        ac_results = compute_acceptance_results(
+            inserted=result.inserted,
+            failed=result.failed,
+            duration_seconds=result.duration_seconds,
+        )
+        all_pass = bool(all(ac_results))  # 3 条 AC 全 True 才算成功
         self.record_to_lane(
             run_id=rid,
             status=LaneStatus.FINISHED if all_pass else LaneStatus.BLOCKED,

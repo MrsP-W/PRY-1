@@ -308,27 +308,30 @@
 
 **总产出**:1 新增 src 模块(270 行) + 1 `__init__` 扩展(26→31 导出) + 1 新增测试(397 行 / 31 tests) + 1 报告(400 行) + 1 mapping 段。**D4.4 源文件零修改**(4 件套契约保持 v1.0)。
 
-### 6.5 验证 anchor(8 质量门,7 实跑 + 1 预存)
+### 6.5 验证 anchor(8 质量门全绿,v1.0 锁定 6/9)
 
 | 门 | 结果 |
 |----|------|
-| 1. `pytest tests/policy/ -v` | **211 passed in 0.13s** (D4.4 180 → D4.5 +31) |
+| 1. `pytest tests/policy/ -v` | **215 passed in 0.30s** (D4.4 180 → D4.5 +35,含 P0 修复 +4) |
 | 2. `ruff check` | All checks passed |
 | 3. `ruff format` | 71 files already formatted |
 | 4. `mypy src/my_ai_employee/policy/` | 0 errors / 7 files(D4.4 6 + integration 1) |
 | 5. `mypy tests/policy/` | 0 errors / 8 files(D4.4 7 + test_integration 1) |
 | 6. `alembic upgrade head --sql` | exit 0 (0003 latest) |
 | 7. `uv build` | tar.gz + .whl OK |
-| 8. `pytest` (全量) | **489 passed** + 1 D4.3 预存隔离(`test_by_session`,与 D4.5 无关) |
+| 8. `pytest` (全量) | **494 passed**(D4.3 预存隔离 6/9 早晨已修复,**0 失败**) |
 
-### 6.6 关键设计决策(D3.3.3 + D4.4 P1 教训应用)
+### 6.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 教训应用)
 
 | 决策 | 理由 | 教训来源 |
 |------|------|---------|
 | 4 依赖全可选注入 | D3.3 行为零变化,不传 = 纯评估模式 | Karpathy 原则 2(向后兼容) |
 | `evaluate_and_emit` 不替 caller 执行 6 决策 | 只 emit + 推进 lane,实际 retry/merge/escalate 由 D5+ 决定 | D3.3.3 异常窄化教训 |
-| `consecutive_failures` 必填 int>=0,严判透传 ValueError | 编程错误不包装,避免掩盖问题 | D4.4 P1 教训 |
-| `transport_alive` 必填 bool,`type() is bool` 严判 | 字符串"true" 不通过,显式 `bool()` 转换 | D4.4 P1 教训 |
+| `consecutive_failures` 必填原生 int>=0,`type() is int` 严判,透传 ValueError | 编程错误不包装,避免掩盖问题 + 拒 bool 子类 | D4.4 P1 + D4.5 P0-1 反馈 |
+| `transport_alive` 必填原生 bool,`type() is bool` 严判 | 字符串"true" 不通过,显式 `bool()` 转换,脏输入早失败 | D4.4 P1 + D4.5 P0-1 反馈 |
+| `branch_stale` / `now_ms` 入口严判(type() is bool/int) | 与 D4.4 P1 对齐,`branch_stale="false"` 等脏输入不静默转 True | D4.5 P0-1 反馈 |
+| escalate 语义:`failed > 0 AND consecutive_failures >= 3` | 达到连续失败阈值才升级;原 `failed > cf > 0` 颠倒 | D4.5 P0-2 反馈 |
+| lane/heartbeat 单一真相源 = `all(acceptance_results)` | 3 条 AC 全 pass 才算"sync 成功",与 PolicyEngine 同步 | D4.5 P0-3 反馈 |
 | `run_id` 空时用 `int(time.time()*1000)` 默认值 | 多次调用 lane_entry_id 唯一(测试 `test_run_id_unique_per_call` 验证) | Karpathy 原则 3(最小可用) |
 | `record_to_lane` 内部先 add ACTIVE 再 update FINISHED | D4.4 状态矩阵:FINISHED 终态不能直接 add | D4.4 LaneBoard 矩阵 |
 | 业务 payload 7 字段合并到 `event_metadata` 顶层 | D4.3.2 决策:`build_event_metadata` `meta.update(extra)` | D4.3.2 contract 教训 |
@@ -348,7 +351,7 @@
 
 ---
 
-**最后更新**:2026-06-08(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(ready_for_review),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段)
+**最后更新**:2026-06-09(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(**v1.0 锁定 · P0 业务语义修复后**),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + P0 反馈 3 条修复)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
