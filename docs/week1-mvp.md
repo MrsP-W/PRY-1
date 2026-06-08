@@ -342,7 +342,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | # | 任务 | 预计耗时 | 实际产出 | 状态 |
 |---|------|----------|----------|------|
 | 3.3.1 | 写 `src/my_ai_employee/core/sync.py` + `scripts/sync_imap.py`（`IMAPSync` 100/批 commit ORM + CLI）| 90 min | 320 + 110 行 | ✅ |
-| 3.3.2 | 写 `tests/core/test_sync.py`（mock BaseConnector + 真实 SQLCipher DB）| 60 min | 9 个端到端用例 | ✅ |
+| 3.3.2 | 写 `tests/core/test_sync.py`（mock BaseConnector + 真实 SQLCipher DB）| 60 min | **11 个端到端用例**（D3.3.1 9 + D3.3.2 +1 UNIQUE 冲突 + D3.3.3 +1 OperationalError 传播）| ✅ |
 | 3.3.3 | **Spike**：1 万封 mock 邮件 < 30s 入库 | 30 min | **0.30s / 33000 封/秒** | ✅ |
 
 **总耗时**：约 3 小时（符合预期）
@@ -357,7 +357,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 #### 5 关质量门
 
-- [x] pytest **100 passed**（91 → 100，+9 D3.3）
+- [x] pytest **102 passed**（91 → 102，+11 D3.3：D3.3.1 +9 + D3.3.2 +1 UNIQUE 冲突测试 + D3.3.3 +1 OperationalError 传播测试）
 - [x] ruff check **0 errors**
 - [x] ruff format **No changes needed**
 - [x] mypy **0 errors in 27 source files**
@@ -370,7 +370,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | [src/my_ai_employee/core/sync.py](../src/my_ai_employee/core/sync.py) | `IMAPSync` 核心（100/批 commit + SyncState upsert + 失败隔离）|
 | [scripts/sync_imap.py](../scripts/sync_imap.py) | CLI（`sync` 真 IMAP 模式 + `spike` 性能模式）|
 | [scripts/spike_sync.py](../scripts/spike_sync.py) | 1 万封 faker 性能测试 |
-| [tests/core/test_sync.py](../tests/core/test_sync.py) | 9 个 D3.3 端到端测试 |
+| [tests/core/test_sync.py](../tests/core/test_sync.py) | **11 个 D3.3 端到端测试** |
 | [reports/D3.3-同步脚本与性能spike.md](../reports/D3.3-同步脚本与性能spike.md) | 完整完成报告 |
 
 #### 关键设计决策（沉淀）
