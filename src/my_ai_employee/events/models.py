@@ -84,6 +84,10 @@ class EventType(enum.StrEnum):
     DRAFT_GENERATE_SUCCEEDED = "draft.generate.succeeded"
     DRAFT_GENERATE_FAILED = "draft.generate.failed"
 
+    # 任务策略板 (D4.4 policy engine 决策事件)
+    POLICY_DECISION_MADE = "policy.decision.made"
+    POLICY_DECISION_DEGRADED = "policy.decision.degraded"
+
 
 class EventStatus(enum.StrEnum):
     """事件状态 — 7 枚举 (g004 不变量 2).
