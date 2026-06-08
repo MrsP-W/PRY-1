@@ -2,7 +2,7 @@
 
 > **项目内 mapping**（D4 启动检查清单第 2 项要求）
 > **触发规则**:参考 [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md)（D4 智能层启动后每 D-step 必先参考）
-> **2026-06-08 创建 · 2026-06-09 启动 D4.2 时更新**
+> **2026-06-08 创建 · 2026-06-08 D4.2 完成时更新**
 > **快照基线**:claw-code 6/7 已拉过 12 个文件,后续有变更需 re-fetch
 
 ---
@@ -36,10 +36,11 @@
 
 ---
 
-## 2. D4.2 MCP 生命周期(2026-06-09 启动)
+## 2. D4.2 MCP 生命周期(✅ 2026-06-08 v1.0 锁定)
 
-> **范围**:MCP 客户端基类 + connect/disconnect/重试/熔断 + 4 类业务异常 + DegradedReport + Required flag 决策
+> **范围**:MCP 客户端基类 + connect/disconnect/重试/降级 + 4 类业务异常 + DegradedReport + Required flag 决策
 > **不接真实 server**:全 mock transport,可独立测试
+> **注**:D4.2 **不含熔断器**(`failure_count/opened_at` 状态), 仅做 `max_retries` 次重试 + 失败抛错; 熔断器在 D4.4+ 任务策略板阶段加
 
 ### 2.1 claw-code 优先参考
 
@@ -68,20 +69,20 @@
 - ❌ 真实 MCP server 连接 — 项目内没需求,先建抽象
 - ❌ `McpOAuth` 流程 — D4.2 不涉及认证
 
-### 2.4 实施子任务(2026-06-09)
+### 2.4 实施子任务(2026-06-08 当日完成)
 
 1. **D4.2.0 mapping + 报告骨架** — 本文件 + `reports/D4.2-MCP抽象层完成.md` 段
 2. **D4.2.1 实施 mcp 抽象层**:
    - `src/my_ai_employee/mcp/exceptions.py` — 4 类异常
    - `src/my_ai_employee/mcp/report.py` — `McpDegradedReport` / `McpErrorSurface` / `McpServerStatus`
    - `src/my_ai_employee/mcp/transport.py` — `Transport` 抽象 + `MockTransport` 实现
-   - `src/my_ai_employee/mcp/client.py` — `MCPClient` 基类(connect/disconnect/call_tool + 重试/熔断)
+   - `src/my_ai_employee/mcp/client.py` — `MCPClient` 基类(connect/disconnect/call_tool + 重试 + 4 类异常透传)
    - `src/my_ai_employee/mcp/discovery.py` — `discover_servers()` + Required flag 决策
 3. **D4.2.2 写测试**:
    - `tests/mcp/test_exceptions.py` — 4 类异常窄化 + 编程错误透传
    - `tests/mcp/test_report.py` — DegradedReport 数据结构
    - `tests/mcp/test_transport.py` — MockTransport 模拟超时/连接/协议/响应
-   - `tests/mcp/test_client.py` — connect/disconnect/call_tool + 重试/熔断
+   - `tests/mcp/test_client.py` — connect/disconnect/call_tool + 重试 + 4 类业务异常
    - `tests/mcp/test_discovery.py` — `discover_keeps_healthy_servers_when_one_fails` 关键 regression
 4. **D4.2.3 8 大质量门 + commit + 报告**
 
@@ -107,7 +108,7 @@
 
 ---
 
-**最后更新**:2026-06-09(D4.2 启动,落 mapping 第二段)
+**最后更新**:2026-06-08(D4.2 锁定,落 mapping 第二段 + 熔断口径收口)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则

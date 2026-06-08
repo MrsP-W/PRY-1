@@ -444,9 +444,9 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - API Key 优先级：`override 参数` > 专用 Key（`DEEPSEEK_API_KEY` 等）> `OPENAI_API_KEY` 兜底
 - `LLMAPIError.body` 截断到 500 字符，防止巨型错误响应爆日志
 
-**下一棒 → D4.2 MCP 生命周期**（6/9 启动）
+**下一棒 → D4.3 Events 表契约**（6/10 启动，参考 claw-code `g004-events-reports-contract.md`）
 
-### D4.2 — MCP 抽象层（✅ v1.0 锁定 2026-06-09）
+### D4.2 — MCP 抽象层（✅ v1.0 锁定 2026-06-08）
 
 **承接 D4.1.1 下一棒**：MCP 客户端基类抽象 + 生命周期 + 4 类业务异常 + DegradedReport（**不接真实 MCP server**，仅 MockTransport 留扩展）。
 
@@ -461,8 +461,8 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 - ruff format / check: ✅ 0 errors（44 files already formatted）
 - mypy: ✅ **44 files** 0 errors（D4.1.1 33 → 44，+11 mcp 文件）
-- pytest: ✅ **206 passed**（D4.1.1 159 → 206，+44 mcp 测试）
-- 覆盖率: **89.2%**（D4.1.1 87.8% → 89.2%，+1.4%）/ mcp 包 **96.7%**（exceptions 100% / report 100% / transport 96.9% / client 87.5% / discovery 96.2%）
+- pytest: ✅ **209 passed**（D4.1.1 159 → 209，+50 mcp 测试 [47 + 3 malformed]）
+- 覆盖率: **89.4%**（D4.1.1 87.8% → 89.4%，+1.6%）/ mcp 包 **96.7%**（exceptions 100% / report 100% / transport 96.9% / client 94.4% / discovery 96.2%）
 - alembic upgrade head --sql: ✅ exit 0
 - uv build: ✅ success
 - make lint: ✅ 0 errors
@@ -529,12 +529,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **token 成本**：5000 封邮件分类估算成本（按 minimax M3 单价）
 - **降级路径**：minimax M3 不可用时 → 规则引擎（关键词/正则）
 
-### 📌 下一棒 → D4.2（MCP 生命周期）→ D5
+### 📌 下一棒 → D4.3（Events 表契约）→ D4.4 → D5
 
-- **D4.0 LLM 路由层 + D4.1.1 HTTP 实施已双锁定**（6/8 20:30）
-- D4.0 路由决策 + D4.1.1 真实 HTTP 调用 = D4.2-D4.9 可直接 `router.route()` 调 LLM
-- 下棒任务：**D4.2 MCP 生命周期**（6/9 启动，参考 claw-code `g007-mcp-lifecycle-mapping.md`）
-- 再下棒：D4.3 Events 表契约 → D4.4 任务策略板 → D4.5 release readiness（6/14 周末）
+- **D4.0 LLM 路由层 + D4.1.1 HTTP 实施 + D4.2 MCP 抽象层 三锁定**（6/8 22:00）
+- D4.0 路由决策 + D4.1.1 真实 HTTP 调用 + D4.2 MCP 抽象 = D4.3-D4.9 可直接 `router.route()` + `client.call_tool()` 双底座
+- 下棒任务：**D4.3 Events 表契约**（6/10 启动，参考 claw-code `g004-events-reports-contract.md`）
+- 再下棒：D4.4 任务策略板 → D4.5 release readiness（6/14 周末）
 
 ---
 
