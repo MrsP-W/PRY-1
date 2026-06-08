@@ -558,13 +558,13 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **D4.4 源文件零修改**（4 件套契约保持 v1.0，向后兼容）
 
 **8 大质量门**（8/8 全绿 · v1.0 锁定 6/8）：
-- `pytest tests/policy/ -v`: **215 passed in 0.30s**（D4.4 180 → D4.5 +35，含 P0 修复 +4）
-- `ruff check`: All checks passed / `ruff format`: 71 files already formatted
+- `pytest tests/policy/ -v`: **217 passed in 0.30s**（D4.4 180 → D4.5 +37 = 35 集成 + 2 v1.0.1 文档/可观测性补完,含 P0 修复 +4）
+- `ruff check`: All checks passed / `ruff format`: 76 files already formatted
 - `mypy src/policy/`: 0 errors / 7 files（D4.4 6 + integration 1）
 - `mypy tests/policy/`: 0 errors / 8 files（D4.4 7 + test_integration 1）
 - `alembic upgrade head --sql`: exit 0 (0003 latest)
 - `uv build`: tar.gz + .whl OK
-- `pytest` 全量: **494 passed**（D4.3 预存隔离 6/8 晚间已修复，**0 失败**）
+- `pytest` 全量: **496 passed**（D4.3 预存隔离 6/8 晚间已修复，**0 失败**）
 
 **关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 教训应用）：
 - 4 依赖可注入（event_store / engine / heartbeat / board），不传 = D3.3 行为不变

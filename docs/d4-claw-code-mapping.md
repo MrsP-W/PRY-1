@@ -312,14 +312,14 @@
 
 | 门 | 结果 |
 |----|------|
-| 1. `pytest tests/policy/ -v` | **215 passed in 0.30s** (D4.4 180 → D4.5 +35,含 P0 修复 +4) |
+| 1. `pytest tests/policy/ -v` | **217 passed in 0.30s** (D4.4 180 → D4.5 +37 = 35 集成 + 2 v1.0.1,含 P0 修复 +4) |
 | 2. `ruff check` | All checks passed |
 | 3. `ruff format` | 71 files already formatted |
 | 4. `mypy src/my_ai_employee/policy/` | 0 errors / 7 files(D4.4 6 + integration 1) |
 | 5. `mypy tests/policy/` | 0 errors / 8 files(D4.4 7 + test_integration 1) |
 | 6. `alembic upgrade head --sql` | exit 0 (0003 latest) |
 | 7. `uv build` | tar.gz + .whl OK |
-| 8. `pytest` (全量) | **494 passed**(D4.3 预存隔离 6/8 晚间已修复,**0 失败**) |
+| 8. `pytest` (全量) | **496 passed**(D4.3 预存隔离 6/8 晚间已修复,**0 失败**) |
 
 ### 6.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 教训应用)
 
