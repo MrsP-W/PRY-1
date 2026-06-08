@@ -34,7 +34,7 @@ from typing import Any
 import sqlcipher3.dbapi2 as _sqlcipher_dbapi
 from loguru import logger
 from sqlalchemy import Engine, select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 from my_ai_employee.connectors.base import BaseConnector
@@ -179,13 +179,17 @@ class IMAPSync:
                     max_uid = max(max_uid, email.uid)
                 session.commit()
                 inserted = len(batch)
-            except (SQLAlchemyError, _sqlcipher_dbapi.IntegrityError):
+            except (IntegrityError, _sqlcipher_dbapi.IntegrityError):
                 # UNIQUE(source, uid) 冲突 — 已被另一个 sync 写入
                 # ⚠️ D3.3.2 修复：SQLCipher dialect 不包装 DBAPI 异常，
                 # 实际抛出的是 `sqlcipher3.dbapi2.IntegrityError`，
                 # 不是 `sqlalchemy.exc.IntegrityError` — D3.3.1 的 `except IntegrityError`
                 # 漏掉这个类型，导致 IntegrityError 逃逸到 run_once 外层 try/except
                 # 被错认为 "整批失败"（failed=100 而非 skipped=100）
+                # ⚠️ D3.3.3 修复：异常范围从 `(SQLAlchemyError, ...)` **收窄**为
+                # `(IntegrityError, ...)` — DB 锁 / OperationalError / 其他 SQLAlchemyError
+                # 应传播到 run_once 外层计入 `failed`，**不应**被当 UNIQUE 冲突
+                # 误计 `skipped`（掩盖真实问题）
                 # ⚠️ D3.3.2 修复：rollback 显式 try/except — SQLCipher 在 session
                 # 已 abort 状态时 rollback 可能再次失败，导致 `with session` __exit__
                 # 重新抛出 IntegrityError 逃逸 try/except

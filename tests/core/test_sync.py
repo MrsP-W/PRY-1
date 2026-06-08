@@ -518,6 +518,80 @@ def test_sync_skips_duplicate_uids_without_advancing_last_uid(
     assert rows[0]["cnt"] == 100
 
 
+# ===== 8.6 OperationalError 传播 — D3.3.3 修复锁定测试 =====
+
+
+def test_sync_operational_error_propagates_to_failed_not_skipped(
+    db: Database,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """OperationalError（DB 锁等）应被 _commit_batch 重新抛出 → run_once 计入 failed。
+
+    D3.3.3 修复关键：原 `except (SQLAlchemyError, _sqlcipher_dbapi.IntegrityError):`
+    会把**所有** SQLAlchemyError 都当 UNIQUE 冲突处理为 `skipped`，包括 DB 锁
+    / OperationalError / 其他非重复邮件错误 — 这会**掩盖真实问题**（同步失败
+    被错认为"已存在"）。
+
+    窄化为 `except (IntegrityError, _sqlcipher_dbapi.IntegrityError):` 后，
+    OperationalError 等非 IntegrityError **重新抛出**给 `run_once` 外层
+    `except SQLAlchemyError`，正确计入 `failed`。
+
+    测试设计：
+        1. monkeypatch `Session.commit` 让第 1 次 commit 抛 OperationalError
+           （仅 _commit_batch 内部触发；后续 _update_sync_state 的 commit 不受影响）
+        2. 50 封 mock 邮件 + batch_size=100 → 1 个 batch
+        3. 验证：inserted=0, skipped=0, failed=50, new_last_uid=0
+    """
+    from sqlalchemy.exc import OperationalError
+    from sqlalchemy.orm import Session
+
+    raw = [make_raw(uid=i + 1) for i in range(50)]
+    sync = IMAPSync(db, FakeIMAPConnector(raw), batch_size=100)
+
+    # 拦截 Session.commit：仅第 1 次抛 OperationalError（_commit_batch 内），
+    # 后续 commit（_update_sync_state 内）走原逻辑
+    call_count = {"n": 0}
+    original_commit = Session.commit
+
+    def commit_maybe_fail(self_session: Session) -> None:
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            # OperationalError(stmt, params, orig) — orig 不能是 None
+            raise OperationalError("simulated DB lock", {}, Exception("orig"))
+        return original_commit(self_session)
+
+    monkeypatch.setattr(Session, "commit", commit_maybe_fail)
+
+    try:
+        result = _arun(sync.run_once())
+    finally:
+        sync.close()
+
+    # 关键断言（D3.3.3 修复锁定）：
+    # - OperationalError **不**被认作 UNIQUE 冲突 → skipped=0
+    # - 重新抛出给 run_once 外层 except SQLAlchemyError → failed=50
+    # - inserted=0（没有真正入库）
+    # - new_last_uid=0（max_uid 在 except 块外保持 init=0；
+    #   OperationalError 路径下 _commit_batch 直接抛出，run_once 走外层 except，
+    #   后续 _update_sync_state 用 new_last_uid=last_uid=0 写入）
+    assert result.inserted == 0
+    assert result.skipped == 0  # D3.3.3 关键：不是 skipped
+    assert result.failed == 50  # D3.3.3 关键：是 failed
+    assert result.new_last_uid == 0
+
+    # DB 验证：emails 表应为空（50 封都失败）
+    rows = db.fetch_all("SELECT COUNT(*) AS cnt FROM emails WHERE source = 'qq'")
+    assert rows[0]["cnt"] == 0
+
+    # DB 验证：sync_state.last_uid 应保持 0（不跳到 50）
+    rows = db.fetch_all("SELECT last_uid FROM sync_state WHERE source = 'qq'")
+    assert len(rows) == 1
+    assert rows[0]["last_uid"] == 0
+
+    # 调用次数验证：第 1 次抛 + 第 2 次 sync_state commit 成功 = 2 次
+    assert call_count["n"] == 2
+
+
 # ===== 9. 完整清理：close() 被调用 =====
 
 
