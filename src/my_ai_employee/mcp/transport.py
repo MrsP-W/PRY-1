@@ -97,8 +97,10 @@ class MockTransport(Transport):
         # 注入失败点(默认无失败)
         self.start_failure: Exception | None = None
         self.call_failure: Exception | None = None
-        self.call_protocol_error: bool = False  # 响应非 dict
-        self.call_response_error: bool = False  # 缺 result 字段
+        self.call_protocol_error: bool = False  # 响应非 dict (transport 层抛)
+        self.call_response_error: bool = False  # 缺 result 字段 (transport 层抛)
+        self.call_malformed_response: str | None = None  # 响应坏值, 由 _validate_response 抛
+        # 可选值: None(正常) / "non_dict"(返回 list) / "missing_result"(返回 dict 无 result)
         self.call_timeout: bool = False
 
     def start(self) -> None:
@@ -125,6 +127,12 @@ class MockTransport(Transport):
         if self.call_response_error:
             # 响应结构错: 缺 result(模拟 transport 层抛响应错)
             raise MCPResponseError(f"MockTransport {self.server_name} 响应错: 缺 result 字段")
+        if self.call_malformed_response == "non_dict":
+            # 返回非 dict, 让 client._validate_response 抛 MCPProtocolError
+            return ["malformed", "response"]  # type: ignore[return-value]
+        if self.call_malformed_response == "missing_result":
+            # 返回 dict 但缺 result, 让 client._validate_response 抛 MCPResponseError
+            return {"jsonrpc": "2.0", "id": request.get("id"), "no_result": True}
         # 正常: 按 method 路由
         method = request.get("method", "")
         if method == "tools/list":

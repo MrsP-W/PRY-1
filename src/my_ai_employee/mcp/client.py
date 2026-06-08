@@ -1,4 +1,4 @@
-"""MCP Client — connect/disconnect/call_tool 生命周期 + 重试/熔断.
+"""MCP Client — connect/disconnect/call_tool 生命周期 + 重试 + 4 类业务异常透传.
 
 参考 g007-mcp-lifecycle-mapping.md:
   - connect() 启动 transport + initialize 协议
@@ -59,6 +59,7 @@ class MCPClient:
           3. send tools/list — 拉工具清单
 
         异常: 4 类业务异常透传(由调用方决定 degraded vs abort)
+        失败时: 任何阶段抛 MCPError → 关闭 transport(D4.2.1 修复)
         """
         if self.transport.connected:
             return  # 幂等
@@ -66,7 +67,8 @@ class MCPClient:
             self.transport.start()
         except MCPError:
             raise  # 透传业务异常
-        # initialize 协议(JSON-RPC initialize)
+        # initialize 协议(JSON-RPC initialize) + 校验
+        # send + validate 包在同一个 try 里, 任何异常都关闭 transport
         try:
             init_resp = self.transport.send(
                 {
@@ -76,19 +78,19 @@ class MCPClient:
                     "params": {"protocolVersion": "2024-11-05"},
                 }
             )
+            self._validate_response(init_resp, method="initialize")
         except MCPError:
             self.transport.close()
             raise
-        self._validate_response(init_resp, method="initialize")
-        # tools/list
+        # tools/list + 校验(同上)
         try:
             tools_resp = self.transport.send(
                 {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
             )
+            self._validate_response(tools_resp, method="tools/list")
         except MCPError:
             self.transport.close()
             raise
-        self._validate_response(tools_resp, method="tools/list")
         # 解析工具列表
         self.tools = [
             t.get("name", "")  # type: ignore[union-attr]

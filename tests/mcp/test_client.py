@@ -1,4 +1,4 @@
-"""D4.2 — MCPClient connect/disconnect/call_tool + 重试/熔断测试.
+"""D4.2 — MCPClient connect/disconnect/call_tool + 重试 + 4 类业务异常测试.
 
 覆盖:
   - connect() 成功 + 拉 tools
@@ -77,6 +77,43 @@ class TestConnect:
         t.start()
         t.call_response_error = True  # initialize 响应缺 result
         t.connected = False  # 重置让 connect() 走完完整流程
+        client = MCPClient(server_name="fs", transport=t)
+        with pytest.raises(MCPResponseError):
+            client.connect()
+        assert t.connected is False
+
+    def test_connect_initialize_malformed_non_dict_closes_transport(self) -> None:
+        """D4.2.1 修复 regression: initialize 返回非 dict (transport 不抛,
+        由 _validate_response 抛) → transport 应关闭."""
+        t = MockTransport(server_name="fs")
+        t.start()
+        t.call_malformed_response = "non_dict"  # 返回 list
+        t.connected = False
+        client = MCPClient(server_name="fs", transport=t)
+        with pytest.raises(MCPProtocolError):
+            client.connect()
+        # 关键: 校验失败后 transport 仍被关闭
+        assert t.connected is False
+
+    def test_connect_initialize_malformed_missing_result_closes_transport(self) -> None:
+        """D4.2.1 修复 regression: initialize 返回 dict 但缺 result
+        (transport 不抛, 由 _validate_response 抛) → transport 应关闭."""
+        t = MockTransport(server_name="fs")
+        t.start()
+        t.call_malformed_response = "missing_result"  # 返回 dict 无 result
+        t.connected = False
+        client = MCPClient(server_name="fs", transport=t)
+        with pytest.raises(MCPResponseError):
+            client.connect()
+        assert t.connected is False
+
+    def test_connect_tools_list_malformed_closes_transport(self) -> None:
+        """D4.2.1 修复 regression: tools/list 返回坏值 → transport 应关闭."""
+        t = MockTransport(server_name="fs", tools=["read_file"])
+        t.start()
+        # initialize 正常, tools/list 失败
+        t.call_malformed_response = "missing_result"
+        t.connected = False
         client = MCPClient(server_name="fs", transport=t)
         with pytest.raises(MCPResponseError):
             client.connect()
