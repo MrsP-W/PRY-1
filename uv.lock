@@ -26,6 +26,19 @@ wheels = [
 ]
 
 [[package]]
+name = "anyio"
+version = "4.13.0"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "idna" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/19/14/2c5dd9f512b66549ae92767a9c7b330ae88e1932ca57876909410251fe13/anyio-4.13.0.tar.gz", hash = "sha256:334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/da/42/e921fccf5015463e32a3cf6ee7f980a6ed0f395ceeaa45060b61d86486c2/anyio-4.13.0-py3-none-any.whl", hash = "sha256:08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708" },
+]
+
+[[package]]
 name = "apscheduler"
 version = "3.11.2"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -100,6 +113,15 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/52/20/fd2054d0fe08b2641b5e501fdc1b7d7f989960ce7c2e4ec5a0fad4f8a82b/caldav-3.2.1.tar.gz", hash = "sha256:b474900130226f22dbe3e3abed34559faaeed8a29c455af920c2afb0e355e3d3" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/4e/39/970a6699f06487088d8a936ae67e7197d98d11dd778b13b3a1261eac7331/caldav-3.2.1-py3-none-any.whl", hash = "sha256:6869e505ad14741a582003c93e49be2689013d19c9b91679c7c385775b673408" },
+]
+
+[[package]]
+name = "certifi"
+version = "2026.5.20"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/f3/ce/ee2ecad540810a79593028e88299baeae54d346cc7a0d94b6199988b89b1/certifi-2026.5.20.tar.gz", hash = "sha256:69dea482ab64caa7b9f6aba1c6bf48bb6a5448d1c0f1b17ab42ad8c763a5344d" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/59/8c/57e832b7af6d7c5abe66eb3fbe3a3a32f4d11ea23a1aa7131371035be991/certifi-2026.5.20-py3-none-any.whl", hash = "sha256:3c52e209ba0a4ad7aebe60436a4ab349c39e1e602e8c134221e546902ad25897" },
 ]
 
 [[package]]
@@ -285,6 +307,34 @@ wheels = [
 ]
 
 [[package]]
+name = "httpcore"
+version = "1.0.9"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "certifi" },
+    { name = "h11" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/06/94/82699a10bca87a5556c9c59b5963f2d039dbd239f25bc2a63907a05a14cb/httpcore-1.0.9.tar.gz", hash = "sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl", hash = "sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55" },
+]
+
+[[package]]
+name = "httpx"
+version = "0.28.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "anyio" },
+    { name = "certifi" },
+    { name = "httpcore" },
+    { name = "idna" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/b1/df/48c586a5fe32a0f01324ee087459e112ebb7224f646c0b5023f5e79e9956/httpx-0.28.1.tar.gz", hash = "sha256:75e98c5f16b0f35b567856f597f06ff2270a374470a5c2392242528e3e3e42fc" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/2a/39/e50c7c3a983047577ee07d2a9e53faf5a69493943ec3f6a384bdc792deb2/httpx-0.28.1-py3-none-any.whl", hash = "sha256:d909fcccc110f8c7faf814ca82a9a4d816bc5a6dbfea25d6591d6985b8ba59ad" },
+]
+
+[[package]]
 name = "icalendar"
 version = "7.1.2"
 source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
@@ -309,6 +359,15 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/b8/65/255f6eb7589c3c98d1d739076c961d60ce70bbb55f7f406589f0245ddc6a/icalendar_searcher-1.0.6.tar.gz", hash = "sha256:2440d4d0d9fbe0021a6647916853744dbca179abd39d25c742ebb8442bbc1bc3" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/0b/34/2248bb70ca2b4affa2e80623d3bae38a51b435254c3ce17dcff883a44a00/icalendar_searcher-1.0.6-py3-none-any.whl", hash = "sha256:649aad558df211bc50ca3dea3646e1b2f3e93f0995bca2b6358e9c79031471b6" },
+]
+
+[[package]]
+name = "idna"
+version = "3.18"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/cd/63/9496c57188a2ee585e0f1db071d75089a11e98aa86eb99d9d7618fc1edce/idna-3.18.tar.gz", hash = "sha256:ffb385a7e039654cef1ab9ef32c6fafe283c0c0467bba1d9029738ce4a14a848" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/1e/5e/d4e9f1a599fb8e573b7b87160658329fbf28d19eac2718f51fc3def3aa5a/idna-3.18-py3-none-any.whl", hash = "sha256:7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2" },
 ]
 
 [[package]]
@@ -542,6 +601,7 @@ dependencies = [
     { name = "apscheduler" },
     { name = "caldav" },
     { name = "click" },
+    { name = "httpx" },
     { name = "icalendar" },
     { name = "imapclient" },
     { name = "keyring" },
@@ -550,6 +610,7 @@ dependencies = [
     { name = "pyobjc-framework-cocoa" },
     { name = "python-dateutil" },
     { name = "python-dotenv" },
+    { name = "respx" },
     { name = "rich" },
     { name = "rumps" },
     { name = "sqlalchemy" },
@@ -578,6 +639,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.1.7" },
     { name = "faker", marker = "extra == 'dev'", specifier = ">=30.3.0" },
     { name = "hatchling", marker = "extra == 'dev'", specifier = ">=1.25.0" },
+    { name = "httpx", specifier = ">=0.27" },
     { name = "icalendar", specifier = ">=6.0.0" },
     { name = "imapclient", specifier = ">=3.0.1" },
     { name = "keyring", specifier = ">=25.5.0" },
@@ -590,6 +652,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=6.0.0" },
     { name = "python-dateutil", specifier = ">=2.9.0" },
     { name = "python-dotenv", specifier = ">=1.0.1" },
+    { name = "respx", specifier = ">=0.21" },
     { name = "rich", specifier = ">=13.9.4" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.8.4" },
     { name = "rumps", specifier = ">=0.4.0" },
@@ -908,6 +971,18 @@ dependencies = [
 sdist = { url = "https://mirrors.aliyun.com/pypi/packages/b9/f5/898abd8fbb25766ec6cb17b244730ebf192f47963c71eeacd61aadd903a1/recurring_ical_events-3.8.2.tar.gz", hash = "sha256:e731af31d0b7dec5cd47a1defacd8549e2f36fab1c1995e8b9f042822a0acf8e" }
 wheels = [
     { url = "https://mirrors.aliyun.com/pypi/packages/81/f7/d3eb4f545baf5d6daaa5881694517626fb7ad04036d94168197a4f021384/recurring_ical_events-3.8.2-py3-none-any.whl", hash = "sha256:9ad605e27b4fbeb70ee1c66205ade32550be15a57cedc579606522f1c67aef6d" },
+]
+
+[[package]]
+name = "respx"
+version = "0.23.1"
+source = { registry = "https://mirrors.aliyun.com/pypi/simple/" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://mirrors.aliyun.com/pypi/packages/43/98/4e55c9c486404ec12373708d015ebce157966965a5ebe7f28ff2c784d41b/respx-0.23.1.tar.gz", hash = "sha256:242dcc6ce6b5b9bf621f5870c82a63997e8e82bc7c947f9ffe272b8f3dd5a780" }
+wheels = [
+    { url = "https://mirrors.aliyun.com/pypi/packages/1d/4a/221da6ca167db45693d8d26c7dc79ccfc978a440251bf6721c9aaf251ac0/respx-0.23.1-py2.py3-none-any.whl", hash = "sha256:b18004b029935384bccfa6d7d9d74b4ec9af73a081cc28600fffc0447f4b8c1a" },
 ]
 
 [[package]]

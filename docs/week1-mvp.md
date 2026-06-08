@@ -391,7 +391,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ## D4 — 智能层（邮件分类 + 草稿）
 
-> **2026-06-08 更新**：v2 晨报钩子（MiniMax M3 冲进 OpenRouter 前 3 + 中国大模型 6 周连续超美）触发 LLM 选型调整：原"统一 minimax M3"升级为"国内模型优先 + capability registry + 多 provider fallback"。**D4.0 LLM 路由层作为 D4 子任务的前置 D-step 先建**（v1.0 已锁定 6/8 11:30+，详见 [reports/D4.1-LLM路由层完成.md](../reports/D4.1-LLM路由层完成.md)）。
+> **2026-06-08 更新**：v2 晨报钩子（MiniMax M3 冲进 OpenRouter 前 3 + 中国大模型 6 周连续超美）触发 LLM 选型调整：原"统一 minimax M3"升级为"国内模型优先 + capability registry + 多 provider fallback"。**D4.0 LLM 路由层作为 D4 子任务的前置 D-step 先建**（v1.0 已锁定 6/8 11:30+，详见 [reports/D4.1-LLM路由层完成.md](../reports/D4.1-LLM路由层完成.md)）。**D4.1.1 HTTP 实施已完成**（v1.0 锁定 6/8 20:30+，详见 [reports/D4.1.1-HTTP调用实施完成.md](../reports/D4.1.1-HTTP调用实施完成.md)）。
 
 ### D4.0 — LLM 路由层（前置 D-step，✅ v1.0 锁定 2026-06-08）
 
@@ -402,17 +402,18 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | 文件 | 行数 | 作用 |
 |------|------|------|
 | [src/my_ai_employee/ai/capability.py](../src/my_ai_employee/ai/capability.py) | 222 | Capability Registry（9 模型 / 6 国内 + 2 国外 + 1 本地）|
-| [src/my_ai_employee/ai/providers.py](../src/my_ai_employee/ai/providers.py) | 154 | Provider 抽象（LLMProvider 基类 + OpenAICompatibleProvider 占位 + 工厂）|
+| [src/my_ai_employee/ai/providers.py](../src/my_ai_employee/ai/providers.py) | 154→**306** | Provider 抽象（基类 + OpenAICompatibleProvider + 4 类异常 + httpx 调用）|
 | [src/my_ai_employee/ai/fallback.py](../src/my_ai_employee/ai/fallback.py) | 144 | Fallback 链（5 任务 → 4 异构链 + CircuitBreaker）|
 | [src/my_ai_employee/ai/router.py](../src/my_ai_employee/ai/router.py) | 231 | Router 主入口（5 步决策法 + 统计 + 单例）|
-| [tests/ai/test_router.py](../tests/ai/test_router.py) | 30 用例 | 单元测试（覆盖率 96.6%）|
+| [tests/ai/test_router.py](../tests/ai/test_router.py) | 30 → 31 用例 | 单元测试（capability + fallback + provider + router）|
+| [tests/ai/test_provider_http.py](../tests/ai/test_provider_http.py) | **26 用例（新增）**| respx mock 6 provider + 4 类异常 + 端到端 |
 
 **质量门**（8 大门全绿）：
 
 - ruff format / check: ✅ 0 errors
-- mypy: ✅ 32 files 0 errors（D3.3.3 27 → 32，+5 D4.0 文件）
-- pytest: ✅ 132 passed（D3.3.3 102 → 132，+30 D4.0 测试）
-- 覆盖率: 87.0%（D3.3.3 83.7% → 87.0%，+3.3%）/ ai 包 96.6%
+- mypy: ✅ **33 files** 0 errors（D4.0 32 → 33，+1 test_provider_http）
+- pytest: ✅ **159 passed**（D4.0 132 → 159，+27 D4.1.1 测试）
+- 覆盖率: **87.8%**（D4.0 87.0% → 87.8%，+0.8%）/ ai 包 **96.3%**（providers 96.3% / fallback 100% / capability 98% / router 97.4%）
 - alembic upgrade head --sql: ✅ exit 0
 - uv build: ✅ success
 
@@ -421,8 +422,29 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - 国内模型优先：DeepSeek（0.5 元/百万 token）/ MiniMax M3（冲榜验证）/ Qwen / 腾讯混元 / GLM
 - Capability Registry 数据驱动：参考 claw-code `MODEL_COMPATIBILITY.md`
 - 5 任务类型 → 5 异构 fallback 链（避免同 provider 雪崩）
+- **D3.3.3 教训落地**：4 类业务异常（`LLMTimeoutError` / `LLMConnectionError` / `LLMAPIError` / `LLMResponseError`），编程错误透传（`ValueError` / `TypeError` 不包装）
 
-**D4.1（下一棒）**：HTTP 调用实施（httpx + OpenAI SDK 风格 + 6 provider API Key 环境变量模板）— 预计 60-90 min。
+### D4.1.1 — HTTP 调用实施（✅ v1.0 锁定 2026-06-08）
+
+**承接 D4.1.0 下一棒**：把占位 `OpenAICompatibleProvider.chat()` 实施为真实 httpx 调用。
+
+**新增交付**：
+
+| 改动 | 作用 |
+|------|------|
+| `providers.py` +152 行 | 4 类业务异常（基类 `LLMError`）+ chat() httpx 调用 + 专用 Key 查找（`DEEPSEEK_API_KEY` / `DASHSCOPE_API_KEY` 等）|
+| `tests/ai/test_provider_http.py`（新建，258 行）| respx mock 6 provider + 5 类异常 + 端到端 |
+| `tests/ai/test_router.py` -18/+28 行 | 删除 D4.1.0 过时 `NotImplementedError` 测试，改写为真实 HTTP 错误测试 |
+| `.env.example` +30 行 | 6 provider API Key 模板 |
+| `pyproject.toml` +2 deps | `httpx>=0.27` + `respx>=0.21` |
+
+**关键设计**：
+
+- 异常窄化（参考 D3.3.3 教训）：`httpx.TimeoutException` / `ConnectError` / `RequestError` / HTTP 4xx/5xx / 响应解析失败 → 4 类业务异常，编程错误（`ValueError` / `TypeError`）透传
+- API Key 优先级：`override 参数` > 专用 Key（`DEEPSEEK_API_KEY` 等）> `OPENAI_API_KEY` 兜底
+- `LLMAPIError.body` 截断到 500 字符，防止巨型错误响应爆日志
+
+**下一棒 → D4.2 MCP 生命周期**（6/9 启动）
 
 ### 目标
 
@@ -435,7 +457,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | # | 任务 | 预计耗时 | 产出 | 状态 |
 |---|------|----------|------|------|
 | 4.0 | LLM 路由层（capability + provider + fallback + router）| 90 min | 5 文件 + 30 测试 | ✅ v1.0 锁定（6/8）|
-| 4.1 | **HTTP 实施**：`OpenAICompatibleProvider.chat()` + httpx + 6 provider API Key 模板 | 60-90 min | httpx 调用 + 集成测试 | ⏳ 待启动 |
+| 4.1.1 | **HTTP 实施**：`OpenAICompatibleProvider.chat()` + httpx + 4 类异常 + 26 测试 | 90 min | httpx 调用 + respx 集成测试 | ✅ v1.0 锁定（6/8 20:30）|
 | 4.2 | 写 `ai/classifier.py`（用 `router.route(CLASSIFY, ...)` + 5 类标签）| 90 min | 分类服务 | ⏳ 待启动 |
 | 4.3 | 写 `ai/drafter.py`（用 `router.route(DRAFT, ...)` + 历史回复模式）| 90 min | 草稿服务 | ⏳ 待启动 |
 | 4.4 | 写 `ai/prompts/classifier.txt`（中文 prompt + few-shot 5 例）| 30 min | 提示词 | ⏳ 待启动 |
@@ -462,12 +484,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **token 成本**：5000 封邮件分类估算成本（按 minimax M3 单价）
 - **降级路径**：minimax M3 不可用时 → 规则引擎（关键词/正则）
 
-### 📌 下一棒 → D4.1（HTTP 实施）→ D5
+### 📌 下一棒 → D4.2（MCP 生命周期）→ D5
 
-- D4.0 LLM 路由层已锁定（6/8 11:30）
-- 下棒任务：D4.1 `OpenAICompatibleProvider.chat()` httpx 实施 + 6 provider API Key 模板 + 集成测试
-- 再下棒：D4.2-D4.9 实际写 classifier / drafter（用 `router.route()` 调 LLM）→ D5 CalDAV
-- 关键决策：D4.1 HTTP 实施时机 = 6/9 启动（D4.0 已锁定，D4.1 可立即并行于 D4.2）
+- **D4.0 LLM 路由层 + D4.1.1 HTTP 实施已双锁定**（6/8 20:30）
+- D4.0 路由决策 + D4.1.1 真实 HTTP 调用 = D4.2-D4.9 可直接 `router.route()` 调 LLM
+- 下棒任务：**D4.2 MCP 生命周期**（6/9 启动，参考 claw-code `g007-mcp-lifecycle-mapping.md`）
+- 再下棒：D4.3 Events 表契约 → D4.4 任务策略板 → D4.5 release readiness（6/14 周末）
 
 ---
 

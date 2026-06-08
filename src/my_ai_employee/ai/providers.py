@@ -12,17 +12,57 @@
   - GPT-5 用 max_completion_tokens 而非 max_tokens(本抽象层不暴露此差异,
     由 OpenAICompatibleProvider 在 D4.1.1 实现时处理)
 
-D4.1.0 范围: 抽象基类 + 工厂函数 + 配置接口, **不调 HTTP**.
-D4.1.1 实施: OpenAICompatibleProvider.chat() 实际 HTTP 调用.
+D4.1.0: 抽象基类 + 工厂函数 + 配置接口(chat() 抛 NotImplementedError).
+D4.1.1: 实施 OpenAICompatibleProvider.chat() — httpx + OpenAI 协议响应解析.
+
+D3.3.3 教训("异常范围要窄化到真要处理的类型"):
+  - chat() 抛 4 类业务异常(LLMTimeoutError / LLMConnectionError /
+    LLMAPIError / LLMResponseError), 编程错误(参数错)透传
+  - router 决定 fallback: 业务异常 → fallback, 编程异常 → 直接抛
 """
 
 from __future__ import annotations
 
 import os
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+import httpx
+
 from .capability import Provider
+
+# === 4 类业务异常（窄化定义，参考 D3.3.3 教训）===
+
+
+class LLMError(Exception):
+    """LLM 业务异常基类."""
+
+
+class LLMTimeoutError(LLMError):
+    """请求超时(httpx.TimeoutException 映射)."""
+
+
+class LLMConnectionError(LLMError):
+    """网络连接失败(httpx.ConnectError / RequestError)."""
+
+
+class LLMAPIError(LLMError):
+    """API 返回 4xx/5xx(httpx.HTTPStatusError 映射).
+
+    Attributes:
+        status_code: HTTP 状态码
+        body: 响应体(截断到 500 字符, 防止巨型响应爆日志)
+    """
+
+    def __init__(self, message: str, status_code: int, body: str) -> None:
+        super().__init__(message)
+        self.status_code = status_code
+        self.body = body[:500]
+
+
+class LLMResponseError(LLMError):
+    """响应解析失败(响应体非 JSON / 缺字段 / 字段类型错)."""
 
 
 @dataclass(frozen=True)
@@ -108,28 +148,55 @@ _BASE_URLS: dict[Provider, str] = {
 }
 
 
+# === 各 provider 专用 API Key 环境变量名（v2 钩子驱动）===
+# 加新 provider 只需在此表加一行
+
+_API_KEY_ENV: dict[Provider, str] = {
+    Provider.DEEPSEEK: "DEEPSEEK_API_KEY",
+    Provider.QWEN: "DASHSCOPE_API_KEY",
+    Provider.GLM: "GLM_API_KEY",
+    Provider.MINIMAX: "MINIMAX_API_KEY",
+    Provider.TENCENT: "TENCENT_API_KEY",
+    Provider.OPENAI: "OPENAI_API_KEY",
+    Provider.ANTHROPIC: "ANTHROPIC_API_KEY",
+    # OLLAMA 无 Key
+}
+
+
+def _resolve_api_key(provider: Provider, override: str | None) -> str:
+    """按 provider 解析 API Key.
+
+    优先级: override > 专用 Key(DEEPSEEK_API_KEY 等) > OPENAI_API_KEY 兜底
+    """
+    if override:
+        return override
+    env_name = _API_KEY_ENV.get(provider, "OPENAI_API_KEY")
+    return os.environ.get(env_name, "") or os.environ.get("OPENAI_API_KEY", "")
+
+
 class OpenAICompatibleProvider(LLMProvider):
-    """OpenAI-compatible 协议 provider(占位实现, D4.1.0 不调 HTTP).
+    """OpenAI-compatible 协议 provider.
 
     适用: OpenAI / DeepSeek / Qwen / GLM / OpenRouter / Ollama / MiniMax / 腾讯混元
     共同特征: 接受 /v1/chat/completions 端点 + Bearer token.
 
-    D4.1.0 状态: 仅做架构定义, chat() 抛 NotImplementedError.
-    D4.1.1 实施: 实现 chat() 调用 httpx + OpenAI SDK 风格.
+    D4.1.1 实施: httpx 调用 + 响应解析, 抛 4 类窄化业务异常.
     """
+
+    # 默认 HTTP 超时（秒）
+    DEFAULT_TIMEOUT = 30.0
 
     def __init__(
         self,
         provider_type: Provider,
         base_url: str,
         api_key: str | None = None,
+        timeout: float = DEFAULT_TIMEOUT,
     ) -> None:
         self._provider_type = provider_type
         self._base_url = base_url.rstrip("/")
-        # OPENAI_API_KEY fallback: 多数 OpenAI-compatible 服务都用这个名
-        self._api_key = api_key or os.environ.get("OPENAI_API_KEY", "")
-        # 占位: D4.1.1 会读各 provider 的环境变量
-        # (DEEPSEEK_API_KEY / DASHSCOPE_API_KEY / MINIMAX_API_KEY / ...)
+        self._api_key = _resolve_api_key(provider_type, api_key)
+        self._timeout = timeout
 
     @property
     def provider_type(self) -> Provider:
@@ -148,15 +215,94 @@ class OpenAICompatibleProvider(LLMProvider):
 
         真实健康检查在 chat() 调用失败时由 router 触发熔断.
         """
-        return bool(self._base_url)
+        return bool(self._base_url) and bool(self._api_key)
 
     def chat(self, request: LLMRequest) -> LLMResponse:
         """调用 /v1/chat/completions.
 
-        D4.1.0 占位: 抛 NotImplementedError.
-        D4.1.1 实施: httpx + OpenAI SDK 风格.
+        流程:
+          1. 构造 OpenAI 风格请求体
+          2. httpx.post 同步调用
+          3. 解析响应 → LLMResponse
+
+        异常(窄化, 参考 D3.3.3 教训):
+          - httpx.TimeoutException → LLMTimeoutError
+          - httpx.ConnectError / RequestError → LLMConnectionError
+          - HTTP 4xx/5xx → LLMAPIError(status_code + body)
+          - 响应解析失败(非 JSON / 缺字段)→ LLMResponseError
+          - 编程错误(TypeError / KeyError 在 model_id 等)→ 透传, 不包装
         """
-        raise NotImplementedError("D4.1.0 仅做架构定义, HTTP 调用在 D4.1.1 实施")
+        # 1. 构造请求体(从 full_id 拆 model_id)
+        if "/" not in request.model_full_id:
+            raise ValueError(
+                f"model_full_id 格式错误: {request.model_full_id!r} (需 provider/model)"
+            )
+        model_id = request.model_full_id.split("/", 1)[1]
+        url = f"{self._base_url}/chat/completions"
+        payload = {
+            "model": model_id,
+            "messages": list(request.messages),
+            "temperature": request.temperature,
+            "max_tokens": request.max_tokens,
+        }
+        headers = {
+            "Authorization": f"Bearer {self._api_key}",
+            "Content-Type": "application/json",
+        }
+
+        # 2. 同步调用 httpx（每次新建短连接，避免连接泄漏）
+        # D3.3.3 教训: 异常范围要窄化 — 分层 except
+        start = time.monotonic()
+        try:
+            with httpx.Client(timeout=self._timeout) as client:
+                response = client.post(url, json=payload, headers=headers)
+        except httpx.TimeoutException as e:
+            raise LLMTimeoutError(
+                f"LLM 调用超时 ({self._timeout}s) | provider={self._provider_type.value} | "
+                f"model={request.model_full_id}"
+            ) from e
+        except httpx.ConnectError as e:
+            raise LLMConnectionError(
+                f"LLM 连接失败 | provider={self._provider_type.value} | "
+                f"base_url={self._base_url} | err={e}"
+            ) from e
+        except httpx.RequestError as e:
+            # 其他网络错误(读取失败/写入失败/连接重置)
+            raise LLMConnectionError(
+                f"LLM 网络错误 | provider={self._provider_type.value} | err={e}"
+            ) from e
+
+        latency_ms = int((time.monotonic() - start) * 1000)
+
+        # 3. 检查 HTTP 状态码
+        if response.status_code >= 400:
+            raise LLMAPIError(
+                f"LLM API 错误 {response.status_code} | provider={self._provider_type.value}",
+                status_code=response.status_code,
+                body=response.text,
+            )
+
+        # 4. 解析响应(OpenAI 风格: choices[0].message.content + usage)
+        try:
+            data = response.json()
+            content = data["choices"][0]["message"]["content"]
+            usage = data.get("usage", {})
+            input_tokens = int(usage.get("prompt_tokens", 0))
+            output_tokens = int(usage.get("completion_tokens", 0))
+        except (KeyError, IndexError, TypeError, ValueError) as e:
+            # 响应结构异常(非 OpenAI 风格 / 缺字段)
+            raise LLMResponseError(
+                f"LLM 响应解析失败 | provider={self._provider_type.value} | "
+                f"err={e} | body={response.text[:200]}"
+            ) from e
+
+        return LLMResponse(
+            content=content,
+            model_full_id=request.model_full_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            latency_ms=latency_ms,
+        )
 
 
 # === Provider Factory ===
@@ -169,7 +315,7 @@ def get_provider(full_id: str) -> LLMProvider:
         full_id: provider/model 格式(如 "deepseek/deepseek-chat")
 
     Returns:
-        LLMProvider 实例(目前只返回 OpenAICompatibleProvider 占位实现)
+        LLMProvider 实例(目前只返回 OpenAICompatibleProvider)
 
     Examples:
         >>> get_provider("deepseek/deepseek-chat").provider_type

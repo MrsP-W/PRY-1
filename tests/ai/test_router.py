@@ -241,18 +241,37 @@ class TestProviderFactory:
         )
         assert p.healthcheck() is True
 
-    def test_openai_compatible_chat_not_implemented(self) -> None:
-        """D4.1.0 占位: chat() 抛 NotImplementedError(D4.1.1 实施)."""
+    def test_openai_compatible_healthcheck_missing_key(self) -> None:
+        """D4.1.1: healthcheck 要求 base_url + api_key 都配置完整."""
         p = OpenAICompatibleProvider(
             provider_type=Provider.DEEPSEEK,
             base_url="https://api.deepseek.com/v1",
-            api_key="test-key",
+            api_key="",  # 无 Key
+        )
+        assert p.healthcheck() is False
+
+    def test_openai_compatible_chat_http_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """D4.1.1 边界: D4.1.0 的 NotImplementedError 测试已废弃, 改为验证真实 HTTP 错误处理.
+
+        真实场景: 无 API Key → DeepSeek 返回 401 → LLMAPIError(由 router 触发 fallback).
+        此测试只验证抛错行为, 不验证 fallback 决策(fallback 决策在 test_router.py).
+        """
+        p = OpenAICompatibleProvider(
+            provider_type=Provider.DEEPSEEK,
+            base_url="https://api.deepseek.com/v1",
+            api_key="invalid-key",  # 故意给错, 让真实 DeepSeek 返回 401
         )
         request = LLMRequest(
             model_full_id="deepseek/deepseek-chat",
-            messages=[{"role": "user", "content": "test"}],
+            messages=[{"role": "user", "content": "ping"}],
         )
-        with pytest.raises(NotImplementedError, match="D4.1.1"):
+        # 用 monkeypatch 限制超时(避免测试卡住)
+        monkeypatch.setattr(p, "_timeout", 5.0)
+        # 此测试依赖网络可达(可达则 401, 不可达则 LLMConnectionError)
+        # 两种都接受: 都属于"业务异常 → 应 fallback" 的范畴
+        from my_ai_employee.ai.providers import LLMError
+
+        with pytest.raises(LLMError):
             p.chat(request)
 
 
