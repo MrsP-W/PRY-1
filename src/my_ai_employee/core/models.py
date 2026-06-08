@@ -24,17 +24,19 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from sqlalchemy import (
-    JSON,
     ForeignKey,
     Index,
     Integer,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy.types import TypeDecorator
 
 # ===== Base =====
 
@@ -48,22 +50,39 @@ class Base(DeclarativeBase):
 # ===== 字段类型辅助 =====
 
 
-class JSONList:
-    """JSON list 字段 type decorator（D3 阶段简化版：用 SA 内置 JSON）。
+class JSONList(TypeDecorator):
+    """list ↔ JSON 文本（D3 阶段 mirror schema.sql TEXT DEFAULT '[]'）。
 
     设计：
-        - 用 SQLAlchemy 内置 `JSON` 类型（SQLite 走 TEXT 存 JSON 文本）
-        - D3.3 同步脚本写入 list[recipient] / list[label_name]
-        - 读取时 ORM 自动 json.loads 还原
+        - DDL 层面是 TEXT（D3.1 schema.sql 决策 — 避免 SQLAlchemy JSON 在 SQLite
+          走 TEXT 存 JSON 文本时和 schema.sql 不一致；schema.sql 是真理之源）
+        - ORM 层面是 list[str]（TypeDecorator 透明处理 dumps/loads）
+        - server_default="[]"（DDL） + default=list（Python）配对
+
+    用法：
+        recipients: Mapped[list[str]] = mapped_column(
+            JSONList, nullable=False, default=list, server_default="[]"
+        )
     """
 
-    pass
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):  # type: ignore[no-untyped-def, override]
+        """ORM → DB：list 序列化为 JSON 文本。None → None（用 NULL 还是 [] 看业务）。"""
+        if value is None:
+            return None
+        return json.dumps(value, ensure_ascii=False)
+
+    def process_result_value(self, value, dialect):  # type: ignore[no-untyped-def, override]
+        """DB → ORM：JSON 文本 → list。空字符串/None 一律视作 []。"""
+        if not value:
+            return []
+        return json.loads(value)
 
 
-# 注：D3 阶段 Model 用内置 JSON 即可（无需自定义 TypeDecorator）
-# 显式标注用：Mapped[list[str]] = mapped_column(JSON, default=list)
-# 此处只预留一个具名常量供未来扩展
-JSON_FIELD = JSON
+# 别名（保持与之前 D3.2.0 JSON_FIELD 命名兼容 — 内部用更准确的 JSONList）
+JSON_FIELD = JSONList
 
 
 # ===== 1. Email =====
@@ -109,7 +128,7 @@ class Email(Base):
         Text, nullable=False, default="", server_default=""
     )
     recipients: Mapped[list[str]] = mapped_column(
-        JSON_FIELD, nullable=False, default=list, server_default="[]"
+        JSONList, nullable=False, default=list, server_default="[]"
     )
     received_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_size: Mapped[int] = mapped_column(
@@ -123,7 +142,7 @@ class Email(Base):
     )
     fetched_at: Mapped[int] = mapped_column(Integer, nullable=False)
     labels: Mapped[list[str]] = mapped_column(
-        JSON_FIELD, nullable=False, default=list, server_default="[]"
+        JSONList, nullable=False, default=list, server_default="[]"
     )
 
     # 关系
@@ -133,6 +152,8 @@ class Email(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    # 多对多规范化（关系表 EmailLabel）— D4+ 复杂 join / 级联删除用
+    # 与上方 JSON 字段 labels 互为冗余：JSON 快速过滤、EmailLabel 规范化 join
     email_labels: Mapped[list[EmailLabel]] = relationship(
         "EmailLabel",
         back_populates="email",
@@ -140,11 +161,15 @@ class Email(Base):
         passive_deletes=True,
     )
 
-    # 约束 + 索引
+    # 约束 + 索引（DESC 倒序与 D3.1 schema.sql 对齐：D3 阶段热路径"按时间倒序取最近邮件"）
     __table_args__ = (
         UniqueConstraint("source", "uid", name="uq_emails_source_uid"),
-        Index("idx_emails_received_at", "received_at"),
-        Index("idx_emails_source_received", "source", "received_at"),
+        Index("idx_emails_received_at", text("received_at DESC")),
+        Index(
+            "idx_emails_source_received",
+            "source",
+            text("received_at DESC"),
+        ),
         Index("idx_emails_sender", "sender"),
         Index("idx_emails_message_id", "message_id"),
     )
@@ -226,14 +251,20 @@ class Label(Base):
         - idx_labels_source
 
     注：SQLite 的 COLLATE NOCASE 在 schema.sql 是列级 collation，
-    SQLAlchemy 用 `Column(..., sqlite_collation="NOCASE")`（D3.2 简化版省略，
-    实际唯一性由应用层负责 — D3 阶段标签量小）。
+    SQLAlchemy 正确写法：`sa.Text(collation="NOCASE")`（collation 是类型参数，
+    **不是** `Column(..., sqlite_collation=...)` —— 后者会报
+    `ArgumentError: 'sqlite_collation' is not accepted by dialect 'sqlite'`）。
+
+    唯一性：UNIQUE(name, source) + name COLLATE NOCASE → "Inbox" 和 "inbox" 视为同名
     """
 
     __tablename__ = "labels"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(
+        Text(collation="NOCASE"),
+        nullable=False,
+    )
     source: Mapped[str] = mapped_column(
         Text, nullable=False, default="system", server_default="system"
     )
@@ -380,9 +411,9 @@ class AuditLog(Base):
     )
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
 
-    # 索引
+    # 索引（DESC 倒序与 D3.1 schema.sql 对齐：审计日志热路径"按时间倒序取最近事件"）
     __table_args__ = (
-        Index("idx_audit_log_created_at", "created_at"),
+        Index("idx_audit_log_created_at", text("created_at DESC")),
         Index("idx_audit_log_event", "event"),
     )
 
