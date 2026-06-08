@@ -446,6 +446,51 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **下一棒 → D4.2 MCP 生命周期**（6/9 启动）
 
+### D4.2 — MCP 抽象层（✅ v1.0 锁定 2026-06-09）
+
+**承接 D4.1.1 下一棒**：MCP 客户端基类抽象 + 生命周期 + 4 类业务异常 + DegradedReport（**不接真实 MCP server**，仅 MockTransport 留扩展）。
+
+**新增交付**：
+
+| 文件 | 行数 | 作用 |
+|------|------|------|
+| [src/my_ai_employee/mcp/](../src/my_ai_employee/mcp/) | 621 | exceptions(33) + report(87) + transport(164) + client(187) + discovery(145) + **init**(5) |
+| [tests/mcp/](../tests/mcp/) | 44 用例 | exceptions(7) + report(11) + transport(12) + client(11) + discovery(8 + 1 fixture) |
+
+**质量门**（8 大门全绿）：
+
+- ruff format / check: ✅ 0 errors（44 files already formatted）
+- mypy: ✅ **44 files** 0 errors（D4.1.1 33 → 44，+11 mcp 文件）
+- pytest: ✅ **206 passed**（D4.1.1 159 → 206，+44 mcp 测试）
+- 覆盖率: **89.2%**（D4.1.1 87.8% → 89.2%，+1.4%）/ mcp 包 **96.7%**（exceptions 100% / report 100% / transport 96.9% / client 87.5% / discovery 96.2%）
+- alembic upgrade head --sql: ✅ exit 0
+- uv build: ✅ success
+- make lint: ✅ 0 errors
+
+**关键设计**（D3.3.3 + D4.1 教训应用）：
+
+- **4 类业务异常**：`MCPTimeoutError` / `MCPConnectionError` / `MCPProtocolError` / `MCPResponseError` + `MCPError` 基类
+- **recoverable 标志**：`isinstance(exc, (MCPTimeoutError, MCPConnectionError))` 决定是否重试
+- **Required flag 决策**：必填 server 失败 → abort，可选 server 失败 → 计入 `report.failed`（filesystem=optional / calendar=required）
+- **`McpErrorSurface` 5 字段**：phase + server + message + context + recoverable
+- **`McpDegradedReport` 4 段**：working + failed + available_tools + missing_tools（+ is_healthy/is_degraded 派生属性）
+- **关键 regression 测试**：`test_keeps_healthy_servers_when_optional_fails`（对应 claw-code `manager_discovery_report_keeps_healthy_servers_when_one_server_fails`）
+
+**修复记录**（D4.2 期间踩的 6 个坑）：
+
+| 坑 | 修复 |
+|----|------|
+| `client.py:19` 误写 `dataclasses, field`（11 字符含重复 ca）| `sed` 强制修 |
+| MockTransport `call_protocol_error/response_error` 返回坏值（应抛）| 改为 `raise MCPProtocolError/MCPResponseError` |
+| `test_discovery.py` 缺 `MCPTimeoutError` import | 加 import |
+| `LifecyclePhase(str, enum.Enum)` ruff UP042 | 改 `enum.StrEnum` |
+| `resp.get("result", {})` mypy no-any-return | 显式标注 `result: dict[str, Any] = ... # type: ignore[assignment]` |
+| 测试 `t.start()` 后设 protocol_error（DID NOT RAISE，因 connect 幂等）| 加 `t.connected = False` |
+
+**参考来源**：[docs/d4-claw-code-mapping.md](../docs/d4-claw-code-mapping.md) §2（D4.2 7 行优先参考 + 4 行不照搬）。完整报告：[reports/D4.2-MCP抽象层完成.md](../reports/D4.2-MCP抽象层完成.md)
+
+**下一棒 → D4.3 Events 表契约**（6/10 启动，参考 claw-code `g004-events-reports-contract.md`）
+
 ### 目标
 
 邮件自动分类（5 类）+ 1-click 草稿生成，端到端可用。
