@@ -103,9 +103,11 @@ class IMAPSync:
         # 2) safe_fetch 拉取（D2 应急版范本 — 失败隔离 + 熔断）
         if since is None:
             # 默认拉最近 30 天（D3 阶段合理起点 — SyncState 会持续收口）
-            since = datetime.now(UTC).replace(tzinfo=None)  # naive UTC
+            # ⚠️ D3.3.1 修复：直接算 UTC timestamp 再 fromtimestamp 构造 aware datetime，
+            # 避免 `replace(tzinfo=None)` 把 naive datetime 视为本地时间 (Asia/Shanghai)
+            # 导致 .timestamp() 偏移 8 小时
             since = datetime.fromtimestamp(
-                since.timestamp() - 30 * 24 * 3600, tz=UTC
+                datetime.now(UTC).timestamp() - 30 * 24 * 3600, tz=UTC
             )
 
         raw_emails = await self._connector.safe_fetch(since)
@@ -193,6 +195,10 @@ class IMAPSync:
                 # UNIQUE(source, uid) 冲突 — 已被另一个 sync 写入
                 session.rollback()
                 # 整批视作 skipped（D3 阶段简化：单封冲突不细化）
+                # ⚠️ D3.3.1 修复：max_uid 重置为 0 — 整批回滚时未真正入库任何 uid，
+                # 若返回原 max_uid 会让 SyncState.last_uid 跳到冲突 uid，
+                # 下次 sync 时过滤 `uid > last_uid` 会跳过中间未入库邮件（数据丢失）
+                max_uid = 0
                 skipped = len(batch)
                 logger.warning(
                     f"批次 UNIQUE 冲突（{len(batch)} 封）— 视为已存在"
