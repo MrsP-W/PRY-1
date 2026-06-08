@@ -448,7 +448,9 @@ class TestEventStoreIntegration:
     ) -> None:
         """succeeded → event_type=POLICY_DECISION_MADE."""
         ev = policy_engine.evaluate(valid_packet, context={}, store=store)
+        assert ev.event_id is not None
         stored = store.get_by_id(ev.event_id)
+        assert stored is not None
         assert stored.event == EventType.POLICY_DECISION_MADE.value
 
     def test_event_metadata_includes_rule_decision_fields(
@@ -457,7 +459,9 @@ class TestEventStoreIntegration:
         """event_metadata 含 rule_name/priority/kind/all_decisions/context_snapshot."""
         ctx = {"acceptance_results": [True, True], "branch_stale": True}
         ev = policy_engine.evaluate(valid_packet, context=ctx, store=store)
+        assert ev.event_id is not None
         stored = store.get_by_id(ev.event_id)
+        assert stored is not None
         meta = stored.event_metadata
         # 6 必含 + rule_name + priority + kind + approval_token_id + all_decisions + context_snapshot
         assert "rule_name" in meta
@@ -483,7 +487,10 @@ class TestEventStoreIntegration:
             provider="p",
         )
         ev = policy_engine.evaluate(p, context={}, store=store)
+        assert ev.event_id is not None
         stored = store.get_by_id(ev.event_id)
+        assert stored is not None
+        assert stored.subject_id is not None
         assert len(stored.subject_id) == 32
 
     def test_event_fingerprint_dedupe_same_packet(
@@ -503,7 +510,9 @@ class TestEventStoreIntegration:
     ) -> None:
         """event.ownership=ACT, event.provenance=LIVE."""
         ev = policy_engine.evaluate(valid_packet, context={}, store=store)
+        assert ev.event_id is not None
         stored = store.get_by_id(ev.event_id)
+        assert stored is not None
         assert stored.event_metadata["ownership"] == EventOwnership.ACT.value
         assert stored.event_metadata["provenance"] == EventProvenance.LIVE.value
 
@@ -513,6 +522,192 @@ class TestEventStoreIntegration:
         """不传 store → event_id=None(不强行 require store)."""
         ev = policy_engine.evaluate(valid_packet, context={})
         assert ev.event_id is None
+
+
+# ===== Context 严格解析 (D4.4 P1 修复) =====
+# 背景: 之前用 `bool(...)` / `int(...)` / `list(...)` 兜底, Python 内建
+#       `bool("false") == True` / `all(["false"]) == True`, 会让 JSON/CLI 输入
+#       里的字符串"false"被当真, 触发错误决策 (rebase/merge/approval 错判).
+# 修复: 12 字段严判 — bool 必须原生 bool, int 必须原生 int (排除 bool 子类),
+#       str 必须原生 str, list 元素必须全 bool.
+# 异常范围: 抛 PolicyDecisionError (透传, caller 责任 — D3.3.3 异常窄化教训).
+
+
+class TestContextStrictParsing:
+    """`_normalize_context` 12 字段 × 4 类 (bool/int/str/list) 严格解析."""
+
+    # ----- 6 个 bool 字段 -----
+
+    def test_last_error_recoverable_rejects_string(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """P1 根因: bool("false")==True, 严格解析必须拒绝 str."""
+        with pytest.raises(PolicyDecisionError, match="last_error_recoverable 必须是 bool"):
+            policy_engine.evaluate(valid_packet, context={"last_error_recoverable": "false"})
+
+    def test_branch_stale_rejects_int(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """int 1 不是 bool (bool 是 int 子类, 但 type() is int 排除)."""
+        with pytest.raises(PolicyDecisionError, match="branch_stale 必须是 bool"):
+            policy_engine.evaluate(valid_packet, context={"branch_stale": 1})
+
+    def test_action_sensitive_rejects_list(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """list 不是 bool."""
+        with pytest.raises(PolicyDecisionError, match="action_sensitive 必须是 bool"):
+            policy_engine.evaluate(valid_packet, context={"action_sensitive": [True]})
+
+    def test_has_approval_token_rejects_none(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """None 不是 bool (旧代码会 bool(None)==False, 静默通过 — 严格化拒绝)."""
+        with pytest.raises(PolicyDecisionError, match="has_approval_token 必须是 bool"):
+            policy_engine.evaluate(valid_packet, context={"has_approval_token": None})
+
+    def test_policy_eval_failed_rejects_string(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """policy_eval_failed 字符串 'false' 严拒."""
+        with pytest.raises(PolicyDecisionError, match="policy_eval_failed 必须是 bool"):
+            policy_engine.evaluate(valid_packet, context={"policy_eval_failed": "false"})
+
+    def test_6th_bool_field_via_default_path(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """缺字段走 default (Python 字面量 False), 0 错误."""
+        ev = policy_engine.evaluate(valid_packet, context={})
+        # 验证 default 路径没破: status=succeeded, decisions=空
+        assert ev.status == EventStatus.SUCCEEDED.value
+        assert isinstance(ev.decisions, list)
+
+    # ----- 5 个 int 字段 (含边界) -----
+
+    def test_current_attempts_rejects_negative(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """attempts=-1 → 旧代码静默通过, 严格化拒绝 (< 0)."""
+        with pytest.raises(PolicyDecisionError, match="current_attempts 必须 >= 0"):
+            policy_engine.evaluate(valid_packet, context={"current_attempts": -1})
+
+    def test_current_attempts_rejects_string(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """int('abc') 抛 ValueError 透传, 严格化改为 PolicyDecisionError."""
+        with pytest.raises(PolicyDecisionError, match="current_attempts 必须是 int"):
+            policy_engine.evaluate(valid_packet, context={"current_attempts": "abc"})
+
+    def test_current_attempts_rejects_bool(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """True 是 int 子类, 但语义错, type(v) is int 排除."""
+        with pytest.raises(PolicyDecisionError, match="current_attempts 必须是 int"):
+            policy_engine.evaluate(valid_packet, context={"current_attempts": True})
+
+    def test_max_attempts_zero_rejected(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """max_attempts=0 → attempts<max 永真 (退化), min_value=1 拒绝."""
+        with pytest.raises(PolicyDecisionError, match="max_attempts 必须 >= 1"):
+            policy_engine.evaluate(valid_packet, context={"max_attempts": 0})
+
+    def test_max_attempts_negative_rejected(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """max_attempts=-1 拒绝."""
+        with pytest.raises(PolicyDecisionError, match="max_attempts 必须 >= 1"):
+            policy_engine.evaluate(valid_packet, context={"max_attempts": -1})
+
+    def test_last_heartbeat_ms_negative_rejected(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """负数 heartbeat ms 拒绝 (时间戳不应为负)."""
+        with pytest.raises(PolicyDecisionError, match="last_heartbeat_ms 必须 >= 0"):
+            policy_engine.evaluate(valid_packet, context={"last_heartbeat_ms": -100})
+
+    def test_stale_threshold_ms_rejects_string(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """stale_threshold_ms 字符串拒绝."""
+        with pytest.raises(PolicyDecisionError, match="stale_threshold_ms 必须是 int"):
+            policy_engine.evaluate(valid_packet, context={"stale_threshold_ms": "60000"})
+
+    def test_now_ms_zero_accepted(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """now_ms=0 是合法哨兵 ('用 wall clock'), 不应拒绝."""
+        ev = policy_engine.evaluate(valid_packet, context={"now_ms": 0})
+        assert ev.status == EventStatus.SUCCEEDED.value
+
+    # ----- 1 个 str 字段 -----
+
+    def test_approval_token_id_rejects_int(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """approval_token_id 必须 str, 拒绝 int."""
+        with pytest.raises(PolicyDecisionError, match="approval_token_id 必须是 str"):
+            policy_engine.evaluate(valid_packet, context={"approval_token_id": 12345})
+
+    def test_approval_token_id_rejects_bool(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """approval_token_id 拒绝 bool (语义错)."""
+        with pytest.raises(PolicyDecisionError, match="approval_token_id 必须是 str"):
+            policy_engine.evaluate(valid_packet, context={"approval_token_id": False})
+
+    def test_approval_token_id_empty_string_accepted(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """空 str 是合法 (无 token 时 default '')."""
+        ev = policy_engine.evaluate(valid_packet, context={"approval_token_id": ""})
+        assert ev.status == EventStatus.SUCCEEDED.value
+
+    # ----- 1 个 list 字段 (含元素类型) -----
+
+    def test_acceptance_results_rejects_non_list(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """acceptance_results 必须 list, 拒绝 tuple/set."""
+        with pytest.raises(PolicyDecisionError, match="acceptance_results 必须是 list"):
+            policy_engine.evaluate(valid_packet, context={"acceptance_results": (True, False)})
+
+    def test_acceptance_results_rejects_string_elements(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """P1 根因: all(['false','false'])==True, 严格化必须拒绝 str 元素."""
+        with pytest.raises(PolicyDecisionError, match="acceptance_results 必须全为 bool"):
+            policy_engine.evaluate(valid_packet, context={"acceptance_results": ["false", "false"]})
+
+    def test_acceptance_results_rejects_int_elements(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """int 1/0 元素拒绝 (避免 all([1,0])==False 巧合对)."""
+        with pytest.raises(PolicyDecisionError, match="acceptance_results 必须全为 bool"):
+            policy_engine.evaluate(valid_packet, context={"acceptance_results": [1, 0, 1]})
+
+    def test_acceptance_results_empty_accepted(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """空 list 是合法 (default, merge rule 用 `if results and all(results)` 短路)."""
+        ev = policy_engine.evaluate(valid_packet, context={"acceptance_results": []})
+        assert ev.status == EventStatus.SUCCEEDED.value
+
+    def test_acceptance_results_all_bool_accepted(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """全 bool 元素接受, 触发 MergeRequired (priority 20)."""
+        ev = policy_engine.evaluate(valid_packet, context={"acceptance_results": [True, True]})
+        assert ev.has_decision(PolicyDecisionKind.MERGE_REQUIRED)
+
+    # ----- 综合: 非 dict 顶层 -----
+
+    def test_non_dict_context_rejected(
+        self, policy_engine: PolicyEngine, valid_packet: TaskPacket
+    ) -> None:
+        """顶层非 dict 拒绝 (兼容旧行为, 错误信息更精确)."""
+        with pytest.raises(PolicyDecisionError, match="context 必须是 dict"):
+            policy_engine.evaluate(valid_packet, context=["not", "a", "dict"])  # type: ignore[arg-type]
 
 
 # ===== Singleton =====

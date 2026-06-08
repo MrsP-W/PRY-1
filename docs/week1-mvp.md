@@ -536,12 +536,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **token 成本**：5000 封邮件分类估算成本（按 minimax M3 单价）
 - **降级路径**：minimax M3 不可用时 → 规则引擎（关键词/正则）
 
-### 📌 下一棒 → D4.3（Events 表契约）→ D4.4 → D5
+### 📌 下一棒 → D4.4 ✅ 已锁定 → D4.5
 
-- **D4.0 LLM 路由层 + D4.1.1 HTTP 实施 + D4.2 MCP 抽象层 + D4.3 Events 表契约 四锁定**（6/8 22:00，D4.3.1 复检修复 P1 NULL 去重漏洞 + P2 契约口径修正 + 4 处文档同步）
-- D4.0 路由决策 + D4.1.1 真实 HTTP 调用 + D4.2 MCP 抽象 + D4.3 events 表契约 = D4.4+ 可直接 `router.route()` + `client.call_tool()` + `EventStore.insert()` 三底座
-- ✅ **D4.3 Events 表契约 v1.1 锁定**（6/8 复检完成，268 passed / 90.5% / 59 events 测试）
-- 下棒任务：**D4.4 任务策略板**（6/9 晨间链路启动，参考 claw-code `g006-task-policy-board-verification-map.md`）
+- **D4.0 + D4.1.1 + D4.2 + D4.3 + D4.4 五锁定**（6/8 22:00 D4.3 + 6/8 22:30 D4.4）
+- ✅ **D4.4 任务策略板 v1.0 锁定**（6/8 22:30，6 模块 + 180 policy 测试 + ~97% 覆盖率 + 8 大质量门全绿 + 全量 mypy src tests 0 errors）
+- D4.4 P1 收口：context 12 字段严格解析（23 新 test）+ 全量 mypy 10 errors → 0 errors + 总覆盖率 91.8% + 全量 459 passed
+- 下棒任务：**D4.5 release readiness + 业务层接入**（6/9 晨间链路确认后启动，参考 claw-code `g007-release-readiness-verification-map.md`）
 - 再下棒：D4.5 release readiness（6/14 周末）
 
 ---

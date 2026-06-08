@@ -180,7 +180,7 @@ class PolicyEngine:
 
         Raises:
             PolicyContractError: packet 不满足 8 字段不变量
-            PolicyDecisionError: context 关键信号非法(透传)
+            PolicyDecisionError: context 关键信号非法(严格解析, D4.4 P1 修复)
             EventContractError / EventMetadataError: 事件落地失败(events/store 透传)
         """
         # 1. 校验 packet 8 字段
@@ -342,22 +342,114 @@ class PolicyEngine:
     # ===== context 归一 =====
 
     def _normalize_context(self, ctx: dict[str, Any]) -> dict[str, Any]:
-        """归一 context, 缺字段填合理 defaults."""
+        """归一 context, 缺字段填合理 defaults.
+
+        严格化(D4.4 P1 修复): 拒绝 type-coerce 兜底(Python `bool("false")==True`,
+        `all(["false"])` 也是 True, 会让字符串 JSON 输入触发错误决策). 严格解析:
+          - bool 字段: 必须原生 `bool`, 拒绝 str/int/list
+          - int 字段: 必须原生 `int` (排除 bool 子类), 拒绝 str/float
+          - str 字段: 必须原生 `str`
+          - list 字段: 必须 `list`, 元素必须 `bool`
+
+        失败抛 `PolicyDecisionError` (透传, caller 责任 — D3.3.3 异常窄化教训).
+        """
         if not isinstance(ctx, dict):
             raise PolicyDecisionError(f"context 必须是 dict, 实际 {type(ctx).__name__}")
+
+        def _strict_bool(v: Any, field: str) -> bool:
+            if type(v) is not bool:  # 排除 int 子类陷阱 (True is int=False)
+                raise PolicyDecisionError(
+                    f"context.{field} 必须是 bool, 得到 {type(v).__name__}={v!r}"
+                )
+            return v
+
+        def _strict_int(v: Any, field: str, *, min_value: int = 0) -> int:
+            if type(v) is not int:  # type() is int 排除 bool 子类 (True/False)
+                raise PolicyDecisionError(
+                    f"context.{field} 必须是 int, 得到 {type(v).__name__}={v!r}"
+                )
+            if v < min_value:
+                raise PolicyDecisionError(f"context.{field} 必须 >= {min_value}, 得到 {v}")
+            return v
+
+        def _strict_str(v: Any, field: str) -> str:
+            if type(v) is not str:
+                raise PolicyDecisionError(
+                    f"context.{field} 必须是 str, 得到 {type(v).__name__}={v!r}"
+                )
+            return v
+
+        def _strict_list_bool(v: Any, field: str) -> list[bool]:
+            if not isinstance(v, list):
+                raise PolicyDecisionError(f"context.{field} 必须是 list, 得到 {type(v).__name__}")
+            if not all(type(x) is bool for x in v):
+                bad = [type(x).__name__ for x in v if type(x) is not bool]
+                raise PolicyDecisionError(f"context.{field} 必须全为 bool, 收到非 bool 元素: {bad}")
+            return v
+
+        # 缺字段 sentinel 模式: ctx.get(k, _MISSING) → 走 strict 解析 (_MISSING 不通过严判)
+        # (避免 `ctx[k] if k in ctx else default` 触发 ruff SIM401)
+        missing_marker: Any = object()
+
+        def _get_or(k: str, default: Any) -> Any:
+            v = ctx.get(k, missing_marker)
+            return default if v is missing_marker else v
+
+        # 注意: 缺字段用 Python 字面量 default (False/0/3/60000/""/[]), 这些都通过严判
         return {
-            "last_error_recoverable": bool(ctx.get("last_error_recoverable", False)),
-            "current_attempts": int(ctx.get("current_attempts", 0)),
-            "max_attempts": int(ctx.get("max_attempts", 3)),
-            "branch_stale": bool(ctx.get("branch_stale", False)),
-            "last_heartbeat_ms": int(ctx.get("last_heartbeat_ms", 0)),
-            "stale_threshold_ms": int(ctx.get("stale_threshold_ms", 60_000)),
-            "now_ms": int(ctx.get("now_ms", 0)),
-            "action_sensitive": bool(ctx.get("action_sensitive", False)),
-            "has_approval_token": bool(ctx.get("has_approval_token", False)),
-            "approval_token_id": str(ctx.get("approval_token_id", "")),
-            "acceptance_results": list(ctx.get("acceptance_results", [])),
-            "policy_eval_failed": bool(ctx.get("policy_eval_failed", False)),
+            "last_error_recoverable": _strict_bool(
+                _get_or("last_error_recoverable", False),
+                "last_error_recoverable",
+            ),
+            "current_attempts": _strict_int(
+                _get_or("current_attempts", 0),
+                "current_attempts",
+                min_value=0,
+            ),
+            "max_attempts": _strict_int(
+                _get_or("max_attempts", 3),
+                "max_attempts",
+                min_value=1,  # 防 attempts<max 永真
+            ),
+            "branch_stale": _strict_bool(
+                _get_or("branch_stale", False),
+                "branch_stale",
+            ),
+            "last_heartbeat_ms": _strict_int(
+                _get_or("last_heartbeat_ms", 0),
+                "last_heartbeat_ms",
+                min_value=0,
+            ),
+            "stale_threshold_ms": _strict_int(
+                _get_or("stale_threshold_ms", 60_000),
+                "stale_threshold_ms",
+                min_value=0,
+            ),
+            "now_ms": _strict_int(
+                _get_or("now_ms", 0),
+                "now_ms",
+                min_value=0,
+            ),
+            "action_sensitive": _strict_bool(
+                _get_or("action_sensitive", False),
+                "action_sensitive",
+            ),
+            "has_approval_token": _strict_bool(
+                _get_or("has_approval_token", False),
+                "has_approval_token",
+            ),
+            "approval_token_id": _strict_str(
+                _get_or("approval_token_id", ""),
+                "approval_token_id",
+            ),
+            "acceptance_results": _strict_list_bool(
+                _get_or("acceptance_results", []),
+                "acceptance_results",
+            ),
+            "policy_eval_failed": _strict_bool(
+                _get_or("policy_eval_failed", False),
+                "policy_eval_failed",
+            ),
         }
 
     # ===== 事件 emit =====

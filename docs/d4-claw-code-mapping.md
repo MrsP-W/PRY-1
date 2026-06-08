@@ -221,7 +221,7 @@
 | 5. 5 类业务异常 + PolicyError 基类 | `src/my_ai_employee/policy/exceptions.py` | 71 |
 | 6. 26 个公共 API 顶层导出 | `src/my_ai_employee/policy/__init__.py` | 95 |
 | 7. 2 个 EventType 扩展(复用 D4.3) | `src/my_ai_employee/events/models.py` | +2 |
-| 8. 5 个测试文件 + 167 测试 | `tests/policy/` | 1720 |
+| 8. 5 个测试文件 + 180 测试 | `tests/policy/` | 1720 |
 | 9. D4.4 完成报告 | `reports/D4.4-任务策略板完成.md` | 540+ |
 
 **总产出**:6 src 模块(1425 行) + 1 enum 扩展 + 1 测试修复 + 5 测试文件(1720 行) + 1 报告(540 行) + 1 mapping 段(本段)。
@@ -234,8 +234,8 @@
 | 8 字段契约 + JSON 双向 + 向后兼容 | `tests/policy/test_task_packet.py` | 29 |
 | 3 状态 + 优先级 + now_ms 注入 | `tests/policy/test_heartbeat.py` | 27 |
 | 3 lanes + 状态转换矩阵 + freshness | `tests/policy/test_lane_board.py` | 50 |
-| 6 决策 + EventStore 集成 + fingerprint dedupe | `tests/policy/test_policy_engine.py` | 41 |
-| **总计** | | **157 passed** (含 10 conftest setup) |
+| 6 决策 + EventStore 集成 + fingerprint dedupe + 23 context 严格解析 | `tests/policy/test_policy_engine.py` | 64 |
+| **总计** | | **180 passed** (含 10 conftest setup) |
 
 ### 5.6 关键设计决策(D3.3.3 + D3.2 教训应用)
 
