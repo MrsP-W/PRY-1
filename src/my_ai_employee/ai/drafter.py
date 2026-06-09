@@ -218,6 +218,9 @@ class DraftResult:
     会被误标为"SPAM 授权", 审计语义错位)
     6/10 v1.0.7 P2-1 修复: 增加 `spam_reply_intent` 字段记录实际授权意图
     (v1.0.6 缺口: 仅记录 bool 授权, 无法区分 UNSUBSCRIBE 与 REJECT)
+    6/10 v1.0.8 P2-2 修复: raw_content 实际截断到 500 字符(__post_init__ 用
+    object.__setattr__ 在 frozen dataclass 中修改, 与文档契约一致;
+    v1.0.7 漏洞: 实测 10070 字符完整保存, 放大 D4.7.3 事件载荷)
     """
 
     subject: str
@@ -272,6 +275,14 @@ class DraftResult:
                 f"raw_content 必须是 str, 实际 "
                 f"{type(self.raw_content).__name__}={self.raw_content!r}"
             )
+        # 6/10 v1.0.8 P2-2 修复: raw_content 截断到 500 字符(文档契约兑现)
+        # - 文档声明: raw_content 是 LLM 原始响应(便于排查, 截断到 500 字符)
+        # - v1.0.7 漏洞: __post_init__ 仅 type 校验, 未截断, 实测 10070 字符完整保存,
+        #   可能放大 D4.7.3 事件载荷(每条事件 20KB, 阻断场景下 audit 日志膨胀)
+        # - v1.0.8 真修: 用 object.__setattr__ 在 frozen dataclass 中修改 raw_content,
+        #   截断到 500 字符(文档契约兑现, 与 DrafterResponseError 一致)
+        if len(self.raw_content) > 500:
+            object.__setattr__(self, "raw_content", self.raw_content[:500])
         # 6/9 v1.0.6 P2-1 新增: spam_reply_authorized 严格 bool 严判
         # 拒 "false"(str)/ 1(int) 等真值陷阱, 与 P2-1 范本保持一致
         if type(self.spam_reply_authorized) is not bool:
@@ -374,7 +385,8 @@ class DraftBlockedResult:
     # - True: 调用方传了 allow_spam_reply=True, 但仍有阻断(本类只产出阻断模板不调 LLM)
     # 严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
     spam_reply_authorized: bool = False
-    # 6/10 v1.0.7 P2-1 新增: 调用方实际授权意图(便于 D4.7.3 Adapter 事件审计)
+    # 6/10 v1.0.7 P2-1 新增 + 6/10 v1.0.8 P1-2 升级为强一致:
+    # 调用方实际授权意图(便于 D4.7.3 Adapter 事件审计)
     # - DraftSpamReplyIntent 枚举: 调用方传了 allow_spam_reply=True + 明确 intent
     # - None: 调用方未授权(intent 即使在 draft() 严判通过, 阻断场景下也不入产物)
     # 注: 阻断场景 spam_reply_authorized 仍按调用方原 allow_spam_reply 记录(True/False),
@@ -419,6 +431,22 @@ class DraftBlockedResult:
             raise ValueError(
                 f"spam_reply_intent 必须是 DraftSpamReplyIntent 枚举或 None, 实际 "
                 f"{type(self.spam_reply_intent).__name__}={self.spam_reply_intent!r}"
+            )
+        # 6/10 v1.0.8 P1-2 新增: 强一致性校验(与 DraftResult 同款范本)
+        # - 阻断产物是正式业务产物, audit 必须可信
+        # - 不允许矛盾状态(authorized=True + intent=None 或 authorized=False + intent=枚举)
+        # - 调用方应通过 draft_blocked_category 入口的 allow_spam_reply 语义保证
+        #   (allow=True 时传 intent, allow=False 时不传 intent)
+        if self.spam_reply_authorized and self.spam_reply_intent is None:
+            raise ValueError(
+                "spam_reply_authorized=True 时 spam_reply_intent 必为 DraftSpamReplyIntent 枚举"
+                "(v1.0.8 P1-2 强一致契约, 阻断产物需 audit 可信), 实际 None"
+            )
+        if not self.spam_reply_authorized and self.spam_reply_intent is not None:
+            raise ValueError(
+                "spam_reply_authorized=False 时 spam_reply_intent 必为 None"
+                f"(v1.0.8 P1-2 强一致契约, 防 audit 误读'该草稿是 SPAM 授权放行'), "
+                f"实际 {self.spam_reply_intent!r}"
             )
         # 业务验收(subject / body / reason / original_email_category 至少语义非空, 防空字符串绕过)
         if not self.subject.strip():
@@ -1047,6 +1075,25 @@ class EmailDrafter:
                 )
         else:
             intent_enum = None
+        # 6/10 v1.0.8 P1-2 修复: 入口严判"授权+意图"强一致性(v1.0.7 阻断场景弱一致漏洞)
+        # - 阻断场景不允许矛盾状态(authorized=True + intent=None 或
+        #   authorized=False + intent=非 None)
+        # - 阻断是正式业务产物, audit 必须可信
+        # - 调用方应通过 allow_spam_reply 语义保证: allow=True 时传 intent,
+        #   allow=False 时不传 intent(None 或不传)
+        if spam_reply_authorized and intent_enum is None:
+            raise ValueError(
+                "draft_blocked_category spam_reply_authorized=True 时 "
+                "spam_reply_intent 必为 DraftSpamReplyIntent 枚举"
+                "(v1.0.8 P1-2 强一致契约, 阻断产物需 audit 可信), 实际 None"
+            )
+        if not spam_reply_authorized and intent_enum is not None:
+            raise ValueError(
+                "draft_blocked_category spam_reply_authorized=False 时 "
+                "spam_reply_intent 必为 None"
+                f"(v1.0.8 P1-2 强一致契约, 防 audit 误读'该草稿是 SPAM 授权放行'), "
+                f"实际 {intent_enum!r}"
+            )
         # email_category 必填(本入口专给阻断场景用, 不允许 None 走 DEFAULT)
         if email_category is None:
             raise ValueError("email_category 必填(本入口只接受阻断类别, 不允许 None)")
@@ -1085,14 +1132,14 @@ class EmailDrafter:
             raise ValueError(f"tone 必须是 DraftTone 或 str, 实际 {type(tone).__name__}")
 
         # 构造阻断模板(不调 LLM, 0 配额消耗)
-        # stats 累加语义:
-        #   - 独立调用本入口(draft() 未触发): _stats_already_bumped=False, +1 blocked, +1 total
-        #   - 从 draft_batch 收容处调用: _stats_already_bumped=True(draft() 已 +1 total, +1 blocked), 0 重复
-        # 防"独立调用 vs 批量调用"路径 stats 计数不一致
+        # stats 累加语义(6/10 v1.0.8 P2-1 修复: 移到构造成功之后):
+        #   - 独立调用本入口(draft() 未触发): _stats_already_bumped=False
+        #   - 从 draft_batch 收容处调用: _stats_already_bumped=True(draft() 已 +1 total, +1 blocked)
+        #   - **关键**: 必须在 DraftBlockedResult 构造成功后再累加, 防构造异常时污染 stats
+        #   - v1.0.7 漏洞: emoji 等极端场景可能让 DraftBlockedResult.__post_init__ 抛
+        #     ValueError(body 超长 / subject 超长), 此时 stats["total/blocked"] 已 +1,
+        #     构造失败但统计仍计为成功阻断 → 污染 audit 口径
         # 6/9 v1.0.4 P2-1 修复: 批量路径不重复 total(原无条件 +1 是 bug, draft() 抛 SPAM 之前已 +1)
-        if not _stats_already_bumped:
-            self._stats["total"] += 1
-            self._stats["blocked"] = self._stats.get("blocked", 0) + 1
         reason = f"{cat_str.lower()}_business_blocked"
         original_subject = subject or "(无主题)"
         # 6/9 v1.0.4 P1-2 修复: 阻断模板自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀,
@@ -1119,14 +1166,31 @@ class EmailDrafter:
         audit_subject_max_len = 80
         audit_sender_max_len = 80
         audit_body_max_len = 100
-        # 先截断, 再 json.dumps 序列化(双保险: 防撑爆 + 防换行注入)
+        # 先按字符截断, 再 json.dumps 序列化(双保险: 防撑爆 + 防换行注入)
         raw_audit_subject = original_subject[:audit_subject_max_len]
         raw_audit_sender = sender[:audit_sender_max_len] if sender else "(空)"
         raw_audit_body = body_excerpt[:audit_body_max_len] if body_excerpt else "(空)"
-        # 序列化后单字段: 中文 escape 后 ≲ 200 字符, 远低于 2000 上限
-        audit_subject = json.dumps(raw_audit_subject, ensure_ascii=True)
-        audit_sender = json.dumps(raw_audit_sender, ensure_ascii=True)
-        audit_body = json.dumps(raw_audit_body, ensure_ascii=True)
+        # 6/10 v1.0.8 P1-1 修复: ensure_ascii=False + json.dumps 二次截断(防 emoji 代理对撑爆)
+        # - v1.0.6 漏洞: ensure_ascii=True 把 emoji 膨胀成 `😀` 代理对转义,
+        #   80 个 emoji → 480 字符代理对 → 加 json 引号 → ~500 字符字段.
+        #   实测: sender 80 + subject 80 + body 100 = 260 emoji → ~1560 字符代理对 +
+        #   固定提示 ~400 = ~1960 字符, 接近 2000 上限. 极端 case(更密集 emoji):
+        #   80/80/100 个 emoji → 3376 字符正文, 撑爆 2000, 抛 ValueError, 安全降级失败.
+        # - v1.0.8 真修:
+        #   1) **ensure_ascii=False**(中文字符 / emoji 不需要 escape 为 \u 转义,
+        #      json.dumps 仍会 escape `\n` / `\r` / `\t` / 双引号等控制字符,
+        #      抗换行注入防护不被破坏).
+        #   2) **json.dumps 后再校验长度**, 如果单字段 > 100 字符则按字符再次截断
+        #      (避免 emoji 占用更多 UTF-16 code unit 而突破单字段预估).
+        # 序列化后单字段: 中文 escape 后 ≲ 100 字符(emoji 不会膨胀), 远低于 2000 上限
+        audit_field_max_len = 100
+        audit_subject = json.dumps(raw_audit_subject, ensure_ascii=False)
+        audit_sender = json.dumps(raw_audit_sender, ensure_ascii=False)
+        audit_body = json.dumps(raw_audit_body, ensure_ascii=False)
+        # 二次截断防御: 极端 emoji/控制字符场景(防代理对膨胀或超长 UTF-8 字节)
+        audit_subject = audit_subject[:audit_field_max_len]
+        audit_sender = audit_sender[:audit_field_max_len]
+        audit_body = audit_body[:audit_field_max_len]
         blocked_body = (
             f"建议: 不回复\n\n"
             f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"
@@ -1139,7 +1203,12 @@ class EmailDrafter:
             f"原分类: {cat_str}\n"
             f"原正文摘要: {audit_body}"
         )
-        return DraftBlockedResult(
+        # 6/10 v1.0.8 P2-1 修复: 构造 DraftBlockedResult 后再累加 stats
+        # - v1.0.7 漏洞: emoji 等极端场景可能让 __post_init__ 抛 ValueError,
+        #   此时 stats["total/blocked"] 已 +1, 构造失败但统计仍计为成功阻断
+        # - v1.0.8 真修: 构造成功后再 +1, 构造失败时异常上抛由调用方处理
+        #   (draft_batch 已有 (ValueError, TypeError) 收容处, 异常入 results 不上抛)
+        blocked_result = DraftBlockedResult(
             subject=blocked_subject,
             body=blocked_body,
             tone=tone_enum,
@@ -1151,6 +1220,11 @@ class EmailDrafter:
             # 6/10 v1.0.7 P2-1 新增: 透传调用方实际授权意图(枚举, 阻断场景下也记录)
             spam_reply_intent=intent_enum,
         )
+        # stats 累加(必须在构造成功之后, 防构造异常时污染统计)
+        if not _stats_already_bumped:
+            self._stats["total"] += 1
+            self._stats["blocked"] = self._stats.get("blocked", 0) + 1
+        return blocked_result
 
 
 # ===== 模块内辅助函数 =====
