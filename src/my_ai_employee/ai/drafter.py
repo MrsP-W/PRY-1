@@ -61,6 +61,7 @@ from loguru import logger
 from .capability import TaskType
 from .classifier import EmailCategory
 from .prompts.draft import build_system_prompt as _build_draft_system_prompt
+from .prompts.draft import build_user_message as _build_draft_user_message
 from .providers import LLMError
 from .router import LLMRouter, get_router
 
@@ -364,7 +365,10 @@ class EmailDrafter:
 
         self._stats["total"] += 1
 
-        # 构造 messages(D4.7.2 替换 placeholder: 5+1 类 SYSTEM prompt 按 email_category 分发)
+        # 构造 messages(D4.7.2 v1.0.1 P1 修复: 委托 prompts/draft.py build_user_message)
+        # - SYSTEM prompt: _build_draft_system_prompt 按 email_category 5+1 类分发
+        # - user 消息: _build_draft_user_message 含 P1-3 tone 末行重述 + 抗注入声明
+        #   (本地旧 build_user_message 已删除, v1.0 误用旧版导致 P1 tone 重述未生效)
         # - email_category 枚举/字符串 → 内部统一 str 用于分发
         # - None → SYSTEM_PROMPT_DEFAULT(中性回退)
         email_category_str = (
@@ -373,12 +377,12 @@ class EmailDrafter:
         system_prompt = _build_draft_system_prompt(email_category_str)
         messages = [
             system_to_message(system_prompt),
-            *build_user_message(
+            *_build_draft_user_message(
                 subject=subject,
                 sender=sender,
                 body_excerpt=body_excerpt,
-                email_category=email_category,
-                tone=tone_enum,
+                email_category=email_category_str,
+                tone=tone_enum.value,
             ),
         ]
 
@@ -477,68 +481,8 @@ def system_to_message(content: str) -> dict:
     return {"role": "system", "content": content}
 
 
-def build_user_message(
-    *,
-    subject: str,
-    sender: str,
-    body_excerpt: str,
-    email_category: EmailCategory | str | None = None,
-    tone: DraftTone = DraftTone.FORMAL,
-) -> list[dict]:
-    """构造 user 消息列表(OpenAI 风格, D4.7.2 替换为 ai/prompts/draft.py).
-
-    Args:
-        subject: 邮件主题(可能为空)
-        sender: 发件人
-        body_excerpt: 正文前 N 字符(默认调用方截断到 2000 字符)
-        email_category: 5 类邮件标签(来自 D4.6, 接受 EmailCategory 枚举 / str / None)
-        tone: 草稿语气
-
-    Returns:
-        1 条 user 消息(多轮可扩展, 本步 D4.7.1 单轮)
-    """
-    # 严判
-    if type(subject) is not str:
-        raise ValueError(f"subject 必须是 str, 实际 {type(subject).__name__}")
-    if type(sender) is not str:
-        raise ValueError(f"sender 必须是 str, 实际 {type(sender).__name__}")
-    if type(body_excerpt) is not str:
-        raise ValueError(f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}")
-    # P1-1 修复(6/9): 接受 EmailCategory | str | None
-    if email_category is not None:
-        if isinstance(email_category, EmailCategory):
-            pass
-        elif type(email_category) is str:
-            if email_category not in _EMAIL_CATEGORY_VALUES:
-                raise ValueError(
-                    f"email_category 字符串必须 ∈ {sorted(_EMAIL_CATEGORY_VALUES)}, "
-                    f"实际 {email_category!r}"
-                )
-        else:
-            raise ValueError(
-                f"email_category 必须是 EmailCategory 枚举 / str / None, "
-                f"实际 {type(email_category).__name__}"
-            )
-    if not isinstance(tone, DraftTone):
-        raise ValueError(f"tone 必须是 DraftTone 枚举, 实际 {type(tone).__name__}")
-
-    # 枚举转字符串值(LLM prompt 友好)
-    category_str = (
-        email_category.value if isinstance(email_category, EmailCategory) else email_category
-    )
-    category_line = f"分类: {category_str}\n" if category_str else ""
-    return [
-        {
-            "role": "user",
-            "content": (
-                f"主题: {subject or '(空)'}\n"
-                f"发件人: {sender or '(空)'}\n"
-                f"正文: {body_excerpt or '(空)'}\n"
-                f"{category_line}"
-                f"语气: {tone.value}"
-            ),
-        }
-    ]
+# D4.7.2 v1.0.1 P1 修复: 本地 build_user_message 已删除, 委托给 prompts/draft.py
+# (旧实现缺少 P1-3 tone 末行重述 + 抗注入声明, 真实生产消息未生效)
 
 
 # ===== 3 个 _validate_draft_* helper(契约 1 公共 API,供 D4.7.3 严判下沉复用)=====
