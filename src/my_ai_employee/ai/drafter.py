@@ -24,7 +24,8 @@ D4.7 4 项契约(2026-06-09 用户审批锁定,D4.7.1 起始固定):
   1. **草稿无 confidence 字段** → 业务验收用**明确长度/必填/tone 枚举**判定
      (`validate_draft` 公共 API: subject 非空 AND body 10-8000 AND tone ∈ 3 类)
   2. **拒 markdown-wrapped JSON**(不剥离 ```json ... ``` fence)→ LLM 必须
-     返回**裸 JSON**,违者拒收触发 retry;body 字段内容允许 markdown
+     返回**裸 JSON**(`json.loads(stripped)` 唯一解析路径, 无 prose / 无外层 fence);
+     违者拒收触发 retry;body 字段内容允许 markdown(含 code fence)
   3. **tone 枚举锁定**:FORMAL / FRIENDLY / CONCISE 三选一,后续扩枚举需 B 类审批
   4. **范围限定**:D4.7 只生成草稿文本 + emit 业务事件 + 推进 Lane;不写
      `drafts` 数据库表、不创建 Mail.app 草稿、不接 iCloud CalDAV
@@ -32,9 +33,13 @@ D4.7 4 项契约(2026-06-09 用户审批锁定,D4.7.1 起始固定):
 D4.7.1 实施细节:
   - placeholder system prompt 内置(D4.7.2 替换为 `ai/prompts/draft.py`)
   - 严判入口:`type() is str` 严判,`isinstance(x, bool)` 拒 bool 子类
-  - 平衡括号定位 JSON(复用 D4.6 范本,无强制字段顺序)
-  - 4 项契约测试:契约 1 (业务验收) / 契约 2 (拒 markdown) / 契约 3 (tone 锁定) /
-    契约 4 (范围限定,ast 静态验证不 import drafts/events/db 模块)
+  - 裸 JSON 契约(6/9 v1.0.2 P1):`json.loads(stripped)` 唯一解析路径,
+    删除 v1.0.1 的"平衡括号兜底"(该兜底接受 prose 包装, 绕过契约)
+  - 业务验收下沉(6/9 v1.0.2 P2-2):契约 1 严判移到 _parse_draft_response,
+    删除 draft() 内的 validation_error 不可达分支
+  - DraftResult 自校验(6/9 v1.0.2 P2-3):__post_init__ 严判 5 字段
+  - 4 项契约测试:契约 1 (业务验收) / 契约 2 (拒外层 fence + 拒 prose) /
+    契约 3 (tone 锁定 + 请求 tone 强制) / 契约 4 (范围限定,ast 静态验证)
 """
 
 from __future__ import annotations
@@ -108,8 +113,11 @@ class DraftResult:
         body: 草稿正文(10-8000 字符, 内容允许 markdown)
         tone: 3 类语气之一(DraftTone 枚举)
         model_full_id: 实际调用的 provider/model(便于审计/计费)
-        latency_ms: 单次草稿生成耗时
+        latency_ms: 单次草稿生成耗时(非负)
         raw_content: LLM 原始响应(便于排查,截断到 500 字符)
+
+    6/9 v1.0.2 P2-3 修复: __post_init__ 严判 5 字段, 防止构造非法状态
+    (空 subject / 短 body / str tone / 负延迟 / 空 model), 复用契约 1 helper。
     """
 
     subject: str
@@ -118,6 +126,48 @@ class DraftResult:
     model_full_id: str
     latency_ms: int
     raw_content: str
+
+    def __post_init__(self) -> None:
+        """自校验 5 字段(6/9 v1.0.2 P2-3 修复).
+
+        编程错误(type 错 / 越界) → ValueError(透传, 不包装为 DrafterError).
+        业务验收(长度/枚举) → 复用 _validate_draft_subject / _validate_draft_body
+        / _validate_draft_tone(契约 1 严判下沉, D4.6 v1.0.2-second 范本).
+        """
+        # 严判入口(拒 bool 子类陷阱: isinstance(True, int) == True)
+        if type(self.subject) is not str:
+            raise ValueError(
+                f"subject 必须是 str, 实际 {type(self.subject).__name__}={self.subject!r}"
+            )
+        if type(self.body) is not str:
+            raise ValueError(f"body 必须是 str, 实际 {type(self.body).__name__}={self.body!r}")
+        if not isinstance(self.tone, DraftTone):
+            raise ValueError(
+                f"tone 必须是 DraftTone 枚举, 实际 {type(self.tone).__name__}={self.tone!r}"
+            )
+        if type(self.model_full_id) is not str:
+            raise ValueError(
+                f"model_full_id 必须是 str, 实际 "
+                f"{type(self.model_full_id).__name__}={self.model_full_id!r}"
+            )
+        if type(self.latency_ms) is not int or isinstance(self.latency_ms, bool):
+            raise ValueError(
+                f"latency_ms 必须是 int, 实际 {type(self.latency_ms).__name__}={self.latency_ms!r}"
+            )
+        if type(self.raw_content) is not str:
+            raise ValueError(
+                f"raw_content 必须是 str, 实际 "
+                f"{type(self.raw_content).__name__}={self.raw_content!r}"
+            )
+
+        # 业务验收(契约 1 严判下沉)
+        if not self.model_full_id:
+            raise ValueError("model_full_id 不能为空(审计需要实际调用的 provider/model)")
+        if self.latency_ms < 0:
+            raise ValueError(f"latency_ms 不能为负: {self.latency_ms}")
+        _validate_draft_subject(self.subject)
+        _validate_draft_body(self.body)
+        # _validate_draft_tone 接受 DraftTone | str, 这里 tone 已是 DraftTone, 必通过
 
     def to_dict(self) -> dict[str, Any]:
         """序列化为 dict(便于 JSON 化)."""
@@ -184,11 +234,13 @@ class EmailDrafter:
         self._router = router or get_router()
         self._max_tokens = max_tokens
         # 运行时统计(可观测性, 类似 RouterStats)
+        # 6/9 v1.0.2 P2-2 修复: 删除 validation_error 字段
+        # 解析器(_parse_draft_response)已对 subject / body / tone 严判
+        # 业务验收不可达, 统计无意义
         self._stats: dict[str, int] = {
             "total": 0,
             "success": 0,
             "response_error": 0,
-            "validation_error": 0,
             "llm_error": 0,
         }
 
@@ -331,6 +383,8 @@ class EmailDrafter:
 
         # 严判响应(D4.7 严判入口)
         # P1-3 修复(6/9): 强制 expected_tone, LLM 返回的 tone 必须 == 请求 tone
+        # 6/9 v1.0.2 P2-2 修复: 业务验收(契约 1) 已下沉到 _parse_draft_response,
+        # 解析成功即通过验收, 不再有 validation_error 计数分支
         try:
             draft_subject, draft_body, draft_tone = _parse_draft_response(
                 response.content, expected_tone=tone_enum
@@ -342,18 +396,6 @@ class EmailDrafter:
                 f"reason={e.reason} | raw={e.raw_content!r}"
             )
             raise
-
-        # 业务验收(契约 1: 长度/必填/tone 严判)
-        # - 不抛错(响应已 parse 成功),但记录 validation_error 计数
-        # - D4.7.3 EmailDrafterAdapter 复用 validate_draft 公共 API 判定 business_accepted
-        if not self.validate_draft(subject=draft_subject, body=draft_body, tone=draft_tone):
-            self._stats["validation_error"] += 1
-            logger.warning(
-                f"[drafter] 草稿业务验收未通过(契约 1) | subject={draft_subject!r} | "
-                f"body_len={len(draft_body)} | tone={draft_tone}"
-            )
-            # 不抛错: 业务验收未通过 ≠ LLM 死, 由 D4.7.3 Adapter 决定 fallback
-            # (L704 教训: 业务验收独立于传输存活)
 
         self._stats["success"] += 1
         return DraftResult(
@@ -571,11 +613,15 @@ def _validate_draft_tone(tone: Any) -> None:
 
 # ===== markdown fence 检测(契约 2 拒外层包裹)=====
 
-# D4.7 契约 2 修复(6/9 P1-2): 只拒"外层包裹", body 内合法 code fence 允许
-# - D4.7.1 初版用正则整段扫描 fence → 误杀 body 内的 ```python ... ``` 围栏
-# - 6/9 改为: 优先 json.loads 整段, 失败再检测外层包裹(以 ``` 开头 AND 以 ``` 结尾)
-# - 这样 LLM 可在 body 字段中正常输出 markdown 代码示例, 不被契约 2 误拒
-# - D4.6 v1.0.1 P1-4 是"剥 fence", D4.7 改为"拒外层 fence" — 决择见 week1-mvp.md L706
+# D4.7 契约 2 修复史(2026-06-09 三轮迭代):
+#   v1.0 P0: 正则整段扫描 fence → 误杀 body 内的 ```python ... ``` 围栏
+#   v1.0.1 P1-2: 优先 json.loads 整段, 失败回退平衡括号定位 → 仍接受 prose 包装
+#   v1.0.2 P1(检查员第二次复检): 删除平衡括号兜底, **只允许 json.loads(stripped)**
+#     - LLM 必须返回"裸 JSON"(无 prose / 无外层 fence / 无前后说明文字)
+#     - 整段 load 失败 + 外层 fence → 拒收(reason=markdown_fenced_outer)
+#     - 整段 load 失败 + 无外层 fence → 拒收(reason=json_decode_error)
+#     - body 字段内允许 markdown(包括 code fence), 因为 body 是字符串内容
+# 决择依据: 契约 2 "LLM 响应必须为裸 JSON" 严格落实, 避免"提示工程漂移"
 
 
 def _has_outer_markdown_fence(raw: str) -> bool:
@@ -589,73 +635,12 @@ def _has_outer_markdown_fence(raw: str) -> bool:
 
     Returns:
         True = 外层被 fence 包裹(契约 2 拒收)
-        False = 无外层包裹(继续走整段 JSON 解析或平衡括号定位)
+        False = 无外层包裹(继续走整段 JSON 解析)
     """
     if type(raw) is not str:
         return False  # 留到 _parse_draft_response 上层抛 type 错
     stripped = raw.strip()
     return stripped.startswith("```") and stripped.endswith("```")
-
-
-# ===== 平衡括号定位(复用 D4.6 范本)=====
-
-
-def _find_all_balanced_json(raw: str) -> list[str]:
-    """扫描 raw, 返回所有平衡的 { ... } 块文本列表(不含外层字符).
-
-    平衡括号扫描: 跟踪 { 与 } 嵌套深度, 忽略字符串内 / 转义后的括号.
-    D4.6 v1.0.2 P2-3 范本复用: 找所有平衡 JSON 块, 便于 _extract_balanced_json
-    在多个候选中选含 subject+body+tone 字段的。
-    """
-    blocks: list[str] = []
-    start = raw.find("{")
-    while start != -1:
-        depth = 0
-        in_str = False
-        escape = False
-        for i in range(start, len(raw)):
-            ch = raw[i]
-            if escape:
-                escape = False
-                continue
-            if ch == "\\":
-                escape = True
-                continue
-            if ch == '"':
-                in_str = not in_str
-                continue
-            if in_str:
-                continue
-            if ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
-                if depth == 0:
-                    blocks.append(raw[start : i + 1])
-                    break
-        start = raw.find("{", start + 1)
-    return blocks
-
-
-def _extract_balanced_json_draft(raw: str) -> str | None:
-    """扫描 raw, 返回第一个同时含 subject + body + tone 字段的平衡 JSON 块文本.
-
-    D4.6 v1.0.1 P1-4 范本复用: 不再强制字段顺序, 允许 LLM 输出任意字段顺序。
-    D4.6 v1.0.2 P2-3 范本复用: 扫描所有平衡 JSON 块, 选第一个同时含
-    `subject` + `body` + `tone` 字段的(避免前面无关对象遮蔽草稿结果)。
-
-    兜底: 若所有块都不含 3 字段, 返回第一个平衡 JSON(原 v1.0.1 行为)。
-    全部无平衡 JSON 时返回 None(上层抛 no_balanced_json)。
-    """
-    blocks = _find_all_balanced_json(raw)
-    for block in blocks:
-        try:
-            data = json.loads(block)
-        except (json.JSONDecodeError, ValueError):
-            continue
-        if isinstance(data, dict) and {"subject", "body", "tone"} <= data.keys():
-            return block
-    return blocks[0] if blocks else None
 
 
 # ===== 严判解析主函数(契约 2 拒外层 fence + 契约 3 tone 严判 + P1-3 强制)=====
@@ -668,24 +653,31 @@ def _parse_draft_response(
 ) -> tuple[str, str, DraftTone]:
     """严判解析 LLM 草稿响应, 返回 (subject, body, tone).
 
-    解析策略(D4.7 4 项契约 + 6/9 P1-2 + P1-3 应用):
+    解析策略(D4.7 4 项契约 + 6/9 P1 + P2-1 应用):
       1. type() 严判 content 是 str
-      2. **优先** `json.loads(content.strip())` 整段解析
-         (允许 prose + JSON 混合 / body 内 code fence)
-      3. 整段解析失败 → 检测**外层** markdown fence 包裹 → 拒收(契约 2)
-      4. 兜底: 平衡括号定位 JSON(允许任意字段顺序)
-      5. 严判 "subject" 字段: type is str, 复用 _validate_draft_subject
-      6. 严判 "body" 字段: type is str, 复用 _validate_draft_body
-      7. 严判 "tone" 字段: 必须是 3 类枚举之一(契约 3)
-      8. **P1-3 强制**: 若传入 expected_tone, 返回 tone 必须 == expected_tone
+      2. 入口严判 expected_tone: 仅接受 DraftTone | None(6/9 P2-1 修复)
+      3. **裸 JSON 契约**: 只执行 `json.loads(content.strip())` 整段解析
+         (不允许 prose / 不允许外层 fence / 不允许平衡括号兜底)
+      4. 整段解析失败 → 检测外层 fence 包裹 → 拒收(reason=markdown_fenced_outer)
+         或 拒收(reason=json_decode_error)
+      5. 严判结构(必须 dict) + 严判 subject / body / tone 字段类型与值
+      6. **P1-3 强制**: 若传入 expected_tone, 返回 tone 必须 == expected_tone
 
     任何一步失败 → DrafterResponseError(业务异常, 可重试).
     编程错误(KeyError/TypeError 等在解析前) → 透传(不在本函数包装).
 
     Args:
         content: LLM 原始响应
-        expected_tone: 请求的语气(6/9 P1-3 新增, 强制 LLM 返回一致 tone)
+        expected_tone: 请求的语气(6/9 P1-3 新增, 强制 LLM 返回一致 tone;
+                       6/9 P2-1 修复: 仅接受 DraftTone | None, 非法值 ValueError)
     """
+    # P2-1 修复(6/9): 入口严判 expected_tone, 防止 "OOPS" / 123 等泄漏到 .value 抛 AttributeError
+    if expected_tone is not None and not isinstance(expected_tone, DraftTone):
+        raise ValueError(
+            f"expected_tone 必须是 DraftTone 枚举或 None, "
+            f"实际 {type(expected_tone).__name__}={expected_tone!r}"
+        )
+
     if type(content) is not str:
         raise DrafterResponseError(
             "LLM content 必须是 str",
@@ -693,34 +685,30 @@ def _parse_draft_response(
             reason=f"type={type(content).__name__}",
         )
 
-    # 契约 2 (6/9 P1-2 修复): 优先整段 json.loads, 允许 body 内 code fence
+    # 契约 2 (6/9 v1.0.2 P1 修复): **只允许裸 JSON**
+    # - 整段 json.loads(stripped) 是唯一解析路径
+    # - 整段失败 + 外层 fence → 拒收(reason=markdown_fenced_outer)
+    # - 整段失败 + 无外层 fence → 拒收(reason=json_decode_error)
+    # - 删除 v1.0.1 的"平衡括号兜底": 该兜底接受 prose 包装的 JSON,
+    #   与锁定契约"无其他文字"冲突
+    # - body 字段内的 markdown(含 code fence)仍然允许, 因为 body 是字符串内容
     stripped = content.strip()
     try:
         data = json.loads(stripped)
     except (json.JSONDecodeError, ValueError) as parse_err:
-        # 整段不是合法 JSON → 检测是否被外层 fence 包裹
+        # 整段不是合法 JSON → 检测是否被外层 fence 包裹(便于运维定位)
         if _has_outer_markdown_fence(content):
             raise DrafterResponseError(
                 "LLM 响应被外层 markdown fence 包裹(契约 2: 拒收, 不剥离)",
                 raw_content=content,
                 reason="markdown_fenced_outer",
             ) from parse_err
-        # 兜底: 平衡括号定位(允许 LLM 输出 prose + JSON 混合)
-        json_text = _extract_balanced_json_draft(content)
-        if json_text is None:
-            raise DrafterResponseError(
-                "未找到平衡的 JSON 块",
-                raw_content=content,
-                reason="no_balanced_json",
-            ) from parse_err
-        try:
-            data = json.loads(json_text)
-        except (json.JSONDecodeError, ValueError) as e:
-            raise DrafterResponseError(
-                f"JSON 解析失败: {e}",
-                raw_content=content,
-                reason=f"json_decode_error={type(e).__name__}",
-            ) from e
+        # 裸 JSON 契约: 不容错, 不兜底, 整段 load 失败即拒
+        raise DrafterResponseError(
+            f"LLM 响应不是合法裸 JSON(契约 2): {parse_err}",
+            raw_content=content,
+            reason=f"json_decode_error={type(parse_err).__name__}",
+        ) from parse_err
 
     # 严判结构(必须是 dict)
     if not isinstance(data, dict):

@@ -138,6 +138,66 @@ class TestDraftToneEnum:
 
 
 # ============================================================
+# Section 0.5: DraftResult 自校验(6/9 v1.0.2 P2-3)
+# ============================================================
+
+
+class TestDraftResultPostInit:
+    """DraftResult __post_init__ 严判 5 字段(6/9 v1.0.2 P2-3)."""
+
+    def _valid_kwargs(self) -> dict:
+        return {
+            "subject": "Re: 测试主题",
+            "body": "感谢您的来信, 项目进展顺利, 详情如下。",
+            "tone": DraftTone.FORMAL,
+            "model_full_id": "minimax/M3",
+            "latency_ms": 100,
+            "raw_content": "{}",
+        }
+
+    def test_accepts_valid(self) -> None:
+        """合法 5 字段 → 构造成功."""
+        result = DraftResult(**self._valid_kwargs())
+        assert result.subject == "Re: 测试主题"
+        assert result.tone == DraftTone.FORMAL
+
+    def test_rejects_empty_subject(self) -> None:
+        """空 subject(契约 1)→ ValueError."""
+        with pytest.raises(ValueError, match="subject 太短"):
+            DraftResult(**{**self._valid_kwargs(), "subject": ""})
+
+    def test_rejects_short_body(self) -> None:
+        """短 body(< 10 字符)→ ValueError."""
+        with pytest.raises(ValueError, match="body 太短"):
+            DraftResult(**{**self._valid_kwargs(), "body": "abc"})
+
+    def test_rejects_string_tone(self) -> None:
+        """**P2-3 核心**: tone 是 str(非 DraftTone 枚举)→ ValueError."""
+        with pytest.raises(ValueError, match="tone 必须是 DraftTone 枚举"):
+            DraftResult(**{**self._valid_kwargs(), "tone": "FORMAL"})
+
+    def test_rejects_empty_model(self) -> None:
+        """空 model_full_id(审计需要)→ ValueError."""
+        with pytest.raises(ValueError, match="model_full_id 不能为空"):
+            DraftResult(**{**self._valid_kwargs(), "model_full_id": ""})
+
+    def test_rejects_negative_latency(self) -> None:
+        """**P2-3 核心**: 负 latency_ms → ValueError."""
+        with pytest.raises(ValueError, match="latency_ms 不能为负"):
+            DraftResult(**{**self._valid_kwargs(), "latency_ms": -1})
+
+    def test_rejects_bool_latency(self) -> None:
+        """**P2-3**: bool 子类陷阱(True/False 是 int)→ ValueError."""
+        with pytest.raises(ValueError, match="latency_ms 必须是 int"):
+            DraftResult(**{**self._valid_kwargs(), "latency_ms": True})
+
+    def test_rejects_wrong_type_subject(self) -> None:
+        """**P2-3 核心**: subject 是 None → ValueError(编程错误)."""
+        with pytest.raises(ValueError, match="subject 必须是 str"):
+            DraftResult(**{**self._valid_kwargs(), "subject": None})
+
+
+# ============================================================
 # Section 1: 严判 _validate_draft_* helper(契约 1 公共 API)
 # ============================================================
 
@@ -306,28 +366,30 @@ class TestParseDraftResponse:
         with pytest.raises(DrafterResponseError, match="markdown fence"):
             _parse_draft_response(fenced)
 
-    def test_accepts_prose_around_json(self) -> None:
-        """**契约 2 (6/9 P1-2 修复)**: 接受 prose + JSON 混合(LLM 友好输出)."""
-        # 整段不是合法 JSON(有 prose), 但平衡括号定位能找到 JSON 块
+    def test_rejects_prose_around_json(self) -> None:
+        """**契约 2 (6/9 v1.0.2 P1)**: 拒收 prose + JSON 混合(LLM 必须返回裸 JSON).
+
+        v1.0.1 P1-2 误把"平衡括号兜底"当作优化, 实际绕过裸 JSON 契约.
+        v1.0.2 删除兜底: 整段 json.loads(stripped) 是唯一路径, 任何 prose 包装即拒.
+        """
         content = (
             "Here is the draft:\n"
             '{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}\n'
             "thanks!"
         )
-        subject, body, tone = _parse_draft_response(content)
-        assert subject == "Re: 项目"
-        assert tone == DraftTone.FORMAL
+        with pytest.raises(DrafterResponseError, match="不是合法裸 JSON") as exc_info:
+            _parse_draft_response(content)
+        assert "json_decode_error=" in exc_info.value.reason
 
-    def test_accepts_unclosed_fence_with_balanced_json(self) -> None:
-        """**契约 2 (6/9 P1-2 修复)**: 未闭合 ```json 但有平衡 JSON → 接受(LLM 偶发截断)."""
-        # 注意: 此 content 不在外层 fence 包裹(stripped 不以 ``` 开头也不以 ``` 结尾)
+    def test_rejects_unclosed_fence_with_prose(self) -> None:
+        """**契约 2 (6/9 v1.0.2 P1)**: 未闭合 ```json + 平衡 JSON → 拒收(裸 JSON 严格)."""
+        # 整段不是合法 JSON(开头有 ```json 文字), 整段 load 失败 → 拒
         content = (
             "```json\n"
             '{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}'
         )
-        subject, _, tone = _parse_draft_response(content)
-        assert subject == "Re: 项目"
-        assert tone == DraftTone.FORMAL
+        with pytest.raises(DrafterResponseError, match="不是合法裸 JSON"):
+            _parse_draft_response(content)
 
     def test_rejects_tone_mismatch(self) -> None:
         """**P1-3 核心(6/9)**: 请求 tone 与返回 tone 不一致 → DrafterResponseError."""
@@ -348,6 +410,31 @@ class TestParseDraftResponse:
         subject, body, tone = _parse_draft_response(content)  # 不传 expected_tone
         assert tone == DraftTone.FORMAL
 
+    def test_rejects_invalid_expected_tone_string(self) -> None:
+        """**P2-1 核心(6/9 v1.0.2)**: expected_tone="OOPS" → ValueError(编程错误).
+
+        v1.0.1 漏严判: expected_tone="OOPS" 会泄漏到 .value 抛 AttributeError,
+        与契约承诺"非法类型统一抛 ValueError"冲突. v1.0.2 入口加守卫.
+        """
+        content = _valid_draft_json(tone="FORMAL")
+        with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
+            _parse_draft_response(content, expected_tone="OOPS")  # type: ignore[arg-type]
+
+    def test_rejects_invalid_expected_tone_int(self) -> None:
+        """**P2-1 (6/9 v1.0.2)**: expected_tone=123 → ValueError(编程错误)."""
+        content = _valid_draft_json(tone="FORMAL")
+        with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
+            _parse_draft_response(content, expected_tone=123)  # type: ignore[arg-type]
+
+    def test_rejects_invalid_expected_tone_str_value(self) -> None:
+        """**P2-1 (6/9 v1.0.2)**: expected_tone=DraftTone.FORMAL.value(str)→ ValueError.
+
+        注意: str 形式不允许(防止上层偷懒). 仅 DraftTone 枚举实例或 None.
+        """
+        content = _valid_draft_json(tone="FORMAL")
+        with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
+            _parse_draft_response(content, expected_tone="FORMAL")  # type: ignore[arg-type]
+
     def test_accepts_body_with_inner_code_fence(self) -> None:
         """**契约 2 (6/9 P1-2 核心修复)**: body 内有 ```python ... ``` 围栏 → 接受.
 
@@ -364,10 +451,15 @@ class TestParseDraftResponse:
         assert "```python" in body
         assert tone == DraftTone.FORMAL
 
-    def test_rejects_no_balanced_json(self) -> None:
-        """无平衡 JSON 块 → DrafterResponseError."""
-        with pytest.raises(DrafterResponseError, match="未找到平衡的 JSON 块"):
+    def test_rejects_non_json_text(self) -> None:
+        """**契约 2 (6/9 v1.0.2 P1)**: 非 JSON 文本 → 拒收(reason=json_decode_error).
+
+        v1.0.1 是 "未找到平衡的 JSON 块"(no_balanced_json).
+        v1.0.2 删除兜底: 整段 load 失败即 json_decode_error.
+        """
+        with pytest.raises(DrafterResponseError, match="不是合法裸 JSON") as exc_info:
             _parse_draft_response("not a json at all")
+        assert "json_decode_error=" in exc_info.value.reason
 
     def test_rejects_non_dict_json(self) -> None:
         """JSON 顶层非 object(数组)→ DrafterResponseError.
@@ -714,19 +806,23 @@ class TestEmailDrafterDraft:
         with pytest.raises(ValueError, match="tone 字符串必须"):
             drafter.draft(subject="x", sender="y", body_excerpt="z", tone="apologetic")
 
-    def test_validation_error_recorded_but_not_raised(self) -> None:
-        """业务验收未通过(契约 1)记录 stats 但不抛错(由 D4.7.3 Adapter 决定)."""
+    def test_short_body_rejected_at_parser(self) -> None:
+        """**契约 1 (6/9 v1.0.2 P2-2)**: 短 body 在 _parse_draft_response 严判时即拒.
+
+        v1.0.1 注释误说"业务验收在 draft() 内 validate_draft 二次校验",
+        实际解析器已预拒, 不存在 validation_error 不可达分支. v1.0.2 删除该分支.
+        """
         mock_router = MagicMock()
-        # LLM 返回 body 长度合法但 == 0 字符(契约 1 拒收)
         bad_content = '{"subject": "Re: x", "body": "", "tone": "FORMAL"}'
         mock_router.route.return_value = _mock_router_response(bad_content)
         drafter = EmailDrafter(router=mock_router)
-        # body=0 字符 _parse_draft_response 会抛 DrafterResponseError(body_invalid_len)
-        with pytest.raises(DrafterResponseError):
+        with pytest.raises(DrafterResponseError, match="body 业务验收未通过") as exc_info:
             drafter.draft(subject="x", sender="y", body_excerpt="z")
-        # 注意: 业务验收(契约 1)在 _parse_draft_response 严判时已经抛错, 不走到
-        # EmailDrafter.draft 的 validate_draft 二次校验。这是正确的:
-        # 严判入口下沉到 _parse_draft_response, 不重复校验(D4.6 v1.0.2-second 范本).
+        assert "body_invalid_len=0" in exc_info.value.reason
+        # stats["response_error"] += 1, validation_error 字段已删除
+        stats = drafter.stats()
+        assert stats["response_error"] == 1
+        assert "validation_error" not in stats
 
     def test_temperature_passed_to_router(self) -> None:
         """中温 0.7 应透传到 router(草稿任务保创意)."""
@@ -1055,14 +1151,14 @@ class TestDrafterStats:
     """EmailDrafter stats 可观测性测试."""
 
     def test_stats_initial(self) -> None:
-        """初始 stats 全 0."""
+        """初始 stats 全 0(6/9 v1.0.2 P2-2: validation_error 字段已删除)."""
         drafter = EmailDrafter(router=MagicMock())
         stats = drafter.stats()
         assert stats["total"] == 0
         assert stats["success"] == 0
         assert stats["response_error"] == 0
-        assert stats["validation_error"] == 0
         assert stats["llm_error"] == 0
+        assert "validation_error" not in stats
 
     def test_stats_accumulate(self) -> None:
         """stats 累加正确."""
