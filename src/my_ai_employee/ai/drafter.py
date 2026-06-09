@@ -102,6 +102,32 @@ _DRAFT_TONE_CHOICES: frozenset[str] = frozenset(t.value for t in DraftTone)
 _EMAIL_CATEGORY_VALUES: frozenset[str] = frozenset(c.value for c in EmailCategory)
 
 
+# 6/9 v1.0.6 P2-2 新增: SPAM 授权意图枚举(消除"确认收悉"与 SYSTEM_PROMPT_SPAM 矛盾)
+# - v1.0.5 漏洞: 授权行措辞"礼貌退订/确认收悉" 与 SYSTEM prompt "避免确认邮箱活跃" 矛盾
+#   模型收到互相冲突的指令时, 可能错误地走"确认收悉"路径, 让发件方知道你打开了邮件
+# - 真修: 严格枚举白名单, **排除"ACKNOWLEDGE/确认收悉"**(与 SYSTEM prompt 业务硬规则矛盾)
+# - 仅允许明确的"退订"或"拒收"意图(都是单向拒绝语义, 不暴露"用户已读"信号)
+# - 未来扩枚举(如 BLOCK_SENDER 等) 需 B 类审批
+class DraftSpamReplyIntent(StrEnum):
+    """SPAM 授权回复意图(6/9 v1.0.6 P2-2 新增, 排除 ACKNOWLEDGE 语义冲突).
+
+    UNSUBSCRIBE: 礼貌退订(请将我移除列表/请勿再发送同类邮件)
+    REJECT     : 明确拒收(我不感兴趣, 拒绝任何后续沟通, 升级法律风险)
+
+    与 DraftTone 区别:
+      - DraftTone 是"语气"(FORMAL/FRIENDLY/CONCISE)
+      - DraftSpamReplyIntent 是"业务意图"(UNSUBSCRIBE/REJECT, 互斥)
+
+    未来扩枚举需 B 类审批(D4.7.2 契约外增量)。
+    """
+
+    UNSUBSCRIBE = "UNSUBSCRIBE"  # 礼貌退订
+    REJECT = "REJECT"  # 明确拒收
+
+
+_DRAFT_SPAM_REPLY_INTENT_CHOICES: frozenset[str] = frozenset(t.value for t in DraftSpamReplyIntent)
+
+
 # ===== 业务异常(D3.3.3 教训:窄化异常范围)=====
 
 # 6/9 v1.0.5 P2-2 修复: 阻断原因 reason 锁定白名单
@@ -174,6 +200,9 @@ class DraftResult:
 
     6/9 v1.0.2 P2-3 修复: __post_init__ 严判 5 字段, 防止构造非法状态
     (空 subject / 短 body / str tone / 负延迟 / 空 model), 复用契约 1 helper。
+    6/9 v1.0.6 P2-1 修复: 增加 `spam_reply_authorized: bool` 字段(契约外增量),
+    便于 D4.7.3 EmailDrafterAdapter 事件审计追溯"是否通过 allow_spam_reply=True 生成"
+    (v1.0.5 缺口: 成功结果无法区分"普通草稿"和"SPAM 授权放行草稿", 审计盲点)。
     """
 
     subject: str
@@ -182,9 +211,15 @@ class DraftResult:
     model_full_id: str
     latency_ms: int
     raw_content: str
+    # 6/9 v1.0.6 P2-1 新增: SPAM 授权标记(便于 D4.7.3 Adapter 事件审计)
+    # - False(默认): 正常草稿(URGENT/TODO/FYI/PERSONAL)或 SPAM 业务阻断后从未放行
+    # - True: 通过 allow_spam_reply=True 显式放行, 实际生成了可投递草稿
+    # - 业务含义: "该草稿是否由 SPAM 授权意图触发", 便于 audit 追溯
+    # 严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
+    spam_reply_authorized: bool = False
 
     def __post_init__(self) -> None:
-        """自校验 5 字段(6/9 v1.0.2 P2-3 修复).
+        """自校验 6 字段(6/9 v1.0.2 P2-3 修复 + v1.0.6 P2-1 新增 spam_reply_authorized).
 
         编程错误(type 错 / 越界) → ValueError(透传, 不包装为 DrafterError).
         业务验收(长度/枚举) → 复用 _validate_draft_subject / _validate_draft_body
@@ -215,6 +250,13 @@ class DraftResult:
                 f"raw_content 必须是 str, 实际 "
                 f"{type(self.raw_content).__name__}={self.raw_content!r}"
             )
+        # 6/9 v1.0.6 P2-1 新增: spam_reply_authorized 严格 bool 严判
+        # 拒 "false"(str)/ 1(int) 等真值陷阱, 与 P2-1 范本保持一致
+        if type(self.spam_reply_authorized) is not bool:
+            raise ValueError(
+                f"spam_reply_authorized 必须是 bool, 实际 "
+                f"{type(self.spam_reply_authorized).__name__}={self.spam_reply_authorized!r}"
+            )
 
         # 业务验收(契约 1 严判下沉)
         # 6/9 v1.0.3 P2-2 修复: strip() 严判语义非空("   " 长度 3 仍会被旧版绕过)
@@ -238,6 +280,7 @@ class DraftResult:
             "model_full_id": self.model_full_id,
             "latency_ms": self.latency_ms,
             "raw_content": self.raw_content,
+            "spam_reply_authorized": self.spam_reply_authorized,
         }
 
 
@@ -259,13 +302,16 @@ class DraftBlockedResult:
         tone: 用户请求的 tone(透传,便于业务层 audit)
         reason: 阻断原因(机器可读, 如 'spam_business_blocked')
         original_email_category: 触发阻断的邮件分类
+        spam_reply_authorized: 6/9 v1.0.6 P2-1 新增, 调用方当时是否传 allow_spam_reply=True
+                              (业务层 audit: 即便最终被阻断, 也记录"调用方授权意图"
+                              便于 D4.7.3 Adapter 事件审计追溯"为什么阻断"+"是否本来可放行")
 
     与 DraftResult 区别:
       - DraftResult 是 LLM 实际生成的草稿(含 model_full_id / latency_ms)
       - DraftBlockedResult 是模板化阻断产物(无 LLM 调用, 无 model 信息)
 
     Raises:
-        __post_init__ 严判 5 字段, 编程错误 → ValueError(透传).
+        __post_init__ 严判 6 字段, 编程错误 → ValueError(透传).
     """
 
     subject: str
@@ -273,6 +319,11 @@ class DraftBlockedResult:
     tone: DraftTone
     reason: str
     original_email_category: str
+    # 6/9 v1.0.6 P2-1 新增: SPAM 授权标记(便于 D4.7.3 Adapter 事件审计)
+    # - False(默认): 调用方未传 allow_spam_reply=True, 走"业务硬阻断"路径
+    # - True: 调用方传了 allow_spam_reply=True, 但仍有阻断(本类只产出阻断模板不调 LLM)
+    # 严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
+    spam_reply_authorized: bool = False
 
     def __post_init__(self) -> None:
         # 严判入口(拒 bool 子类陷阱)
@@ -294,6 +345,13 @@ class DraftBlockedResult:
             raise ValueError(
                 f"original_email_category 必填非空 str, "
                 f"实际 {type(self.original_email_category).__name__}"
+            )
+        # 6/9 v1.0.6 P2-1 新增: spam_reply_authorized 严格 bool 严判
+        # 拒 "false"(str)/ 1(int) 等真值陷阱, 与 DraftResult 范本保持一致
+        if type(self.spam_reply_authorized) is not bool:
+            raise ValueError(
+                f"spam_reply_authorized 必须是 bool, 实际 "
+                f"{type(self.spam_reply_authorized).__name__}={self.spam_reply_authorized!r}"
             )
         # 业务验收(subject / body / reason / original_email_category 至少语义非空, 防空字符串绕过)
         if not self.subject.strip():
@@ -340,6 +398,7 @@ class DraftBlockedResult:
             "reason": self.reason,
             "original_email_category": self.original_email_category,
             "blocked": True,  # 显式标记,便于上层识别"阻断产物 vs LLM 产物"
+            "spam_reply_authorized": self.spam_reply_authorized,
         }
 
 
@@ -453,6 +512,7 @@ class EmailDrafter:
         email_category: EmailCategory | str | None = None,
         tone: DraftTone | str = DraftTone.FORMAL,
         allow_spam_reply: bool = False,
+        spam_reply_intent: DraftSpamReplyIntent | str | None = None,
     ) -> DraftResult:
         """单邮件草稿生成.
 
@@ -467,9 +527,17 @@ class EmailDrafter:
                             默认 False(业务硬阻断, 与 D4.6 BLOCKED 流程形成双保险);
                             True 时显式覆盖阻断, 但调用方必须在业务层 audit(避免误用).
                             若需"产出阻断模板但不抛异常", 请用 draft_blocked_category() 独立入口.
+            spam_reply_intent: 6/9 v1.0.6 P2-2 新增, SPAM 授权回复意图(枚举/字符串/None).
+                            仅在 allow_spam_reply=True 时生效:
+                            - None: 默认 UNSUBSCRIBE(礼貌退订, 最安全的"单向拒绝"语义)
+                            - UNSUBSCRIBE: 礼貌退订(请将我移除列表)
+                            - REJECT: 明确拒收(不感兴趣, 拒绝后续沟通)
+                            **排除 ACKNOWLEDGE/确认收悉**(与 SYSTEM_PROMPT_SPAM
+                            "避免确认邮箱活跃" 业务硬规则矛盾, v1.0.5 漏洞)
+                            当 allow_spam_reply=False 时, 此参数被忽略.
 
         Returns:
-            DraftResult(含 subject + body + tone + 调用模型)
+            DraftResult(含 subject + body + tone + 调用模型 + spam_reply_authorized)
 
         Raises:
             ValueError: 参数 type 错(编程错误, 透传)
@@ -492,6 +560,34 @@ class EmailDrafter:
             raise ValueError(
                 f"allow_spam_reply 必须是 bool, 实际 {type(allow_spam_reply).__name__}"
             )
+        # 6/9 v1.0.6 P2-2 新增: spam_reply_intent 严判
+        # - 枚举/字符串 2 类(契约外增量, 排除 ACKNOWLEDGE 语义冲突)
+        # - None 允许(默认 UNSUBSCRIBE, 在 SPAM 授权时启用)
+        # 6/9 v1.0.6 P2-2: spam_reply_intent 严判(类型 + 白名单)
+        # - 枚举/字符串 2 类(契约外增量, 排除 ACKNOWLEDGE 语义冲突)
+        # - None 允许(默认 UNSUBSCRIBE, 在 SPAM 授权时启用)
+        intent_enum: DraftSpamReplyIntent | None
+        if spam_reply_intent is not None:
+            if isinstance(spam_reply_intent, DraftSpamReplyIntent):
+                intent_enum = spam_reply_intent
+            elif type(spam_reply_intent) is str:
+                try:
+                    intent_enum = DraftSpamReplyIntent(spam_reply_intent)
+                except ValueError as e:
+                    raise ValueError(
+                        f"spam_reply_intent 字符串必须 ∈ "
+                        f"{sorted(_DRAFT_SPAM_REPLY_INTENT_CHOICES)}, "
+                        f"实际 {spam_reply_intent!r}"
+                    ) from e
+            else:
+                raise ValueError(
+                    f"spam_reply_intent 必须是 DraftSpamReplyIntent 枚举 / str / None, "
+                    f"实际 {type(spam_reply_intent).__name__}"
+                )
+        else:
+            # allow_spam_reply=True 时 None → 默认 UNSUBSCRIBE(最安全语义)
+            # allow_spam_reply=False 时 忽略(后续 SPAM 阻断会抛)
+            intent_enum = DraftSpamReplyIntent.UNSUBSCRIBE if allow_spam_reply else None
         # P1-1 修复(6/9): 接受 EmailCategory | str | None
         # - EmailCategory 枚举直接接受(D4.6 ClassificationResult.category 真实 handoff)
         # - str 严判 ∈ 5 类(拒 'OOPS' 等非法值)
@@ -511,10 +607,32 @@ class EmailDrafter:
                     f"实际 {type(email_category).__name__}"
                 )
 
+        # 6/9 v1.0.6 P1-1 修复: tone 校验必须在 SPAM 阻断**之前**
+        # - 检查员第七次复检 P1: 非法 tone(如 "OOPS")若在 SPAM 阻断后校验,
+        #   会先被记录为业务阻断(stats["total"]+=1, stats["blocked"]+=1),
+        #   再抛 ValueError 退出, 污染 total/blocked 统计, 上层 audit 误读
+        #   "SPAM 阻断率虚高"
+        # - 范本: "先完成全部参数校验, 再执行阻断及统计变更"
+        #   (与 D4.4 P1 入口严判范本 + D4.6 v1.0.2-second 业务验收前参数严判一致)
+        # - DraftTone 枚举 / 字符串 3 类(契约 3 锁定, 大小写敏感)
+        if isinstance(tone, DraftTone):
+            tone_enum = tone
+        elif type(tone) is str:
+            # 严判字符串(契约 3 锁定 3 类, 大小写敏感)
+            try:
+                tone_enum = DraftTone(tone)
+            except ValueError as e:
+                raise ValueError(
+                    f"tone 字符串必须 ∈ {sorted(_DRAFT_TONE_CHOICES)}, 实际 {tone!r}"
+                ) from e
+        else:
+            raise ValueError(f"tone 必须是 DraftTone 或 str, 实际 {type(tone).__name__}")
+
         # 6/9 v1.0.2 P1-1 业务硬阻断: SPAM 默认阻断(不调 LLM)
         # - 不依赖 prompt 文案(那是软引导), 业务层必须有硬阻断
         # - 与 D4.6 分类层 BLOCKED 流程形成双保险
         # - allow_spam_reply=True 显式覆盖(调用方需在业务层 audit)
+        # - 6/9 v1.0.6 P1-1 修复后: 此处 tone 已是 DraftTone 枚举, 非法 tone 不会污染
         email_category_str = (
             email_category.value if isinstance(email_category, EmailCategory) else email_category
         )
@@ -531,19 +649,6 @@ class EmailDrafter:
                 allow_spam_reply=False,
                 reason="spam_business_blocked",
             )
-        # tone 入参允许 DraftTone 或 str, 内部统一转 DraftTone
-        if isinstance(tone, DraftTone):
-            tone_enum = tone
-        elif type(tone) is str:
-            # 严判字符串(契约 3 锁定 3 类, 大小写敏感)
-            try:
-                tone_enum = DraftTone(tone)
-            except ValueError as e:
-                raise ValueError(
-                    f"tone 字符串必须 ∈ {sorted(_DRAFT_TONE_CHOICES)}, 实际 {tone!r}"
-                ) from e
-        else:
-            raise ValueError(f"tone 必须是 DraftTone 或 str, 实际 {type(tone).__name__}")
 
         # 正文截断(防御巨型 body)
         if len(body_excerpt) > self.MAX_BODY_CHARS:
@@ -561,6 +666,9 @@ class EmailDrafter:
         # 6/9 v1.0.5 P1-1 修复: 把 allow_spam_reply 透传给 build_user_message,
         # SPAM 显式授权意图才能进入 user 消息(此前模型只看到 SYSTEM prompt 的
         # "默认不生成回复"指令, 不知道调用方已显式放行, 模型仍按默认拒收生成)
+        # 6/9 v1.0.6 P2-2 修复: 透传 spam_reply_intent(枚举或 None),
+        # 让 build_user_message 根据枚举值选择措辞(UNSUBSCRIBE/REJECT),
+        # 排除"确认收悉"等与 SYSTEM_PROMPT_SPAM "避免确认邮箱活跃"矛盾的措辞
         system_prompt = _build_draft_system_prompt(email_category_str)
         messages = [
             system_to_message(system_prompt),
@@ -571,6 +679,7 @@ class EmailDrafter:
                 email_category=email_category_str,
                 tone=tone_enum.value,
                 allow_spam_reply=allow_spam_reply,
+                spam_reply_intent=intent_enum.value if intent_enum is not None else None,
             ),
         ]
 
@@ -611,6 +720,10 @@ class EmailDrafter:
             model_full_id=response.model_full_id,
             latency_ms=response.latency_ms,
             raw_content=response.content,
+            # 6/9 v1.0.6 P2-1 修复: 透传 allow_spam_reply 标记(便于 D4.7.3 Adapter 事件审计
+            # 追溯"该草稿是否由 SPAM 授权意图触发"。SPAM 阻断时 allow_spam_reply=False,
+            # 不会走到这里; SPAM 授权放行时 allow_spam_reply=True, spam_reply_authorized=True)
+            spam_reply_authorized=allow_spam_reply,
         )
 
     def draft_batch(
@@ -712,6 +825,8 @@ class EmailDrafter:
                         body_excerpt=email["body_excerpt"],
                         email_category=e.email_category,
                         tone=email.get("tone", DraftTone.FORMAL),
+                        # 6/9 v1.0.6 P2-1 新增: 透传调用方授权意图(便于 D4.7.3 Adapter 事件审计)
+                        spam_reply_authorized=per_email_allow,
                         _stats_already_bumped=True,  # draft() 已 +1, 避免重复
                     )
                     results.append(blocked)
@@ -735,6 +850,7 @@ class EmailDrafter:
         body_excerpt: str,
         email_category: EmailCategory | str,
         tone: DraftTone | str = DraftTone.FORMAL,
+        spam_reply_authorized: bool = False,
         _stats_already_bumped: bool = False,
     ) -> DraftBlockedResult:
         """为业务阻断邮件产出"建议: 不回复"模板(不调 LLM, 6/9 v1.0.2 P1-1 新增).
@@ -753,11 +869,16 @@ class EmailDrafter:
             body_excerpt: 正文(本入口不调 LLM, 仅用于审计/正文摘要)
             email_category: 触发阻断的邮件分类(SPAM 或未来其他 BLOCKED 类别)
             tone: 透传给 DraftBlockedResult.tone(便于业务层 audit)
+            spam_reply_authorized: 6/9 v1.0.6 P2-1 新增, 调用方当时是否传 allow_spam_reply=True
+                                  (业务层 audit: 即便最终被阻断, 也记录"调用方授权意图"
+                                  便于 D4.7.3 Adapter 事件审计追溯"为什么阻断"+"是否本来可放行")
+                                  严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
 
         Returns:
             DraftBlockedResult(含 subject="(DRAFT-NO-REPLY) ..." + body="建议: 不回复..."
                               + tone + reason="spam_business_blocked"
-                              + original_email_category=email_category)
+                              + original_email_category=email_category
+                              + spam_reply_authorized)
 
         Raises:
             ValueError: 参数 type 错 / 非法 email_category 字符串(编程错误, 透传)
@@ -781,6 +902,13 @@ class EmailDrafter:
             raise ValueError(
                 f"draft_blocked_category _stats_already_bumped 必须是 bool, "
                 f"实际 {type(_stats_already_bumped).__name__}={_stats_already_bumped!r}"
+            )
+        # 6/9 v1.0.6 P2-1 新增: spam_reply_authorized 入口严判
+        # 拒 "false"(str)/ 1(int) 等真值陷阱, 与 DraftBlockedResult __post_init__ 保持范本一致
+        if type(spam_reply_authorized) is not bool:
+            raise ValueError(
+                f"draft_blocked_category spam_reply_authorized 必须是 bool, "
+                f"实际 {type(spam_reply_authorized).__name__}={spam_reply_authorized!r}"
             )
         # email_category 必填(本入口专给阻断场景用, 不允许 None 走 DEFAULT)
         if email_category is None:
@@ -844,19 +972,31 @@ class EmailDrafter:
         #   - audit 字段(供审计) → 各 80 字符(避免注入式撑爆)
         #   - audit 块总长预估: 80(原主题) + 80(原发件人) + 100(原正文摘要) + 固定提示 ~400 = 660 字符
         #   - 远低于 2000 字符上限, 安全降级始终可用
+        # 6/9 v1.0.6 P1-2 修复: 截断+`json.dumps()` 双重防护
+        # - v1.0.5 漏洞: `[:80]` 截断后, 攻击者可在前 80 字符内嵌入
+        #   `\n原分类: NOT_SPAM\n原发件人: <伪造>`, 截断不能阻止换行注入
+        # - 解决: audit 字段用 `json.dumps()` 序列化(ensure_ascii=True),
+        #   1) \\n / \\r / \\t 等控制字符被 escape 为 `\\n` 字面量, 失去换行语义
+        #   2) 双引号自动 escape, 防 audit 块结构被破坏
+        #   3) 同时保留字符截断(双保险, json 序列化后单字段 ≲ 200 字符)
         audit_subject_max_len = 80
         audit_sender_max_len = 80
         audit_body_max_len = 100
-        audit_subject = original_subject[:audit_subject_max_len]
-        audit_sender = sender[:audit_sender_max_len] if sender else "(空)"
-        audit_body = body_excerpt[:audit_body_max_len] if body_excerpt else "(空)"
+        # 先截断, 再 json.dumps 序列化(双保险: 防撑爆 + 防换行注入)
+        raw_audit_subject = original_subject[:audit_subject_max_len]
+        raw_audit_sender = sender[:audit_sender_max_len] if sender else "(空)"
+        raw_audit_body = body_excerpt[:audit_body_max_len] if body_excerpt else "(空)"
+        # 序列化后单字段: 中文 escape 后 ≲ 200 字符, 远低于 2000 上限
+        audit_subject = json.dumps(raw_audit_subject, ensure_ascii=True)
+        audit_sender = json.dumps(raw_audit_sender, ensure_ascii=True)
+        audit_body = json.dumps(raw_audit_body, ensure_ascii=True)
         blocked_body = (
             f"建议: 不回复\n\n"
             f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"
             f'  - 避免确认邮箱活跃(任何"已收到"都会让发件方知道你打开了邮件)\n'
             f'  - 避免触发钓鱼链接(任何"请移除/退订"反而可能触发更多同类邮件)\n'
             f"  - 如确需主动回复, 请走 drafter.draft(allow_spam_reply=True) 显式覆盖\n\n"
-            f"--- 邮件元信息(供 audit, 字段已截断)---\n"
+            f"--- 邮件元信息(供 audit, 字段已截断+JSON 转义, 防止换行注入)---\n"
             f"原主题: {audit_subject}\n"
             f"原发件人: {audit_sender}\n"
             f"原分类: {cat_str}\n"
@@ -868,6 +1008,9 @@ class EmailDrafter:
             tone=tone_enum,
             reason=reason,
             original_email_category=cat_str,
+            # 6/9 v1.0.6 P2-1 新增: 透传调用方授权意图(便于 D4.7.3 Adapter 事件审计
+            # 追溯"调用方当时是否传 allow_spam_reply=True")
+            spam_reply_authorized=spam_reply_authorized,
         )
 
 

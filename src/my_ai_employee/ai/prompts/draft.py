@@ -245,6 +245,19 @@ def build_system_prompt(
 # drafter 自身的截断是"双保险"——本常量是"基础防护"
 _MAX_BODY_CHARS_FOR_PROMPT = 2000
 
+# 6/9 v1.0.6 P2-2 新增: SPAM 授权意图白名单(排除"确认收悉"语义冲突)
+# - 检查员第七次复检 P2: 旧措辞"礼貌退订/确认收悉" 与 SYSTEM_PROMPT_SPAM
+#   "避免确认邮箱活跃" 矛盾, 模型可能错误走"确认收悉"路径暴露邮箱活跃信号
+# - 真修: 严格枚举白名单(UNSUBSCRIBE / REJECT), 排除 ACKNOWLEDGE
+# - prompts 层接受字符串值(与 drafter 解耦, 不依赖枚举)
+_SPAM_REPLY_INTENT_CHOICES: frozenset[str] = frozenset({"UNSUBSCRIBE", "REJECT"})
+
+# 6/9 v1.0.6 P2-2 新增: 意图 → 措辞映射(明确单向拒绝语义, 不暴露"用户已读"信号)
+_SPAM_INTENT_PHRASING: dict[str, str] = {
+    "UNSUBSCRIBE": "礼貌退订(请将我移除列表/请勿再发送同类邮件, 简短正式)",
+    "REJECT": "明确拒收(不感兴趣, 拒绝任何后续沟通, 简短坚定, 不含威胁)",
+}
+
 
 def build_user_message(
     *,
@@ -254,6 +267,7 @@ def build_user_message(
     email_category: str | None = None,
     tone: str = "FORMAL",
     allow_spam_reply: bool = False,
+    spam_reply_intent: str | None = None,
 ) -> list[dict]:
     """构造 user 消息列表(OpenAI 风格).
 
@@ -271,6 +285,12 @@ def build_user_message(
     显式标注"用户已显式授权生成可投递草稿";非 SPAM / 默认 False 时不传, 让 SYSTEM
     prompt 的"默认不生成回复"指令生效(SPAM 默认阻断仍由 drafter 业务层兜底).
 
+    **6/9 v1.0.6 P2-2 修复**: 新增 `spam_reply_intent` 参数, 排除 v1.0.5 措辞中
+    "确认收悉" 与 SYSTEM_PROMPT_SPAM "避免确认邮箱活跃" 的语义冲突.
+    - spam_reply_intent 严格白名单 {UNSUBSCRIBE, REJECT}, 排除 ACKNOWLEDGE
+    - 默认 None(配合 allow_spam_reply=True 时取 UNSUBSCRIBE, 最安全的"单向拒绝"语义)
+    - 措辞映射 _SPAM_INTENT_PHRASING 显式选择, 杜绝"已收到"等暴露邮箱活跃的措辞
+
     Args:
         subject: 邮件主题(可能为空, 内部 (空) 占位)
         sender: 发件人(email 或 "Name <email>" 格式)
@@ -279,12 +299,16 @@ def build_user_message(
         tone: 3 类语气字符串(FORMAL / FRIENDLY / CONCISE)
         allow_spam_reply: 6/9 v1.0.5 P1-1 新增, 仅在 SPAM 场景下生效;
                        True → user 消息显式标注"用户已显式授权"; False / 默认不传
+        spam_reply_intent: 6/9 v1.0.6 P2-2 新增, SPAM 授权回复意图;
+                       None / "UNSUBSCRIBE" / "REJECT"; 排除"ACKNOWLEDGE"语义冲突;
+                       配合 allow_spam_reply=True 时生效, 决定授权行措辞
 
     Returns:
         1 条 user 消息(多轮可扩展, 本步 D4.7.2 单轮)
 
     Raises:
-        ValueError: 编程错误(type 错 / 非法 email_category 字符串 / 非法 tone 字符串)
+        ValueError: 编程错误(type 错 / 非法 email_category 字符串 / 非法 tone 字符串 /
+                          非法 spam_reply_intent 字符串)
     """
     # 严判 type(拒 bool 子类陷阱)
     if type(subject) is not str:
@@ -300,6 +324,11 @@ def build_user_message(
     # 6/9 v1.0.5 P1-1 修复: allow_spam_reply 类型严判(与 drafter 入口严判保持一致)
     if type(allow_spam_reply) is not bool:
         raise ValueError(f"allow_spam_reply 必须是 bool, 实际 {type(allow_spam_reply).__name__}")
+    # 6/9 v1.0.6 P2-2 新增: spam_reply_intent 严判
+    if spam_reply_intent is not None and type(spam_reply_intent) is not str:
+        raise ValueError(
+            f"spam_reply_intent 必须是 str 或 None, 实际 {type(spam_reply_intent).__name__}"
+        )
 
     # 严判 email_category 字符串 ∈ 5 类(为 None 时跳过, 不影响 SYSTEM prompt 分发)
     if email_category is not None and email_category not in _SYSTEM_PROMPTS_BY_CATEGORY:
@@ -312,6 +341,14 @@ def build_user_message(
     valid_tones = ("FORMAL", "FRIENDLY", "CONCISE")
     if tone not in valid_tones:
         raise ValueError(f"tone 字符串必须 ∈ {valid_tones}, 实际 {tone!r}")
+
+    # 6/9 v1.0.6 P2-2 新增: spam_reply_intent 字符串严判(白名单)
+    # - 拒绝 ACKNOWLEDGE / 任意其他字符串, 防止旧版"确认收悉"措辞污染授权行
+    if spam_reply_intent is not None and spam_reply_intent not in _SPAM_REPLY_INTENT_CHOICES:
+        raise ValueError(
+            f"spam_reply_intent 字符串必须 ∈ {sorted(_SPAM_REPLY_INTENT_CHOICES)}"
+            f"(排除 ACKNOWLEDGE 语义冲突), 实际 {spam_reply_intent!r}"
+        )
 
     # 6/9 v1.0.2 P2-2 修复: 顶层 API 自防御截断
     if len(body_excerpt) > _MAX_BODY_CHARS_FOR_PROMPT:
@@ -332,15 +369,20 @@ def build_user_message(
     # - 显式说明"用户已显式授权", 覆盖 SYSTEM_PROMPT_SPAM "默认不生成回复"指令
     # - 业务硬阻断仍由 drafter 入口兜底(allow_spam_reply=False 直接抛 SpamBlockedError)
     #   → prompts 层只是"传递意图", 不替代业务门
-    # 注: 字符串内嵌"建议: 不回复"用 ASCII 单引号 ' 包裹, 避免与 Python 字符串
-    #     边界的 ASCII 双引号 " 冲突
-    spam_authorization_line = (
-        "授权: 用户已显式授权生成 SPAM 回复草稿(allow_spam_reply=True); "
-        "请按 SPAM 写作要求生成可投递草稿(礼貌退订/确认收悉), "
-        "不要输出 '建议: 不回复' 模板。\n"
-        if email_category == "SPAM" and allow_spam_reply
-        else ""
-    )
+    # 6/9 v1.0.6 P2-2 修复: 措辞按 spam_reply_intent 枚举选择
+    # - 旧版 v1.0.5 "礼貌退订/确认收悉" 与 SYSTEM_PROMPT_SPAM "避免确认邮箱活跃" 矛盾
+    # - 新版: 按白名单 {UNSUBSCRIBE, REJECT} 显式选择措辞, 排除"已收到"等确认收悉语义
+    # - 默认 None → UNSUBSCRIBE(配合 allow_spam_reply=True 时的安全降级)
+    spam_authorization_line = ""
+    if email_category == "SPAM" and allow_spam_reply:
+        effective_intent = spam_reply_intent or "UNSUBSCRIBE"
+        intent_phrase = _SPAM_INTENT_PHRASING[effective_intent]
+        spam_authorization_line = (
+            f"授权: 用户已显式授权生成 SPAM 回复草稿(allow_spam_reply=True, "
+            f"intent={effective_intent}); "
+            f"请按 SPAM 写作要求生成可投递草稿({intent_phrase}), "
+            f"不要输出 '建议: 不回复' 模板。\n"
+        )
     # 三字段统一 json.dumps: ensure_ascii=True (默认, 显式声明) 便于审计
     untrusted_block = json.dumps(
         {
