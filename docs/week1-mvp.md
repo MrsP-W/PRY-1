@@ -691,19 +691,26 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **承接 D4.6 业务层范本**：D4.6 `EmailClassifierAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 双入口架构（成功/失败 type system 锁定），在 D4.7 第二个真实业务场景上**复用**。
 
+**🔒 4 项契约锁定**（2026-06-09 用户审批 D4.7.1 启动时确认,D4.7.1 实现 commit 中作为测试契约固化）：
+
+1. **草稿无 `confidence` 字段** → 业务验收用**明确长度/必填/tone 枚举**判定（`business_accepted = subject 非空 AND body 长度在 10-8000 AND tone ∈ {FORMAL, FRIENDLY, CONCISE}`），**不**用 LLM 自报 confidence
+2. **拒 markdown-wrapped JSON**（不剥离 ```json ... ``` fence）→ LLM 必须返回**裸 JSON**，违者拒收触发 retry；body 字段内容允许 markdown（`*bold*` / `**bold**` 是合法草稿内容）
+3. **tone 枚举锁定**：`FORMAL` / `FRIENDLY` / `CONCISE` 三选一,D4.7.1 起始固定,后续扩枚举需 B 类审批
+4. **范围限定**（契约 4）：D4.7 只负责**生成草稿文本 + emit 业务事件 + 推进 Lane**,**不写** `drafts` 数据库表、**不创建** Mail.app 草稿、**不接** iCloud CalDAV;端到端联动留 D4.7.1+ / D5+ 业务调度器
+
 **范围**：
 
 - **业务层**：`ai/drafter.py` 实现 `EmailDrafter`（`draft` / `draft_batch`）+ `_parse_draft_response` 严判 LLM 响应
 - **Prompt 模板**：`ai/prompts/draft.py` SYSTEM prompt + `build_user_message`（接 `email_category` 入参，D4.6 输出作为 D4.7 输入）
 - **业务层接入**：`EmailDrafterAdapter` 复用 D4.6 双入口架构（`draft_and_emit` 成功 + `record_draft_failure_and_emit` 失败，cf 必填 >= 1）
-- **业务字段透传**：`draft_subject` / `draft_body` / `tone` / `model_full_id` / `email_id` / `category` 6 项到 `event_metadata` 顶层
+- **业务字段透传**：`draft_subject` / `draft_body` / `tone`（3 选 1 枚举） / `model_full_id` / `email_id` / `category` 6 项到 `event_metadata` 顶层
 - **lane_entry_id 命名**：`draft:<source>:<run_id>`（与 `classify:` / `sync:` 区分）
 - **D3.3.3 教训应用**：严判入口 + 异常窄化 + 不 catch-all 兜底
 - **D4.6 v1.0.1 ~ v1.0.2 教训应用**：
   - P1-1：`LLMAllFallbacksError` 业务异常（全链失败抛子类，不逃逸 RuntimeError）
-  - P1-2：拆分 `business_accepted`（Lane）vs `transport_alive`（Heartbeat），低置信草稿 / 慢响应 ≠ LLM 死
+  - P1-2：拆分 `business_accepted`（Lane）vs `transport_alive`（Heartbeat），**草稿长度越界 / 空 subject / 非法 tone / 占位符未填** ≠ LLM 死（业务验收独立于传输存活，契约 1）
   - P1-3：`last_draft_failed` 显式 bool 解决成功路径误触发 retry / escalate
-  - P1-4：平衡括号 + markdown fence 剥离（`{"subject": ..., "body": ..., "tone": ...}`）
+  - P1-4：平衡括号定位 + 拒 markdown-wrapped JSON（LLM 必须返回裸 JSON，**不剥离** ```json ... ``` fence，违者拒收触发 retry；body 内容允许 markdown，契约 2）
   - P2-5：严判 duck type 拒 type-coerce（`True → 1.0` / `"0.5" → 0.5` 静默 coerce 必须拒）
   - v1.0.2-first：严判下沉到 `compute_*` / `build_*` 公共 API（`_validate_draft_*` helper 复用）
   - v1.0.2-second：`DraftFailureDecisionReport` 独立类型 + `Literal[True]` + `__post_init__` 三重校验
@@ -745,7 +752,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - 草稿长度不可控 → 严判 body 长度上限（e.g. 8000 字符）
 - 历史回复模式需要语料 → 暂用 placeholder，D4.7.1+ 接入 `sent_emails` 表
 - `draft_batch` 顺序串行（100 封 ≈ 100-1000s） → D4.7.1+ 改 asyncio + httpx async
-- tone 枚举硬编码（3-5 类） → D4.7.1+ 扩 FRIENDLY / FORMAL / CONCISE 等
+- tone 枚举硬编码（**3 类锁定**: `FORMAL` / `FRIENDLY` / `CONCISE`，契约 3，D4.7.1 起始固定,后续扩枚举需 B 类审批）→ 暂不支持 APOLOGETIC / INSPIRATIONAL 等额外枚举
 
 **参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.6 v1.0.1 ~ v1.0.2-third 13 项教训应用。完整报告：[reports/D4.7-草稿生成器.md](../reports/D4.7-草稿生成器.md)（待写）。
 
