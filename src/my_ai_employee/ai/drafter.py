@@ -290,15 +290,34 @@ class DraftBlockedResult:
                 f"original_email_category 必填非空 str, "
                 f"实际 {type(self.original_email_category).__name__}"
             )
-        # 业务验收(subject / body 至少语义非空, 防空字符串绕过)
+        # 业务验收(subject / body / reason / original_email_category 至少语义非空, 防空字符串绕过)
         if not self.subject.strip():
             raise ValueError(f"subject 语义为空(仅空白): {self.subject!r}")
         if not self.body.strip():
             raise ValueError(f"body 语义为空(仅空白): {self.body!r}")
+        # 6/9 v1.0.4 P2-2 修复: reason / original_email_category 同样需 strip() 严判(防纯空白绕过)
+        if not self.reason.strip():
+            raise ValueError(f"reason 语义为空(仅空白): {self.reason!r}")
+        if not self.original_email_category.strip():
+            raise ValueError(
+                f"original_email_category 语义为空(仅空白): {self.original_email_category!r}"
+            )
+        # 6/9 v1.0.4 P2-2 修复: original_email_category 限定 SPAM 集合(本数据类专为阻断场景设计,
+        # 拒收 URGENT/TODO/FYI/PERSONAL 错类, 与 draft_blocked_category 入口严判保持一致)
+        if self.original_email_category not in {"SPAM"}:
+            raise ValueError(
+                f"original_email_category 必须是 'SPAM', 实际 {self.original_email_category!r}"
+            )
         # 6/9 v1.0.3 P2-2 修复: subject 上限 200 字符(与 DraftResult.MAX_SUBJECT_CHARS 同步)
         # 阻断模板会自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀, 实际可用 ≈ 175 字符
         if len(self.subject) > 200:
             raise ValueError(f"subject 超长(> 200 字符): 实际 {len(self.subject)} 字符")
+        # 6/9 v1.0.4 P2-2 修复: body 长度上限契约复用 EmailDrafter.MAX_BODY_CHARS=2000
+        # 防止超长 sender 注入式构造 9229 字符 body 突破契约
+        if len(self.body) > EmailDrafter.MAX_BODY_CHARS:
+            raise ValueError(
+                f"body 超长(> {EmailDrafter.MAX_BODY_CHARS} 字符): 实际 {len(self.body)} 字符"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         """序列化为 dict(便于 JSON 化)."""
@@ -584,7 +603,7 @@ class EmailDrafter:
         *,
         allow_spam_reply: bool = False,
     ) -> list[
-        DraftResult | DraftBlockedResult | DrafterResponseError | LLMError | ValueError | KeyError
+        DraftResult | DraftBlockedResult | DrafterResponseError | LLMError | ValueError | KeyError | TypeError
     ]:
         """批量草稿生成(顺序串行, 避免触发熔断).
 
@@ -603,10 +622,19 @@ class EmailDrafter:
               - SPAM 业务阻断(默认): DraftBlockedResult(0 配额, 不调 LLM)
               - 响应解析失败: DrafterResponseError
               - LLM 全链失败: LLMError
-              - 编程错误(非 dict): ValueError
+              - 编程错误(非 dict / 类型错): ValueError
               - 编程错误(缺字段): KeyError
+              - 6/9 v1.0.4 P1-2 新增: 阻断模板构造异常降级: TypeError
             SpamBlockedError 绝不上抛 — 6/9 v1.0.3 P1-1 修复(批次不中断, 输入输出 1:1)。
         """
+        # 6/9 v1.0.4 P1-1 修复: 批级参数严判 type(value) is bool
+        # 签名默认 bool=False, 但 Python 不拒 int=1 / str="true" 等真值陷阱
+        # 严判后返回空 list + logger 告警(让"批级非法"立即被上层发现, 不静默)
+        if type(allow_spam_reply) is not bool:
+            raise ValueError(
+                f"draft_batch 批级 allow_spam_reply 必须是 bool, "
+                f"实际 {type(allow_spam_reply).__name__}={allow_spam_reply!r}"
+            )
         results: list[
             DraftResult
             | DraftBlockedResult
@@ -614,6 +642,7 @@ class EmailDrafter:
             | LLMError
             | ValueError
             | KeyError
+            | TypeError
         ] = []
         for i, email in enumerate(emails):
             if not isinstance(email, dict):
@@ -626,6 +655,16 @@ class EmailDrafter:
                 continue
             # per-email allow_spam_reply 优先, 缺则用批默认(D4.7.2 v1.0.3 P1-1)
             per_email_allow = email.get("allow_spam_reply", allow_spam_reply)
+            # 6/9 v1.0.4 P1-1 修复: per-email 值必须 type(value) is bool(拒 bool() 吞真值陷阱)
+            # 严判位置: 在调 draft() 之前, 非法项 → ValueError 收容入 results, 不调 LLM
+            if type(per_email_allow) is not bool:
+                results.append(
+                    ValueError(
+                        f"emails[{i}] allow_spam_reply 必须是 bool, "
+                        f"实际 {type(per_email_allow).__name__}={per_email_allow!r}"
+                    )
+                )
+                continue
             try:
                 result = self.draft(
                     subject=email["subject"],
@@ -633,7 +672,7 @@ class EmailDrafter:
                     body_excerpt=email["body_excerpt"],
                     email_category=email.get("email_category"),
                     tone=email.get("tone", DraftTone.FORMAL),
-                    allow_spam_reply=bool(per_email_allow),
+                    allow_spam_reply=per_email_allow,
                 )
                 results.append(result)
             except SpamBlockedError as e:
@@ -644,15 +683,24 @@ class EmailDrafter:
                     f"[drafter] 批量 SPAM 业务硬阻断(不调 LLM) | index={i} | "
                     f"subject={email['subject']!r} | reason={e.reason}"
                 )
-                blocked = self.draft_blocked_category(
-                    subject=email["subject"],
-                    sender=email["sender"],
-                    body_excerpt=email["body_excerpt"],
-                    email_category=e.email_category,
-                    tone=email.get("tone", DraftTone.FORMAL),
-                    _stats_already_bumped=True,  # draft() 已 +1, 避免重复
-                )
-                results.append(blocked)
+                try:
+                    blocked = self.draft_blocked_category(
+                        subject=email["subject"],
+                        sender=email["sender"],
+                        body_excerpt=email["body_excerpt"],
+                        email_category=e.email_category,
+                        tone=email.get("tone", DraftTone.FORMAL),
+                        _stats_already_bumped=True,  # draft() 已 +1, 避免重复
+                    )
+                    results.append(blocked)
+                except (ValueError, TypeError) as blocked_err:
+                    # 6/9 v1.0.4 P1-2 修复: 阻断模板降级构造异常也入 results, 严守 1:1 契约
+                    # 兜底场景: 极端 subject(空字符 / 巨型字符) / body 异常构造
+                    logger.warning(
+                        f"[drafter] 批量阻断模板构造失败(降级入 results) | index={i} | "
+                        f"err={blocked_err!r}"
+                    )
+                    results.append(blocked_err)
             except (DrafterResponseError, LLMError, ValueError) as e:
                 results.append(e)
         return results
@@ -740,15 +788,21 @@ class EmailDrafter:
 
         # 构造阻断模板(不调 LLM, 0 配额消耗)
         # stats 累加语义:
-        #   - 独立调用本入口(draft() 未触发): _stats_already_bumped=False, +1 blocked
-        #   - 从 draft_batch 收容处调用: _stats_already_bumped=True(draft() 已 +1), 不重复
+        #   - 独立调用本入口(draft() 未触发): _stats_already_bumped=False, +1 blocked, +1 total
+        #   - 从 draft_batch 收容处调用: _stats_already_bumped=True(draft() 已 +1 total, +1 blocked), 0 重复
         # 防"独立调用 vs 批量调用"路径 stats 计数不一致
-        self._stats["total"] += 1
+        # 6/9 v1.0.4 P2-1 修复: 批量路径不重复 total(原无条件 +1 是 bug, draft() 抛 SPAM 之前已 +1)
         if not _stats_already_bumped:
+            self._stats["total"] += 1
             self._stats["blocked"] = self._stats.get("blocked", 0) + 1
         reason = f"{cat_str.lower()}_business_blocked"
         original_subject = subject or "(无主题)"
-        blocked_subject = f"(DRAFT-NO-REPLY) [{cat_str}] {original_subject}"
+        # 6/9 v1.0.4 P1-2 修复: 阻断模板自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀,
+        # 实际可用 = 200 - 24 = 176 字符(防 P1 主题超 200 字符, 突破 DraftBlockedResult
+        # __post_init__ 200 字符上限, 整批中断)
+        blocked_subject_prefix_len = 24  # len("(DRAFT-NO-REPLY) [SPAM] ") = 24
+        truncated_subject = original_subject[: 200 - blocked_subject_prefix_len]
+        blocked_subject = f"(DRAFT-NO-REPLY) [{cat_str}] {truncated_subject}"
         blocked_body = (
             f"建议: 不回复\n\n"
             f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"
