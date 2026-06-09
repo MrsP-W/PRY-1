@@ -240,6 +240,22 @@ class TestValidateDraftSubject:
         with pytest.raises(ValueError, match="subject 必须是 str"):
             validate_draft_subject(True)  # type: ignore[arg-type]
 
+    def test_rejects_whitespace_only_subject(self) -> None:
+        """6/9 v1.0.2 P1-2 修复: 仅按字符数校验会被纯空白绕过, 必须用 strip() 语义非空."""
+        # 3 个空格(长度 3 ≥ 1, 旧实现可通过)→ 现在应被 strip() 严判拒收
+        with pytest.raises(ValueError, match="subject 语义为空"):
+            validate_draft_subject("   ")
+        # 混合空白字符(空格 / 换行 / Tab / 回车)同样拒收
+        with pytest.raises(ValueError, match="subject 语义为空"):
+            validate_draft_subject(" \n\t\r ")
+
+    def test_accepts_subject_with_surrounding_whitespace(self) -> None:
+        """6/9 v1.0.2 P1-2 修复: 前后空白但语义非空的 subject 应通过(契约 1 仍满足)."""
+        # " Re: 项目进度 " 前后各 1 空格, 长度 9 ≥ 1, strip 后 "Re: 项目进度" 语义非空
+        validate_draft_subject(" Re: 项目进度 ")
+        # 单字符前后空白也通过
+        validate_draft_subject(" A ")
+
 
 class TestValidateDraftBody:
     """body 严判 helper(契约 1: 10-8000 字符)."""
@@ -278,6 +294,25 @@ class TestValidateDraftBody:
             validate_draft_body(None)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="body 必须是 str"):
             validate_draft_body(["x"] * 10)  # type: ignore[arg-type]
+
+    def test_rejects_whitespace_only_body(self) -> None:
+        """6/9 v1.0.2 P1-2 修复: 10 个空格 body(长度 10 达下边界)应被 strip() 严判拒收."""
+        # 10 个空格(长度 10 ≥ 10, 旧实现可通过)→ 现在应被 strip() 严判拒收
+        with pytest.raises(ValueError, match="body 语义为空"):
+            validate_draft_body(" " * 10)
+        # 混合空白字符(空格 / 换行 / Tab)也拒收(长度 10)
+        with pytest.raises(ValueError, match="body 语义为空"):
+            validate_draft_body(" \n\t \r " + " " * 5)
+        # 10 个换行(典型 LLM 输出退化场景)也拒收
+        with pytest.raises(ValueError, match="body 语义为空"):
+            validate_draft_body("\n" * 10)
+
+    def test_accepts_body_with_surrounding_whitespace(self) -> None:
+        """6/9 v1.0.2 P1-2 修复: 前后空白但语义非空的 body 应通过(契约 1 仍满足)."""
+        # 11 字符内容 + 前后空白 = 15 字符, strip 后 11 ≥ MIN_BODY=10 通过
+        validate_draft_body("  hello world  ")
+        # 含换行的正常 body 也通过(必须 ≥10 字符)
+        validate_draft_body("\n感谢您的来信, 项目进展顺利\n")
 
 
 class TestValidateDraftTone:
@@ -729,11 +764,16 @@ class TestEmailDrafterDraft:
         mock_router.route.assert_called_once()
 
     def test_email_category_valid_str_accepted(self) -> None:
-        """**P1-1 (6/9)**: email_category 字符串 ∈ 5 类时接受."""
+        """**P1-1 (6/9)**: email_category 字符串 ∈ 5 类时接受严判.
+
+        注: 6/9 v1.0.2 P1-1 业务硬阻断后, SPAM 字符串会在业务层抛 SpamBlockedError
+        (与 D4.6 BLOCKED 流程双保险), 测试需用 allow_spam_reply=True 显式覆盖以
+        验证"严判通过", 体现新契约的预期行为变更.
+        """
         mock_router = MagicMock()
         mock_router.route.return_value = _mock_router_response(_valid_draft_json())
         drafter = EmailDrafter(router=mock_router)
-        for cat in ("URGENT", "TODO", "FYI", "SPAM", "PERSONAL"):
+        for cat in ("URGENT", "TODO", "FYI", "PERSONAL"):
             result = drafter.draft(
                 subject="x",
                 sender="y",
@@ -741,6 +781,24 @@ class TestEmailDrafterDraft:
                 email_category=cat,
             )
             assert result is not None
+        # SPAM 单独验证: 业务硬阻断默认抛 SpamBlockedError, 显式 allow_spam_reply=True 才放行
+        from my_ai_employee.ai.drafter import SpamBlockedError
+
+        with pytest.raises(SpamBlockedError, match="业务硬阻断"):
+            drafter.draft(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="SPAM",
+            )
+        result = drafter.draft(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            allow_spam_reply=True,
+        )
+        assert result is not None
 
     def test_email_category_invalid_str_rejected(self) -> None:
         """**P1-1 (6/9)**: email_category 非法字符串(如 'OOPS')→ ValueError 严判."""
@@ -868,13 +926,18 @@ class TestEmailDrafterBatch:
 
     def test_batch_handles_non_dict(self) -> None:
         """list 元素不是 dict → ValueError 入 list(D3.3.3 教训)."""
+        from typing import Any, cast
+
         mock_router = MagicMock()
         mock_router.route.return_value = _mock_router_response(_valid_draft_json())
         drafter = EmailDrafter(router=mock_router)
-        emails = [
-            {"subject": "s", "sender": "x", "body_excerpt": "b"},
-            "not a dict",  # type: ignore[list-item]
-        ]
+        emails = cast(
+            list[dict[str, Any]],
+            [
+                {"subject": "s", "sender": "x", "body_excerpt": "b"},
+                "not a dict",
+            ],
+        )
         results = drafter.draft_batch(emails)
         assert len(results) == 2
         assert isinstance(results[0], DraftResult)

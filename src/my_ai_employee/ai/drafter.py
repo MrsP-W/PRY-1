@@ -47,6 +47,19 @@ D4.7.2 实施细节(6/9):
     `prompts.draft.build_system_prompt(email_category)` 取 5+1 类 prompt
   - email_category=None 走 DEFAULT(中性回退),drafter 可独立运行不依赖 D4.6
   - prompts 层接受字符串化的 email_category/tone(解耦 drafter 枚举依赖)
+
+D4.7.2 v1.0.2 实施细节(6/9 第三次复检收口):
+  - P1-1 SPAM 业务硬阻断:drafter.draft() 收到 SPAM 默认抛 SpamBlockedError;
+    加 `allow_spam_reply: bool=False` 显式参数,业务层硬阻断不依赖 prompt 文案;
+    新增 `draft_blocked_category()` 独立入口(不调 LLM, 直接返回 DraftBlockedResult)
+  - P1-2 纯空白草稿拦截:`_validate_draft_subject/body` 改用 `value.strip()`
+    严判语义非空(拒 "   " 主题 / 十个空格 body);DraftResult.__post_init__
+    严判 model_full_id 非空(契约 1 自校验)
+  - P2-1 抗注入三字段包裹:`prompts/draft.build_user_message` 主题/发件人/正文
+    全部用 `json.dumps()` 序列化为 UNTRUSTED_DATA block(取代 BEGIN/END_EMAIL_BODY),
+    防主题/发件人注入 + 防正文自含 END 标签绕过
+  - P2-2 公共 builder 自防御:`build_user_message` 顶层 API 加 MAX_BODY_CHARS=2000
+    截断(与 drafter.MAX_BODY_CHARS 同步),即便用户绕过 drafter 也不会撑爆 prompt
 """
 
 from __future__ import annotations
@@ -107,6 +120,35 @@ class DrafterResponseError(DrafterError):
     def __init__(self, message: str, raw_content: str = "", reason: str = "") -> None:
         super().__init__(message)
         self.raw_content = raw_content[:500]
+        self.reason = reason
+
+
+class SpamBlockedError(DrafterError):
+    """SPAM 业务硬阻断(6/9 v1.0.2 P1-1 修复).
+
+    业务异常: 邮件被 D4.6 分类为 SPAM 并进入 BLOCKED 流程, drafter 业务层
+    默认拒收(不调 LLM, 不消耗配额),与 D4.6 分类结果形成双保险。
+
+    Attributes:
+        email_category: 触发阻断的邮件分类(SPAM, 未来可扩 OTHER_BLOCKED)
+        allow_spam_reply: 触发时调用方是否传 True(便于审计: 调用方误用记录)
+        reason: 阻断原因(机器可读, 如 'spam_business_blocked')
+
+    Raises:
+        父类 DrafterError(便于上层 catch 业务异常统一处理)
+    """
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        email_category: str = "SPAM",
+        allow_spam_reply: bool = False,
+        reason: str = "spam_business_blocked",
+    ) -> None:
+        super().__init__(message)
+        self.email_category = email_category
+        self.allow_spam_reply = allow_spam_reply
         self.reason = reason
 
 
@@ -190,6 +232,78 @@ class DraftResult:
         }
 
 
+# ===== 阻断草稿结果数据类(6/9 v1.0.2 P1-1 新增)=====
+
+
+@dataclass(frozen=True)
+class DraftBlockedResult:
+    """被业务阻断的邮件草稿结果(不调 LLM,直接产出"建议: 不回复"模板).
+
+    D4.6 分类层已对 SPAM / 未来其他 BLOCKED 类别做业务拒绝,
+    但 drafter 仍可能被独立调用(用户主动草稿 / 第三方集成).
+    该数据类给上层(EmailDrafterAdapter / CLI)一个不抛异常、直接产出的通道,
+    避免"草稿任务失败"误上报为"系统故障".
+
+    Attributes:
+        subject: 阻断草稿主题(典型: "(DRAFT-NO-REPLY) 风险标注: <原主题>")
+        body: 阻断草稿正文(典型: "建议: 不回复\\n\\n原因: SPAM...")
+        tone: 用户请求的 tone(透传,便于业务层 audit)
+        reason: 阻断原因(机器可读, 如 'spam_business_blocked')
+        original_email_category: 触发阻断的邮件分类
+
+    与 DraftResult 区别:
+      - DraftResult 是 LLM 实际生成的草稿(含 model_full_id / latency_ms)
+      - DraftBlockedResult 是模板化阻断产物(无 LLM 调用, 无 model 信息)
+
+    Raises:
+        __post_init__ 严判 5 字段, 编程错误 → ValueError(透传).
+    """
+
+    subject: str
+    body: str
+    tone: DraftTone
+    reason: str
+    original_email_category: str
+
+    def __post_init__(self) -> None:
+        # 严判入口(拒 bool 子类陷阱)
+        if type(self.subject) is not str:
+            raise ValueError(
+                f"subject 必须是 str, 实际 {type(self.subject).__name__}={self.subject!r}"
+            )
+        if type(self.body) is not str:
+            raise ValueError(f"body 必须是 str, 实际 {type(self.body).__name__}={self.body!r}")
+        if not isinstance(self.tone, DraftTone):
+            raise ValueError(
+                f"tone 必须是 DraftTone 枚举, 实际 {type(self.tone).__name__}={self.tone!r}"
+            )
+        if type(self.reason) is not str or not self.reason:
+            raise ValueError(
+                f"reason 必填非空 str, 实际 {type(self.reason).__name__}={self.reason!r}"
+            )
+        if type(self.original_email_category) is not str or not self.original_email_category:
+            raise ValueError(
+                f"original_email_category 必填非空 str, "
+                f"实际 {type(self.original_email_category).__name__}"
+            )
+        # 业务验收(subject / body 至少语义非空, 防空字符串绕过)
+        if not self.subject.strip():
+            raise ValueError(f"subject 语义为空(仅空白): {self.subject!r}")
+        if not self.body.strip():
+            raise ValueError(f"body 语义为空(仅空白): {self.body!r}")
+
+    def to_dict(self) -> dict[str, Any]:
+        """序列化为 dict(便于 JSON 化)."""
+        return {
+            "subject": self.subject,
+            "body": self.body,
+            "tone": self.tone.value,
+            "reason": self.reason,
+            "original_email_category": self.original_email_category,
+            "blocked": True,  # 显式标记,便于上层识别"阻断产物 vs LLM 产物"
+        }
+
+
 # ===== 草稿生成器主类 =====
 
 
@@ -251,6 +365,7 @@ class EmailDrafter:
             "success": 0,
             "response_error": 0,
             "llm_error": 0,
+            "blocked": 0,  # 6/9 v1.0.2 P1-1 新增: SPAM 业务硬阻断计数
         }
 
     def stats(self) -> dict[str, int]:
@@ -298,6 +413,7 @@ class EmailDrafter:
         body_excerpt: str,
         email_category: EmailCategory | str | None = None,
         tone: DraftTone | str = DraftTone.FORMAL,
+        allow_spam_reply: bool = False,
     ) -> DraftResult:
         """单邮件草稿生成.
 
@@ -308,12 +424,17 @@ class EmailDrafter:
             email_category: 5 类邮件标签(D4.6 分类结果, 接受 EmailCategory 枚举 /
                             5 类字符串 / None; 6/9 P1-1 修复允许 D4.6 真实 handoff)
             tone: 草稿语气(默认 FORMAL)
+            allow_spam_reply: 6/9 v1.0.2 P1-1 新增, 是否允许为 SPAM 邮件生成可投递草稿.
+                            默认 False(业务硬阻断, 与 D4.6 BLOCKED 流程形成双保险);
+                            True 时显式覆盖阻断, 但调用方必须在业务层 audit(避免误用).
+                            若需"产出阻断模板但不抛异常", 请用 draft_blocked_category() 独立入口.
 
         Returns:
             DraftResult(含 subject + body + tone + 调用模型)
 
         Raises:
             ValueError: 参数 type 错(编程错误, 透传)
+            SpamBlockedError: email_category=SPAM 且 allow_spam_reply=False(业务硬阻断)
             DrafterResponseError: LLM 响应解析失败(非严格 JSON / tone 不在 3 类 /
                                   markdown-wrapped / 字段类型错 / tone 与请求不一致)
             LLMError: 全链失败(router 抛, 由调用方决定 fallback)
@@ -326,6 +447,11 @@ class EmailDrafter:
         if type(body_excerpt) is not str:
             raise ValueError(
                 f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}={body_excerpt!r}"
+            )
+        # allow_spam_reply 类型严判(D5 严判入口范本)
+        if type(allow_spam_reply) is not bool:
+            raise ValueError(
+                f"allow_spam_reply 必须是 bool, 实际 {type(allow_spam_reply).__name__}"
             )
         # P1-1 修复(6/9): 接受 EmailCategory | str | None
         # - EmailCategory 枚举直接接受(D4.6 ClassificationResult.category 真实 handoff)
@@ -345,6 +471,27 @@ class EmailDrafter:
                     f"email_category 必须是 EmailCategory 枚举 / str / None, "
                     f"实际 {type(email_category).__name__}"
                 )
+
+        # 6/9 v1.0.2 P1-1 业务硬阻断: SPAM 默认阻断(不调 LLM)
+        # - 不依赖 prompt 文案(那是软引导), 业务层必须有硬阻断
+        # - 与 D4.6 分类层 BLOCKED 流程形成双保险
+        # - allow_spam_reply=True 显式覆盖(调用方需在业务层 audit)
+        email_category_str = (
+            email_category.value if isinstance(email_category, EmailCategory) else email_category
+        )
+        if email_category_str == "SPAM" and not allow_spam_reply:
+            self._stats["total"] += 1
+            self._stats["blocked"] = self._stats.get("blocked", 0) + 1
+            logger.warning(
+                f"[drafter] SPAM 业务硬阻断 | subject={subject!r} | "
+                f"sender={sender!r} | allow_spam_reply=False"
+            )
+            raise SpamBlockedError(
+                "SPAM 邮件被业务硬阻断(allow_spam_reply=False), 与 D4.6 BLOCKED 流程保持一致",
+                email_category="SPAM",
+                allow_spam_reply=False,
+                reason="spam_business_blocked",
+            )
         # tone 入参允许 DraftTone 或 str, 内部统一转 DraftTone
         if isinstance(tone, DraftTone):
             tone_enum = tone
@@ -369,11 +516,9 @@ class EmailDrafter:
         # - SYSTEM prompt: _build_draft_system_prompt 按 email_category 5+1 类分发
         # - user 消息: _build_draft_user_message 含 P1-3 tone 末行重述 + 抗注入声明
         #   (本地旧 build_user_message 已删除, v1.0 误用旧版导致 P1 tone 重述未生效)
-        # - email_category 枚举/字符串 → 内部统一 str 用于分发
+        # - email_category 枚举/字符串 → 内部统一 str 用于分发(SPAM 已在前面阻断,
+        #   此处只可能走 URGENT/TODO/FYI/PERSONAL/None 5 路径)
         # - None → SYSTEM_PROMPT_DEFAULT(中性回退)
-        email_category_str = (
-            email_category.value if isinstance(email_category, EmailCategory) else email_category
-        )
         system_prompt = _build_draft_system_prompt(email_category_str)
         messages = [
             system_to_message(system_prompt),
@@ -467,6 +612,105 @@ class EmailDrafter:
                 results.append(e)
         return results
 
+    def draft_blocked_category(
+        self,
+        *,
+        subject: str,
+        sender: str,
+        body_excerpt: str,
+        email_category: EmailCategory | str,
+        tone: DraftTone | str = DraftTone.FORMAL,
+    ) -> DraftBlockedResult:
+        """为业务阻断邮件产出"建议: 不回复"模板(不调 LLM, 6/9 v1.0.2 P1-1 新增).
+
+        与 draft() 区别:
+          - **不调 LLM**: 直接构造阻断模板, 0 LLM 配额消耗, 0 延迟
+          - **不抛 SpamBlockedError**: 即便 email_category=SPAM 也直接返回模板
+            (本入口专为"产出阻断模板"设计, 上层做"安全降级"语义)
+          - **不消耗熔断配额**: 即便 router 全链失败, 本入口仍可用(降级通道)
+          - **可投递性**: 阻断产物可投递(带 (DRAFT-NO-REPLY) 标注),
+            也可作 audit 留底(便于后续追溯"为什么没有正式草稿")
+
+        Args:
+            subject: 邮件主题(允许空字符串)
+            sender: 发件人(允许空字符串)
+            body_excerpt: 正文(本入口不调 LLM, 仅用于审计/正文摘要)
+            email_category: 触发阻断的邮件分类(SPAM 或未来其他 BLOCKED 类别)
+            tone: 透传给 DraftBlockedResult.tone(便于业务层 audit)
+
+        Returns:
+            DraftBlockedResult(含 subject="(DRAFT-NO-REPLY) ..." + body="建议: 不回复..."
+                              + tone + reason="spam_business_blocked"
+                              + original_email_category=email_category)
+
+        Raises:
+            ValueError: 参数 type 错 / 非法 email_category 字符串(编程错误, 透传)
+        """
+        # 严判入口(与 draft() 一致范本)
+        if type(subject) is not str:
+            raise ValueError(f"subject 必须是 str, 实际 {type(subject).__name__}={subject!r}")
+        if type(sender) is not str:
+            raise ValueError(f"sender 必须是 str, 实际 {type(sender).__name__}={sender!r}")
+        if type(body_excerpt) is not str:
+            raise ValueError(
+                f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}={body_excerpt!r}"
+            )
+        # email_category 必填(本入口专给阻断场景用, 不允许 None 走 DEFAULT)
+        if email_category is None:
+            raise ValueError("email_category 必填(本入口只接受阻断类别, 不允许 None)")
+        if isinstance(email_category, EmailCategory):
+            cat_str = email_category.value
+        elif type(email_category) is str:
+            if email_category not in _EMAIL_CATEGORY_VALUES:
+                raise ValueError(
+                    f"email_category 字符串必须 ∈ {sorted(_EMAIL_CATEGORY_VALUES)}, "
+                    f"实际 {email_category!r}"
+                )
+            cat_str = email_category
+        else:
+            raise ValueError(
+                f"email_category 必须是 EmailCategory 枚举或 str, "
+                f"实际 {type(email_category).__name__}"
+            )
+        # tone 转枚举(与 draft() 同范本)
+        if isinstance(tone, DraftTone):
+            tone_enum = tone
+        elif type(tone) is str:
+            try:
+                tone_enum = DraftTone(tone)
+            except ValueError as e:
+                raise ValueError(
+                    f"tone 字符串必须 ∈ {sorted(_DRAFT_TONE_CHOICES)}, 实际 {tone!r}"
+                ) from e
+        else:
+            raise ValueError(f"tone 必须是 DraftTone 或 str, 实际 {type(tone).__name__}")
+
+        # 构造阻断模板(不调 LLM, 0 配额消耗)
+        self._stats["total"] += 1
+        self._stats["blocked"] += 1
+        reason = f"{cat_str.lower()}_business_blocked"
+        original_subject = subject or "(无主题)"
+        blocked_subject = f"(DRAFT-NO-REPLY) [{cat_str}] {original_subject}"
+        blocked_body = (
+            f"建议: 不回复\n\n"
+            f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"
+            f'  - 避免确认邮箱活跃(任何"已收到"都会让发件方知道你打开了邮件)\n'
+            f'  - 避免触发钓鱼链接(任何"请移除/退订"反而可能触发更多同类邮件)\n'
+            f"  - 如确需主动回复, 请走 drafter.draft(allow_spam_reply=True) 显式覆盖\n\n"
+            f"--- 邮件元信息(供 audit)---\n"
+            f"原主题: {original_subject}\n"
+            f"原发件人: {sender or '(空)'}\n"
+            f"原分类: {cat_str}\n"
+            f"原正文摘要: {body_excerpt[:100] if body_excerpt else '(空)'}"
+        )
+        return DraftBlockedResult(
+            subject=blocked_subject,
+            body=blocked_body,
+            tone=tone_enum,
+            reason=reason,
+            original_email_category=cat_str,
+        )
+
 
 # ===== 模块内辅助函数 =====
 
@@ -494,10 +738,12 @@ def _validate_draft_subject(subject: Any) -> None:
     规则:
       - type 必须是 str(拒 bool 子类陷阱,D4.4 P1 教训)
       - 1 <= len <= 200(非空, 不超长)
+      - **strip() 语义非空**(6/9 v1.0.2 P1-2 修复): 拒纯空白 subject("   " / 换行等)
+        仅按字符数校验会被纯空白绕过
       - 严判入口: type 错 → ValueError(编程错误, 透传)
 
     Raises:
-        ValueError: 长度越界 / type 错(编程错误)
+        ValueError: 长度越界 / type 错 / 纯空白(编程错误)
     """
     # 拒 bool 子类陷阱(isinstance(True, int) == True, 易误过)
     if type(subject) is not str:
@@ -506,6 +752,9 @@ def _validate_draft_subject(subject: Any) -> None:
         raise ValueError(f"subject 太短(契约 1): {len(subject)} < {EmailDrafter.MIN_SUBJECT_CHARS}")
     if len(subject) > EmailDrafter.MAX_SUBJECT_CHARS:
         raise ValueError(f"subject 太长(契约 1): {len(subject)} > {EmailDrafter.MAX_SUBJECT_CHARS}")
+    # 6/9 v1.0.2 P1-2 修复: strip() 语义非空校验, 拒纯空白 subject
+    if not subject.strip():
+        raise ValueError(f"subject 语义为空(仅空白字符, 契约 1): {subject!r}")
 
 
 def _validate_draft_body(body: Any) -> None:
@@ -514,10 +763,12 @@ def _validate_draft_body(body: Any) -> None:
     规则:
       - type 必须是 str
       - 10 <= len <= 8000(明确长度边界)
+      - **strip() 语义非空**(6/9 v1.0.2 P1-2 修复): 拒纯空白 body(10 个空格 / 换行等)
+        仅按字符数校验会被纯空白绕过
       - 严判入口: type 错 → ValueError(编程错误, 透传)
 
     Raises:
-        ValueError: 长度越界 / type 错
+        ValueError: 长度越界 / type 错 / 纯空白
     """
     if type(body) is not str:
         raise ValueError(f"body 必须是 str, 实际 {type(body).__name__}={body!r}")
@@ -525,6 +776,9 @@ def _validate_draft_body(body: Any) -> None:
         raise ValueError(f"body 太短(契约 1): {len(body)} < {EmailDrafter.MIN_DRAFT_BODY_CHARS}")
     if len(body) > EmailDrafter.MAX_DRAFT_BODY_CHARS:
         raise ValueError(f"body 太长(契约 1): {len(body)} > {EmailDrafter.MAX_DRAFT_BODY_CHARS}")
+    # 6/9 v1.0.2 P1-2 修复: strip() 语义非空校验, 拒纯空白 body
+    if not body.strip():
+        raise ValueError(f"body 语义为空(仅空白字符, 契约 1): {body!r}")
 
 
 def _validate_draft_tone(tone: Any) -> None:
@@ -735,7 +989,9 @@ __all__ = [
     "DraftTone",
     "DrafterError",
     "DrafterResponseError",
+    "SpamBlockedError",
     "DraftResult",
+    "DraftBlockedResult",
     "EmailDrafter",
     # helper(契约 1 公共 API, D4.7.3 严判下沉复用)
     "validate_draft_subject",
