@@ -48,10 +48,29 @@ EmailClassifierAdapter 是 D4.6 业务层接入点:
   - `build_packet()` — 邮件上下文 → TaskPacket (8 必含字段, model=classifier_used)
   - `build_context()` — ClassificationResult → PolicyEngine context (12 字段, 严判)
   - `classify_and_emit()` — 主入口: classify() + PolicyEngine.evaluate() + 落 1 条事件
+
+D4.6 v1.0.2 修复(D4.6 6/9 复检 P1-1 + P1-2 + P2-5):
+  - P1-1: 拆 classify_and_emit 为成功入口(classification 必填, 失败计数器
+    强制归零) + 失败入口 record_classify_failure_and_emit(last_error + cf 必填,
+    last_classify_failed 隐式 True),从根上断绝"成功结果 + last_classify_failed=True
+    → retry_available+merge_required" 状态耦合
+  - P1-2: classify_and_emit 严判 category ∈ 5 类 + latency_ms >= 0
+  - P2-5: build_classify_packet 加 math.isfinite() 拒 NaN/Inf(与 _parse_classification_response 对齐)
+
+D4.6 v1.0.2 二次复检修复(D4.6 6/9 早晨第二次复检 4 项):
+  - 严判下沉(P1):category/isfinite/latency_ms 校验下沉到 2 个公共 helper
+    (compute_classification_acceptance + build_classify_policy_context),
+    防止 Adapter 重构后绕过严判(D3.3.3 教训:窄化异常范围 + 公共 API 严判)
+  - 失败报告契约(P2-2):新增 ClassifyFailureDecisionReport 区分成功/失败报告,
+    失败入口不再用空 category 违反 ClassifyDecisionReport "category: 5 类枚举" 契约
+  - 顶层导出(P2-3):build_classify_failure_packet + ClassifyFailureDecisionReport
+    顶层暴露(top-level import 不再失败)
+  - 文档同步(P3):ai 46 / adapter 50 / 全量 592 测试数 + uv build 通过 + v1.0.2 段补完
 """
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -67,6 +86,89 @@ from my_ai_employee.policy.task_packet import (
 
 if TYPE_CHECKING:
     from my_ai_employee.core.sync import SyncResult
+
+
+# 5 类分类枚举常量(D4.6 v1.0.2 P1-2 严判入口)
+# 与 ai/classifier.py::EmailCategory 严格 1:1 对齐(避免循环 import,内联)
+_VALID_CLASSIFY_CATEGORIES: frozenset[str] = frozenset(
+    {"URGENT", "TODO", "FYI", "SPAM", "PERSONAL"}
+)
+
+
+# ===== 公共严判 helper(D4.6 v1.0.2 二次复检 P1 修复)=====
+# 设计: category / confidence / latency_ms 三类业务字段的严判下沉到 helper 层,
+# 防止 Adapter 重构后绕过严判(D3.3.3 教训:窄化异常范围 + 公共 API 必须自防御)。
+# 3 个 helper 都是纯函数 + raise ValueError,可在 factory / public 入口复用。
+
+
+def _validate_classify_category(category_value: Any) -> str:
+    """严判 category_value 必须是 5 类枚举之一(D4.6 业务契约).
+
+    Args:
+        category_value: 任意类型,内部 type() 严判
+
+    Returns:
+        原值(校验通过)
+
+    Raises:
+        ValueError: type 错 / 不在 5 类枚举
+    """
+    if type(category_value) is not str:
+        raise ValueError(
+            f"category_value 必须是原生 str, 实际 {type(category_value).__name__}={category_value!r}"
+        )
+    if category_value not in _VALID_CLASSIFY_CATEGORIES:
+        raise ValueError(
+            f"category_value 必须是 5 类之一 ({sorted(_VALID_CLASSIFY_CATEGORIES)}), "
+            f"实际 {category_value!r}"
+        )
+    return category_value
+
+
+def _validate_classify_confidence(confidence: Any) -> float:
+    """严判 confidence 必须是 0-1 有限数字(D4.6 业务契约).
+
+    Args:
+        confidence: 任意类型,内部 type() 严判
+
+    Returns:
+        float 化的 confidence(校验通过)
+
+    Raises:
+        ValueError: type 错 / NaN / Inf / 越界 0-1
+    """
+    if type(confidence) is bool or not isinstance(confidence, (int, float)):
+        raise ValueError(
+            f"confidence 必须是数字(非 bool/str), 实际 {type(confidence).__name__}={confidence!r}"
+        )
+    confidence_float = float(confidence)
+    if not math.isfinite(confidence_float):
+        raise ValueError(f"confidence 必须是有限数字(非 NaN/Inf), 实际 {confidence_float}")
+    if confidence_float < 0.0 or confidence_float > 1.0:
+        raise ValueError(f"confidence 必须在 0-1 之间, 实际 {confidence_float}")
+    return confidence_float
+
+
+def _validate_classify_latency_ms(latency_ms: Any) -> int:
+    """严判 latency_ms 必须是原生 int >= 0(D4.6 业务契约).
+
+    Args:
+        latency_ms: 任意类型,内部 type() 严判
+
+    Returns:
+        原值(校验通过)
+
+    Raises:
+        ValueError: type 错 / bool 子类 / 负数
+    """
+    if type(latency_ms) is bool or not isinstance(latency_ms, int):
+        raise ValueError(
+            f"latency_ms 必须是原生 int(非 bool/str), 实际 "
+            f"{type(latency_ms).__name__}={latency_ms!r}"
+        )
+    if latency_ms < 0:
+        raise ValueError(f"latency_ms 必须 >= 0, 实际 {latency_ms}")
+    return latency_ms
 
 
 # ===== 同步专用 TaskPacket factory =====
@@ -464,9 +566,21 @@ def compute_classification_acceptance(
       [1] category != SPAM (SPAM 单独走"低优先级"分支,不阻塞主决策)
       [2] latency_ms < 5000 (5s 内出结果)
 
+    D4.6 v1.0.2 二次复检 P1 修复: 公共 helper 入口加 3 类严判(category ∈ 5 类
+    + confidence 有限数 0-1 + latency_ms >= 0),防止 Adapter 重构后绕过严判
+    (D3.3.3 教训:窄化异常范围 + 公共 API 必须自防御)。
+    原 v1.0.2 写法只在校验前 field-access, 严判缺; 新版用 3 个 helper
+    复用同一严判逻辑, classify_and_emit 主入口可省去重复严判。
+
     Returns:
         list[bool](PolicyEngine 严判 type() is bool,D4.4 P1 + D4.5 P0 教训应用)
+
+    Raises:
+        ValueError: category 不在 5 类 / confidence 非有限数 / latency_ms 负数
     """
+    _validate_classify_category(category_value)
+    _validate_classify_confidence(confidence)
+    _validate_classify_latency_ms(latency_ms)
     return [
         bool(confidence >= 0.7),
         bool(category_value != "SPAM"),
@@ -506,6 +620,9 @@ def build_classify_packet(
         raise ValueError(f"model_full_id 必填非空 str, 实际 {type(model_full_id).__name__}")
     if type(confidence) is bool or not isinstance(confidence, (int, float)):
         raise ValueError(f"confidence 必须是数字(非 bool), 实际 {type(confidence).__name__}")
+    # D4.6 v1.0.2 P2-5 修复: 拒 NaN/Inf(NaN 任何比较返回 False,范围检查漏过)
+    if not math.isfinite(confidence):
+        raise ValueError(f"confidence 必须是有限数字(非 NaN/Inf), 实际 {confidence}")
     if confidence < 0.0 or confidence > 1.0:
         raise ValueError(f"confidence 必须在 0-1 之间, 实际 {confidence}")
 
@@ -517,6 +634,60 @@ def build_classify_packet(
             f"category={category_value}",
             f"confidence>={confidence:.2f}",
             "latency<5000ms",
+        ],
+        model=model_full_id,
+        provider=model_full_id.split("/", 1)[0] if "/" in model_full_id else "unknown",
+        permission_profile=PermissionProfile.READ_ONLY.value,
+        recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
+    )
+
+
+def build_classify_failure_packet(
+    *,
+    email_id: int,
+    source: str,
+    last_error_str: str,
+    consecutive_classify_failures: int,
+    model_full_id: str = "unknown",
+) -> TaskPacket:
+    """D4.6 v1.0.2 P1-1 新增: 分类失败专用 TaskPacket(8 必含字段).
+
+    与 build_classify_packet 的差异:
+      - objective: "email_classify_failed" 前缀(便于 lane 串联)
+      - acceptance_criteria: 3 条失败相关(无 category / conf / latency 业务字段)
+      - last_error_str 截断到 100 字符(防 prompt 撑爆)
+      - consecutive_classify_failures 必填 >= 1(确为失败,不是首次)
+
+    D3.3.3 教训应用: 严判入口, 拒 type-coerce。
+    """
+    if type(email_id) is not int or isinstance(email_id, bool) or email_id < 0:
+        raise ValueError(
+            f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+        )
+    if type(source) is not str or not source:
+        raise ValueError(f"source 必填非空 str, 实际 {type(source).__name__}")
+    if type(last_error_str) is not str or not last_error_str:
+        raise ValueError(f"last_error_str 必填非空 str, 实际 {type(last_error_str).__name__}")
+    if (
+        type(consecutive_classify_failures) is not int
+        or isinstance(consecutive_classify_failures, bool)
+        or consecutive_classify_failures < 1
+    ):
+        raise ValueError(
+            f"consecutive_classify_failures 必须是原生 int >= 1, 实际 "
+            f"{type(consecutive_classify_failures).__name__}={consecutive_classify_failures!r}"
+        )
+    if type(model_full_id) is not str or not model_full_id:
+        raise ValueError(f"model_full_id 必填非空 str, 实际 {type(model_full_id).__name__}")
+
+    return TaskPacket(
+        objective=f"email_classify_failed:source={source}:id={email_id}",
+        scope=["ai/classifier.py", "core/models.py"],
+        resources=["db:sqlcipher", "llm:router"],
+        acceptance_criteria=[
+            f"last_error={last_error_str[:100]}",
+            f"consecutive_classify_failures={consecutive_classify_failures}",
+            "retry_policy=retry_on_transient",
         ],
         model=model_full_id,
         provider=model_full_id.split("/", 1)[0] if "/" in model_full_id else "unknown",
@@ -562,8 +733,19 @@ def build_classify_policy_context(
         本次成功(recoverable 仍 True) → retry+merge 误触发
       - 新版引入 `last_classify_failed` 显式 bool,成功路径 caller 必传 False
         (adapter 不隐式推断 — D3.3.3 教训:不 catch-all 兜底)
+
+    D4.6 v1.0.2 二次复检 P1 修复: category / confidence / latency_ms 3 类业务
+    字段也走严判 helper,与 compute_classification_acceptance 同一严判口径
+    (防止 Adapter 直接绕开 compute_classification_acceptance 调此函数时漏严判)。
+    失败入口的 synthetic 值(category="URGENT" / confidence=0.0 / latency_ms=0)
+    全部能通过严判(URGENT ∈ 5 类、0.0 有限且在 0-1、0 >= 0)。
     """
     import time
+
+    # D4.6 v1.0.2 P1 修复: 业务字段走严判 helper(下沉到 helper 层,任何 caller 都受保护)
+    _validate_classify_category(category_value)
+    _validate_classify_confidence(confidence)
+    _validate_classify_latency_ms(latency_ms)
 
     # 严判入口(D4.5 P0 修复 1 + D4.6 v1.0.1 P1-3 新增 last_classify_failed)
     if type(last_classify_failed) is not bool:
@@ -611,15 +793,15 @@ def build_classify_policy_context(
 
 @dataclass(frozen=True)
 class ClassifyDecisionReport:
-    """D4.6 业务层接入的可观测报告.
+    """D4.6 业务层接入的可观测报告(成功分类版本).
 
     Attributes:
         evaluation: PolicyEngine.evaluate() 完整结果
         event_id: 落地到 events 表的 PolicyDecisionEvent id
         lane_entry_id: LaneBoard 中本次分类的 entry_id
         liveness: Heartbeat 评估的 Liveness
-        category: 5 类枚举(决策结果)
-        confidence: 置信度
+        category: 5 类枚举(决策结果,EmailCategory.value)
+        confidence: 置信度 [0.0, 1.0]
     """
 
     evaluation: PolicyEvaluation
@@ -627,8 +809,39 @@ class ClassifyDecisionReport:
     lane_entry_id: str
     liveness: Liveness
     # 以下字段是 D4.6 业务侧关心的(与 SyncDecisionReport 差异)
-    category: str  # EmailCategory.value
-    confidence: float
+    category: str  # EmailCategory.value, 必填 5 类之一
+    confidence: float  # 0.0 ~ 1.0 有限数
+
+
+@dataclass(frozen=True)
+class ClassifyFailureDecisionReport:
+    """D4.6 业务层接入的可观测报告(失败分类版本).
+
+    D4.6 v1.0.2 二次复检 P2-2 新增: 旧版失败入口返回 ClassifyDecisionReport,
+    用 `category=""` + `confidence=0.0` 强行填充,违反自身"category: 5 类"契约
+    (D3.3.3 教训:数据类的字段约束必须自洽,不能用空串当占位符)。
+    新版独立 dataclass 区分成功/失败,失败场景的字段语义不同:
+      - failed: 永远 True(类型层面防止混入成功报告)
+      - last_error: 截断到 200 字符的失败原因(便于人读)
+      - consecutive_classify_failures: 连续失败计数(便于触发升级)
+
+    Attributes:
+        evaluation: PolicyEngine.evaluate() 完整结果
+        event_id: 落地到 events 表的 PolicyDecisionEvent id
+        lane_entry_id: LaneBoard 中本次分类的 entry_id
+        liveness: Heartbeat 评估的 Liveness
+        failed: 必为 True(类型层面与 ClassifyDecisionReport 区分)
+        last_error: 失败原因(str(last_error) 截断到 200 字符)
+        consecutive_classify_failures: 连续失败次数(>= 1)
+    """
+
+    evaluation: PolicyEvaluation
+    event_id: int | None
+    lane_entry_id: str
+    liveness: Liveness
+    failed: bool  # 必为 True(类型层面区分成功/失败)
+    last_error: str  # 截断到 200 字符
+    consecutive_classify_failures: int  # >= 1
 
 
 class EmailClassifierAdapter:
@@ -754,22 +967,21 @@ class EmailClassifierAdapter:
         *,
         email_id: int,
         classification: Any,  # ClassificationResult(避免循环 import,用 duck type)
-        last_classify_failed: bool = False,
-        consecutive_classify_failures: int = 0,
         transport_alive: bool = True,
         run_id: str = "",
         now_ms: int | None = None,
     ) -> ClassifyDecisionReport:
-        """主入口: 评估分类结果 + 落 1 条 PolicyDecisionEvent.
+        """成功分类主入口: 评估分类结果 + 落 1 条 PolicyDecisionEvent.
+
+        D4.6 v1.0.2 P1-1 修复: 旧版 last_classify_failed / consecutive_classify_failures
+        都可传,实际仍可能触发 `retry_available + merge_required`(状态耦合)。
+        新版强制: 成功路径 = last_classify_failed=False + cf=0, 触发 merge_required
+        (全部 AC pass) 或 BLOCKED (业务拒绝) — 永不触发 retry / escalate。
+        失败请走 record_classify_failure_and_emit(last_error + cf 必填)。
 
         Args:
             email_id: 邮件主键(emails.id)
             classification: EmailClassifier.classify() 的返回(duck type, 严判字段)
-            last_classify_failed: 上一次分类是否失败(D4.6 v1.0.1 P1-3 新增)
-              - True: 上次 LLM 失败 → recoverable / policy_eval_failed 看 cf
-              - False: 上次成功 / 首次调用 → 强制 recoverable=False
-              - 默认 False(首次成功零摩擦)
-            consecutive_classify_failures: 连续分类失败次数(喂 RetryAvailable/Escalate)
             transport_alive: LLM 路由本次是否可用(D4.6 v1.0.1 P1-2 新增)
               - 默认 True(本次成功调用 router 必为 True,失败由 caller 在 try/except
                 外层决定)
@@ -781,15 +993,18 @@ class EmailClassifierAdapter:
             ClassifyDecisionReport
 
         Raises:
-            ValueError: 参数 type 错(D4.5 P0 严判 + D4.6 v1.0.1 扩 last_classify_failed/transport_alive)
+            ValueError: 参数 type 错(D4.5 P0 严判 + D4.6 v1.0.2 扩 category 5 类
+                + latency_ms >= 0)
             PolicyContractError: build_classify_packet 8 字段不全
             PolicyDecisionError: build_classify_policy_context 类型非法
             EventContractError / EventMetadataError: EventStore.insert 失败
 
-        D4.6 v1.0.1 修复汇总:
-          - P1-2: 拆分 business_accepted(Lane) vs transport_alive(Heartbeat)
-          - P1-3: 引入 last_classify_failed,caller 显式告知(不隐式推断)
-          - P2-5: 严判 classification duck type,拒 bool/str(取消 float()/int() coerce)
+        D4.6 v1.0.2 修复汇总:
+          - P1-1: 移除 last_classify_failed / consecutive_classify_failures 参数,
+            强制成功路径 = cf=0 → 永不触发 retry / escalate
+          - P1-2: 严判 category ∈ 5 类枚举, latency_ms >= 0
+          - P1-2(v1.0.1): 拆分 business_accepted(Lane) vs transport_alive(Heartbeat)
+          - P2-5(v1.0.1): 严判 classification duck type,拒 bool/str
         """
         import time as _time
 
@@ -798,18 +1013,6 @@ class EmailClassifierAdapter:
             raise ValueError(
                 f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
             )
-        # D4.6 v1.0.1 P1-3 严判 last_classify_failed
-        if type(last_classify_failed) is not bool:
-            raise ValueError(
-                f"last_classify_failed 必须是原生 bool, 实际 "
-                f"{type(last_classify_failed).__name__}={last_classify_failed!r}"
-            )
-        if type(consecutive_classify_failures) is not int or consecutive_classify_failures < 0:
-            raise ValueError(
-                f"consecutive_classify_failures 必须是原生 int >= 0, 实际 "
-                f"{type(consecutive_classify_failures).__name__}="
-                f"{consecutive_classify_failures!r}"
-            )
         # D4.6 v1.0.1 P1-2 严判 transport_alive
         if type(transport_alive) is not bool:
             raise ValueError(
@@ -817,14 +1020,20 @@ class EmailClassifierAdapter:
                 f"{type(transport_alive).__name__}={transport_alive!r}"
             )
 
-        # 严判 classification duck type — D4.6 v1.0.1 P2-5 修复:
-        # 旧版 `float() / int()` 静默 coerce,True → 1.0 / "0.5" → 0.5 均能通过
-        # 新版 type() 严判,拒 bool 子类陷阱 + 字符串混入
+        # 严判 classification duck type — D4.6 v1.0.1 P2-5 + v1.0.2 P1-2 修复:
+        # - v1.0.1: type() 严判,拒 bool 子类陷阱 + 字符串混入
+        # - v1.0.2: 严判 category ∈ 5 类 + latency_ms >= 0
         if hasattr(classification, "category") and hasattr(classification.category, "value"):
             category_value = classification.category.value
         else:
             raise ValueError(
                 f"classification.category.value 缺失, 实际 {type(classification).__name__}"
+            )
+        # D4.6 v1.0.2 P1-2: 严判 category 属于 5 类枚举(防止 LLM 输出脏 / 业务侧乱传)
+        if category_value not in _VALID_CLASSIFY_CATEGORIES:
+            raise ValueError(
+                f"classification.category.value 必须是 5 类之一 "
+                f"({sorted(_VALID_CLASSIFY_CATEGORIES)}), 实际 {category_value!r}"
             )
         if not isinstance(classification.confidence, (int, float)) or isinstance(
             classification.confidence, bool
@@ -834,6 +1043,10 @@ class EmailClassifierAdapter:
                 f"{type(classification.confidence).__name__}={classification.confidence!r}"
             )
         confidence = float(classification.confidence)
+        if not math.isfinite(confidence):
+            raise ValueError(
+                f"classification.confidence 必须是有限数字(非 NaN/Inf), 实际 {confidence}"
+            )
         if not (0.0 <= confidence <= 1.0):
             raise ValueError(f"confidence 必须在 0-1 之间, 实际 {confidence}")
         if not isinstance(classification.latency_ms, int) or isinstance(
@@ -842,6 +1055,11 @@ class EmailClassifierAdapter:
             raise ValueError(
                 f"classification.latency_ms 必须是原生 int(非 bool), 实际 "
                 f"{type(classification.latency_ms).__name__}={classification.latency_ms!r}"
+            )
+        # D4.6 v1.0.2 P1-2: 严判 latency_ms >= 0(防止外部 time.time() 异常 / 时钟回退)
+        if classification.latency_ms < 0:
+            raise ValueError(
+                f"classification.latency_ms 必须 >= 0, 实际 {classification.latency_ms}"
             )
         latency_ms = classification.latency_ms
         if not isinstance(classification.model_full_id, str) or not classification.model_full_id:
@@ -860,13 +1078,13 @@ class EmailClassifierAdapter:
             confidence=confidence,
         )
 
-        # 2) 构造 context (12 字段严判) — D4.6 v1.0.1 P1-3 透传 last_classify_failed
+        # 2) 构造 context (12 字段严判) — D4.6 v1.0.2 P1-1: 成功路径强制 cf=0
         context = build_classify_policy_context(
             category_value=category_value,
             confidence=confidence,
             latency_ms=latency_ms,
-            last_classify_failed=last_classify_failed,
-            consecutive_classify_failures=consecutive_classify_failures,
+            last_classify_failed=False,  # P1-1 强制: 成功路径永不失败
+            consecutive_classify_failures=0,  # P1-1 强制: 成功路径计数归零
             now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
         )
 
@@ -919,6 +1137,136 @@ class EmailClassifierAdapter:
             confidence=confidence,
         )
 
+    def record_classify_failure_and_emit(
+        self,
+        *,
+        email_id: int,
+        last_error: Any,  # str | LLMError | ClassifierResponseError | Exception
+        consecutive_classify_failures: int,
+        transport_alive: bool = True,
+        run_id: str = "",
+        now_ms: int | None = None,
+    ) -> ClassifyFailureDecisionReport:
+        """失败分类入口: 分类失败,记录 last_error,触发 retry / escalate.
+
+        D4.6 v1.0.2 P1-1 新增: 与 classify_and_emit 互斥, 防止状态耦合.
+        旧版 classify_and_emit 接受 `last_classify_failed=True + 成功 classification`,
+        实际仍会同时触发 `retry_available + merge_required`(P1-1 bug)。
+        新版强制分离: 成功入口永不失败, 失败入口永不合并(AC 全 False → BLOCKED)。
+
+        Args:
+            email_id: 邮件主键(emails.id)
+            last_error: 失败原因(任意类型,内部 str() 化喂 packet)
+            consecutive_classify_failures: 连续分类失败次数(必填 >= 1)
+              - < 3: 触发 RETRY_AVAILABLE
+              - >= 3: 触发 ESCALATE_REQUIRED
+            transport_alive: LLM 路由本次是否可用(失败不一定意味 LLM 死了,
+              如 ClassifierResponseError 响应脏但 LLM 仍可达)
+            run_id: LaneBoard entry 唯一 ID(空 = 用 now_ms 字符串)
+            now_ms: 注入时间(默认 int(time.time() * 1000))
+
+        Returns:
+            ClassifyDecisionReport(同 classify_and_emit 范本)
+
+        Raises:
+            ValueError: 参数 type 错 / consecutive_classify_failures < 1
+            PolicyContractError: build_classify_failure_packet 字段不全
+            PolicyDecisionError: build_classify_policy_context 类型非法
+            EventContractError / EventMetadataError: EventStore.insert 失败
+        """
+        import time as _time
+
+        # 严判 email_id
+        if type(email_id) is not int or isinstance(email_id, bool) or email_id < 0:
+            raise ValueError(
+                f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+            )
+        # 严判 consecutive_classify_failures(失败入口必填 >= 1)
+        if (
+            type(consecutive_classify_failures) is not int
+            or isinstance(consecutive_classify_failures, bool)
+            or consecutive_classify_failures < 1
+        ):
+            raise ValueError(
+                f"consecutive_classify_failures 必须是原生 int >= 1, 实际 "
+                f"{type(consecutive_classify_failures).__name__}="
+                f"{consecutive_classify_failures!r}"
+            )
+        # 严判 transport_alive
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        # 严判 last_error(转 str 后非空)
+        if last_error is None:
+            raise ValueError("last_error 不能为 None, 失败必须带原因")
+        last_error_str = str(last_error)
+        if not last_error_str:
+            raise ValueError(
+                f"last_error 必填非空 (str() 后非空), 实际 {type(last_error).__name__}"
+            )
+
+        # 1) 构造 TaskPacket(失败专用 factory)
+        packet = build_classify_failure_packet(
+            email_id=email_id,
+            source=self._source,
+            last_error_str=last_error_str,
+            consecutive_classify_failures=consecutive_classify_failures,
+            model_full_id="unknown",  # 失败时无模型可用,标记 unknown
+        )
+
+        # 2) 构造 context — D4.6 v1.0.2 P1-1: 失败入口隐式 last_classify_failed=True
+        #    用 synthetic category/conf/latency 让 AC[0] 自动 False → merge 不触发
+        context = build_classify_policy_context(
+            category_value="URGENT",  # synthetic, 仅用于 context 必填字段
+            confidence=0.0,  # synthetic, AC[0] = (0.0 >= 0.7) = False → 不 merge
+            latency_ms=0,  # synthetic, 失败无延迟
+            last_classify_failed=True,  # P1-1 强制: 失败入口隐式 True
+            consecutive_classify_failures=consecutive_classify_failures,
+            now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
+        )
+
+        # 3) run_id + lane_entry_id
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate — 业务 payload 标记为失败
+        extra_business_payload = {
+            "email_id": email_id,
+            "source": self._source,
+            "last_error": last_error_str[:200],  # 截断到 200 字符
+            "consecutive_classify_failures": consecutive_classify_failures,
+            "failed": True,  # 业务侧查询可用
+        }
+        evaluation = self._engine.evaluate(
+            packet=packet,
+            context=context,
+            store=self._event_store,
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
+            extra_business_payload=extra_business_payload,
+        )
+
+        # 5) LaneBoard: 失败入口强制 BLOCKED(synthetic conf=0 → AC[0] False)
+        self.record_to_lane(
+            run_id=rid,
+            status=LaneStatus.BLOCKED,
+        )
+
+        # 6) Heartbeat — 用 transport_alive(失败可能是响应脏,不是 LLM 死了)
+        liveness = self.tick_heartbeat(transport_alive=transport_alive, now_ms=now_ms)
+
+        return ClassifyFailureDecisionReport(
+            evaluation=evaluation,
+            event_id=evaluation.event_id,
+            lane_entry_id=lane_entry_id,
+            liveness=liveness,
+            failed=True,  # 必为 True(类型层面与成功报告区分)
+            last_error=last_error_str[:200],  # 截断到 200 字符
+            consecutive_classify_failures=consecutive_classify_failures,
+        )
+
 
 # ===== 模块导出 =====
 
@@ -931,7 +1279,9 @@ __all__ = [
     "compute_acceptance_results",
     "EmailClassifierAdapter",
     "ClassifyDecisionReport",
+    "ClassifyFailureDecisionReport",
     "build_classify_packet",
+    "build_classify_failure_packet",
     "build_classify_policy_context",
     "compute_classification_acceptance",
 ]

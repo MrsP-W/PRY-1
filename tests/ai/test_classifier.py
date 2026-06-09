@@ -534,3 +534,109 @@ class TestD46V101Fixes:
         )
         assert c == EmailCategory.TODO
         assert conf == 0.65
+
+
+# ===== D4.6 v1.0.2 修复测试(2026-06-09 第二次复检 P2-3 + P2-4)=====
+
+
+class TestD46V102Fixes:
+    """D4.6 v1.0.2 ai 层业务语义修复测试集.
+
+    覆盖用户 6/9 第二次复检的 P2-3 + P2-4。
+    P1-1 + P1-2 + P2-5 由 tests/policy/test_classifier_adapter.py::TestD46V102AdapterFixes 覆盖。
+    """
+
+    # --- P2-3: _extract_balanced_json 选含 category+confidence 字段的 JSON ---
+
+    def test_leading_unrelated_json_then_classification(self) -> None:
+        """P2-3 修复: 前面有无关对象 {`debug`}, 后面才是分类结果 → 接受后者.
+
+        v1.0.1 旧版只取第一个平衡 JSON, 把 {`debug`} 当成响应返回,
+        json.loads 成功但 category/confidence 缺失 → 抛 category_type 错。
+        v1.0.2 扫描所有平衡 JSON, 选第一个含 category+confidence 字段的。
+        """
+        content = (
+            '{"debug": "info", "model": "deepseek"}'  # 无关对象(平衡)
+            '\n{"category": "URGENT", "confidence": 0.88}\n'  # 真正的分类结果
+        )
+        c, conf = _parse_classification_response(content)
+        assert c == EmailCategory.URGENT
+        assert conf == 0.88
+
+    def test_classification_first_then_unrelated(self) -> None:
+        """P2-3: 分类结果在前, 无关对象在后 → 接受前者的分类(第一个匹配)."""
+        content = (
+            '{"category": "TODO", "confidence": 0.7}\n'  # 第一个平衡且含 category+conf
+            '{"status": "ok"}\n'  # 后面无关
+        )
+        c, conf = _parse_classification_response(content)
+        assert c == EmailCategory.TODO
+        assert conf == 0.7
+
+    def test_no_balanced_json_with_category_returns_none(self) -> None:
+        """P2-3 兜底: 所有平衡 JSON 都不含 category+confidence → 仍走 no_balanced_json 路径.
+
+        注意: 只要至少有一个平衡 JSON 存在(即便字段不对), v1.0.2 兜底返回
+        第一个,让 _parse_classification_response 后续步骤抛具体错(更精准)。
+        这里测试 content 完全无 JSON 的极端情况。
+        """
+        with pytest.raises(ClassifierResponseError) as exc_info:
+            _parse_classification_response("no json at all, just text")
+        assert exc_info.value.reason == "no_balanced_json"
+
+    def test_first_json_invalid_falls_through_to_second(self) -> None:
+        """P2-3 修复: 第一个平衡 JSON 是非法 JSON, 跳过取第二个含 category+conf 的.
+
+        v1.0.1: 第一个 JSON 是 `{garbage}`(平衡但 json.loads 失败) → 抛 json_decode_error
+        v1.0.2: 跳过非法, 取第二个合法且含 category+conf 的
+        """
+        # 注意: 平衡括号扫描只看 { } 配对, 不管内容是否合法 JSON
+        content = (
+            "{garbage content, not json}"  # 平衡但非法
+            '\n{"category": "FYI", "confidence": 0.55}\n'  # 合法分类
+        )
+        c, conf = _parse_classification_response(content)
+        assert c == EmailCategory.FYI
+        assert conf == 0.55
+
+    # --- P2-4: classify_batch 补 ValueError | KeyError 到 type hint + 收容缺字段 ---
+
+    def test_batch_missing_field_returns_keyerror(self) -> None:
+        """P2-4 修复: 字典缺字段 → KeyError 入 results 列表(不外抛)."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(
+            '{"category": "FYI", "confidence": 0.9}'
+        )
+        classifier = EmailClassifier(router=mock_router)
+        results = classifier.classify_batch(
+            [
+                {"subject": "s1", "sender": "x", "body_excerpt": "b1"},
+                {"subject": "s2"},  # 缺 sender / body_excerpt
+                {"sender": "y", "body_excerpt": "b3"},  # 缺 subject
+            ]
+        )
+        assert len(results) == 3
+        assert isinstance(results[0], ClassificationResult)  # 第 1 条成功
+        assert isinstance(results[1], KeyError)  # 第 2 条缺 2 字段
+        assert isinstance(results[2], KeyError)  # 第 3 条缺 1 字段
+        # 关键: mock router 只被调用 1 次(成功的第 1 条), 缺字段的不调
+        assert mock_router.route.call_count == 1
+
+    def test_batch_continues_after_keyerror(self) -> None:
+        """P2-4 修复: KeyError 不阻塞后续 — 3 条入 list, 1 成功 + 2 KeyError."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(
+            '{"category": "URGENT", "confidence": 0.8}'
+        )
+        classifier = EmailClassifier(router=mock_router)
+        results = classifier.classify_batch(
+            [
+                {"subject": "s1", "sender": "x", "body_excerpt": "b1"},
+                {},  # 缺全部 3 字段
+                {"subject": "s3", "sender": "y", "body_excerpt": "b3"},
+            ]
+        )
+        assert len(results) == 3
+        assert isinstance(results[0], ClassificationResult)
+        assert isinstance(results[1], KeyError)
+        assert isinstance(results[2], ClassificationResult)

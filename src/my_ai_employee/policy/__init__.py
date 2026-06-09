@@ -50,9 +50,11 @@ from my_ai_employee.policy.exceptions import (
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.integration import (
     ClassifyDecisionReport,
+    ClassifyFailureDecisionReport,
     EmailClassifierAdapter,
     SyncDecisionReport,
     SyncPolicyAdapter,
+    build_classify_failure_packet,
     build_classify_packet,
     build_classify_policy_context,
     build_imap_sync_packet,
@@ -118,7 +120,9 @@ __all__ = [
     # D4.6 业务层接入(邮件分类)
     "EmailClassifierAdapter",
     "ClassifyDecisionReport",
+    "ClassifyFailureDecisionReport",
     "build_classify_packet",
+    "build_classify_failure_packet",
     "build_classify_policy_context",
     "compute_classification_acceptance",
 ]

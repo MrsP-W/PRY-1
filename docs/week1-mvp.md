@@ -593,29 +593,59 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
-### D4.6 — 邮件分类器（✅ 2026-06-08 v1.0 锁定）
+### D4.6 — 邮件分类器（✅ 2026-06-09 v1.0.2-second 二次复检后真正锁定）
 
 **承接 D4.5 业务层范本**：D4.5 `SyncPolicyAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 5 步主入口，在 D4.6 第二个真实业务场景上**复用**。
 
 **范围**：
 - **业务层**：`ai/classifier.py` 实现 `EmailClassifier`（`classify` / `classify_batch`） + `_parse_classification_response` 严判 LLM 响应 + 5 类 StrEnum `EmailCategory`
 - **Prompt 模板**：`ai/prompts/classify.py` 5 类 SYSTEM prompt + `build_user_message` 拼接
-- **业务层接入**：`EmailClassifierAdapter` 复用 D4.5 范本，`classify_and_emit` 5 步主入口（evaluate + EventStore + LaneBoard + Heartbeat）
+- **业务层接入**：`EmailClassifierAdapter` 复用 D4.5 范本，`classify_and_emit`（成功入口）+ `record_classify_failure_and_emit`（失败入口）双入口架构（v1.0.2 引入）
 - **业务字段透传**：D4.6 新增 `_emit_decision_event` 可选 kwargs `extra_business_payload`，透传 `category / confidence / model_full_id / email_id / source` 5 项到 event_metadata 顶层
 - **lane_entry_id 命名**：`classify:<source>:<run_id>`（与 `sync:` 区分，便于 `mmx policy history --lane` 跨次分类串联）
 - **5 类标签**：URGENT（紧急）/ TODO（待办）/ FYI（知晓）/ SPAM（垃圾）/ PERSONAL（私人）
 - **D4.5 兼容度**：`SyncPolicyAdapter` 5 步主入口 + `evaluate()` `_emit_decision_event` 旧 kwargs 全保留（`extra_business_payload=None` 旧行为零变化）
 - **D4.4 兼容度**：D4.4 6 个源文件零修改，仅 `_emit_decision_event` 新增可选 kwargs
 
-**8 大质量门**（8/8 全绿 · v1.0 锁定 6/8 晚间）：
-- `pytest tests/ai/ -v`: **92 passed**（D4.1.1 62 → D4.6 +30）
-- `pytest tests/policy/ -v`: **249 passed in 0.97s**（D4.5 v1.0.1 217 → D4.6 +32）
+**v1.0 → v1.0.1 → v1.0.2-first → v1.0.2-second 演进路径**（2026-06-09 早晨两次复检）：
+
+| 版本 | 提交 | 触发 | 修复项 | 测试数 | 关键变更 |
+|------|------|------|--------|--------|----------|
+| v1.0 | ab6ad9c | 6/8 晚间初版提交 | — | 559 | 5 类 + 严判 + 业务层接入 |
+| v1.0.1 | 22aa82a | 6/9 早晨第一次复检 | 6 P1+P2+P3 | 576 | Router 全链 / 业务传输解耦 / 成功失败分离 / JSON 解析 / duck type / 文档 |
+| v1.0.2-first | (待 commit) | 6/9 早晨第二次复检 5 项 | 2 P1 + 3 P2 | 592 | 双入口 type system 锁定 + 5 类严判 + 平衡 JSON + 批处理补全 + NaN 拒收 |
+| **v1.0.2-second** | (待 commit) | 6/9 早晨第二次复检 4 项 | 1 P1 + 2 P2 + 1 P3 | **603** | 公开 helper 严判下沉 + `ClassifyFailureDecisionReport` 独立类型 + 顶层导出 + 文档同步 |
+
+**8 大质量门**（8/8 全绿 · v1.0.2-second 二次复检后 6/9 早晨）：
+- `pytest tests/ai/ -v`: classifier 46 passed（D4.6 ai 30 → v1.0.1 40 → v1.0.2-first 46 → v1.0.2-second 46）
+- `pytest tests/policy/ -v`: classifier_adapter 61 passed（D4.6 policy 32 → v1.0.1 40 → v1.0.2-first 50 → v1.0.2-second 50 + 11 = 61）
 - `ruff check`: All checks passed / `ruff format`: 81 files already formatted
-- `mypy src/ tests/`: 0 errors / 76 files（D4.5 28 + D4.6 48）
+- `mypy src/ tests/`: 0 errors / 76 files
 - `alembic upgrade head --sql`: exit 0 (0003 latest)
 - `uv build`: tar.gz + .whl OK
-- `pytest` 全量: **559 passed**（D4.5 v1.0.1 累计 +63，**0 失败**）
+- `pytest` 全量: **603 passed**（v1.0.2-first 592 → v1.0.2-second 603，**0 失败**）
 - 覆盖率：`policy/integration.py` 99.4% + `ai/classifier.py` 96.4% + `ai/prompts/classify.py` 100%
+
+**v1.0.2 关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 + v1.0.1 教训应用）：
+- 复用 `router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链（`fallback.FALLBACK_CHAINS` 已配）
+- 严判 LLM 响应：必须严格 JSON `{"category": "<枚举>", "confidence": <0-1 float>}` 拒 markdown / 拒 bool（陷阱）/ 拒越界 / 拒非法 category
+- 复用 `SyncPolicyAdapter` 4 依赖可注入范本，`classify_and_emit` 5 步主入口
+- 业务字段（category / confidence / model_full_id / email_id / source）透传到 event_metadata 顶层，便于 `mmx policy history` 跨业务类型查询
+- 正文 > 2000 字符自动截断（防御巨型 body 撑爆 prompt）
+- batch 单条响应脏 → 异常入 results 列表，不阻塞后续（D3.3.3 教训：不 catch-all 兜底）
+
+**v1.0.2-first 关键修复**（type system 层面）：
+- **P1-1 拆双入口**：成功入口 `classify_and_emit` 无 cf 参数 → 编译期拒绝"成功结果 + last_classify_failed=True"状态耦合；失败入口 `record_classify_failure_and_emit` cf 必填 >= 1 → 必触发 retry/escalate
+- **P1-2 5 类严判**：`category_value not in _VALID_CLASSIFY_CATEGORIES` + `latency_ms < 0` 拒收
+- **P2-3 平衡 JSON**：`_find_all_balanced_json` 收集所有 + `_extract_balanced_json` 选含 category+conf 的
+- **P2-4 批处理补全**：type hint 补 `ValueError | KeyError` + 缺字段 KeyError 收容
+- **P2-5 NaN 拒收**：`math.isfinite()` 在 0-1 范围检查前
+
+**v1.0.2-second 关键修复**（公共 API + 文档）：
+- **P1 严判下沉**：3 个 `_validate_classify_*` helper 下沉到 `compute_classification_acceptance` + `build_classify_policy_context`，防止 Adapter 重构后绕过严判
+- **P2-2 失败报告独立类型**：`ClassifyFailureDecisionReport`（含 `failed: bool` + `last_error: str` + `consecutive_classify_failures: int`），与 `ClassifyDecisionReport`（含 `category: 5 类` + `confidence: float`）类型层面区分，失败入口不再用 `category=""` 违反契约
+- **P2-3 顶层导出**：`policy/__init__.py` 暴露 `build_classify_failure_packet` + `ClassifyFailureDecisionReport`，`from my_ai_employee.policy import ...` 不再 ImportError
+- **P3 文档同步**：报告 49+47 → 46+50、uv build blocked → 通过、week1-mvp 数字 559 → 603、mapping 数字 576 → 603
 
 **关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 + D4.5 v1.0.1 教训应用）：
 - 复用 `router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链（`fallback.FALLBACK_CHAINS` 已配）

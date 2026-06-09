@@ -44,7 +44,9 @@ from my_ai_employee.events.models import EventType  # noqa: E402
 from my_ai_employee.policy.heartbeat import Liveness  # noqa: E402
 from my_ai_employee.policy.integration import (  # noqa: E402
     ClassifyDecisionReport,
+    ClassifyFailureDecisionReport,
     EmailClassifierAdapter,
+    build_classify_failure_packet,
     build_classify_packet,
     build_classify_policy_context,
     compute_classification_acceptance,
@@ -523,18 +525,16 @@ class TestClassifyAndEmit:
         assert report.liveness == Liveness.HEALTHY
 
     def test_escalate_at_threshold_3(self, store) -> None:
-        """D4.6 v1.0.1 P1-3 修复: last_classify_failed=True AND cf >= 3 → EscalateRequired.
+        """D4.6 v1.0.2 P1-1 修复: 失败入口走 record_classify_failure_and_emit, cf >= 3 → EscalateRequired.
 
-        v1.0 旧逻辑只看 cf 单参数 → 成功路径仍会触发 escalate(P1-3 bug)。
-        v1.0.1 引入 last_classify_failed 显式 bool,本次为成功分类 → 默认 False。
-        本测试必须显式传 last_classify_failed=True 才能触发 escalate。
+        v1.0 旧逻辑: 成功路径 + consecutive_classify_failures=3 → EscalateRequired 误触发
+        v1.0.1 引入 last_classify_failed,但允许同时传 成功 classification,状态耦合
+        v1.0.2 拆入口: 失败走 record_classify_failure_and_emit, 永不触发 merge
         """
         a = EmailClassifierAdapter(source="qq", event_store=store)
-        classification = FakeClassification.make()
-        a.classify_and_emit(
+        a.record_classify_failure_and_emit(
             email_id=1,
-            classification=classification,
-            last_classify_failed=True,
+            last_error="simulated LLM timeout",
             consecutive_classify_failures=3,
             run_id="r-escalate",
         )
@@ -545,10 +545,9 @@ class TestClassifyAndEmit:
     def test_no_escalate_below_threshold(self, store) -> None:
         """consecutive_classify_failures < 3 → 不应触发 EscalateRequired."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
-        classification = FakeClassification.make()
-        a.classify_and_emit(
+        a.record_classify_failure_and_emit(
             email_id=1,
-            classification=classification,
+            last_error="transient network",
             consecutive_classify_failures=2,
             run_id="r-no-escalate",
         )
@@ -588,22 +587,31 @@ class TestClassifyAndEmit:
             )
 
     def test_strict_type_rejection_consecutive_failures(self) -> None:
-        """consecutive_classify_failures 必填原生 int >= 0(拒 bool 子类)."""
+        """D4.6 v1.0.2 P1-1 修复: 成功入口无 cf 参数(移到失败入口,必填 >= 1)."""
         a = EmailClassifierAdapter(source="qq")
         classification = FakeClassification.make()
-        with pytest.raises(ValueError):
+        # 成功入口不能再传 consecutive_classify_failures(P1-1 强制拆入口)
+        with pytest.raises(TypeError):
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                consecutive_classify_failures=True,  # type: ignore[arg-type]
-                run_id="r-bool-cf",
+                consecutive_classify_failures=2,  # type: ignore[call-arg]
+                run_id="r-no-cf-on-success",
+            )
+        # 失败入口 cf 必填 >= 1
+        with pytest.raises(ValueError):
+            a.record_classify_failure_and_emit(
+                email_id=1,
+                last_error="x",
+                consecutive_classify_failures=0,  # < 1 拒收
+                run_id="r-cf-zero",
             )
         with pytest.raises(ValueError):
-            a.classify_and_emit(
+            a.record_classify_failure_and_emit(
                 email_id=1,
-                classification=classification,
-                consecutive_classify_failures=-1,
-                run_id="r-neg-cf",
+                last_error="x",
+                consecutive_classify_failures=True,  # type: ignore[arg-type]
+                run_id="r-bool-cf",
             )
 
     def test_event_metadata_contains_business_fields(self, store) -> None:
@@ -629,18 +637,15 @@ class TestClassifyAndEmit:
         assert meta.get("source") == "qq"
 
     def test_retry_available_at_cf_2(self, store) -> None:
-        """D4.6 v1.0.1 P1-3 修复: last_classify_failed=True AND cf=2 → RetryAvailable.
+        """D4.6 v1.0.2 P1-1 修复: 失败入口 cf=2 → RetryAvailable.
 
-        v1.0 旧逻辑纯看 cf → 成功分类也会触发 retry(P1-3 bug)。
-        v1.0.1 引入 last_classify_failed 显式 bool,本次为成功分类 → 默认 False。
-        本测试必须显式传 last_classify_failed=True 才能触发 retry。
+        v1.0.1 引入 last_classify_failed 但允许同时传 成功 classification。
+        v1.0.2 拆入口: 失败走 record_classify_failure_and_emit(cf=2) → retry。
         """
         a = EmailClassifierAdapter(source="qq", event_store=store)
-        classification = FakeClassification.make()
-        a.classify_and_emit(
+        a.record_classify_failure_and_emit(
             email_id=1,
-            classification=classification,
-            last_classify_failed=True,
+            last_error="transient network",
             consecutive_classify_failures=2,
             run_id="r-retry",
         )
@@ -793,21 +798,403 @@ class TestD46V101AdapterFixes:
     # --- P1-3 联动: 成功路径 last_classify_failed 默认 False,不触发 retry ---
 
     def test_successful_classify_does_not_trigger_retry(self, store) -> None:
-        """P1-3 修复: 成功分类(默认 last_classify_failed=False) → 不触发 RETRY_AVAILABLE.
+        """D4.6 v1.0.2 P1-1 修复: 成功入口永不触发 retry / escalate.
 
-        v1.0 旧逻辑纯看 cf,即使本次成功若 cf>0 仍触发 retry。
-        v1.0.1 显式 last_classify_failed=False → 强制 recoverable=False。
+        v1.0 旧逻辑: 成功分类 + cf=2 → RETRY_AVAILABLE 误触发
+        v1.0.1 引入 last_classify_failed=False → 强制 recoverable=False
+        v1.0.2 拆入口: classify_and_emit 无 last_classify_failed / cf 参数,
+          永不可能触发 retry / escalate
         """
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()
         a.classify_and_emit(
             email_id=1,
             classification=classification,
-            last_classify_failed=False,  # 显式声明本次为成功
-            consecutive_classify_failures=2,  # 旧逻辑会触发 retry
-            run_id="r-v101-success-no-retry",
+            run_id="r-v102-success-no-retry",
         )
         ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
         kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
         assert PolicyDecisionKind.RETRY_AVAILABLE not in kinds
         assert PolicyDecisionKind.ESCALATE_REQUIRED not in kinds
+
+
+# ============================================================
+# D4.6 v1.0.2 业务语义修复测试(2026-06-09 第二次复检)
+# ============================================================
+
+
+class TestD46V102AdapterFixes:
+    """D4.6 v1.0.2 Adapter 层业务语义修复测试.
+
+    覆盖用户 6/9 第二次复检的 P1-1 + P1-2 + P2-5。
+    P2-3 + P2-4 由 tests/ai/test_classifier.py::TestD46V102Fixes 覆盖(ai 层)。
+    """
+
+    # --- P1-1: 成功入口强制失败次数归零 ---
+
+    def test_success_entry_no_failure_params(self, store) -> None:
+        """P1-1 修复: classify_and_emit 签名删除 last_classify_failed / consecutive_classify_failures.
+
+        v1.0.1 允许传 last_classify_failed=True + 成功 classification → 状态耦合
+        v1.0.2 拆入口: 成功入口无失败参数,从根上断绝
+        """
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        classification = FakeClassification.make()
+        # 1) 成功入口不再接受 cf 参数
+        with pytest.raises(TypeError):
+            a.classify_and_emit(
+                email_id=1,
+                classification=classification,
+                consecutive_classify_failures=99,  # type: ignore[call-arg]
+                run_id="r-v102-no-cf",
+            )
+        # 2) 成功入口不再接受 last_classify_failed 参数
+        with pytest.raises(TypeError):
+            a.classify_and_emit(
+                email_id=1,
+                classification=classification,
+                last_classify_failed=True,  # type: ignore[call-arg]
+                run_id="r-v102-no-last-failed",
+            )
+
+    def test_success_and_failure_never_coexist(self, store) -> None:
+        """P1-1 修复: 成功入口不触发 retry / escalate,失败入口不触发 merge."""
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        classification = FakeClassification.make()  # 业务通过
+
+        # 成功入口 → merge_only(无 retry / escalate)
+        a.classify_and_emit(
+            email_id=1,
+            classification=classification,
+            run_id="r-v102-success-only",
+        )
+        ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
+        success_kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
+        assert PolicyDecisionKind.RETRY_AVAILABLE not in success_kinds
+        assert PolicyDecisionKind.ESCALATE_REQUIRED not in success_kinds
+
+    def test_failure_entry_no_merge(self, store) -> None:
+        """P1-1 修复: 失败入口触发 retry / escalate,但不触发 merge.
+
+        旧 v1.0.1: 成功 classification + last_classify_failed=True + cf=3
+        → merge_required + escalate_required 同时触发
+        新 v1.0.2: 失败入口走 synthetic AC[0]=False → 永不 merge
+        """
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        a.record_classify_failure_and_emit(
+            email_id=1,
+            last_error="LLM timeout",
+            consecutive_classify_failures=3,
+            run_id="r-v102-fail-no-merge",
+        )
+        ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
+        failure_kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
+        # 失败入口必须触发 escalate(因为 cf=3)
+        assert PolicyDecisionKind.ESCALATE_REQUIRED in failure_kinds
+        # 失败入口不能触发 merge(AC[0]=False,无业务合并意义)
+        assert PolicyDecisionKind.MERGE_REQUIRED not in failure_kinds
+
+    def test_failure_entry_under_threshold_triggers_retry(self, store) -> None:
+        """P1-1 修复: 失败入口 cf=1/2 → RETRY_AVAILABLE(不 escalate)."""
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        for cf in (1, 2):
+            run_id = f"r-v102-fail-cf-{cf}"
+            a.record_classify_failure_and_emit(
+                email_id=1,
+                last_error="transient",
+                consecutive_classify_failures=cf,
+                run_id=run_id,
+            )
+        events = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)
+        for ev in events:
+            kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
+            assert PolicyDecisionKind.RETRY_AVAILABLE in kinds
+            assert PolicyDecisionKind.ESCALATE_REQUIRED not in kinds
+
+    def test_failure_entry_payload_marks_failed(self, store) -> None:
+        """P1-1 修复: 失败入口 event_metadata 顶层有 failed=True + last_error."""
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        a.record_classify_failure_and_emit(
+            email_id=42,
+            last_error="HTTP 502 from upstream",
+            consecutive_classify_failures=2,
+            run_id="r-v102-fail-payload",
+        )
+        ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
+        meta = ev.event_metadata
+        assert meta["failed"] is True
+        assert "HTTP 502" in meta["last_error"]
+        assert meta["consecutive_classify_failures"] == 2
+        assert meta["email_id"] == 42
+        assert meta["source"] == "qq"
+
+    # --- P1-2: 严判 category 5 类 + latency_ms >= 0 ---
+
+    def test_category_not_in_5_classes_rejected(self) -> None:
+        """P1-2 修复: category 不在 5 类枚举 → ValueError(不触发 merge)."""
+        a = EmailClassifierAdapter(source="qq")
+        bad_classification = FakeClassification.make(category_value="OOPS")
+        with pytest.raises(ValueError, match="5 类之一"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=bad_classification,
+                run_id="r-v102-bad-category",
+            )
+
+    def test_latency_negative_rejected(self) -> None:
+        """P1-2 修复: latency_ms < 0 → ValueError(防御时钟回退)."""
+        a = EmailClassifierAdapter(source="qq")
+        bad_classification = FakeClassification.make(latency_ms=-1)
+        with pytest.raises(ValueError, match="latency_ms"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=bad_classification,
+                run_id="r-v102-neg-latency",
+            )
+
+    # --- P2-5: build_classify_packet 拒 NaN/Inf ---
+
+    def test_build_classify_packet_nan_rejected(self) -> None:
+        """P2-5 修复: confidence=NaN 旧版 0<=NaN<=1 False 通过; 新版 isfinite 拒."""
+        with pytest.raises(ValueError, match="NaN/Inf"):
+            build_classify_packet(
+                email_id=1,
+                source="qq",
+                category_value="URGENT",
+                model_full_id="m",
+                confidence=float("nan"),  # type: ignore[arg-type]
+            )
+
+    def test_build_classify_packet_inf_rejected(self) -> None:
+        """P2-5 修复: confidence=Inf / -Inf 拒收."""
+        for bad in (float("inf"), float("-inf")):
+            with pytest.raises(ValueError, match="NaN/Inf"):
+                build_classify_packet(
+                    email_id=1,
+                    source="qq",
+                    category_value="URGENT",
+                    model_full_id="m",
+                    confidence=bad,
+                )
+
+    # --- P1-1 联动: build_classify_failure_packet factory 严判 ---
+
+    def test_build_classify_failure_packet_strict(self) -> None:
+        """P1-1 新增 factory: 严判 email_id / source / last_error_str / cf >= 1."""
+        # 缺 last_error_str
+        with pytest.raises(ValueError):
+            build_classify_failure_packet(
+                email_id=1,
+                source="qq",
+                last_error_str="",
+                consecutive_classify_failures=1,
+            )
+        # cf=0 拒收
+        with pytest.raises(ValueError):
+            build_classify_failure_packet(
+                email_id=1,
+                source="qq",
+                last_error_str="err",
+                consecutive_classify_failures=0,
+            )
+        # 正常
+        p = build_classify_failure_packet(
+            email_id=42,
+            source="qq",
+            last_error_str="LLM timeout",
+            consecutive_classify_failures=2,
+        )
+        assert p.objective.startswith("email_classify_failed:source=qq:id=42")
+        assert len(p.acceptance_criteria) == 3
+        assert "last_error=LLM timeout" in p.acceptance_criteria[0]
+
+
+# ============================================================
+# D4.6 v1.0.2 二次复检修复测试(2026-06-09 早晨第二次复检 4 项)
+# ============================================================
+
+
+class TestD46V102SecondPassFixes:
+    """D4.6 v1.0.2 二次复检 4 项修复测试.
+
+    覆盖用户 6/9 早晨第二次复检的 1 P1 + 2 P2 + 1 P3:
+      - P1: 公开 helper 严判下沉(compute_classification_acceptance +
+        build_classify_policy_context 加严判,防止 Adapter 重构后绕过)
+      - P2-2: 失败报告独立数据类(ClassifyFailureDecisionReport,不再用空 category
+        违反 ClassifyDecisionReport "category: 5 类" 契约)
+      - P2-3: 顶层导出 build_classify_failure_packet + ClassifyFailureDecisionReport
+      - P3: 文档同步(49+47 → 46+50、uv build blocked → 通过)
+
+    主入口的 P1-1 + P1-2 修复已在 TestD46V102AdapterFixes 覆盖。
+    ai 层的 P2-3 + P2-4 已在 tests/ai/test_classifier.py::TestD46V102Fixes 覆盖。
+    """
+
+    # --- P1: 公开 helper 严判下沉 ---
+
+    def test_compute_classification_acceptance_rejects_bad_category(self) -> None:
+        """P1 修复: compute_classification_acceptance 拒 OOPS(原版静默通过,产生 3 条 AC)."""
+        with pytest.raises(ValueError, match="5 类之一"):
+            compute_classification_acceptance(
+                category_value="OOPS",  # 不在 5 类
+                confidence=0.9,
+                latency_ms=1500,
+            )
+
+    def test_compute_classification_acceptance_rejects_nan_confidence(self) -> None:
+        """P1 修复: compute_classification_acceptance 拒 NaN(原版 AC[0]=NaN>=0.7 False 通过)."""
+        with pytest.raises(ValueError, match="NaN/Inf"):
+            compute_classification_acceptance(
+                category_value="URGENT",
+                confidence=float("nan"),
+                latency_ms=1500,
+            )
+
+    def test_compute_classification_acceptance_rejects_inf_confidence(self) -> None:
+        """P1 修复: compute_classification_acceptance 拒 Inf / -Inf."""
+        for bad in (float("inf"), float("-inf")):
+            with pytest.raises(ValueError, match="NaN/Inf"):
+                compute_classification_acceptance(
+                    category_value="URGENT",
+                    confidence=bad,
+                    latency_ms=1500,
+                )
+
+    def test_compute_classification_acceptance_rejects_negative_latency(self) -> None:
+        """P1 修复: compute_classification_acceptance 拒 latency_ms < 0(原版静默通过)."""
+        with pytest.raises(ValueError, match="latency_ms"):
+            compute_classification_acceptance(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=-1,
+            )
+
+    def test_build_classify_policy_context_rejects_bad_category(self) -> None:
+        """P1 修复: build_classify_policy_context 同样严判 OOPS.
+
+        旧 v1.0.2 写法只在校验前 field-access, 直接绕过 → caller 传 OOPS 也接受。
+        新版走同一 _validate_classify_category helper, 任何 caller 都受保护。
+        """
+        with pytest.raises(ValueError, match="5 类之一"):
+            build_classify_policy_context(
+                category_value="OOPS",
+                confidence=0.9,
+                latency_ms=1500,
+                last_classify_failed=False,
+                consecutive_classify_failures=0,
+            )
+
+    def test_build_classify_policy_context_rejects_nan_confidence(self) -> None:
+        """P1 修复: build_classify_policy_context 同样严判 NaN."""
+        with pytest.raises(ValueError, match="NaN/Inf"):
+            build_classify_policy_context(
+                category_value="URGENT",
+                confidence=float("nan"),
+                latency_ms=1500,
+                last_classify_failed=False,
+                consecutive_classify_failures=0,
+            )
+
+    def test_build_classify_policy_context_rejects_negative_latency(self) -> None:
+        """P1 修复: build_classify_policy_context 同样严判 latency < 0."""
+        with pytest.raises(ValueError, match="latency_ms"):
+            build_classify_policy_context(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=-1,
+                last_classify_failed=False,
+                consecutive_classify_failures=0,
+            )
+
+    def test_build_classify_policy_context_synthetic_failure_values_pass(self) -> None:
+        """P1 修复: 失败入口的 synthetic 值(category="URGENT"/conf=0/latency=0)
+        全部能通过严判(便于失败入口继续用同一严判口径).
+
+        关键: 这是 P1 修复的"兼容性证明", 失败入口的硬编码值必须合法。
+        """
+        ctx = build_classify_policy_context(
+            category_value="URGENT",  # synthetic, 在 5 类
+            confidence=0.0,  # synthetic, 有限 0-1
+            latency_ms=0,  # synthetic, >= 0
+            last_classify_failed=True,  # 失败入口隐式 True
+            consecutive_classify_failures=3,  # 升级阈值
+        )
+        assert ctx["policy_eval_failed"] is True
+        assert ctx["last_error_recoverable"] is False  # cf=3 不再 recoverable
+        # AC[0] = (0.0 >= 0.7) = False → 永不 merge(失败入口设计)
+        assert ctx["acceptance_results"][0] is False
+
+    # --- P2-2: 失败报告独立数据类 ---
+
+    def test_failure_entry_returns_classify_failure_decision_report(self, store) -> None:
+        """P2-2 修复: 失败入口返回 ClassifyFailureDecisionReport(非 ClassifyDecisionReport).
+
+        旧 v1.0.2: 失败入口返回 ClassifyDecisionReport(category="" + confidence=0.0),
+        违反自身 "category: 5 类枚举" 字段契约。
+        新 v1.0.2-second: 独立 ClassifyFailureDecisionReport,字段自洽:
+        - failed: 必为 True
+        - last_error: 失败原因(截断到 200 字符)
+        - consecutive_classify_failures: 失败计数
+        - 无 category / confidence(失败场景无业务分类)
+        """
+        from dataclasses import fields as dc_fields
+
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        report = a.record_classify_failure_and_emit(
+            email_id=1,
+            last_error="LLM timeout after 30s",
+            consecutive_classify_failures=3,
+            run_id="r-v102sp-failure-report",
+        )
+        # 1) 类型必须为 ClassifyFailureDecisionReport
+        assert isinstance(report, ClassifyFailureDecisionReport)
+        assert not isinstance(report, ClassifyDecisionReport)  # 与成功报告区分
+        # 2) 字段必填
+        assert report.failed is True
+        assert report.last_error == "LLM timeout after 30s"
+        assert report.consecutive_classify_failures == 3
+        assert report.event_id is not None
+        assert report.lane_entry_id.startswith("classify:qq:")
+        # 3) 数据类字段集: 不应有 category / confidence
+        field_names = {f.name for f in dc_fields(ClassifyFailureDecisionReport)}
+        assert "category" not in field_names
+        assert "confidence" not in field_names
+        assert "failed" in field_names
+        assert "last_error" in field_names
+        assert "consecutive_classify_failures" in field_names
+
+    def test_failure_report_truncates_long_last_error(self) -> None:
+        """P2-2 修复: 失败入口 last_error 截断到 200 字符."""
+        a = EmailClassifierAdapter(source="qq")
+        long_error = "X" * 500
+        report = a.record_classify_failure_and_emit(
+            email_id=1,
+            last_error=long_error,
+            consecutive_classify_failures=2,
+            run_id="r-v102sp-truncate",
+        )
+        assert len(report.last_error) == 200
+        assert report.last_error == "X" * 200
+
+    # --- P2-3: 顶层导出 ---
+
+    def test_top_level_imports_work(self) -> None:
+        """P2-3 修复: from my_ai_employee.policy import build_classify_failure_packet /
+        ClassifyFailureDecisionReport 顶层导入必须工作(旧 v1.0.2 漏导入会失败).
+        """
+        # 必须不抛 ImportError
+        from my_ai_employee.policy import (  # noqa: F401
+            ClassifyFailureDecisionReport as _Cfdr,
+        )
+        from my_ai_employee.policy import (  # noqa: F401
+            build_classify_failure_packet as _bcfp,
+        )
+
+        # 类型/工厂可用
+        assert callable(_bcfp)
+        p = _bcfp(
+            email_id=1,
+            source="qq",
+            last_error_str="err",
+            consecutive_classify_failures=1,
+        )
+        assert p.objective.startswith("email_classify_failed:source=qq:id=1")

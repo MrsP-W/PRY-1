@@ -24,6 +24,13 @@ D4.6 v1.0.1 修复(D4.6 复检 P1-1 + P1-4):
   - P1-4: 解析用平衡括号定位 JSON(原正则强制 category→confidence 字段顺序,
     反序 JSON 误拒;允许 markdown 包裹但显式剥离 fence);
     `math.isfinite()` 拒 NaN/Inf(原范围检查 0<=x<=1 NaN 通过)
+
+D4.6 v1.0.2 修复(D4.6 6/9 复检 P2-3 + P2-4):
+  - P2-3: `_extract_balanced_json` 扫描所有平衡 JSON 块,选第一个同时含
+    `category` + `confidence` 字段的(原 v1.0.1 只取第一个平衡 JSON,若 LLM
+    输出前面有无关对象 `{"debug": "info"}`,后面才是分类结果,合法结果被拒)
+  - P2-4: `classify_batch` type hint 补 `ValueError | KeyError`;`email[k]`
+    KeyError 不外抛终止整批,改为入 results 列表
 """
 
 from __future__ import annotations
@@ -251,24 +258,37 @@ class EmailClassifier:
     def classify_batch(
         self,
         emails: list[dict],
-    ) -> list[ClassificationResult | ClassifierResponseError | LLMError]:
+    ) -> list[ClassificationResult | ClassifierResponseError | LLMError | ValueError | KeyError]:
         """批量分类(顺序串行, 避免触发熔断).
 
         Args:
             emails: list[dict], 每条 dict 必须包含 subject/sender/body_excerpt 3 key
-                   (类型不匹配抛 ValueError, 不静默 coerce)
+                   (类型不匹配 / 缺字段 → 异常入 results, 不静默吞掉, 不外抛)
 
         Returns:
             list[ClassificationResult | 异常],与 emails 1:1 对齐
               - 成功: ClassificationResult
               - 响应解析失败: ClassifierResponseError
               - LLM 全链失败: LLMError
-            异常透传,不静默吞掉(D3.3.3 教训)
+              - 编程错误(非 dict): ValueError
+              - 编程错误(缺字段): KeyError
+            异常透传,不静默吞掉(D3.3.3 教训)。
+            D4.6 v1.0.2 P2-4: 补 ValueError | KeyError 到 type hint(原版只标 3 类,
+            实际 ValueError 已入 list, type hint 与实现不一致; KeyError 之前
+            会终止整批)。
         """
-        results: list[ClassificationResult | ClassifierResponseError | LLMError] = []
+        results: list[
+            ClassificationResult | ClassifierResponseError | LLMError | ValueError | KeyError
+        ] = []
         for i, email in enumerate(emails):
             if not isinstance(email, dict):
                 results.append(ValueError(f"emails[{i}] 必须是 dict, 实际 {type(email).__name__}"))
+                continue
+            # D4.6 v1.0.2 P2-4: 缺字段时 KeyError 收容入 list(原版 email[k] 抛
+            # KeyError 会终止整批,违反"单条异常不阻塞"契约)
+            missing_keys = [k for k in ("subject", "sender", "body_excerpt") if k not in email]
+            if missing_keys:
+                results.append(KeyError(f"emails[{i}] 缺字段 {missing_keys}"))
                 continue
             try:
                 result = self.classify(
@@ -277,7 +297,7 @@ class EmailClassifier:
                     body_excerpt=email["body_excerpt"],
                 )
                 results.append(result)
-            except (ClassifierResponseError, LLMError) as e:
+            except (ClassifierResponseError, LLMError, ValueError) as e:
                 results.append(e)
         return results
 
@@ -321,12 +341,14 @@ def _strip_markdown_fence(raw: str) -> str:
     return stripped
 
 
-def _extract_balanced_json(raw: str) -> str | None:
-    """扫描 raw,返回第一个平衡的 { ... } 块文本(不含外层字符).
+def _find_all_balanced_json(raw: str) -> list[str]:
+    """扫描 raw, 返回所有平衡的 { ... } 块文本列表(不含外层字符).
 
-    D4.6 v1.0.1 P1-4 修复: 不再强制字段顺序,允许 LLM 输出
-    `{"confidence":0.8,"category":"URGENT"}` 等任意字段顺序。
+    平衡括号扫描: 跟踪 { 与 } 嵌套深度,忽略字符串内 / 转义后的括号.
+    D4.6 v1.0.2 P2-3 修复: 从"找第一个平衡 JSON"升级为"找所有平衡 JSON",
+    便于 _extract_balanced_json 在多个候选中选含 category+confidence 字段的。
     """
+    blocks: list[str] = []
     start = raw.find("{")
     while start != -1:
         depth = 0
@@ -350,9 +372,32 @@ def _extract_balanced_json(raw: str) -> str | None:
             elif ch == "}":
                 depth -= 1
                 if depth == 0:
-                    return raw[start : i + 1]
+                    blocks.append(raw[start : i + 1])
+                    break
         start = raw.find("{", start + 1)
-    return None
+    return blocks
+
+
+def _extract_balanced_json(raw: str) -> str | None:
+    """扫描 raw, 返回第一个同时含 category+confidence 字段的平衡 JSON 块文本.
+
+    D4.6 v1.0.1 P1-4: 不再强制字段顺序,允许 LLM 输出
+      `{"confidence":0.8,"category":"URGENT"}` 等任意字段顺序。
+    D4.6 v1.0.2 P2-3: 进一步扫描所有平衡 JSON 块,选第一个同时含
+      `category` + `confidence` 字段的(避免前面无关对象 {`debug`} 遮蔽分类结果)。
+
+    兜底: 若所有块都不含 category+confidence, 返回第一个平衡 JSON(原 v1.0.1 行为)。
+    全部无平衡 JSON 时返回 None(上层抛 no_balanced_json)。
+    """
+    blocks = _find_all_balanced_json(raw)
+    for block in blocks:
+        try:
+            data = json.loads(block)
+        except (json.JSONDecodeError, ValueError):
+            continue
+        if isinstance(data, dict) and "category" in data and "confidence" in data:
+            return block
+    return blocks[0] if blocks else None
 
 
 def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:

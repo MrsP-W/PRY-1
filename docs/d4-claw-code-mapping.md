@@ -352,7 +352,7 @@
 
 ---
 
-## 7. D4.6 邮件分类器(✅ 2026-06-08 v1.0 锁定 → 2026-06-09 v1.0.1 业务语义修复后真正锁定)
+## 7. D4.6 邮件分类器(✅ 2026-06-08 v1.0 锁定 → 2026-06-09 v1.0.1 业务语义修复后真正锁定 → **v1.0.2 二次复检后真正锁定**)
 
 ### 7.1 claw-code 优先参考
 
@@ -373,36 +373,41 @@ claw-code 仓库无"邮件分类"或"标签路由"模块。**D4.6 直接落 ai/c
 - 不用 regex 定位 JSON(强制字段顺序,反序误拒)— D4.6 v1.0.1 P1-4 修复改用平衡括号扫描
 - 不用 `float()` / `int()` 静默 coerce(D2 truthy 陷阱)— D4.6 v1.0.1 P2-5 修复改用 type() 严判
 - 不用单一 `all_pass` 变量同时驱动 Lane + Heartbeat(SPAM 误报 transport_dead)— D4.6 v1.0.1 P1-2 修复拆分为 `business_accepted` + `transport_alive`
+- **不把严判只放在 Adapter 入口(v1.0.2-second P1 教训)**:`compute_classification_acceptance` / `build_classify_policy_context` 是公开 helper,Adapter 重构后可能绕过严判 → 严判下沉到公共 API,Adapter 只复用
+- **不用 `category=""` 当失败报告占位符(v1.0.2-second P2-2 教训)**:违反 `ClassifyDecisionReport.category: 5 类` 字段契约 → 定义 `ClassifyFailureDecisionReport` 独立类型,`failed: bool` + `last_error: str` + `consecutive_classify_failures: int`
+- **不在 `policy/integration.py` 内部写好但不导出(v1.0.2-second P2-3 教训)**:`build_classify_failure_packet` 已在 `__all__` 但 `policy/__init__.py` 没转发 → 顶层 `from my_ai_employee.policy import ...` 缺名字 ImportError
 
-### 7.4 实施子任务(2026-06-08 晚间 + 2026-06-09 晨间修复)
+### 7.4 实施子任务(2026-06-08 晚间 + 2026-06-09 晨间两次复检)
 
 | 子步骤 | 文件 | 关键产物 | 状态 |
 |--------|------|---------|------|
-| D4.6.1 | `src/my_ai_employee/ai/classifier.py` | EmailCategory 5 类 + EmailClassifier + _parse_classification_response | ✅ v1.0 → v1.0.1 |
+| D4.6.1 | `src/my_ai_employee/ai/classifier.py` | EmailCategory 5 类 + EmailClassifier + _parse_classification_response | ✅ v1.0 → v1.0.1 → v1.0.2-second |
 | D4.6.2 | `src/my_ai_employee/ai/prompts/classify.py` | 5 类 SYSTEM prompt + build_user_message | ✅ v1.0 |
-| D4.6.3 | `src/my_ai_employee/policy/integration.py` | EmailClassifierAdapter + 3 factory + ClassifyDecisionReport | ✅ v1.0 → v1.0.1 |
+| D4.6.3 | `src/my_ai_employee/policy/integration.py` | EmailClassifierAdapter + 3 factory + ClassifyDecisionReport + 3 _validate_classify_* + ClassifyFailureDecisionReport | ✅ v1.0 → v1.0.1 → v1.0.2-first → **v1.0.2-second** |
 | D4.6.4 | `src/my_ai_employee/ai/providers.py` | LLMAllFallbacksError(D4.6 v1.0.1 P1-1 新增) | ✅ v1.0.1 |
 | D4.6.5 | `src/my_ai_employee/ai/router.py` | raise LLMAllFallbacksError 替换 RuntimeError | ✅ v1.0.1 |
-| D4.6.6 | `tests/ai/test_classifier.py` | 40 tests(31 旧 + 9 v1.0.1) | ✅ v1.0.1 |
-| D4.6.7 | `tests/policy/test_classifier_adapter.py` | 40 tests(32 旧 + 8 v1.0.1) | ✅ v1.0.1 |
-| D4.6.8 | `tests/ai/test_router.py` | test_all_fail_raises_runtime_error 改测 LLMAllFallbacksError | ✅ v1.0.1 |
-| D4.6.9 | `reports/D4.6-邮件分类器.md` | v1.0 段 + §0.5 v1.0.1 业务语义修复段 | ✅ v1.0.1 |
-| D4.6.10 | `docs/d4-claw-code-mapping.md §7` | 本段 mapping | ✅ v1.0.1 |
+| D4.6.6 | `src/my_ai_employee/policy/__init__.py` | 顶层暴露 `ClassifyFailureDecisionReport` + `build_classify_failure_packet`(v1.0.2-second P2-3 修复) | ✅ v1.0.2-second |
+| D4.6.7 | `tests/ai/test_classifier.py` | 46 tests(31 旧 + 9 v1.0.1 + 6 v1.0.2-first) | ✅ v1.0.2-first |
+| D4.6.8 | `tests/policy/test_classifier_adapter.py` | 61 tests(32 旧 + 8 v1.0.1 + 10 v1.0.2-first + **11 v1.0.2-second**) | ✅ v1.0.2-second |
+| D4.6.9 | `tests/ai/test_router.py` | test_all_fail_raises_runtime_error 改测 LLMAllFallbacksError | ✅ v1.0.1 |
+| D4.6.10 | `reports/D4.6-邮件分类器.md` | v1.0 段 + §0.5 v1.0.1 业务语义修复段 + §0.6 v1.0.2-first 段 + **§0.7 v1.0.2-second 段** | ✅ v1.0.2-second |
+| D4.6.11 | `docs/week1-mvp.md §D4.6` | v1.0 → v1.0.1 → v1.0.2-first → v1.0.2-second 演进表 + 双入口 + 8 质量门更新 | ✅ v1.0.2-second |
+| D4.6.12 | `docs/d4-claw-code-mapping.md §7` | 本段 mapping(v1.0.1 → v1.0.2-second / 576 → 603) | ✅ v1.0.2-second |
 
 ### 7.5 验证 anchor(8 质量门 8/8 全绿)
 
-| 门 | 命令 | v1.0.1 结果 |
-|----|------|------------|
-| 1 | `uv run pytest` | **576 passed** / 0 failed |
-| 2 | `uv run ruff check` | All checks passed |
-| 3 | `uv run ruff format --check` | 81 files already formatted |
-| 4 | `uv run mypy src tests` | 0 errors / 76 files |
-| 5 | `uv run alembic upgrade head --sql` | exit 0(同 v1.0 DDL) |
-| 6 | `uv build` | blocked by auto mode(同 v1.0 pyproject,无 metadata 变化) |
+| 门 | 命令 | v1.0.2-second 结果 |
+|----|------|---------------------|
+| 1 | `pytest` | **603 passed** / 0 failed(v1.0.1 576 → v1.0.2-first 592 → v1.0.2-second 603) |
+| 2 | `ruff check` | All checks passed |
+| 3 | `ruff format --check` | 81 files already formatted |
+| 4 | `mypy src tests` | 0 errors / 76 files |
+| 5 | `alembic upgrade head --sql` | exit 0(同 v1.0 DDL) |
+| 6 | `uv build` | tar.gz + .whl OK(同 v1.0.2-first,v1.0.1 误写 blocked) |
 | 7 | `make lint` | 0 errors |
-| 8 | `pytest --collect-only -q` | classifier 40 + adapter 40 = D4.6 80 / 全量 576 |
+| 8 | `pytest --collect-only -q` | classifier 46 + adapter 61 = D4.6 107 / 全量 603 |
 
-### 7.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 + v1.0.1 P1-1 ~ P1-4 + P2-5)
+### 7.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 + v1.0.1 P1-1 ~ P1-4 + P2-5 + v1.0.2-first 5 修复 + v1.0.2-second 4 修复)
 
 - **复用 D4.1.1 LLM Router**:`router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链
 - **5 类枚举 + 严判**:`EmailCategory` StrEnum + `_parse_classification_response` 7 步防御(类型严判 → markdown fence 剥离 → 平衡括号定位 → json.loads → category 5 类枚举校验 → math.isfinite → 0-1 范围)
@@ -415,10 +420,21 @@ claw-code 仓库无"邮件分类"或"标签路由"模块。**D4.6 直接落 ai/c
   - P1-3:`last_classify_failed` 显式 bool 解决成功路径误触发 retry / escalate
   - P1-4:平衡括号 + `math.isfinite()` 解决反序 JSON 误拒 + NaN 漏过
   - P2-5:严判 duck type 解决 bool / str 静默 coerce(`True → 1.0` / `"0.5" → 0.5`)
+- **D4.6 v1.0.2-first 业务语义修复汇总**(type system 层面):
+  - P1-1:拆双入口 `classify_and_emit`(成功) / `record_classify_failure_and_emit`(失败,cf 必填),编译期拒绝状态耦合
+  - P1-2:5 类严判 `_VALID_CLASSIFY_CATEGORIES` + `latency_ms >= 0`
+  - P2-3:平衡 JSON `_find_all_balanced_json` + `_extract_balanced_json` 选含 category+conf
+  - P2-4:批处理补全 type hint `ValueError | KeyError` + 缺字段 KeyError 收容
+  - P2-5:`math.isfinite()` 拒 NaN/Inf
+- **D4.6 v1.0.2-second 二次复检修复汇总**(公共 API + 文档):
+  - P1 严判下沉:3 个 `_validate_classify_*` helper(category / confidence / latency_ms)下沉到 `compute_classification_acceptance` + `build_classify_policy_context`,Adapter 重构后无法绕过
+  - P2-2 失败报告独立类型:`ClassifyFailureDecisionReport`(`failed: bool` + `last_error: str` 截断 200 + `consecutive_classify_failures: int`)与 `ClassifyDecisionReport` 类型层面区分
+  - P2-3 顶层导出:`policy/__init__.py` 暴露 `ClassifyFailureDecisionReport` + `build_classify_failure_packet`,`from my_ai_employee.policy import ...` 不再 ImportError
+  - P3 文档同步:报告 49+47 → 46+50 → 46+61 / uv build blocked → passed / week1-mvp 559 → 603 / mapping 576 → 603
 
 ### 7.7 故意不学的范本(g009 §"反范本" 沉淀)
 
-| 旧 v1.0 写法 | 新 v1.0.1 写法 | 教训 |
+| 旧 v1.0 写法 | 新 v1.0.1+ 写法 | 教训 |
 |--------------|---------------|------|
 | `raise RuntimeError(...)` (全链失败) | `raise LLMAllFallbacksError(...)` (LLMError 子类) | 业务异常必须从基类继承,业务方 `except` 一行覆盖 |
 | `all_pass` 同时驱动 Lane + Heartbeat | `business_accepted` (Lane) + `transport_alive` (Heartbeat) | 业务验收 ≠ 传输存活,两个状态独立判定 |
@@ -426,10 +442,13 @@ claw-code 仓库无"邮件分类"或"标签路由"模块。**D4.6 直接落 ai/c
 | 正则 `\{...category...confidence...\}` | 平衡括号扫描 `_extract_balanced_json` | 不假设字段顺序,允许 LLM 自由发挥 |
 | `0 <= x <= 1` 范围检查 | `math.isfinite(x) AND 0 <= x <= 1` | NaN / Inf 必须显式拒(NaN 任何比较返回 False) |
 | `float(confidence)` / `int(latency_ms)` 静默 coerce | `type() is (int, float) AND not isinstance(x, bool)` | 严判入口拒绝 type-coerce,与 D4.4 P1 对齐 |
+| **严判只放 Adapter `classify_and_emit` 入口(v1.0)** | **严判下沉到 `compute_*` + `build_*` 公共 API(v1.0.2-second)** | 公共 helper 必自防御,Adapter 重构不可绕过 |
+| **失败报告用 `category=""` 占位符(v1.0)** | **`ClassifyFailureDecisionReport` 独立类型(v1.0.2-second)** | 数据类字段约束必须自洽,空串不是合法 5 类 |
+| **`policy/integration.py` 内部写好但不导出(v1.0.1)** | **`policy/__init__.py` 顶层暴露(v1.0.2-second)** | `__all__` 声明 ≠ 实际可导入,顶层必须转发 |
 
 ---
 
-**最后更新**:2026-06-09 晨间链路(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成 + **D4.6 邮件分类器 v1.0 锁定 → v1.0.1 业务语义修复后真正锁定**,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + D4.6 §7 详细段 + P0 反馈 3 条修复 + v1.0.1 反馈 6 条修复)
+**最后更新**:2026-06-09 晨间链路(**D4.6 v1.0.2 二次复检真正锁定**:v1.0 → v1.0.1 → v1.0.2-first → **v1.0.2-second** / 576 → 592 → **603 tests** / 4 P1+P2+P3 修复 + 8 质量门 8/8 全绿)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
