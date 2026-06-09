@@ -67,12 +67,15 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from my_ai_employee.ai.classifier import EmailCategory  # noqa: E402
 from my_ai_employee.ai.drafter import (  # noqa: E402
+    DraftBlockedResult,
     DrafterError,
     DrafterResponseError,
     DraftResult,
     DraftTone,
     EmailDrafter,
+    SpamBlockedError,
     _parse_draft_response,
     has_markdown_fence,
     parse_draft_response,
@@ -782,7 +785,6 @@ class TestEmailDrafterDraft:
             )
             assert result is not None
         # SPAM 单独验证: 业务硬阻断默认抛 SpamBlockedError, 显式 allow_spam_reply=True 才放行
-        from my_ai_employee.ai.drafter import SpamBlockedError
 
         with pytest.raises(SpamBlockedError, match="业务硬阻断"):
             drafter.draft(
@@ -974,6 +976,177 @@ class TestEmailDrafterBatch:
         assert len(results) == 2
         assert isinstance(results[0], DraftResult)
         assert isinstance(results[1], DrafterResponseError)
+
+    def test_batch_spam_blocked_default_returns_blocked_result(self) -> None:
+        """6/9 v1.0.3 P1-1: 默认批含 SPAM → DraftBlockedResult 项(0 LLM 配额, 不上抛)."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json())
+        drafter = EmailDrafter(router=mock_router)
+        emails = [
+            {
+                "subject": "normal 1",
+                "sender": "x1",
+                "body_excerpt": "b1",
+                "email_category": "URGENT",
+            },
+            {
+                "subject": "spam 1",
+                "sender": "spammer@x",
+                "body_excerpt": "b spam",
+                "email_category": "SPAM",
+            },
+            {"subject": "normal 2", "sender": "x2", "body_excerpt": "b2", "email_category": "FYI"},
+        ]
+        results = drafter.draft_batch(emails)
+        assert len(results) == 3, "1:1 输入输出对齐"
+        assert isinstance(results[0], DraftResult), "URGENT 走 LLM"
+        assert isinstance(results[1], DraftBlockedResult), "SPAM 降级为 DraftBlockedResult(0 配额)"
+        assert isinstance(results[2], DraftResult), "FYI 走 LLM"
+        # SPAM 项不消耗 LLM 配额: route 只调用 2 次(URGENT + FYI, SPAM 没调)
+        assert mock_router.route.call_count == 2
+        # 阻断产物语义正确
+        blocked = results[1]
+        assert blocked is not None
+        assert blocked.original_email_category == "SPAM"
+        assert blocked.reason == "spam_business_blocked"
+        assert "DRAFT-NO-REPLY" in blocked.subject
+        # stats 累加 blocked
+        stats = drafter.stats()
+        assert stats["blocked"] == 1
+        assert stats["success"] == 2
+
+    def test_batch_per_email_allow_spam_reply_overrides_batch_default(self) -> None:
+        """6/9 v1.0.3 P1-1: per-email allow_spam_reply=True 覆盖批默认 False → 走 LLM."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json())
+        drafter = EmailDrafter(router=mock_router)
+        emails = [
+            # per-email 显式覆盖: 批默认 False, 这条单独 True
+            {
+                "subject": "spam opt-in",
+                "sender": "x",
+                "body_excerpt": "b",
+                "email_category": "SPAM",
+                "allow_spam_reply": True,
+            },
+        ]
+        results = drafter.draft_batch(emails, allow_spam_reply=False)
+        assert len(results) == 1
+        # 显式覆盖 → 走 LLM → DraftResult(非阻断)
+        assert isinstance(results[0], DraftResult)
+        assert mock_router.route.call_count == 1
+        stats = drafter.stats()
+        assert stats["success"] == 1
+        assert stats["blocked"] == 0
+
+    def test_draft_blocked_category_rejects_non_spam(self) -> None:
+        """6/9 v1.0.3 P1-2: draft_blocked_category 入口只接受 SPAM, URGENT/TODO/FYI/PERSONAL 全拒."""
+        drafter = EmailDrafter(router=MagicMock())
+        for cat in ("URGENT", "TODO", "FYI", "PERSONAL"):
+            with pytest.raises(ValueError, match="只接受阻断类别"):
+                drafter.draft_blocked_category(
+                    subject="s",
+                    sender="x",
+                    body_excerpt="b",
+                    email_category=cat,
+                )
+        # EmailCategory 枚举同源测试
+        with pytest.raises(ValueError, match="只接受阻断类别"):
+            drafter.draft_blocked_category(
+                subject="s",
+                sender="x",
+                body_excerpt="b",
+                email_category=EmailCategory.URGENT,
+            )
+        # SPAM 仍接受(回归)
+        result = drafter.draft_blocked_category(
+            subject="s",
+            sender="x",
+            body_excerpt="b",
+            email_category="SPAM",
+        )
+        assert result.reason == "spam_business_blocked"
+
+
+# ============================================================
+# Section 6.5: v1.0.3 P2-2 — 公共类型契约补全测试
+# ============================================================
+
+
+class TestDraftResultV103ModelFullIdStrip:
+    """6/9 v1.0.3 P2-2 修复: DraftResult.model_full_id strip() 严判语义非空."""
+
+    def test_rejects_whitespace_only_model_full_id(self) -> None:
+        with pytest.raises(ValueError, match="model_full_id 不能为空"):
+            DraftResult(
+                subject="s",
+                body="body here long enough",
+                tone=DraftTone.FORMAL,
+                model_full_id="   ",
+                latency_ms=100,
+                raw_content="{}",
+            )
+        with pytest.raises(ValueError, match="model_full_id 不能为空"):
+            DraftResult(
+                subject="s",
+                body="body here long enough",
+                tone=DraftTone.FORMAL,
+                model_full_id="\n\t \r",
+                latency_ms=100,
+                raw_content="{}",
+            )
+
+    def test_accepts_surrounding_whitespace_model_full_id(self) -> None:
+        # 前后空白但语义非空(provider/model 实际有内容)应通过
+        result = DraftResult(
+            subject="s",
+            body="body here long enough",
+            tone=DraftTone.FORMAL,
+            model_full_id=" deepseek/deepseek-chat ",
+            latency_ms=100,
+            raw_content="{}",
+        )
+        assert result.model_full_id == " deepseek/deepseek-chat "  # 契约 1: 透传
+
+
+class TestDraftBlockedResultV103SubjectLengthCap:
+    """6/9 v1.0.3 P2-2 修复: DraftBlockedResult 主题 200 字符上限(防 spam 注水)."""
+
+    def test_accepts_subject_within_200_chars(self) -> None:
+        subject = "x" * 200
+        result = DraftBlockedResult(
+            subject=subject,
+            body="建议: 不回复",
+            tone=DraftTone.FORMAL,
+            reason="spam_business_blocked",
+            original_email_category="SPAM",
+        )
+        assert len(result.subject) == 200
+
+    def test_rejects_subject_over_200_chars(self) -> None:
+        # 阻断模板自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀, 实际可用 ≈ 175 字符
+        # 但 DraftBlockedResult 是数据类, 应自防御 200 上限
+        subject = "x" * 201
+        with pytest.raises(ValueError, match="subject 超长"):
+            DraftBlockedResult(
+                subject=subject,
+                body="建议: 不回复",
+                tone=DraftTone.FORMAL,
+                reason="spam_business_blocked",
+                original_email_category="SPAM",
+            )
+
+    def test_rejects_subject_524_chars(self) -> None:
+        """复检实测可生成 524 字符主题的场景 — 直接构造 524 字符应拒."""
+        subject = "A" * 524
+        with pytest.raises(ValueError, match="subject 超长"):
+            DraftBlockedResult(
+                subject=subject,
+                body="建议: 不回复",
+                tone=DraftTone.FORMAL,
+                reason="spam_business_blocked",
+                original_email_category="SPAM",
+            )
 
 
 # ============================================================

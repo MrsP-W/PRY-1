@@ -212,8 +212,12 @@ class DraftResult:
             )
 
         # 业务验收(契约 1 严判下沉)
-        if not self.model_full_id:
-            raise ValueError("model_full_id 不能为空(审计需要实际调用的 provider/model)")
+        # 6/9 v1.0.3 P2-2 修复: strip() 严判语义非空("   " 长度 3 仍会被旧版绕过)
+        if not self.model_full_id or not self.model_full_id.strip():
+            raise ValueError(
+                f"model_full_id 不能为空(仅空白也算空, 审计需要实际调用的 "
+                f"provider/model): {self.model_full_id!r}"
+            )
         if self.latency_ms < 0:
             raise ValueError(f"latency_ms 不能为负: {self.latency_ms}")
         _validate_draft_subject(self.subject)
@@ -291,6 +295,10 @@ class DraftBlockedResult:
             raise ValueError(f"subject 语义为空(仅空白): {self.subject!r}")
         if not self.body.strip():
             raise ValueError(f"body 语义为空(仅空白): {self.body!r}")
+        # 6/9 v1.0.3 P2-2 修复: subject 上限 200 字符(与 DraftResult.MAX_SUBJECT_CHARS 同步)
+        # 阻断模板会自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀, 实际可用 ≈ 175 字符
+        if len(self.subject) > 200:
+            raise ValueError(f"subject 超长(> 200 字符): 实际 {len(self.subject)} 字符")
 
     def to_dict(self) -> dict[str, Any]:
         """序列化为 dict(便于 JSON 化)."""
@@ -573,23 +581,40 @@ class EmailDrafter:
     def draft_batch(
         self,
         emails: list[dict],
-    ) -> list[DraftResult | DrafterResponseError | LLMError | ValueError | KeyError]:
+        *,
+        allow_spam_reply: bool = False,
+    ) -> list[
+        DraftResult | DraftBlockedResult | DrafterResponseError | LLMError | ValueError | KeyError
+    ]:
         """批量草稿生成(顺序串行, 避免触发熔断).
 
         Args:
             emails: list[dict], 每条 dict 必须包含 subject/sender/body_excerpt 3 key
                    (类型不匹配 / 缺字段 → 异常入 results, 不静默吞掉, 不外抛)
+                   可选 key: email_category / tone / allow_spam_reply(per-email 覆盖批默认)
+            allow_spam_reply: 批级默认 SPAM 阻断策略(默认 False = 业务硬阻断)
+                - per-email dict 中若含 "allow_spam_reply" 键, 则用 per-email 值覆盖
+                - True: SPAM 走 draft 路径(可能调用 LLM)
+                - False(默认): SPAM 业务硬阻断, 产出 DraftBlockedResult(不调 LLM)
 
         Returns:
-            list[DraftResult | 异常], 与 emails 1:1 对齐
+            list[DraftResult | DraftBlockedResult | 异常], 与 emails 1:1 对齐
               - 成功: DraftResult
+              - SPAM 业务阻断(默认): DraftBlockedResult(0 配额, 不调 LLM)
               - 响应解析失败: DrafterResponseError
               - LLM 全链失败: LLMError
               - 编程错误(非 dict): ValueError
               - 编程错误(缺字段): KeyError
-            异常透传, 不静默吞掉(D3.3.3 教训)。
+            SpamBlockedError 绝不上抛 — 6/9 v1.0.3 P1-1 修复(批次不中断, 输入输出 1:1)。
         """
-        results: list[DraftResult | DrafterResponseError | LLMError | ValueError | KeyError] = []
+        results: list[
+            DraftResult
+            | DraftBlockedResult
+            | DrafterResponseError
+            | LLMError
+            | ValueError
+            | KeyError
+        ] = []
         for i, email in enumerate(emails):
             if not isinstance(email, dict):
                 results.append(ValueError(f"emails[{i}] 必须是 dict, 实际 {type(email).__name__}"))
@@ -599,6 +624,8 @@ class EmailDrafter:
             if missing_keys:
                 results.append(KeyError(f"emails[{i}] 缺字段 {missing_keys}"))
                 continue
+            # per-email allow_spam_reply 优先, 缺则用批默认(D4.7.2 v1.0.3 P1-1)
+            per_email_allow = email.get("allow_spam_reply", allow_spam_reply)
             try:
                 result = self.draft(
                     subject=email["subject"],
@@ -606,8 +633,26 @@ class EmailDrafter:
                     body_excerpt=email["body_excerpt"],
                     email_category=email.get("email_category"),
                     tone=email.get("tone", DraftTone.FORMAL),
+                    allow_spam_reply=bool(per_email_allow),
                 )
                 results.append(result)
+            except SpamBlockedError as e:
+                # SPAM 业务硬阻断 — 不上抛, 降级为 DraftBlockedResult 项(0 配额)
+                # 与 D4.6 BLOCKED 流程形成双保险(批维度), 避免混合批次中断
+                # 注: stats["blocked"] 已在 draft() 内累加过, 此处不再 +1
+                logger.info(
+                    f"[drafter] 批量 SPAM 业务硬阻断(不调 LLM) | index={i} | "
+                    f"subject={email['subject']!r} | reason={e.reason}"
+                )
+                blocked = self.draft_blocked_category(
+                    subject=email["subject"],
+                    sender=email["sender"],
+                    body_excerpt=email["body_excerpt"],
+                    email_category=e.email_category,
+                    tone=email.get("tone", DraftTone.FORMAL),
+                    _stats_already_bumped=True,  # draft() 已 +1, 避免重复
+                )
+                results.append(blocked)
             except (DrafterResponseError, LLMError, ValueError) as e:
                 results.append(e)
         return results
@@ -620,6 +665,7 @@ class EmailDrafter:
         body_excerpt: str,
         email_category: EmailCategory | str,
         tone: DraftTone | str = DraftTone.FORMAL,
+        _stats_already_bumped: bool = False,
     ) -> DraftBlockedResult:
         """为业务阻断邮件产出"建议: 不回复"模板(不调 LLM, 6/9 v1.0.2 P1-1 新增).
 
@@ -672,6 +718,13 @@ class EmailDrafter:
                 f"email_category 必须是 EmailCategory 枚举或 str, "
                 f"实际 {type(email_category).__name__}"
             )
+        # 6/9 v1.0.3 P1-2 修复: 本入口只接受阻断类别(SPAM / 未来 OTHER_BLOCKED),
+        # URGENT/TODO/FYI/PERSONAL 等非阻断类一律拒收(防伪造 *_business_blocked 产物)
+        if cat_str != "SPAM":
+            raise ValueError(
+                f"draft_blocked_category 入口只接受阻断类别(SPAM), "
+                f"实际 {cat_str!r}(非阻断类应走 draft() 而非本降级通道)"
+            )
         # tone 转枚举(与 draft() 同范本)
         if isinstance(tone, DraftTone):
             tone_enum = tone
@@ -686,8 +739,13 @@ class EmailDrafter:
             raise ValueError(f"tone 必须是 DraftTone 或 str, 实际 {type(tone).__name__}")
 
         # 构造阻断模板(不调 LLM, 0 配额消耗)
+        # stats 累加语义:
+        #   - 独立调用本入口(draft() 未触发): _stats_already_bumped=False, +1 blocked
+        #   - 从 draft_batch 收容处调用: _stats_already_bumped=True(draft() 已 +1), 不重复
+        # 防"独立调用 vs 批量调用"路径 stats 计数不一致
         self._stats["total"] += 1
-        self._stats["blocked"] += 1
+        if not _stats_already_bumped:
+            self._stats["blocked"] = self._stats.get("blocked", 0) + 1
         reason = f"{cat_str.lower()}_business_blocked"
         original_subject = subject or "(无主题)"
         blocked_subject = f"(DRAFT-NO-REPLY) [{cat_str}] {original_subject}"

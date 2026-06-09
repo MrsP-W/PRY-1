@@ -32,11 +32,13 @@ from my_ai_employee.ai.classifier import (
     EmailClassifier,
 )
 from my_ai_employee.ai.drafter import (
+    DraftBlockedResult,
     DrafterError,
     DrafterResponseError,
     DraftResult,
     DraftTone,
     EmailDrafter,
+    SpamBlockedError,
     has_markdown_fence,
     parse_draft_response,
     validate_draft_body,
@@ -91,9 +93,11 @@ __all__ = [
     # drafter (D4.7)
     "DrafterError",
     "DrafterResponseError",
+    "DraftBlockedResult",
     "DraftResult",
     "DraftTone",
     "EmailDrafter",
+    "SpamBlockedError",
     "has_markdown_fence",
     "parse_draft_response",
     "validate_draft_body",
