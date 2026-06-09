@@ -31,7 +31,6 @@ D4.7 4 项契约(2026-06-09 用户审批锁定,D4.7.1 起始固定):
      `drafts` 数据库表、不创建 Mail.app 草稿、不接 iCloud CalDAV
 
 D4.7.1 实施细节:
-  - placeholder system prompt 内置(D4.7.2 替换为 `ai/prompts/draft.py`)
   - 严判入口:`type() is str` 严判,`isinstance(x, bool)` 拒 bool 子类
   - 裸 JSON 契约(6/9 v1.0.2 P1):`json.loads(stripped)` 唯一解析路径,
     删除 v1.0.1 的"平衡括号兜底"(该兜底接受 prose 包装, 绕过契约)
@@ -40,6 +39,14 @@ D4.7.1 实施细节:
   - DraftResult 自校验(6/9 v1.0.2 P2-3):__post_init__ 严判 5 字段
   - 4 项契约测试:契约 1 (业务验收) / 契约 2 (拒外层 fence + 拒 prose) /
     契约 3 (tone 锁定 + 请求 tone 强制) / 契约 4 (范围限定,ast 静态验证)
+
+D4.7.2 实施细节(6/9):
+  - 新增 `ai/prompts/draft.py`:5+1 类 SYSTEM prompt(URGENT/TODO/FYI/SPAM/
+    PERSONAL/DEFAULT) + `build_system_prompt` 分发 + `build_user_message`
+  - 替换 v1.0 内置的 placeholder system prompt,drafter 调
+    `prompts.draft.build_system_prompt(email_category)` 取 5+1 类 prompt
+  - email_category=None 走 DEFAULT(中性回退),drafter 可独立运行不依赖 D4.6
+  - prompts 层接受字符串化的 email_category/tone(解耦 drafter 枚举依赖)
 """
 
 from __future__ import annotations
@@ -53,6 +60,7 @@ from loguru import logger
 
 from .capability import TaskType
 from .classifier import EmailCategory
+from .prompts.draft import build_system_prompt as _build_draft_system_prompt
 from .providers import LLMError
 from .router import LLMRouter, get_router
 
@@ -356,9 +364,15 @@ class EmailDrafter:
 
         self._stats["total"] += 1
 
-        # 构造 messages(placeholder system prompt, D4.7.2 替换为 ai/prompts/draft.py)
+        # 构造 messages(D4.7.2 替换 placeholder: 5+1 类 SYSTEM prompt 按 email_category 分发)
+        # - email_category 枚举/字符串 → 内部统一 str 用于分发
+        # - None → SYSTEM_PROMPT_DEFAULT(中性回退)
+        email_category_str = (
+            email_category.value if isinstance(email_category, EmailCategory) else email_category
+        )
+        system_prompt = _build_draft_system_prompt(email_category_str)
         messages = [
-            system_to_message(_PLACEHOLDER_SYSTEM_PROMPT),
+            system_to_message(system_prompt),
             *build_user_message(
                 subject=subject,
                 sender=sender,
@@ -525,26 +539,6 @@ def build_user_message(
             ),
         }
     ]
-
-
-# Placeholder system prompt(D4.7.2 替换为 ai/prompts/draft.py)
-# 临时约束: LLM 必须返回严格 JSON 3 字段 (subject + body + tone)
-_PLACEHOLDER_SYSTEM_PROMPT = """你是邮件草稿生成助手,负责根据邮件主题/发件人/正文生成专业草稿。
-
-语气(必须严格匹配 value, 大小写敏感, 契约 3 锁定 3 类):
-  - FORMAL  : 正式, 商务 / 官方 / 客户沟通
-  - FRIENDLY: 友好, 同事 / 熟人 / 协作
-  - CONCISE : 简洁, 通知 / 确认 / 单点沟通
-
-输出格式(严格 JSON, 无其他文字, 无 markdown 包裹, 契约 2):
-{"subject": "<string>", "body": "<string>", "tone": "<FORMAL|FRIENDLY|CONCISE>"}
-
-约束:
-  - subject 1-200 字符, 非空
-  - body 10-8000 字符, 内容允许 markdown
-  - tone 必须是 FORMAL / FRIENDLY / CONCISE 三选一
-  - 不允许额外文字 / ```json ... ``` 包裹 / 解释段落
-"""
 
 
 # ===== 3 个 _validate_draft_* helper(契约 1 公共 API,供 D4.7.3 严判下沉复用)=====

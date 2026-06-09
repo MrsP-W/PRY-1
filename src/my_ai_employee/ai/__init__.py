@@ -10,6 +10,10 @@
 Fallback：规则引擎（关键词/正则）— 不做本地 Ollama
 
 D4（classifier + drafter）+ D8（finance_analyzer + note_structurer）实施。
+
+Prompts 子包(D4.6 + D4.7.2):
+  - ai.prompts.classify: D4.6 分类器 SYSTEM prompt + build_user_message
+  - ai.prompts.draft:    D4.7.2 草稿 5+1 类 SYSTEM prompt + build_system_prompt 分发
 """
 
 from my_ai_employee.ai.capability import (
@@ -44,6 +48,18 @@ from my_ai_employee.ai.fallback import (
     CircuitBreaker,
     FallbackChainConfig,
     get_chain,
+)
+from my_ai_employee.ai.prompts import (
+    CLASSIFY_SYSTEM_PROMPT,
+    SYSTEM_PROMPT_DEFAULT,
+    SYSTEM_PROMPT_FYI,
+    SYSTEM_PROMPT_PERSONAL,
+    SYSTEM_PROMPT_SPAM,
+    SYSTEM_PROMPT_TODO,
+    SYSTEM_PROMPT_URGENT,
+    build_classify_user_message,
+    build_draft_system_prompt,
+    build_draft_user_message,
 )
 from my_ai_employee.ai.providers import (
     LLMAPIError,
@@ -83,6 +99,17 @@ __all__ = [
     "validate_draft_body",
     "validate_draft_subject",
     "validate_draft_tone",
+    # prompts (D4.6 classify + D4.7.2 draft)
+    "CLASSIFY_SYSTEM_PROMPT",
+    "build_classify_user_message",
+    "SYSTEM_PROMPT_DEFAULT",
+    "SYSTEM_PROMPT_URGENT",
+    "SYSTEM_PROMPT_TODO",
+    "SYSTEM_PROMPT_FYI",
+    "SYSTEM_PROMPT_SPAM",
+    "SYSTEM_PROMPT_PERSONAL",
+    "build_draft_system_prompt",
+    "build_draft_user_message",
     # fallback
     "FALLBACK_CHAINS",
     "CircuitBreaker",
