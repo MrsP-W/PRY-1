@@ -197,12 +197,27 @@ class DraftResult:
         model_full_id: 实际调用的 provider/model(便于审计/计费)
         latency_ms: 单次草稿生成耗时(非负)
         raw_content: LLM 原始响应(便于排查,截断到 500 字符)
+        spam_reply_authorized: 6/9 v1.0.6 P2-1 新增, 6/10 v1.0.7 P1-1 修正语义,
+                              6/10 v1.0.7 P2-1 新增 spam_reply_intent 字段。
+                              - True: 该草稿由 SPAM 邮件 + allow_spam_reply=True 授权触发
+                              - False: 非 SPAM 邮件 或 虽 SPAM 但未授权(业务硬阻断路径)
+                              一致性: spam_reply_authorized=True 时 spam_reply_intent 必非空
+        spam_reply_intent: 6/10 v1.0.7 P2-1 新增, 实际授权意图(枚举/None)
+                          - 枚举(UNSUBSCRIBE/REJECT): SPAM 授权放行时记录实际意图
+                          - None: 非 SPAM 邮件 或 SPAM 阻断场景
+                          便于 D4.7.3 Adapter 事件审计区分"礼貌退订"与"明确拒收"
+                          严格 type 严判(枚举实例 / None, 拒 str 真值陷阱)
 
     6/9 v1.0.2 P2-3 修复: __post_init__ 严判 5 字段, 防止构造非法状态
     (空 subject / 短 body / str tone / 负延迟 / 空 model), 复用契约 1 helper。
     6/9 v1.0.6 P2-1 修复: 增加 `spam_reply_authorized: bool` 字段(契约外增量),
     便于 D4.7.3 EmailDrafterAdapter 事件审计追溯"是否通过 allow_spam_reply=True 生成"
     (v1.0.5 缺口: 成功结果无法区分"普通草稿"和"SPAM 授权放行草稿", 审计盲点)。
+    6/10 v1.0.7 P1-1 修复: spam_reply_authorized 计算必须结合 email_category_str
+    (v1.0.6 漏洞: 直接 spam_reply_authorized=allow_spam_reply, URGENT+allow=True
+    会被误标为"SPAM 授权", 审计语义错位)
+    6/10 v1.0.7 P2-1 修复: 增加 `spam_reply_intent` 字段记录实际授权意图
+    (v1.0.6 缺口: 仅记录 bool 授权, 无法区分 UNSUBSCRIBE 与 REJECT)
     """
 
     subject: str
@@ -211,17 +226,24 @@ class DraftResult:
     model_full_id: str
     latency_ms: int
     raw_content: str
-    # 6/9 v1.0.6 P2-1 新增: SPAM 授权标记(便于 D4.7.3 Adapter 事件审计)
-    # - False(默认): 正常草稿(URGENT/TODO/FYI/PERSONAL)或 SPAM 业务阻断后从未放行
-    # - True: 通过 allow_spam_reply=True 显式放行, 实际生成了可投递草稿
-    # - 业务含义: "该草稿是否由 SPAM 授权意图触发", 便于 audit 追溯
+    # 6/9 v1.0.6 P2-1 新增 + 6/10 v1.0.7 P1-1 修正: SPAM 授权标记
+    # - False(默认): 非 SPAM 邮件(URGENT/TODO/FYI/PERSONAL) 或 SPAM 业务阻断路径
+    # - True: SPAM 邮件 + allow_spam_reply=True 显式放行, 实际生成了可投递草稿
     # 严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
     spam_reply_authorized: bool = False
+    # 6/10 v1.0.7 P2-1 新增: 实际授权意图(便于 D4.7.3 Adapter 事件审计)
+    # - DraftSpamReplyIntent 枚举实例: SPAM 授权放行时记录实际意图(UNSUBSCRIBE/REJECT)
+    # - None: 非 SPAM 邮件(任何 allow_spam_reply 值都返回 None)
+    #         或 SPAM 业务阻断路径(allow_spam_reply=False)
+    # 一致性约束(由调用方负责 + __post_init__ 兜底校验):
+    #   spam_reply_authorized=True  →  spam_reply_intent 必为 DraftSpamReplyIntent 枚举
+    #   spam_reply_authorized=False →  spam_reply_intent 必为 None
+    spam_reply_intent: DraftSpamReplyIntent | None = None
 
     def __post_init__(self) -> None:
-        """自校验 6 字段(6/9 v1.0.2 P2-3 修复 + v1.0.6 P2-1 新增 spam_reply_authorized).
+        """自校验 7 字段(6/9 v1.0.2 P2-3 + v1.0.6 P2-1 + v1.0.7 P1-1 + v1.0.7 P2-1).
 
-        编程错误(type 错 / 越界) → ValueError(透传, 不包装为 DrafterError).
+        编程错误(type 错 / 越界 / 一致性违反) → ValueError(透传, 不包装为 DrafterError).
         业务验收(长度/枚举) → 复用 _validate_draft_subject / _validate_draft_body
         / _validate_draft_tone(契约 1 严判下沉, D4.6 v1.0.2-second 范本).
         """
@@ -257,6 +279,32 @@ class DraftResult:
                 f"spam_reply_authorized 必须是 bool, 实际 "
                 f"{type(self.spam_reply_authorized).__name__}={self.spam_reply_authorized!r}"
             )
+        # 6/10 v1.0.7 P2-1 新增: spam_reply_intent 严判
+        # - 枚举实例: 直接接受(实际授权场景)
+        # - None: 允许(非 SPAM 邮件 或 SPAM 业务阻断场景)
+        # - 其他 type(str / int / bool) → 拒收(拒 str 真值陷阱, 严禁 "REJECT" 等隐式转换)
+        if self.spam_reply_intent is not None and not isinstance(
+            self.spam_reply_intent, DraftSpamReplyIntent
+        ):
+            raise ValueError(
+                f"spam_reply_intent 必须是 DraftSpamReplyIntent 枚举或 None, 实际 "
+                f"{type(self.spam_reply_intent).__name__}={self.spam_reply_intent!r}"
+            )
+        # 6/10 v1.0.7 P2-1 一致性校验: spam_reply_authorized 与 spam_reply_intent 必一致
+        # - 授权=True → 实际意图必为枚举(否则 audit 拿不到"为什么授权放行"语义)
+        # - 授权=False → 实际意图必为 None(否则 audit 会被误导"该草稿是 SPAM 授权放行")
+        # 这是数据类兜底, 调用方(draft())应优先保证, 但构造时被绕过也要拦截
+        if self.spam_reply_authorized and self.spam_reply_intent is None:
+            raise ValueError(
+                "spam_reply_authorized=True 时 spam_reply_intent 必为 DraftSpamReplyIntent 枚举"
+                "(一致性契约, 防 audit 拿不到'为什么授权放行'语义), 实际 None"
+            )
+        if not self.spam_reply_authorized and self.spam_reply_intent is not None:
+            raise ValueError(
+                "spam_reply_authorized=False 时 spam_reply_intent 必为 None"
+                f"(一致性契约, 防 audit 误读'该草稿是 SPAM 授权放行'), "
+                f"实际 {self.spam_reply_intent!r}"
+            )
 
         # 业务验收(契约 1 严判下沉)
         # 6/9 v1.0.3 P2-2 修复: strip() 严判语义非空("   " 长度 3 仍会被旧版绕过)
@@ -281,6 +329,8 @@ class DraftResult:
             "latency_ms": self.latency_ms,
             "raw_content": self.raw_content,
             "spam_reply_authorized": self.spam_reply_authorized,
+            # 6/10 v1.0.7 P2-1: 序列化实际授权意图(枚举 .value, None → None)
+            "spam_reply_intent": self.spam_reply_intent.value if self.spam_reply_intent else None,
         }
 
 
@@ -319,11 +369,17 @@ class DraftBlockedResult:
     tone: DraftTone
     reason: str
     original_email_category: str
-    # 6/9 v1.0.6 P2-1 新增: SPAM 授权标记(便于 D4.7.3 Adapter 事件审计)
+    # 6/9 v1.0.6 P2-1 新增 + 6/10 v1.0.7 P2-1 补 intent 字段
     # - False(默认): 调用方未传 allow_spam_reply=True, 走"业务硬阻断"路径
     # - True: 调用方传了 allow_spam_reply=True, 但仍有阻断(本类只产出阻断模板不调 LLM)
     # 严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
     spam_reply_authorized: bool = False
+    # 6/10 v1.0.7 P2-1 新增: 调用方实际授权意图(便于 D4.7.3 Adapter 事件审计)
+    # - DraftSpamReplyIntent 枚举: 调用方传了 allow_spam_reply=True + 明确 intent
+    # - None: 调用方未授权(intent 即使在 draft() 严判通过, 阻断场景下也不入产物)
+    # 注: 阻断场景 spam_reply_authorized 仍按调用方原 allow_spam_reply 记录(True/False),
+    #     意图单独记录, 不做"授权+意图一致性"强约束(阻断是降级, 记录调用方意图即可)
+    spam_reply_intent: DraftSpamReplyIntent | None = None
 
     def __post_init__(self) -> None:
         # 严判入口(拒 bool 子类陷阱)
@@ -352,6 +408,17 @@ class DraftBlockedResult:
             raise ValueError(
                 f"spam_reply_authorized 必须是 bool, 实际 "
                 f"{type(self.spam_reply_authorized).__name__}={self.spam_reply_authorized!r}"
+            )
+        # 6/10 v1.0.7 P2-1 新增: spam_reply_intent 严判
+        # - 枚举实例: 直接接受(调用方传了 intent)
+        # - None: 允许(未授权 或 调用方未指定 intent)
+        # - 其他 type → 拒收
+        if self.spam_reply_intent is not None and not isinstance(
+            self.spam_reply_intent, DraftSpamReplyIntent
+        ):
+            raise ValueError(
+                f"spam_reply_intent 必须是 DraftSpamReplyIntent 枚举或 None, 实际 "
+                f"{type(self.spam_reply_intent).__name__}={self.spam_reply_intent!r}"
             )
         # 业务验收(subject / body / reason / original_email_category 至少语义非空, 防空字符串绕过)
         if not self.subject.strip():
@@ -399,6 +466,8 @@ class DraftBlockedResult:
             "original_email_category": self.original_email_category,
             "blocked": True,  # 显式标记,便于上层识别"阻断产物 vs LLM 产物"
             "spam_reply_authorized": self.spam_reply_authorized,
+            # 6/10 v1.0.7 P2-1: 序列化调用方实际授权意图
+            "spam_reply_intent": self.spam_reply_intent.value if self.spam_reply_intent else None,
         }
 
 
@@ -527,14 +596,30 @@ class EmailDrafter:
                             默认 False(业务硬阻断, 与 D4.6 BLOCKED 流程形成双保险);
                             True 时显式覆盖阻断, 但调用方必须在业务层 audit(避免误用).
                             若需"产出阻断模板但不抛异常", 请用 draft_blocked_category() 独立入口.
-            spam_reply_intent: 6/9 v1.0.6 P2-2 新增, SPAM 授权回复意图(枚举/字符串/None).
-                            仅在 allow_spam_reply=True 时生效:
-                            - None: 默认 UNSUBSCRIBE(礼貌退订, 最安全的"单向拒绝"语义)
-                            - UNSUBSCRIBE: 礼貌退订(请将我移除列表)
-                            - REJECT: 明确拒收(不感兴趣, 拒绝后续沟通)
-                            **排除 ACKNOWLEDGE/确认收悉**(与 SYSTEM_PROMPT_SPAM
-                            "避免确认邮箱活跃" 业务硬规则矛盾, v1.0.5 漏洞)
-                            当 allow_spam_reply=False 时, 此参数被忽略.
+            spam_reply_intent: 6/9 v1.0.6 P2-2 新增, 6/10 v1.0.7 P2-2 文档统一契约.
+                            **永远先严判**(独立于 allow_spam_reply):
+                            - 严判位置: draft() 入口段(spam_reply_authorized 严判后,
+                              tone 校验前)
+                            - 接受类型: DraftSpamReplyIntent 枚举 / 字符串 / None
+                            - 枚举: 直接接受
+                            - 字符串: 严判 ∈ {UNSUBSCRIBE, REJECT}, **排除 ACKNOWLEDGE**
+                              (与 SYSTEM_PROMPT_SPAM "避免确认邮箱活跃" 业务硬规则矛盾)
+                            - None: 允许(默认 UNSUBSCRIBE, 在 SPAM 授权时启用)
+                            - 其他 type(非枚举非字符串非None) → ValueError
+                            **应用场景**:
+                            - allow_spam_reply=True + email_category=SPAM: 实际生效
+                              None → UNSUBSCRIBE(最安全的"单向拒绝"语义)
+                              UNSUBSCRIBE → 礼貌退订
+                              REJECT → 明确拒收
+                            - allow_spam_reply=False + email_category=SPAM: SPAM 阻断,
+                              严判通过后 intent 进入 DraftBlockedResult.spam_reply_intent
+                              (便于 D4.7.3 audit 追溯"调用方意图")
+                            - email_category=非 SPAM: 严判通过后, spam_reply_authorized
+                              仍为 False(防误标, v1.0.7 P1-1), intent 记录为 None
+                            v1.0.6 文档错误修正: 原文档"未授权时被忽略" 不准确, 实际
+                            参数**永远先严判**(类型错 / 非法字符串 → ValueError),
+                            不存在"忽略"语义。意图是否生效由 allow_spam_reply + email_category
+                            共同决定(详见 P2-2 范本)。
 
         Returns:
             DraftResult(含 subject + body + tone + 调用模型 + spam_reply_authorized)
@@ -713,6 +798,15 @@ class EmailDrafter:
             raise
 
         self._stats["success"] += 1
+        # 6/10 v1.0.7 P1-1 修复: spam_reply_authorized 计算必须结合 email_category_str
+        # - v1.0.6 漏洞: 直接 spam_reply_authorized=allow_spam_reply, URGENT+allow=True
+        #   被审计为"SPAM 授权", 与 D4.7.3 事件审计需求矛盾(非 SPAM 不应有授权标记)
+        # - v1.0.7 真修: 仅当 email_category_str=="SPAM" AND allow_spam_reply=True 时
+        #   才记录 True(代表"该草稿确实由 SPAM 授权意图触发并生成可投递草稿")
+        # - 非 SPAM 邮件无论 allow_spam_reply 为何值, 永远 spam_reply_authorized=False
+        # - 6/10 v1.0.7 P2-1 修复: 同时透传 intent_enum(SPAM 授权场景下必非空,
+        #   非 SPAM 场景为 None, 与 spam_reply_authorized 一致性绑定)
+        spam_reply_authorized: bool = email_category_str == "SPAM" and allow_spam_reply
         return DraftResult(
             subject=draft_subject,
             body=draft_body,
@@ -720,10 +814,10 @@ class EmailDrafter:
             model_full_id=response.model_full_id,
             latency_ms=response.latency_ms,
             raw_content=response.content,
-            # 6/9 v1.0.6 P2-1 修复: 透传 allow_spam_reply 标记(便于 D4.7.3 Adapter 事件审计
-            # 追溯"该草稿是否由 SPAM 授权意图触发"。SPAM 阻断时 allow_spam_reply=False,
-            # 不会走到这里; SPAM 授权放行时 allow_spam_reply=True, spam_reply_authorized=True)
-            spam_reply_authorized=allow_spam_reply,
+            # 6/10 v1.0.7 P1-1: 授权计算必须结合 email_category_str
+            # 6/10 v1.0.7 P2-1: 透传实际 intent(SPAM 时为 UNSUBSCRIBE/REJECT, 非 SPAM 时为 None)
+            spam_reply_authorized=spam_reply_authorized,
+            spam_reply_intent=intent_enum if spam_reply_authorized else None,
         )
 
     def draft_batch(
@@ -808,6 +902,13 @@ class EmailDrafter:
                     email_category=email.get("email_category"),
                     tone=email.get("tone", DraftTone.FORMAL),
                     allow_spam_reply=per_email_allow,
+                    # 6/10 v1.0.7 P1-2 修复: 批量入口透传 spam_reply_intent
+                    # - v1.0.6 漏洞: draft_batch 未透传 intent 字段, 调用方指定 REJECT
+                    #   时会静默退化为默认 UNSUBSCRIBE, 业务层 audit 无法追溯"调用方
+                    #   真实授权意图", D4.7.3 事件审计也拿不到 intent
+                    # - v1.0.7 真修: 优先 per-email 字段, 缺则用批默认; None 允许
+                    #   (None 在 draft() 内部会被严判, draft() 入口已确保合法)
+                    spam_reply_intent=email.get("spam_reply_intent"),
                 )
                 results.append(result)
             except SpamBlockedError as e:
@@ -827,6 +928,8 @@ class EmailDrafter:
                         tone=email.get("tone", DraftTone.FORMAL),
                         # 6/9 v1.0.6 P2-1 新增: 透传调用方授权意图(便于 D4.7.3 Adapter 事件审计)
                         spam_reply_authorized=per_email_allow,
+                        # 6/10 v1.0.7 P2-1 修复: 透传调用方实际授权意图(阻断场景下也记录)
+                        spam_reply_intent=email.get("spam_reply_intent"),
                         _stats_already_bumped=True,  # draft() 已 +1, 避免重复
                     )
                     results.append(blocked)
@@ -851,6 +954,9 @@ class EmailDrafter:
         email_category: EmailCategory | str,
         tone: DraftTone | str = DraftTone.FORMAL,
         spam_reply_authorized: bool = False,
+        # 6/10 v1.0.7 P2-1 新增: 调用方实际授权意图(SPAM 阻断场景下也记录, 便于 audit)
+        # 严判: 枚举/字符串/None 3 类(字符串在内部转枚举, None 允许)
+        spam_reply_intent: DraftSpamReplyIntent | str | None = None,
         _stats_already_bumped: bool = False,
     ) -> DraftBlockedResult:
         """为业务阻断邮件产出"建议: 不回复"模板(不调 LLM, 6/9 v1.0.2 P1-1 新增).
@@ -873,6 +979,13 @@ class EmailDrafter:
                                   (业务层 audit: 即便最终被阻断, 也记录"调用方授权意图"
                                   便于 D4.7.3 Adapter 事件审计追溯"为什么阻断"+"是否本来可放行")
                                   严格 bool 严判(type value is bool, 拒 "false" / 1 真值陷阱)
+            spam_reply_intent: 6/10 v1.0.7 P2-1 新增, 调用方实际授权意图(SPAM 阻断场景下记录)
+                              严判: DraftSpamReplyIntent 枚举 / 字符串 / None
+                              - 枚举: 直接接受
+                              - 字符串: 严判 ∈ {UNSUBSCRIBE, REJECT}, 排除 ACKNOWLEDGE
+                              - None: 允许(未授权 或 调用方未指定 intent)
+                              拒绝非枚举非字符串(防止 str 真值陷阱)
+                              **与 draft() 入口严判范本保持一致**(P2-2 文档统一契约)
 
         Returns:
             DraftBlockedResult(含 subject="(DRAFT-NO-REPLY) ..." + body="建议: 不回复..."
@@ -910,6 +1023,30 @@ class EmailDrafter:
                 f"draft_blocked_category spam_reply_authorized 必须是 bool, "
                 f"实际 {type(spam_reply_authorized).__name__}={spam_reply_authorized!r}"
             )
+        # 6/10 v1.0.7 P2-1 + P2-2 修复: spam_reply_intent 入口严判(类型 + 白名单)
+        # - 枚举/字符串 2 类(契约外增量, 排除 ACKNOWLEDGE 语义冲突)
+        # - None 允许(未授权场景)
+        # 严判位置: 在 type(value) is bool 之后, 与 draft() 入口范本一致(P2-2 文档统一)
+        if spam_reply_intent is not None:
+            if isinstance(spam_reply_intent, DraftSpamReplyIntent):
+                intent_enum = spam_reply_intent
+            elif type(spam_reply_intent) is str:
+                try:
+                    intent_enum = DraftSpamReplyIntent(spam_reply_intent)
+                except ValueError as e:
+                    raise ValueError(
+                        f"draft_blocked_category spam_reply_intent 字符串必须 ∈ "
+                        f"{sorted(_DRAFT_SPAM_REPLY_INTENT_CHOICES)}, "
+                        f"实际 {spam_reply_intent!r}"
+                    ) from e
+            else:
+                raise ValueError(
+                    f"draft_blocked_category spam_reply_intent 必须是 "
+                    f"DraftSpamReplyIntent 枚举 / str / None, "
+                    f"实际 {type(spam_reply_intent).__name__}"
+                )
+        else:
+            intent_enum = None
         # email_category 必填(本入口专给阻断场景用, 不允许 None 走 DEFAULT)
         if email_category is None:
             raise ValueError("email_category 必填(本入口只接受阻断类别, 不允许 None)")
@@ -1011,6 +1148,8 @@ class EmailDrafter:
             # 6/9 v1.0.6 P2-1 新增: 透传调用方授权意图(便于 D4.7.3 Adapter 事件审计
             # 追溯"调用方当时是否传 allow_spam_reply=True")
             spam_reply_authorized=spam_reply_authorized,
+            # 6/10 v1.0.7 P2-1 新增: 透传调用方实际授权意图(枚举, 阻断场景下也记录)
+            spam_reply_intent=intent_enum,
         )
 
 

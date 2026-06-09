@@ -1190,7 +1190,7 @@ class TestDraftResult:
             result.subject = "new"  # type: ignore[misc]
 
     def test_fields(self) -> None:
-        """字段集合固定(6/9 v1.0.6 P2-1 新增 spam_reply_authorized)."""
+        """字段集合固定(6/9 v1.0.6 P2-1 + 6/10 v1.0.7 P2-1)."""
         from dataclasses import fields
 
         field_names = {f.name for f in fields(DraftResult)}
@@ -1202,6 +1202,7 @@ class TestDraftResult:
             "latency_ms",
             "raw_content",
             "spam_reply_authorized",  # 6/9 v1.0.6 P2-1 新增(Adapter 审计契约)
+            "spam_reply_intent",  # 6/10 v1.0.7 P2-1 新增(D4.7.3 事件审计意图)
         }
 
 
@@ -2329,16 +2330,37 @@ class TestDraftResultV106SpamReplyAuthorizedField:
         assert result.spam_reply_authorized is False
 
     def test_explicit_true(self) -> None:
-        """显式 spam_reply_authorized=True(SPAM 授权放行)."""
-        result = DraftResult(**{**self._valid_kwargs(), "spam_reply_authorized": True})
+        """显式 spam_reply_authorized=True(SPAM 授权放行).
+
+        6/10 v1.0.7 P2-1 升级: 授权=True 时 intent 必非空(一致性契约),
+        旧版测试需同时传 intent。
+        """
+        result = DraftResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.UNSUBSCRIBE,
+            }
+        )
         assert result.spam_reply_authorized is True
+        assert result.spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
 
     def test_to_dict_includes_field(self) -> None:
-        """to_dict 序列化包含 spam_reply_authorized 字段(D4.7.3 事件审计用)."""
-        result = DraftResult(**{**self._valid_kwargs(), "spam_reply_authorized": True})
+        """to_dict 序列化包含 spam_reply_authorized 字段(D4.7.3 事件审计用).
+
+        6/10 v1.0.7 P2-1 升级: 授权=True 时 intent 必非空(一致性契约)。
+        """
+        result = DraftResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.REJECT,
+            }
+        )
         d = result.to_dict()
         assert "spam_reply_authorized" in d
         assert d["spam_reply_authorized"] is True
+        assert d["spam_reply_intent"] == "REJECT"
 
     def test_rejects_string_value(self) -> None:
         """spam_reply_authorized="false"(str) → ValueError(拒真值陷阱)."""
@@ -2691,3 +2713,656 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
         assert isinstance(results[0], DraftBlockedResult)
         # 关键: per-email False 透传到 blocked_result
         assert results[0].spam_reply_authorized is False
+
+
+# ============================================================
+# 6/10 v1.0.7 P 修复测试(检查员第八次复检 2 P1 + 2 P2)
+# - P1-1: 授权计算必须结合 email_category_str(防 URGENT+allow=True 误标)
+# - P1-2: draft_batch 透传 spam_reply_intent(防 REJECT 静默退化 UNSUBSCRIBE)
+# - P2-1: DraftResult + DraftBlockedResult.spam_reply_intent 字段 + 一致性
+# - P2-2: spam_reply_intent 永远先严判(文档统一契约)
+# ============================================================
+
+
+class TestDraftV107SpamReplyAuthorizedRequiresSPAM:
+    """6/10 v1.0.7 P1-1 修复: spam_reply_authorized 计算必须结合 email_category_str.
+
+    v1.0.6 漏洞: 直接 spam_reply_authorized=allow_spam_reply, URGENT/TODO/FYI/PERSONAL
+    + allow_spam_reply=True 会被审计为"SPAM 授权", 与 D4.7.3 事件审计需求矛盾。
+    v1.0.7 真修: 仅 email_category_str=="SPAM" AND allow_spam_reply=True → True。
+    """
+
+    def _make_drafter(self) -> EmailDrafter:
+        return EmailDrafter(router=MagicMock())
+
+    def _mock_success(self, d: EmailDrafter) -> None:
+        """配置 router mock 返回合法 JSON(SuSPAM 授权放行调 LLM 路径)."""
+        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
+            _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
+        )
+
+    def test_spam_authorized_true(self) -> None:
+        """SPAM + allow_spam_reply=True → spam_reply_authorized=True."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="测试",
+            sender="spam@example.com",
+            body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,
+        )
+        assert result.spam_reply_authorized is True
+
+    def test_urgent_with_allow_true_is_false(self) -> None:
+        """URGENT + allow_spam_reply=True → spam_reply_authorized=False(v1.0.7 P1-1 防误标)."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="[紧急] 客户投诉",
+            sender="vip@example.com",
+            body_excerpt="客户反馈问题, 我们需在 24 小时内回复, 项目进展顺利。",
+            email_category="URGENT",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,  # 普通邮件无意义, 应该是 False
+        )
+        # 关键: URGENT 不是 SPAM, spam_reply_authorized 必须 False(v1.0.7 P1-1)
+        assert result.spam_reply_authorized is False, (
+            f"URGENT 邮件即使 allow=True, spam_reply_authorized 必须 False, "
+            f"实际 {result.spam_reply_authorized}"
+        )
+
+    def test_todo_with_allow_true_is_false(self) -> None:
+        """TODO + allow_spam_reply=True → spam_reply_authorized=False."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="下周会议安排",
+            sender="boss@example.com",
+            body_excerpt="下周二下午 2 点开会, 请准备本周工作汇报材料。",
+            email_category="TODO",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,
+        )
+        assert result.spam_reply_authorized is False
+
+    def test_fyi_with_allow_true_is_false(self) -> None:
+        """FYI + allow_spam_reply=True → spam_reply_authorized=False."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="公司活动通知",
+            sender="hr@example.com",
+            body_excerpt="本周五下午公司年会, 全体员工务必准时参加。",
+            email_category="FYI",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,
+        )
+        assert result.spam_reply_authorized is False
+
+    def test_personal_with_allow_true_is_false(self) -> None:
+        """PERSONAL + allow_spam_reply=True → spam_reply_authorized=False."""
+        d = self._make_drafter()
+        # mock 返回 FRIENDLY(与请求 tone 一致, 契约 3 强制)
+        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
+            _valid_draft_json(tone="FRIENDLY"), model="minimax/M3", latency=200
+        )
+        result = d.draft(
+            subject="周末爬山",
+            sender="friend@example.com",
+            body_excerpt="周六早上 7 点老地方见, 别忘了带水杯和防晒霜。",
+            email_category="PERSONAL",
+            tone=DraftTone.FRIENDLY,
+            allow_spam_reply=True,
+        )
+        assert result.spam_reply_authorized is False
+
+    def test_spam_with_allow_false_raises(self) -> None:
+        """SPAM + allow_spam_reply=False → SpamBlockedError(不进入产物)."""
+        d = self._make_drafter()
+        with pytest.raises(SpamBlockedError):
+            d.draft(
+                subject="测试",
+                sender="spam@example.com",
+                body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+                email_category="SPAM",
+                tone=DraftTone.FORMAL,
+                allow_spam_reply=False,
+            )
+
+    def test_none_category_with_allow_true_is_false(self) -> None:
+        """email_category=None + allow_spam_reply=True → spam_reply_authorized=False(独立运行)."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="无分类测试",
+            sender="unknown@example.com",
+            body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+            email_category=None,
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,
+        )
+        assert result.spam_reply_authorized is False
+
+
+class TestDraftBatchV107SpamReplyIntentPropagation:
+    """6/10 v1.0.7 P1-2 修复: draft_batch 透传 spam_reply_intent.
+
+    v1.0.6 漏洞: draft_batch 未透传 intent 字段, 调用方指定 REJECT 时会静默退化为
+    默认 UNSUBSCRIBE, 业务层 audit 无法追溯"调用方真实授权意图"。
+    v1.0.7 真修: 优先 per-email 字段, 缺则 None(draft() 内部严判处理)。
+    """
+
+    def _make_drafter(self) -> EmailDrafter:
+        return EmailDrafter(router=MagicMock())
+
+    def _mock_success(self, d: EmailDrafter) -> None:
+        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
+            _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
+        )
+
+    def test_per_email_reject_propagates_to_draft(self) -> None:
+        """per-email spam_reply_intent="REJECT" → draft() 走 REJECT 路径(通过 user 消息).
+
+        实测方式: 验证 DraftResult.spam_reply_intent == DraftSpamReplyIntent.REJECT
+        (D4.7.3 事件审计契约)。
+        """
+        d = self._make_drafter()
+        self._mock_success(d)
+        emails = [
+            {
+                "subject": "测试",
+                "sender": "spam@example.com",
+                "body_excerpt": "测试内容, 项目进展顺利, 我们将在月底前完成。",
+                "email_category": "SPAM",
+                "tone": DraftTone.FORMAL,
+                "allow_spam_reply": True,
+                "spam_reply_intent": "REJECT",  # 关键: per-email 显式 REJECT
+            }
+        ]
+        results = d.draft_batch(emails, allow_spam_reply=False)
+        assert len(results) == 1
+        assert isinstance(results[0], DraftResult)
+        # 关键: per-email REJECT 应该透传到 DraftResult.spam_reply_intent
+        assert results[0].spam_reply_intent == DraftSpamReplyIntent.REJECT, (
+            f"per-email REJECT 应透传, 实际 {results[0].spam_reply_intent}"
+        )
+
+    def test_per_email_unsubscribe_propagates_to_draft(self) -> None:
+        """per-email spam_reply_intent="UNSUBSCRIBE" → DraftResult.spam_reply_intent==UNSUBSCRIBE."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        emails = [
+            {
+                "subject": "测试",
+                "sender": "spam@example.com",
+                "body_excerpt": "测试内容, 项目进展顺利, 我们将在月底前完成。",
+                "email_category": "SPAM",
+                "tone": DraftTone.FORMAL,
+                "allow_spam_reply": True,
+                "spam_reply_intent": "UNSUBSCRIBE",
+            }
+        ]
+        results = d.draft_batch(emails, allow_spam_reply=False)
+        assert len(results) == 1
+        assert isinstance(results[0], DraftResult)
+        assert results[0].spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_default_intent_is_unsubscribe(self) -> None:
+        """per-email 未传 intent + allow=True → 默认 UNSUBSCRIBE(v1.0.6 范本)."""
+        d = self._make_drafter()
+        self._mock_success(d)
+        emails = [
+            {
+                "subject": "测试",
+                "sender": "spam@example.com",
+                "body_excerpt": "测试内容, 项目进展顺利, 我们将在月底前完成。",
+                "email_category": "SPAM",
+                "tone": DraftTone.FORMAL,
+                "allow_spam_reply": True,
+                # 无 spam_reply_intent
+            }
+        ]
+        results = d.draft_batch(emails, allow_spam_reply=False)
+        assert len(results) == 1
+        assert isinstance(results[0], DraftResult)
+        # 默认 None → UNSUBSCRIBE(allow=True 时)
+        assert results[0].spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_invalid_intent_in_batch_raises(self) -> None:
+        """per-email spam_reply_intent="OOPS"(非法) → ValueError 收容入 results.
+
+        注: draft_batch 收容(ValueError), 不上抛。
+        """
+        d = self._make_drafter()
+        emails = [
+            {
+                "subject": "测试",
+                "sender": "spam@example.com",
+                "body_excerpt": "测试内容, 项目进展顺利, 我们将在月底前完成。",
+                "email_category": "SPAM",
+                "tone": DraftTone.FORMAL,
+                "allow_spam_reply": True,
+                "spam_reply_intent": "OOPS",  # type: ignore[dict-item]
+            }
+        ]
+        results = d.draft_batch(emails, allow_spam_reply=False)
+        assert len(results) == 1
+        assert isinstance(results[0], ValueError)
+        assert "spam_reply_intent" in str(results[0])
+
+    def test_per_email_intent_propagates_to_blocked(self) -> None:
+        """per-email spam_reply_intent="REJECT" + allow=False → DraftBlockedResult.spam_reply_intent==REJECT.
+
+        阻断场景下调用方 intent 也必须记录(便于 audit 追溯"为什么没生成草稿")。
+        """
+        d = self._make_drafter()
+        emails = [
+            {
+                "subject": "测试",
+                "sender": "spam@example.com",
+                "body_excerpt": "测试内容, 项目进展顺利, 我们将在月底前完成。",
+                "email_category": "SPAM",
+                "tone": DraftTone.FORMAL,
+                "allow_spam_reply": False,  # 业务阻断
+                "spam_reply_intent": "REJECT",  # 即使阻断也记录 intent
+            }
+        ]
+        results = d.draft_batch(emails, allow_spam_reply=True)
+        assert len(results) == 1
+        assert isinstance(results[0], DraftBlockedResult)
+        # 关键: 阻断场景下 intent 也透传
+        assert results[0].spam_reply_intent == DraftSpamReplyIntent.REJECT
+
+
+class TestDraftResultV107SpamReplyIntentField:
+    """6/10 v1.0.7 P2-1 修复: DraftResult.spam_reply_intent 字段 + 一致性校验.
+
+    v1.0.6 缺口: 仅记录 bool 授权, 无法区分 UNSUBSCRIBE 与 REJECT。
+    v1.0.7 真修: DraftResult 新增 spam_reply_intent 字段(枚举/None),
+    与 spam_reply_authorized 强一致: True 必枚举, False 必 None。
+    """
+
+    def _valid_kwargs(self) -> dict:
+        return {
+            "subject": "Re: 测试主题",
+            "body": "感谢您的来信, 项目进展顺利, 详情如下。",
+            "tone": DraftTone.FORMAL,
+            "model_full_id": "minimax/M3",
+            "latency_ms": 100,
+            "raw_content": "{}",
+        }
+
+    def test_default_intent_is_none(self) -> None:
+        """默认 spam_reply_intent=None(普通草稿)."""
+        result = DraftResult(**self._valid_kwargs())
+        assert result.spam_reply_intent is None
+
+    def test_authorized_with_intent_unsubscribe(self) -> None:
+        """spam_reply_authorized=True + UNSUBSCRIBE → 通过校验."""
+        result = DraftResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.UNSUBSCRIBE,
+            }
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_authorized_with_intent_reject(self) -> None:
+        """spam_reply_authorized=True + REJECT → 通过校验."""
+        result = DraftResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.REJECT,
+            }
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.REJECT
+
+    def test_authorized_true_requires_intent(self) -> None:
+        """spam_reply_authorized=True + intent=None → ValueError(一致性契约)."""
+        with pytest.raises(ValueError, match="spam_reply_authorized=True"):
+            DraftResult(
+                **{
+                    **self._valid_kwargs(),
+                    "spam_reply_authorized": True,
+                    "spam_reply_intent": None,
+                }
+            )
+
+    def test_authorized_false_requires_none_intent(self) -> None:
+        """spam_reply_authorized=False + intent=枚举 → ValueError(一致性契约)."""
+        with pytest.raises(ValueError, match="spam_reply_authorized=False"):
+            DraftResult(
+                **{
+                    **self._valid_kwargs(),
+                    "spam_reply_authorized": False,
+                    "spam_reply_intent": DraftSpamReplyIntent.UNSUBSCRIBE,
+                }
+            )
+
+    def test_rejects_string_intent(self) -> None:
+        """spam_reply_intent="REJECT"(str) → ValueError(拒 str 真值陷阱, 严禁隐式转换)."""
+        with pytest.raises(ValueError, match="spam_reply_intent 必须是 DraftSpamReplyIntent"):
+            DraftResult(
+                **{
+                    **self._valid_kwargs(),
+                    "spam_reply_authorized": True,
+                    "spam_reply_intent": "REJECT",  # type: ignore[arg-type]
+                }
+            )
+
+    def test_rejects_int_intent(self) -> None:
+        """spam_reply_intent=1(int) → ValueError."""
+        with pytest.raises(ValueError, match="spam_reply_intent 必须是 DraftSpamReplyIntent"):
+            DraftResult(
+                **{
+                    **self._valid_kwargs(),
+                    "spam_reply_authorized": True,
+                    "spam_reply_intent": 1,  # type: ignore[arg-type]
+                }
+            )
+
+    def test_to_dict_serializes_intent(self) -> None:
+        """to_dict 序列化包含 spam_reply_intent(枚举 .value, None → None)."""
+        result = DraftResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.REJECT,
+            }
+        )
+        d = result.to_dict()
+        assert "spam_reply_intent" in d
+        assert d["spam_reply_intent"] == "REJECT"
+
+    def test_to_dict_serializes_none_intent(self) -> None:
+        """to_dict 序列化 None intent → None(便于 JSON 化)."""
+        result = DraftResult(**self._valid_kwargs())
+        d = result.to_dict()
+        assert d["spam_reply_intent"] is None
+
+
+class TestDraftBlockedResultV107SpamReplyIntentField:
+    """6/10 v1.0.7 P2-1 修复: DraftBlockedResult.spam_reply_intent 字段(阻断场景下记录调用方意图).
+
+    阻断场景不强制"授权+意图一致性"(阻断是降级, 记录调用方原 intent 即可):
+      - spam_reply_authorized=True + intent=枚举: 调用方显式授权 + 明确 intent
+      - spam_reply_authorized=False + intent=None: 调用方未授权
+      - spam_reply_authorized=True + intent=None: 调用方显式授权但未指定 intent
+    """
+
+    def _valid_kwargs(self) -> dict:
+        return {
+            "subject": "(DRAFT-NO-REPLY) [SPAM] 测试",
+            "body": "建议: 不回复\n\n原因: 该邮件被 D4.6 分类为 SPAM.\n",
+            "tone": DraftTone.FORMAL,
+            "reason": "spam_business_blocked",
+            "original_email_category": "SPAM",
+        }
+
+    def test_default_intent_is_none(self) -> None:
+        """默认 spam_reply_intent=None(阻断未授权)."""
+        result = DraftBlockedResult(**self._valid_kwargs())
+        assert result.spam_reply_intent is None
+
+    def test_blocked_with_intent_unsubscribe(self) -> None:
+        """阻断场景 + UNSUBSCRIBE → 通过(阻断不强制一致)."""
+        result = DraftBlockedResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.UNSUBSCRIBE,
+            }
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_blocked_with_intent_reject(self) -> None:
+        """阻断场景 + REJECT → 通过(阻断不强制一致)."""
+        result = DraftBlockedResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.REJECT,
+            }
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.REJECT
+
+    def test_blocked_unauthorized_with_intent_accepted(self) -> None:
+        """阻断 + 未授权 + 有 intent → 通过(阻断不强制一致, 记录调用方原 intent)."""
+        # 实际场景少见, 但契约允许(调用方可能先严判 intent 通过后才决定不授权)
+        result = DraftBlockedResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": False,
+                "spam_reply_intent": DraftSpamReplyIntent.UNSUBSCRIBE,
+            }
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_rejects_string_intent(self) -> None:
+        """spam_reply_intent="REJECT"(str) → ValueError."""
+        with pytest.raises(ValueError, match="spam_reply_intent 必须是 DraftSpamReplyIntent"):
+            DraftBlockedResult(
+                **{
+                    **self._valid_kwargs(),
+                    "spam_reply_authorized": True,
+                    "spam_reply_intent": "REJECT",  # type: ignore[arg-type]
+                }
+            )
+
+    def test_to_dict_serializes_intent(self) -> None:
+        """to_dict 序列化 intent(枚举 .value, None → None)."""
+        result = DraftBlockedResult(
+            **{
+                **self._valid_kwargs(),
+                "spam_reply_authorized": True,
+                "spam_reply_intent": DraftSpamReplyIntent.REJECT,
+            }
+        )
+        d = result.to_dict()
+        assert d["spam_reply_intent"] == "REJECT"
+
+
+class TestDraftV107SpamReplyIntentValidation:
+    """6/10 v1.0.7 P2-2 修复: spam_reply_intent 永远先严判(独立于 allow_spam_reply).
+
+    v1.0.6 文档错误: 称未授权时 intent"被忽略", 实际仍严判并抛错。
+    v1.0.7 真修: 文档统一契约 — intent 永远先严判(type + 白名单),
+    是否生效由 allow_spam_reply + email_category 共同决定。
+    """
+
+    def _make_drafter(self) -> EmailDrafter:
+        return EmailDrafter(router=MagicMock())
+
+    def _mock_success(self, d: EmailDrafter) -> None:
+        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
+            _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
+        )
+
+    def test_invalid_string_intent_with_allow_false_raises(self) -> None:
+        """allow=False + invalid intent="OOPS" → ValueError(严判永远在前).
+
+        v1.0.6 文档称"未授权时被忽略", 实际仍严判。
+        v1.0.7 文档统一: 严判永远在前, type 错/非法字符串 → ValueError。
+        """
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="spam_reply_intent"):
+            d.draft(
+                subject="测试",
+                sender="test@example.com",
+                body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+                email_category="URGENT",
+                tone=DraftTone.FORMAL,
+                allow_spam_reply=False,
+                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+            )
+
+    def test_invalid_type_intent_with_allow_false_raises(self) -> None:
+        """allow=False + intent=123(int) → ValueError(type 严判)."""
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="spam_reply_intent"):
+            d.draft(
+                subject="测试",
+                sender="test@example.com",
+                body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+                email_category="URGENT",
+                tone=DraftTone.FORMAL,
+                allow_spam_reply=False,
+                spam_reply_intent=123,  # type: ignore[arg-type]
+            )
+
+    def test_invalid_string_intent_with_urgent_allow_true_raises(self) -> None:
+        """URGENT + allow=True + invalid intent → ValueError(非 SPAM 也严判)."""
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="spam_reply_intent"):
+            d.draft(
+                subject="测试",
+                sender="test@example.com",
+                body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+                email_category="URGENT",
+                tone=DraftTone.FORMAL,
+                allow_spam_reply=True,
+                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+            )
+
+    def test_valid_intent_with_allow_false_blocked_records_intent(self) -> None:
+        """SPAM + allow=False + valid intent=REJECT → SpamBlockedError(阻断路径).
+
+        v1.0.7 真修: 阻断场景下, intent 已通过严判但 SPAM 阻断仍发生(业务层硬规则)。
+        """
+        d = self._make_drafter()
+        # draft() 内部对 SPAM+allow=False 抛 SpamBlockedError, 不进入产物
+        with pytest.raises(SpamBlockedError):
+            d.draft(
+                subject="测试",
+                sender="spam@example.com",
+                body_excerpt="测试内容, 项目进展顺利, 我们将在月底前完成。",
+                email_category="SPAM",
+                tone=DraftTone.FORMAL,
+                allow_spam_reply=False,
+                spam_reply_intent="REJECT",  # 严判通过
+            )
+
+    def test_valid_intent_with_non_spam_records_none(self) -> None:
+        """URGENT + allow=True + valid intent=UNSUBSCRIBE → DraftResult.spam_reply_intent==None.
+
+        v1.0.7 P1-1: 非 SPAM 邮件 spam_reply_authorized=False, 强一致要求 intent=None。
+        """
+        d = self._make_drafter()
+        self._mock_success(d)
+        result = d.draft(
+            subject="[紧急] 客户投诉",
+            sender="vip@example.com",
+            body_excerpt="客户反馈问题, 我们需在 24 小时内回复, 项目进展顺利。",
+            email_category="URGENT",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,  # 无意义, URGENT
+            spam_reply_intent="UNSUBSCRIBE",  # 严判通过
+        )
+        # P1-1 + 一致性: 非 SPAM 邮件, authorized=False → intent=None
+        assert result.spam_reply_authorized is False
+        assert result.spam_reply_intent is None
+
+
+class TestDraftBlockedCategoryV107SpamReplyIntentParam:
+    """6/10 v1.0.7 P2-1 修复: draft_blocked_category 接受 spam_reply_intent 参数.
+
+    draft_blocked_category 入口严判范本与 draft() 保持一致:
+      - 枚举: 直接接受
+      - 字符串: 严判 ∈ {UNSUBSCRIBE, REJECT}
+      - None: 允许
+      - 其他 type: ValueError
+    透传到 DraftBlockedResult.spam_reply_intent 字段(便于 audit)。
+    """
+
+    def _make_drafter(self) -> EmailDrafter:
+        return EmailDrafter(router=MagicMock())
+
+    def test_default_intent_is_none(self) -> None:
+        """默认 spam_reply_intent=None(独立调用未指定)."""
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="测试",
+            sender="test@example.com",
+            body_excerpt="测试正文",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+        )
+        assert result.spam_reply_intent is None
+
+    def test_string_unsubscribe(self) -> None:
+        """字符串 "UNSUBSCRIBE" → 转枚举透传."""
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="测试",
+            sender="test@example.com",
+            body_excerpt="测试正文",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+            spam_reply_authorized=True,
+            spam_reply_intent="UNSUBSCRIBE",
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.UNSUBSCRIBE
+
+    def test_string_reject(self) -> None:
+        """字符串 "REJECT" → 转枚举透传."""
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="测试",
+            sender="test@example.com",
+            body_excerpt="测试正文",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+            spam_reply_authorized=True,
+            spam_reply_intent="REJECT",
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.REJECT
+
+    def test_invalid_string_raises(self) -> None:
+        """字符串 "OOPS" → ValueError(白名单严判)."""
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="draft_blocked_category spam_reply_intent"):
+            d.draft_blocked_category(
+                subject="测试",
+                sender="test@example.com",
+                body_excerpt="测试正文",
+                email_category="SPAM",
+                tone=DraftTone.FORMAL,
+                spam_reply_authorized=True,
+                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+            )
+
+    def test_invalid_type_raises(self) -> None:
+        """spam_reply_intent=123(int) → ValueError(type 严判)."""
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="draft_blocked_category spam_reply_intent"):
+            d.draft_blocked_category(
+                subject="测试",
+                sender="test@example.com",
+                body_excerpt="测试正文",
+                email_category="SPAM",
+                tone=DraftTone.FORMAL,
+                spam_reply_authorized=True,
+                spam_reply_intent=123,  # type: ignore[arg-type]
+            )
+
+    def test_enum_directly_accepted(self) -> None:
+        """DraftSpamReplyIntent 枚举实例 → 直接接受."""
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="测试",
+            sender="test@example.com",
+            body_excerpt="测试正文",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+            spam_reply_authorized=True,
+            spam_reply_intent=DraftSpamReplyIntent.REJECT,
+        )
+        assert result.spam_reply_intent == DraftSpamReplyIntent.REJECT
