@@ -294,17 +294,75 @@ class TestParseDraftResponse:
             _parse_draft_response(None)  # type: ignore[arg-type]
 
     def test_rejects_markdown_fenced_json(self) -> None:
-        """**契约 2 核心**: 拒 ```json ... ``` 包裹的 JSON(D4.7 决择: 不剥离)."""
+        """**契约 2 核心(6/9 P1-2)**: 拒外层 ```json ... ``` 包裹的 JSON."""
         fenced = '```json\n{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}\n```'
         with pytest.raises(DrafterResponseError, match="markdown fence") as exc_info:
             _parse_draft_response(fenced)
-        assert exc_info.value.reason == "markdown_fenced"
+        assert exc_info.value.reason == "markdown_fenced_outer"
 
     def test_rejects_markdown_fenced_no_language(self) -> None:
-        """**契约 2**: 拒 ``` ... ```(无语言标识) 包裹."""
+        """**契约 2 (6/9)**: 拒外层 ``` ... ```(无语言标识) 包裹."""
         fenced = '```\n{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}\n```'
         with pytest.raises(DrafterResponseError, match="markdown fence"):
             _parse_draft_response(fenced)
+
+    def test_accepts_prose_around_json(self) -> None:
+        """**契约 2 (6/9 P1-2 修复)**: 接受 prose + JSON 混合(LLM 友好输出)."""
+        # 整段不是合法 JSON(有 prose), 但平衡括号定位能找到 JSON 块
+        content = (
+            "Here is the draft:\n"
+            '{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}\n'
+            "thanks!"
+        )
+        subject, body, tone = _parse_draft_response(content)
+        assert subject == "Re: 项目"
+        assert tone == DraftTone.FORMAL
+
+    def test_accepts_unclosed_fence_with_balanced_json(self) -> None:
+        """**契约 2 (6/9 P1-2 修复)**: 未闭合 ```json 但有平衡 JSON → 接受(LLM 偶发截断)."""
+        # 注意: 此 content 不在外层 fence 包裹(stripped 不以 ``` 开头也不以 ``` 结尾)
+        content = (
+            "```json\n"
+            '{"subject": "Re: 项目", "body": "感谢您的来信, 项目进展顺利。", "tone": "FORMAL"}'
+        )
+        subject, _, tone = _parse_draft_response(content)
+        assert subject == "Re: 项目"
+        assert tone == DraftTone.FORMAL
+
+    def test_rejects_tone_mismatch(self) -> None:
+        """**P1-3 核心(6/9)**: 请求 tone 与返回 tone 不一致 → DrafterResponseError."""
+        content = _valid_draft_json(tone="FORMAL")
+        with pytest.raises(DrafterResponseError, match="tone 与请求不一致") as exc_info:
+            _parse_draft_response(content, expected_tone=DraftTone.CONCISE)
+        assert "tone_mismatch=request_CONCISE_got_FORMAL" in exc_info.value.reason
+
+    def test_accepts_matching_tone(self) -> None:
+        """**P1-3 (6/9)**: 请求 tone 与返回 tone 一致 → 通过."""
+        content = _valid_draft_json(tone="FORMAL")
+        subject, body, tone = _parse_draft_response(content, expected_tone=DraftTone.FORMAL)
+        assert tone == DraftTone.FORMAL
+
+    def test_expected_tone_none_skips_enforcement(self) -> None:
+        """**P1-3 (6/9)**: expected_tone=None → 跳过强制(向后兼容)."""
+        content = _valid_draft_json(tone="FORMAL")
+        subject, body, tone = _parse_draft_response(content)  # 不传 expected_tone
+        assert tone == DraftTone.FORMAL
+
+    def test_accepts_body_with_inner_code_fence(self) -> None:
+        """**契约 2 (6/9 P1-2 核心修复)**: body 内有 ```python ... ``` 围栏 → 接受.
+
+        这是 P1-2 修复的关键场景: D4.7.1 初版正则扫描 fence 会误拒此 case.
+        6/9 改为"外层包裹"判定后, body 内的合法 code fence 允许.
+        """
+        content = (
+            '{"subject": "代码示例", '
+            '"body": "请参考以下 Python 代码:\\n```python\\nprint(\\"hello\\")\\n```\\n谢谢", '
+            '"tone": "FORMAL"}'
+        )
+        subject, body, tone = _parse_draft_response(content, expected_tone=DraftTone.FORMAL)
+        assert subject == "代码示例"
+        assert "```python" in body
+        assert tone == DraftTone.FORMAL
 
     def test_rejects_no_balanced_json(self) -> None:
         """无平衡 JSON 块 → DrafterResponseError."""
@@ -312,11 +370,14 @@ class TestParseDraftResponse:
             _parse_draft_response("not a json at all")
 
     def test_rejects_non_dict_json(self) -> None:
-        """JSON 顶层非 object → DrafterResponseError(实际是 'no_balanced_json')."""
-        # 注: `{...}` 在 JSON 中永远 parse 成 dict, 故 "顶层必须是 object" 分支不可达.
-        # 实际拒绝路径: 数组 `[1,2,3]` 不含 `{`, 平衡括号扫描失败 → no_balanced_json.
-        with pytest.raises(DrafterResponseError, match="未找到平衡的 JSON 块"):
+        """JSON 顶层非 object(数组)→ DrafterResponseError.
+
+        6/9 P1-2 修复后: `[1,2,3]` 整段 json.loads 成功, 走到 dict 严判 → 顶层必须是 object.
+        (D4.7.1 初版: 数组不含 `{`, 平衡括号扫描失败 → no_balanced_json.)
+        """
+        with pytest.raises(DrafterResponseError, match="JSON 顶层必须是 object") as exc_info:
             _parse_draft_response("[1, 2, 3]")
+        assert "top_level_type=list" in exc_info.value.reason
 
     def test_rejects_invalid_tone(self) -> None:
         """**契约 3 核心**: 非法 tone → DrafterResponseError."""
@@ -378,11 +439,20 @@ class TestHasMarkdownFence:
         assert has_markdown_fence(None) is False  # type: ignore[arg-type]
 
     def test_returns_false_for_fence_in_body(self) -> None:
-        """fence 在 body 字段内也是 fence(整体检测, 不区分位置)."""
+        """**6/9 P1-2 修复**: fence 在 body 字段内不算外层包裹 → False.
+
+        D4.7.1 初版用正则整段扫描 fence 会误杀 body 字段内的代码围栏,
+        6/9 改为"外层包裹"判定 — stripped 以 ``` 开头 AND 以 ``` 结尾。
+        """
         content = (
             '{"subject": "x", "body": "请看 ```python\\nprint(1)\\n``` 这段代码", "tone": "FORMAL"}'
         )
-        # 契约 2 拒收, 含 fence → True
+        # 6/9 修复后: 整段是合法 JSON, 内部 ```python...``` 不算外层 fence → False
+        assert has_markdown_fence(content) is False
+
+    def test_detects_fence_with_surrounding_whitespace(self) -> None:
+        """stripped 后才比较 → 前后空行不影响外层判定."""
+        content = '\n\n```json\n{"x":1}\n```\n\n'
         assert has_markdown_fence(content) is True
 
 
@@ -547,6 +617,87 @@ class TestEmailDrafterDraft:
             email_category=None,
         )
         assert result is not None
+
+    def test_email_category_enum_accepted(self) -> None:
+        """**P1-1 修复(6/9)**: email_category 接受 EmailCategory 枚举(D4.6 真实 handoff)."""
+        from my_ai_employee.ai.classifier import EmailCategory
+
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json())
+        drafter = EmailDrafter(router=mock_router)
+        # 传枚举(D4.6 ClassificationResult.category 真实类型), 不抛错
+        result = drafter.draft(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category=EmailCategory.URGENT,
+        )
+        assert result is not None
+        # mock_router.route 应被调用
+        mock_router.route.assert_called_once()
+
+    def test_email_category_valid_str_accepted(self) -> None:
+        """**P1-1 (6/9)**: email_category 字符串 ∈ 5 类时接受."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json())
+        drafter = EmailDrafter(router=mock_router)
+        for cat in ("URGENT", "TODO", "FYI", "SPAM", "PERSONAL"):
+            result = drafter.draft(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category=cat,
+            )
+            assert result is not None
+
+    def test_email_category_invalid_str_rejected(self) -> None:
+        """**P1-1 (6/9)**: email_category 非法字符串(如 'OOPS')→ ValueError 严判."""
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        with pytest.raises(ValueError, match="email_category 字符串必须"):
+            drafter.draft(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="OOPS",
+            )
+        mock_router.route.assert_not_called()
+
+    def test_email_category_wrong_type_rejected(self) -> None:
+        """**P1-1 (6/9)**: email_category 非 EmailCategory / str / None → ValueError."""
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        with pytest.raises(ValueError, match="email_category 必须是"):
+            drafter.draft(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category=123,  # type: ignore[arg-type]
+            )
+        mock_router.route.assert_not_called()
+
+    def test_draft_enforces_tone_request(self) -> None:
+        """**P1-3 修复(6/9)**: 请求 tone 与返回 tone 不一致 → DrafterResponseError, stats 累加 response_error."""
+        mock_router = MagicMock()
+        # 请求 CONCISE, LLM 返回 FORMAL
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json(tone="FORMAL"))
+        drafter = EmailDrafter(router=mock_router)
+        with pytest.raises(DrafterResponseError, match="tone 与请求不一致") as exc_info:
+            drafter.draft(subject="x", sender="y", body_excerpt="z", tone=DraftTone.CONCISE)
+        assert "tone_mismatch=request_CONCISE_got_FORMAL" in exc_info.value.reason
+        stats = drafter.stats()
+        assert stats["response_error"] == 1
+        assert stats["success"] == 0
+
+    def test_draft_accepts_matching_tone(self) -> None:
+        """**P1-3 (6/9)**: 请求 tone 与返回 tone 一致 → 成功."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(_valid_draft_json(tone="FRIENDLY"))
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft(subject="x", sender="y", body_excerpt="z", tone=DraftTone.FRIENDLY)
+        assert result.tone == DraftTone.FRIENDLY
+        stats = drafter.stats()
+        assert stats["success"] == 1
 
     def test_tone_string_valid(self) -> None:
         """tone 字符串合法 → 接受."""
@@ -765,7 +916,7 @@ class TestContract2RejectsMarkdownFenced:
     """**契约 2 锁定**: 拒 markdown-wrapped JSON(不剥离 fence)."""
 
     def test_drafter_response_error_for_markdown_fence(self) -> None:
-        """_parse_draft_response 对 ```json ... ``` 抛 DrafterResponseError, reason=markdown_fenced."""
+        """_parse_draft_response 对 ```json ... ``` 抛 DrafterResponseError, reason=markdown_fenced_outer."""
         fenced = (
             '```json\n{"subject": "Re: 项目", '
             '"body": "感谢您的来信, 项目进展顺利。", '
@@ -773,7 +924,7 @@ class TestContract2RejectsMarkdownFenced:
         )
         with pytest.raises(DrafterResponseError) as exc_info:
             parse_draft_response(fenced)
-        assert exc_info.value.reason == "markdown_fenced"
+        assert exc_info.value.reason == "markdown_fenced_outer"
 
     def test_drafter_rejects_markdown_fence_via_draft(self) -> None:
         """EmailDrafter.draft 透传契约 2 错误."""
@@ -784,6 +935,23 @@ class TestContract2RejectsMarkdownFenced:
         drafter = EmailDrafter(router=mock_router)
         with pytest.raises(DrafterResponseError, match="markdown fence"):
             drafter.draft(subject="x", sender="y", body_excerpt="z")
+
+    def test_drafter_accepts_body_with_inner_code_fence(self) -> None:
+        """**契约 2 (6/9 P1-2 核心修复)**: body 字段含 code fence 不被外层判定误拒.
+
+        D4.7.1 初版用正则整段扫描 fence, 会误杀 body 内的代码示例.
+        6/9 改为"外层包裹"判定后, body 内的合法 code fence 允许.
+        """
+        mock_router = MagicMock()
+        # 整段是合法 JSON(```python...``` 在 JSON 字符串值内不影响语法)
+        content_with_inner_fence = (
+            '{"subject": "代码示例", "body": "请参考 ```python\\nprint(1)\\n```", "tone": "FORMAL"}'
+        )
+        mock_router.route.return_value = _mock_router_response(content_with_inner_fence)
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft(subject="x", sender="y", body_excerpt="z", tone=DraftTone.FORMAL)
+        assert result.subject == "代码示例"
+        assert "```python" in result.body
 
     def test_drafter_accepts_raw_json(self) -> None:
         """裸 JSON(无 fence)正常通过."""

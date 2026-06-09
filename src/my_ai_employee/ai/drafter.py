@@ -40,7 +40,6 @@ D4.7.1 实施细节:
 from __future__ import annotations
 
 import json
-import re
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
@@ -48,6 +47,7 @@ from typing import Any
 from loguru import logger
 
 from .capability import TaskType
+from .classifier import EmailCategory
 from .providers import LLMError
 from .router import LLMRouter, get_router
 
@@ -69,6 +69,10 @@ class DraftTone(StrEnum):
 
 # 3 类枚举值集合(O(1) 校验)
 _DRAFT_TONE_CHOICES: frozenset[str] = frozenset(t.value for t in DraftTone)
+
+# 5 类邮件标签值(P1-1: 严判 email_category 字符串)
+# Drafter 是 D4.6 分类结果的下游消费者, 严判字符串 ∈ 5 类
+_EMAIL_CATEGORY_VALUES: frozenset[str] = frozenset(c.value for c in EmailCategory)
 
 
 # ===== 业务异常(D3.3.3 教训:窄化异常范围)=====
@@ -231,7 +235,7 @@ class EmailDrafter:
         subject: str,
         sender: str,
         body_excerpt: str,
-        email_category: str | None = None,
+        email_category: EmailCategory | str | None = None,
         tone: DraftTone | str = DraftTone.FORMAL,
     ) -> DraftResult:
         """单邮件草稿生成.
@@ -240,7 +244,8 @@ class EmailDrafter:
             subject: 邮件主题(允许空字符串)
             sender: 发件人(允许空字符串)
             body_excerpt: 正文前 N 字符(> MAX_BODY_CHARS 时截断)
-            email_category: 5 类邮件标签(来自 D4.6 分类结果, 允许 None)
+            email_category: 5 类邮件标签(D4.6 分类结果, 接受 EmailCategory 枚举 /
+                            5 类字符串 / None; 6/9 P1-1 修复允许 D4.6 真实 handoff)
             tone: 草稿语气(默认 FORMAL)
 
         Returns:
@@ -249,7 +254,7 @@ class EmailDrafter:
         Raises:
             ValueError: 参数 type 错(编程错误, 透传)
             DrafterResponseError: LLM 响应解析失败(非严格 JSON / tone 不在 3 类 /
-                                  markdown-wrapped / 字段类型错)
+                                  markdown-wrapped / 字段类型错 / tone 与请求不一致)
             LLMError: 全链失败(router 抛, 由调用方决定 fallback)
         """
         # 严判入口(D4.4 P1 + D4.5 P0 教训应用)
@@ -261,10 +266,24 @@ class EmailDrafter:
             raise ValueError(
                 f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}={body_excerpt!r}"
             )
-        if email_category is not None and type(email_category) is not str:
-            raise ValueError(
-                f"email_category 必须是 str 或 None, 实际 {type(email_category).__name__}"
-            )
+        # P1-1 修复(6/9): 接受 EmailCategory | str | None
+        # - EmailCategory 枚举直接接受(D4.6 ClassificationResult.category 真实 handoff)
+        # - str 严判 ∈ 5 类(拒 'OOPS' 等非法值)
+        # - None 允许(drafter 可独立运行, 不强制 D4.6 上下文)
+        if email_category is not None:
+            if isinstance(email_category, EmailCategory):
+                pass  # 枚举直接接受
+            elif type(email_category) is str:
+                if email_category not in _EMAIL_CATEGORY_VALUES:
+                    raise ValueError(
+                        f"email_category 字符串必须 ∈ {sorted(_EMAIL_CATEGORY_VALUES)}, "
+                        f"实际 {email_category!r}"
+                    )
+            else:
+                raise ValueError(
+                    f"email_category 必须是 EmailCategory 枚举 / str / None, "
+                    f"实际 {type(email_category).__name__}"
+                )
         # tone 入参允许 DraftTone 或 str, 内部统一转 DraftTone
         if isinstance(tone, DraftTone):
             tone_enum = tone
@@ -311,8 +330,11 @@ class EmailDrafter:
             raise
 
         # 严判响应(D4.7 严判入口)
+        # P1-3 修复(6/9): 强制 expected_tone, LLM 返回的 tone 必须 == 请求 tone
         try:
-            draft_subject, draft_body, draft_tone = _parse_draft_response(response.content)
+            draft_subject, draft_body, draft_tone = _parse_draft_response(
+                response.content, expected_tone=tone_enum
+            )
         except DrafterResponseError as e:
             self._stats["response_error"] += 1
             logger.warning(
@@ -404,7 +426,7 @@ def build_user_message(
     subject: str,
     sender: str,
     body_excerpt: str,
-    email_category: str | None = None,
+    email_category: EmailCategory | str | None = None,
     tone: DraftTone = DraftTone.FORMAL,
 ) -> list[dict]:
     """构造 user 消息列表(OpenAI 风格, D4.7.2 替换为 ai/prompts/draft.py).
@@ -413,7 +435,7 @@ def build_user_message(
         subject: 邮件主题(可能为空)
         sender: 发件人
         body_excerpt: 正文前 N 字符(默认调用方截断到 2000 字符)
-        email_category: 5 类邮件标签(来自 D4.6, 允许 None)
+        email_category: 5 类邮件标签(来自 D4.6, 接受 EmailCategory 枚举 / str / None)
         tone: 草稿语气
 
     Returns:
@@ -426,12 +448,29 @@ def build_user_message(
         raise ValueError(f"sender 必须是 str, 实际 {type(sender).__name__}")
     if type(body_excerpt) is not str:
         raise ValueError(f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}")
-    if email_category is not None and type(email_category) is not str:
-        raise ValueError(f"email_category 必须是 str 或 None, 实际 {type(email_category).__name__}")
+    # P1-1 修复(6/9): 接受 EmailCategory | str | None
+    if email_category is not None:
+        if isinstance(email_category, EmailCategory):
+            pass
+        elif type(email_category) is str:
+            if email_category not in _EMAIL_CATEGORY_VALUES:
+                raise ValueError(
+                    f"email_category 字符串必须 ∈ {sorted(_EMAIL_CATEGORY_VALUES)}, "
+                    f"实际 {email_category!r}"
+                )
+        else:
+            raise ValueError(
+                f"email_category 必须是 EmailCategory 枚举 / str / None, "
+                f"实际 {type(email_category).__name__}"
+            )
     if not isinstance(tone, DraftTone):
         raise ValueError(f"tone 必须是 DraftTone 枚举, 实际 {type(tone).__name__}")
 
-    category_line = f"分类: {email_category}\n" if email_category else ""
+    # 枚举转字符串值(LLM prompt 友好)
+    category_str = (
+        email_category.value if isinstance(email_category, EmailCategory) else email_category
+    )
+    category_line = f"分类: {category_str}\n" if category_str else ""
     return [
         {
             "role": "user",
@@ -530,29 +569,32 @@ def _validate_draft_tone(tone: Any) -> None:
     raise ValueError(f"tone 必须是 DraftTone 枚举或 str, 实际 {type(tone).__name__}={tone!r}")
 
 
-# ===== markdown fence 检测(契约 2 拒 markdown-wrapped)=====
+# ===== markdown fence 检测(契约 2 拒外层包裹)=====
 
-# D4.7 契约 2 修复: 拒 markdown-wrapped JSON, 不剥离 fence
-# D4.6 v1.0.1 P1-4 是"剥 fence", D4.7 改为"拒 fence" — 决择见 week1-mvp.md L706
-_MARKDOWN_FENCE_PATTERN = re.compile(r"```(?:json|JSON)?\s*\n?.*?\n?```", re.DOTALL)
+# D4.7 契约 2 修复(6/9 P1-2): 只拒"外层包裹", body 内合法 code fence 允许
+# - D4.7.1 初版用正则整段扫描 fence → 误杀 body 内的 ```python ... ``` 围栏
+# - 6/9 改为: 优先 json.loads 整段, 失败再检测外层包裹(以 ``` 开头 AND 以 ``` 结尾)
+# - 这样 LLM 可在 body 字段中正常输出 markdown 代码示例, 不被契约 2 误拒
+# - D4.6 v1.0.1 P1-4 是"剥 fence", D4.7 改为"拒外层 fence" — 决择见 week1-mvp.md L706
 
 
-def _has_markdown_fence(raw: str) -> bool:
-    """检测 raw 是否含 markdown code fence(契约 2).
+def _has_outer_markdown_fence(raw: str) -> bool:
+    """检测 raw 是否被外层 markdown fence 包裹(契约 2).
 
-    匹配 ```json / ```JSON / ``` 三种 fence 形式。
-    契约 2 锁定: 拒 markdown-wrapped JSON, 不剥离 fence。
+    判定: stripped 内容以 ``` 开头 AND 以 ``` 结尾(允许前后空行)。
+    不再扫描内部任意位置的 fence(避免误杀 body 字段内的 code fence)。
 
     Args:
         raw: LLM 原始响应
 
     Returns:
-        True = 含 markdown fence(契约 2 拒收)
-        False = 无 fence(继续走平衡括号定位)
+        True = 外层被 fence 包裹(契约 2 拒收)
+        False = 无外层包裹(继续走整段 JSON 解析或平衡括号定位)
     """
     if type(raw) is not str:
         return False  # 留到 _parse_draft_response 上层抛 type 错
-    return _MARKDOWN_FENCE_PATTERN.search(raw) is not None
+    stripped = raw.strip()
+    return stripped.startswith("```") and stripped.endswith("```")
 
 
 # ===== 平衡括号定位(复用 D4.6 范本)=====
@@ -616,23 +658,33 @@ def _extract_balanced_json_draft(raw: str) -> str | None:
     return blocks[0] if blocks else None
 
 
-# ===== 严判解析主函数(契约 2 拒 markdown + 契约 3 tone 严判)=====
+# ===== 严判解析主函数(契约 2 拒外层 fence + 契约 3 tone 严判 + P1-3 强制)=====
 
 
-def _parse_draft_response(content: Any) -> tuple[str, str, DraftTone]:
+def _parse_draft_response(
+    content: Any,
+    *,
+    expected_tone: DraftTone | None = None,
+) -> tuple[str, str, DraftTone]:
     """严判解析 LLM 草稿响应, 返回 (subject, body, tone).
 
-    解析策略(D4.7 4 项契约应用):
+    解析策略(D4.7 4 项契约 + 6/9 P1-2 + P1-3 应用):
       1. type() 严判 content 是 str
-      2. **拒 markdown-wrapped JSON**(契约 2: 不剥离 ```json ... ``` fence)
-      3. 平衡括号定位最外层 { ... }(允许任意字段顺序)
-      4. json.loads 严格解析(必须是 dict)
+      2. **优先** `json.loads(content.strip())` 整段解析
+         (允许 prose + JSON 混合 / body 内 code fence)
+      3. 整段解析失败 → 检测**外层** markdown fence 包裹 → 拒收(契约 2)
+      4. 兜底: 平衡括号定位 JSON(允许任意字段顺序)
       5. 严判 "subject" 字段: type is str, 复用 _validate_draft_subject
       6. 严判 "body" 字段: type is str, 复用 _validate_draft_body
       7. 严判 "tone" 字段: 必须是 3 类枚举之一(契约 3)
+      8. **P1-3 强制**: 若传入 expected_tone, 返回 tone 必须 == expected_tone
 
     任何一步失败 → DrafterResponseError(业务异常, 可重试).
     编程错误(KeyError/TypeError 等在解析前) → 透传(不在本函数包装).
+
+    Args:
+        content: LLM 原始响应
+        expected_tone: 请求的语气(6/9 P1-3 新增, 强制 LLM 返回一致 tone)
     """
     if type(content) is not str:
         raise DrafterResponseError(
@@ -641,32 +693,34 @@ def _parse_draft_response(content: Any) -> tuple[str, str, DraftTone]:
             reason=f"type={type(content).__name__}",
         )
 
-    # 契约 2: 拒 markdown-wrapped JSON(不剥离 fence)
-    if _has_markdown_fence(content):
-        raise DrafterResponseError(
-            "LLM 响应被 markdown fence 包裹(契约 2: 拒收, 不剥离)",
-            raw_content=content,
-            reason="markdown_fenced",
-        )
-
-    # 平衡括号定位 JSON
-    json_text = _extract_balanced_json_draft(content)
-    if json_text is None:
-        raise DrafterResponseError(
-            "未找到平衡的 JSON 块",
-            raw_content=content,
-            reason="no_balanced_json",
-        )
-
-    # 严格 JSON 解析
+    # 契约 2 (6/9 P1-2 修复): 优先整段 json.loads, 允许 body 内 code fence
+    stripped = content.strip()
     try:
-        data = json.loads(json_text)
-    except (json.JSONDecodeError, ValueError) as e:
-        raise DrafterResponseError(
-            f"JSON 解析失败: {e}",
-            raw_content=content,
-            reason=f"json_decode_error={type(e).__name__}",
-        ) from e
+        data = json.loads(stripped)
+    except (json.JSONDecodeError, ValueError) as parse_err:
+        # 整段不是合法 JSON → 检测是否被外层 fence 包裹
+        if _has_outer_markdown_fence(content):
+            raise DrafterResponseError(
+                "LLM 响应被外层 markdown fence 包裹(契约 2: 拒收, 不剥离)",
+                raw_content=content,
+                reason="markdown_fenced_outer",
+            ) from parse_err
+        # 兜底: 平衡括号定位(允许 LLM 输出 prose + JSON 混合)
+        json_text = _extract_balanced_json_draft(content)
+        if json_text is None:
+            raise DrafterResponseError(
+                "未找到平衡的 JSON 块",
+                raw_content=content,
+                reason="no_balanced_json",
+            ) from parse_err
+        try:
+            data = json.loads(json_text)
+        except (json.JSONDecodeError, ValueError) as e:
+            raise DrafterResponseError(
+                f"JSON 解析失败: {e}",
+                raw_content=content,
+                reason=f"json_decode_error={type(e).__name__}",
+            ) from e
 
     # 严判结构(必须是 dict)
     if not isinstance(data, dict):
@@ -726,6 +780,14 @@ def _parse_draft_response(content: Any) -> tuple[str, str, DraftTone]:
         )
     tone = DraftTone(tone_raw)  # 此时一定成功
 
+    # P1-3 强制(6/9): 请求 tone 必须与返回 tone 一致
+    if expected_tone is not None and tone != expected_tone:
+        raise DrafterResponseError(
+            f"tone 与请求不一致(契约 3 强制): 请求 {expected_tone.value}, 返回 {tone.value}",
+            raw_content=content,
+            reason=f"tone_mismatch=request_{expected_tone.value}_got_{tone.value}",
+        )
+
     return subject_raw, body_raw, tone
 
 
@@ -775,11 +837,24 @@ def validate_draft_tone(tone: Any) -> None:
     _validate_draft_tone(tone)
 
 
-def parse_draft_response(content: Any) -> tuple[str, str, DraftTone]:
-    """公共 API: 严判解析 LLM 草稿响应(契约 2 + 契约 3)."""
-    return _parse_draft_response(content)
+def parse_draft_response(
+    content: Any,
+    *,
+    expected_tone: DraftTone | None = None,
+) -> tuple[str, str, DraftTone]:
+    """公共 API: 严判解析 LLM 草稿响应(契约 2 + 契约 3 + P1-3).
+
+    Args:
+        content: LLM 原始响应
+        expected_tone: 请求的语气(6/9 P1-3 新增), 强制 LLM 返回一致 tone
+    """
+    return _parse_draft_response(content, expected_tone=expected_tone)
 
 
 def has_markdown_fence(raw: Any) -> bool:
-    """公共 API: 检测 markdown fence(契约 2)."""
-    return _has_markdown_fence(raw)
+    """公共 API: 检测外层 markdown fence 包裹(契约 2, 6/9 P1-2 语义收紧).
+
+    仅检测"外层包裹"(stripped 内容以 ``` 开头 AND 以 ``` 结尾),
+    不再扫描内部任意位置的 fence(避免误杀 body 字段内的 code fence)。
+    """
+    return _has_outer_markdown_fence(raw)

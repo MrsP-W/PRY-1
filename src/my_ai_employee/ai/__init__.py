@@ -27,6 +27,18 @@ from my_ai_employee.ai.classifier import (
     EmailCategory,
     EmailClassifier,
 )
+from my_ai_employee.ai.drafter import (
+    DrafterError,
+    DrafterResponseError,
+    DraftResult,
+    DraftTone,
+    EmailDrafter,
+    has_markdown_fence,
+    parse_draft_response,
+    validate_draft_body,
+    validate_draft_subject,
+    validate_draft_tone,
+)
 from my_ai_employee.ai.fallback import (
     FALLBACK_CHAINS,
     CircuitBreaker,
@@ -60,6 +72,17 @@ __all__ = [
     "ClassifierResponseError",
     "EmailCategory",
     "EmailClassifier",
+    # drafter (D4.7)
+    "DrafterError",
+    "DrafterResponseError",
+    "DraftResult",
+    "DraftTone",
+    "EmailDrafter",
+    "has_markdown_fence",
+    "parse_draft_response",
+    "validate_draft_body",
+    "validate_draft_subject",
+    "validate_draft_tone",
     # fallback
     "FALLBACK_CHAINS",
     "CircuitBreaker",
