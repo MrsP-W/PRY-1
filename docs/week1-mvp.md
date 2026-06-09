@@ -510,14 +510,26 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 |---|------|----------|------|------|
 | 4.0 | LLM 路由层（capability + provider + fallback + router）| 90 min | 5 文件 + 30 测试 | ✅ v1.0 锁定（6/8）|
 | 4.1.1 | **HTTP 实施**：`OpenAICompatibleProvider.chat()` + httpx + 4 类异常 + 26 测试 | 90 min | httpx 调用 + respx 集成测试 | ✅ v1.0 锁定（6/8 20:30）|
-| 4.2 | 写 `ai/classifier.py`（用 `router.route(CLASSIFY, ...)` + 5 类标签）| 90 min | 分类服务 | ⏳ 待启动 |
-| 4.3 | 写 `ai/drafter.py`（用 `router.route(DRAFT, ...)` + 历史回复模式）| 90 min | 草稿服务 | ⏳ 待启动 |
-| 4.4 | 写 `ai/prompts/classifier.txt`（中文 prompt + few-shot 5 例）| 30 min | 提示词 | ⏳ 待启动 |
-| 4.5 | 写 `ai/prompts/drafter.txt`（中文 prompt + 角色设定）| 30 min | 提示词 | ⏳ 待启动 |
-| 4.6 | 写 `scripts/classify_all.py`（批量分类 + 准确率统计）| 60 min | 评估脚本 | ⏳ 待启动 |
-| 4.7 | 写 `tests/ai/test_classifier.py`（500 封真实邮件标注）| 60 min | 单元测试 | ⏳ 待启动 |
-| 4.8 | **Spike**：100 封手标邮件做混淆矩阵 | 60 min | 准确率报告 | ⏳ 待启动 |
-| 4.9 | 写 `core/audit.py`（LLM 调用审计日志）| 30 min | 合规依据 | ⏳ 待启动 |
+
+**⚠️ 6/8 D4.5 release readiness 之后编号重整**(本表 L513-520 为原 D4 智能层规划,6/8 晚间任务重组后,新 D-step 编号 → 旧任务映射):
+
+| 新 D-step | 对应旧任务 | 状态 |
+|-----------|-----------|------|
+| **D4.6 邮件分类器**(v1.0.2-third 锁定 6/9 早晨) | 4.2 classifier.py + 4.4 classifier prompt + 4.7 test_classifier.py | ✅ 611 passed / 8 质量门全绿 |
+| **D4.7 草稿生成器**(本次启动) | 4.3 drafter.py + 4.5 drafter prompt | 🎯 待实施(见下方 §D4.7 段) |
+| D4.6.1+ spike 段 | 4.6 classify_all.py + 4.8 100 封 spike | ⏳ 延后(D4.6 锁定后启动) |
+| D4.7+ 审计段 | 4.9 core/audit.py | ⏳ 延后(D4.7 锁定后启动) |
+
+**📜 原任务表**(D4.5 之前的 4.0-4.9 旧编号,仅作历史归档):
+
+| 4.2 | 写 `ai/classifier.py`（用 `router.route(CLASSIFY, ...)` + 5 类标签）| 90 min | 分类服务 | ✅ 已合并到 D4.6(6/9 早晨 v1.0.2-third 锁定) |
+| 4.3 | 写 `ai/drafter.py`（用 `router.route(DRAFT, ...)` + 历史回复模式）| 90 min | 草稿服务 | 🎯 D4.7 草稿生成器(本次启动) |
+| 4.4 | 写 `ai/prompts/classifier.txt`（中文 prompt + few-shot 5 例）| 30 min | 提示词 | ✅ 已合并到 D4.6.2(`ai/prompts/classify.py` 5 类 SYSTEM prompt) |
+| 4.5 | 写 `ai/prompts/drafter.txt`（中文 prompt + 角色设定）| 30 min | 提示词 | 🎯 D4.7.2 范围(`ai/prompts/draft.py`) |
+| 4.6 | 写 `scripts/classify_all.py`（批量分类 + 准确率统计）| 60 min | 评估脚本 | ⏳ D4.6.1+ spike 段延后 |
+| 4.7 | 写 `tests/ai/test_classifier.py`（500 封真实邮件标注）| 60 min | 单元测试 | ✅ 已合并到 D4.6.7(46 tests) |
+| 4.8 | **Spike**：100 封手标邮件做混淆矩阵 | 60 min | 准确率报告 | ⏳ D4.6.1+ spike 段延后 |
+| 4.9 | 写 `core/audit.py`（LLM 调用审计日志）| 30 min | 合规依据 | ⏳ D4.7+ 审计段(LLM 调用审计)延后 |
 
 **总耗时**：约 7-8 小时（4.0 路由层 + 4.1-4.9 实现）
 
@@ -675,6 +687,72 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
+### D4.7 — 草稿生成器（🎯 2026-06-09 启动，目标 v1.0 锁定）
+
+**承接 D4.6 业务层范本**：D4.6 `EmailClassifierAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 双入口架构（成功/失败 type system 锁定），在 D4.7 第二个真实业务场景上**复用**。
+
+**范围**：
+
+- **业务层**：`ai/drafter.py` 实现 `EmailDrafter`（`draft` / `draft_batch`）+ `_parse_draft_response` 严判 LLM 响应
+- **Prompt 模板**：`ai/prompts/draft.py` SYSTEM prompt + `build_user_message`（接 `email_category` 入参，D4.6 输出作为 D4.7 输入）
+- **业务层接入**：`EmailDrafterAdapter` 复用 D4.6 双入口架构（`draft_and_emit` 成功 + `record_draft_failure_and_emit` 失败，cf 必填 >= 1）
+- **业务字段透传**：`draft_subject` / `draft_body` / `tone` / `model_full_id` / `email_id` / `category` 6 项到 `event_metadata` 顶层
+- **lane_entry_id 命名**：`draft:<source>:<run_id>`（与 `classify:` / `sync:` 区分）
+- **D3.3.3 教训应用**：严判入口 + 异常窄化 + 不 catch-all 兜底
+- **D4.6 v1.0.1 ~ v1.0.2 教训应用**：
+  - P1-1：`LLMAllFallbacksError` 业务异常（全链失败抛子类，不逃逸 RuntimeError）
+  - P1-2：拆分 `business_accepted`（Lane）vs `transport_alive`（Heartbeat），低置信草稿 / 慢响应 ≠ LLM 死
+  - P1-3：`last_draft_failed` 显式 bool 解决成功路径误触发 retry / escalate
+  - P1-4：平衡括号 + markdown fence 剥离（`{"subject": ..., "body": ..., "tone": ...}`）
+  - P2-5：严判 duck type 拒 type-coerce（`True → 1.0` / `"0.5" → 0.5` 静默 coerce 必须拒）
+  - v1.0.2-first：严判下沉到 `compute_*` / `build_*` 公共 API（`_validate_draft_*` helper 复用）
+  - v1.0.2-second：`DraftFailureDecisionReport` 独立类型 + `Literal[True]` + `__post_init__` 三重校验
+  - v1.0.2-second：`policy/__init__.py` 顶层暴露（`__all__` 声明 ≠ 实际可导入）
+  - v1.0.2-third：异常统一 `ValueError`（防止 list/dict/set 不可哈希类型触发 `TypeError`）
+
+**v1.0 验收标准**：
+
+- [ ] `pytest tests/ai/test_drafter.py` 全过（目标 ≥ 50 tests）
+- [ ] `pytest tests/policy/test_drafter_adapter.py` 全过（目标 ≥ 70 tests）
+- [ ] 单封草稿生成 < 10s（week1-mvp §D4 验收 L527）
+- [ ] 严判 LLM 响应：必须 `{"subject": str 非空 + body: str 非空 + tone: <enum>}` 拒 markdown / 拒空 subject / 拒空 body / 拒超长 body (> 8000 字符)
+- [ ] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
+- [ ] D4.6 `EmailClassifierAdapter` 双入口架构复用（`draft_and_emit` / `record_draft_failure_and_emit`）
+- [ ] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
+- [ ] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK
+- [ ] lane_entry_id 命名 `draft:<source>:<run_id>`,与 `classify:` / `sync:` 区分
+- [ ] **3+1 文档沉淀法**：`reports/D4.7-草稿生成器.md`（操作 / 异常 / 改进）+ spike 报告（100 封草稿质量用户体感）
+
+**D4.7 子任务清单**（预计 8.5 小时）：
+
+| # | 任务 | 预计耗时 | 产出 | 状态 |
+|---|------|----------|------|------|
+| D4.7.1 | `src/my_ai_employee/ai/drafter.py` EmailDrafter + `_parse_draft_response` | 60 min | drafter 服务 | 🎯 |
+| D4.7.2 | `src/my_ai_employee/ai/prompts/draft.py` SYSTEM prompt + `build_user_message` | 30 min | prompt 模板 | 🎯 |
+| D4.7.3 | `src/my_ai_employee/policy/integration.py` EmailDrafterAdapter + `DraftDecisionReport` + `DraftFailureDecisionReport` + 3 `_validate_draft_*` helper | 90 min | Adapter | 🎯 |
+| D4.7.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.6 v1.0.2-second P2-3 教训） | 5 min | 导出 | 🎯 |
+| D4.7.5 | `tests/ai/test_drafter.py` 50 tests（30 严判 + 10 batch + 10 prompt） | 90 min | 单元测试 | 🎯 |
+| D4.7.6 | `tests/policy/test_drafter_adapter.py` 70 tests（双入口 + 公共 API + 顶层导出） | 120 min | 适配器测试 | 🎯 |
+| D4.7.7 | `docs/week1-mvp.md §D4.7` 本段（v1.0 → v1.0.1 → v1.0.2 演进） | 30 min | 文档 | 🎯 |
+| D4.7.8 | `docs/d4-claw-code-mapping.md §8` D4.7 mapping 段 | 30 min | mapping | 🎯 |
+| D4.7.9 | `reports/D4.7-草稿生成器.md` v1.0 报告（8 质量门 + 教训应用） | 30 min | 报告 | 🎯 |
+| D4.7.10 | **Spike**：100 封真实邮件跑 `draft` + 草稿质量用户体感（精确度 / 长度 / 语气） | 60 min | spike 报告 | 🎯 |
+| D4.7.11 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 |
+
+**已知限制**（D4.7.1+ 复检 P 项预判）：
+
+- 草稿质量难量化（用户主观） → spike 100 封手标 + 用户体感打分
+- 草稿长度不可控 → 严判 body 长度上限（e.g. 8000 字符）
+- 历史回复模式需要语料 → 暂用 placeholder，D4.7.1+ 接入 `sent_emails` 表
+- `draft_batch` 顺序串行（100 封 ≈ 100-1000s） → D4.7.1+ 改 asyncio + httpx async
+- tone 枚举硬编码（3-5 类） → D4.7.1+ 扩 FRIENDLY / FORMAL / CONCISE 等
+
+**参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.6 v1.0.1 ~ v1.0.2-third 13 项教训应用。完整报告：[reports/D4.7-草稿生成器.md](../reports/D4.7-草稿生成器.md)（待写）。
+
+**下一棒 → D4.7 实施**（本段确认后启动）。D4.6 v1.0.2-third 第三次复检真正锁定（2026-06-09 早晨），D4.7 范围 / 验收 / 参考已明确，等待用户审批。
+
+---
+
 ## D5 — CalDAV 同步 + 菜单栏
 
 ### 目标
@@ -756,6 +834,6 @@ iCloud CalDAV 双向同步 + Mac 菜单栏状态显示。
 
 ---
 
-**最后更新**：2026-06-07
-**状态**：D1 已完成（脚手架通过），D2 待启动
+**最后更新**：2026-06-09（D4.6 v1.0.2-third 锁定 + D4.7 范围明确）
+**状态**：D1-D4.6 已完成（v1.0.2-third 锁定 6/9 早晨），D4.7 草稿生成器范围已明确待审批启动
 **维护者**：Mr-PRY
