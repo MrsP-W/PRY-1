@@ -593,7 +593,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
-### D4.6 — 邮件分类器（✅ 2026-06-09 v1.0.2-second 二次复检后真正锁定）
+### D4.6 — 邮件分类器（✅ 2026-06-09 v1.0.2-third 第三次复检后真正锁定）
 
 **承接 D4.5 业务层范本**：D4.5 `SyncPolicyAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 5 步主入口，在 D4.6 第二个真实业务场景上**复用**。
 
@@ -607,24 +607,25 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **D4.5 兼容度**：`SyncPolicyAdapter` 5 步主入口 + `evaluate()` `_emit_decision_event` 旧 kwargs 全保留（`extra_business_payload=None` 旧行为零变化）
 - **D4.4 兼容度**：D4.4 6 个源文件零修改，仅 `_emit_decision_event` 新增可选 kwargs
 
-**v1.0 → v1.0.1 → v1.0.2-first → v1.0.2-second 演进路径**（2026-06-09 早晨两次复检）：
+**v1.0 → v1.0.1 → v1.0.2-first → v1.0.2-second → v1.0.2-third 演进路径**（2026-06-09 早晨三次复检）：
 
 | 版本 | 提交 | 触发 | 修复项 | 测试数 | 关键变更 |
 |------|------|------|--------|--------|----------|
 | v1.0 | ab6ad9c | 6/8 晚间初版提交 | — | 559 | 5 类 + 严判 + 业务层接入 |
 | v1.0.1 | 22aa82a | 6/9 早晨第一次复检 | 6 P1+P2+P3 | 576 | Router 全链 / 业务传输解耦 / 成功失败分离 / JSON 解析 / duck type / 文档 |
-| v1.0.2-first | (待 commit) | 6/9 早晨第二次复检 5 项 | 2 P1 + 3 P2 | 592 | 双入口 type system 锁定 + 5 类严判 + 平衡 JSON + 批处理补全 + NaN 拒收 |
-| **v1.0.2-second** | (待 commit) | 6/9 早晨第二次复检 4 项 | 1 P1 + 2 P2 + 1 P3 | **603** | 公开 helper 严判下沉 + `ClassifyFailureDecisionReport` 独立类型 + 顶层导出 + 文档同步 |
+| v1.0.2-first | (并入 v1.0.2-second commit) | 6/9 早晨第二次复检 5 项 | 2 P1 + 3 P2 | 592 | 双入口 type system 锁定 + 5 类严判 + 平衡 JSON + 批处理补全 + NaN 拒收 |
+| v1.0.2-second | b7468bb | 6/9 早晨第二次复检 4 项 | 1 P1 + 2 P2 + 1 P3 | 603 | 公开 helper 严判下沉 + `ClassifyFailureDecisionReport` 独立类型 + 顶层导出 + 文档同步 |
+| **v1.0.2-third** | c6afda6 | 6/9 早晨第三次复检 4 项 | 1 P1 + 2 P2 + 1 P3 | **611** | 公共构造器严判下沉 + `Literal[True]` 数据类自洽 + 异常统一 `ValueError` + 文档同步 |
 
-**8 大质量门**（8/8 全绿 · v1.0.2-second 二次复检后 6/9 早晨）：
-- `pytest tests/ai/ -v`: classifier 46 passed（D4.6 ai 30 → v1.0.1 40 → v1.0.2-first 46 → v1.0.2-second 46）
-- `pytest tests/policy/ -v`: classifier_adapter 61 passed（D4.6 policy 32 → v1.0.1 40 → v1.0.2-first 50 → v1.0.2-second 50 + 11 = 61）
+**8 大质量门**（8/8 全绿 · v1.0.2-third 第三次复检后 6/9 早晨）：
+- `pytest tests/ai/ -v`: classifier 46 passed（D4.6 ai 30 → v1.0.1 40 → v1.0.2-first 46 → v1.0.2-second 46 → v1.0.2-third 46）
+- `pytest tests/policy/ -v`: classifier_adapter 69 passed（D4.6 policy 32 → v1.0.1 40 → v1.0.2-first 50 → v1.0.2-second 61 → v1.0.2-third 69）
 - `ruff check`: All checks passed / `ruff format`: 81 files already formatted
-- `mypy src/ tests/`: 0 errors / 76 files
+- `mypy src/`: 0 errors / 43 files
 - `alembic upgrade head --sql`: exit 0 (0003 latest)
 - `uv build`: tar.gz + .whl OK
-- `pytest` 全量: **603 passed**（v1.0.2-first 592 → v1.0.2-second 603，**0 失败**）
-- 覆盖率：`policy/integration.py` 99.4% + `ai/classifier.py` 96.4% + `ai/prompts/classify.py` 100%
+- `pytest` 全量: **611 passed**（v1.0.2-first 592 → v1.0.2-second 603 → v1.0.2-third 611，**0 失败**）
+- 覆盖率：`policy/integration.py` 94.3% + `ai/classifier.py` 96.4% + `ai/prompts/classify.py` 100%
 
 **v1.0.2 关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 + v1.0.1 教训应用）：
 - 复用 `router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链（`fallback.FALLBACK_CHAINS` 已配）
@@ -647,6 +648,12 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - **P2-3 顶层导出**：`policy/__init__.py` 暴露 `build_classify_failure_packet` + `ClassifyFailureDecisionReport`，`from my_ai_employee.policy import ...` 不再 ImportError
 - **P3 文档同步**：报告 49+47 → 46+50、uv build blocked → 通过、week1-mvp 数字 559 → 603、mapping 数字 576 → 603
 
+**v1.0.2-third 关键修复**（公共 API 自防御 + 数据类自洽 + 文档同步）：
+- **P1 公共构造器严判下沉**：`build_classify_packet` 复用 `_validate_classify_category` 公共 helper（原版仅 `type() is str` + 空检查，缺 5 类校验），与主入口 + 公共 helper 同一严判口径（防止传 `"OOPS"` / `"TODO_FIX"` 等任意字符串）
+- **P2 Literal[True] + 字段自洽**：`ClassifyFailureDecisionReport.failed: bool` → `Literal[True]`（mypy 编译期拒绝 `failed=False`）；新增 `__post_init__` 三重校验（`failed is True` + `last_error` 非空 + `consecutive_classify_failures >= 1`），D3.3.3 教训应用
+- **P2 异常统一 ValueError**：`classify_and_emit` 内联 `if x not in frozenset` 替换为 `_validate_classify_category`，严判入口统一 `ValueError`，防止 list/dict/set 等不可哈希类型在后续操作触发 `TypeError`
+- **P3 文档同步**：`classify_and_emit` docstring 用例移除已删除的 `consecutive_classify_failures=0`；`record_classify_failure_and_emit` 返回值 docstring 从 `ClassifyDecisionReport` 改为 `ClassifyFailureDecisionReport`
+
 **关键设计**（D3.3.3 + D4.4 P1 + D4.5 P0 + D4.5 v1.0.1 教训应用）：
 - 复用 `router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链（`fallback.FALLBACK_CHAINS` 已配）
 - 严判 LLM 响应：必须严格 JSON `{"category": "<枚举>", "confidence": <0-1 float>}` 拒 markdown / 拒 bool（陷阱）/ 拒越界 / 拒非法 category
@@ -664,7 +671,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.5 v1.0.1 反馈闭环模式。完整报告：[reports/D4.6-邮件分类器.md](../reports/D4.6-邮件分类器.md)
 
-**下一棒 → D4.7+ drafter / classifier_v2**（D4.5 范本 + D4.6 EmailClassifierAdapter 复用）。D4.6 **v1.0 已锁定**（2026-06-08 晚间），W2 业务层启动决策推迟到 6/9 晨间链路确认。D4 智能层底座 6 步全锁定 + 业务层接入范本复用 1 次。
+**下一棒 → D4.7+ drafter / classifier_v2**（D4.5 范本 + D4.6 EmailClassifierAdapter 复用）。D4.6 **v1.0.2-third 第三次复检真正锁定**（2026-06-09 早晨），W2 业务层启动决策推迟到 6/9 晨间链路确认后启动。D4 智能层底座 6 步全锁定 + 业务层接入范本复用 1 次。
 
 ---
 
