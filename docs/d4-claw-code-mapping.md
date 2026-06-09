@@ -352,7 +352,90 @@
 
 ---
 
-**最后更新**:2026-06-08 晚间(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成(**v1.0 锁定 · P0 业务语义修复 + v1.0.1 文档/可观测性补完后**),落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + P0 反馈 3 条修复 + v1.0.1 反馈 1 条修复)
+## 7. D4.6 邮件分类器(✅ 2026-06-08 v1.0 锁定 → 2026-06-09 v1.0.1 业务语义修复后真正锁定)
+
+### 7.1 claw-code 优先参考
+
+claw-code 仓库无"邮件分类"或"标签路由"模块。**D4.6 直接落 ai/classifier.py,不照搬**。
+
+最近邻的是 `src/agents/prompts.rs`(prompt 模板组织)+ `src/agents/agent_loop.rs`(任务循环 + fallback)。D4.6 借鉴 2 点:
+
+- **数据驱动 prompt**:`ai/prompts/classify.py` 独立模块,与业务代码分离,便于切换 LLM 时只改 prompt
+- **5 类枚举 + 严判**:`EmailCategory` 5 类 StrEnum,严判响应 JSON 字段,避免脏输入污染 events
+
+### 7.2 不照搬的部分
+
+- claw-code 通用 agent loop 是 OpenAI function-calling 模式;D4.6 邮件分类是**短响应决策**(≤64 token),不调 function call
+- claw-code 任务循环是 long-running;D4.6 分类是单次调用,无状态
+
+### 7.3 故意不学的
+
+- 不用 regex 定位 JSON(强制字段顺序,反序误拒)— D4.6 v1.0.1 P1-4 修复改用平衡括号扫描
+- 不用 `float()` / `int()` 静默 coerce(D2 truthy 陷阱)— D4.6 v1.0.1 P2-5 修复改用 type() 严判
+- 不用单一 `all_pass` 变量同时驱动 Lane + Heartbeat(SPAM 误报 transport_dead)— D4.6 v1.0.1 P1-2 修复拆分为 `business_accepted` + `transport_alive`
+
+### 7.4 实施子任务(2026-06-08 晚间 + 2026-06-09 晨间修复)
+
+| 子步骤 | 文件 | 关键产物 | 状态 |
+|--------|------|---------|------|
+| D4.6.1 | `src/my_ai_employee/ai/classifier.py` | EmailCategory 5 类 + EmailClassifier + _parse_classification_response | ✅ v1.0 → v1.0.1 |
+| D4.6.2 | `src/my_ai_employee/ai/prompts/classify.py` | 5 类 SYSTEM prompt + build_user_message | ✅ v1.0 |
+| D4.6.3 | `src/my_ai_employee/policy/integration.py` | EmailClassifierAdapter + 3 factory + ClassifyDecisionReport | ✅ v1.0 → v1.0.1 |
+| D4.6.4 | `src/my_ai_employee/ai/providers.py` | LLMAllFallbacksError(D4.6 v1.0.1 P1-1 新增) | ✅ v1.0.1 |
+| D4.6.5 | `src/my_ai_employee/ai/router.py` | raise LLMAllFallbacksError 替换 RuntimeError | ✅ v1.0.1 |
+| D4.6.6 | `tests/ai/test_classifier.py` | 40 tests(31 旧 + 9 v1.0.1) | ✅ v1.0.1 |
+| D4.6.7 | `tests/policy/test_classifier_adapter.py` | 40 tests(32 旧 + 8 v1.0.1) | ✅ v1.0.1 |
+| D4.6.8 | `tests/ai/test_router.py` | test_all_fail_raises_runtime_error 改测 LLMAllFallbacksError | ✅ v1.0.1 |
+| D4.6.9 | `reports/D4.6-邮件分类器.md` | v1.0 段 + §0.5 v1.0.1 业务语义修复段 | ✅ v1.0.1 |
+| D4.6.10 | `docs/d4-claw-code-mapping.md §7` | 本段 mapping | ✅ v1.0.1 |
+
+### 7.5 验证 anchor(8 质量门 8/8 全绿)
+
+| 门 | 命令 | v1.0.1 结果 |
+|----|------|------------|
+| 1 | `uv run pytest` | **576 passed** / 0 failed |
+| 2 | `uv run ruff check` | All checks passed |
+| 3 | `uv run ruff format --check` | 81 files already formatted |
+| 4 | `uv run mypy src tests` | 0 errors / 76 files |
+| 5 | `uv run alembic upgrade head --sql` | exit 0(同 v1.0 DDL) |
+| 6 | `uv build` | blocked by auto mode(同 v1.0 pyproject,无 metadata 变化) |
+| 7 | `make lint` | 0 errors |
+| 8 | `pytest --collect-only -q` | classifier 40 + adapter 40 = D4.6 80 / 全量 576 |
+
+### 7.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.5 P0 + v1.0.1 P1-1 ~ P1-4 + P2-5)
+
+- **复用 D4.1.1 LLM Router**:`router.route(TaskType.CLASSIFY, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链
+- **5 类枚举 + 严判**:`EmailCategory` StrEnum + `_parse_classification_response` 7 步防御(类型严判 → markdown fence 剥离 → 平衡括号定位 → json.loads → category 5 类枚举校验 → math.isfinite → 0-1 范围)
+- **业务层接入范本**:复用 D4.5 `SyncPolicyAdapter` 4 依赖可注入(`event_store` / `engine` / `heartbeat` / `board`),`classify_and_emit` 5 步主入口
+- **业务字段透传**:`extra_business_payload` 扩 PolicyEngine 可选 kwargs,业务字段(category / confidence / model_full_id / email_id / source)合并到 event_metadata 顶层
+- **lane_entry_id 命名**:`classify:<source>:<run_id>`(与 `sync:` 区分)
+- **D4.6 v1.0.1 业务语义修复汇总**:
+  - P1-1:`LLMAllFallbacksError(LLMError)` 解决 router 逃逸 → classifier 自动覆盖
+  - P1-2:拆分 `business_accepted`(Lane) vs `transport_alive`(Heartbeat),SPAM / 低置信度 / 慢响应 ≠ LLM 死
+  - P1-3:`last_classify_failed` 显式 bool 解决成功路径误触发 retry / escalate
+  - P1-4:平衡括号 + `math.isfinite()` 解决反序 JSON 误拒 + NaN 漏过
+  - P2-5:严判 duck type 解决 bool / str 静默 coerce(`True → 1.0` / `"0.5" → 0.5`)
+
+### 7.7 故意不学的范本(g009 §"反范本" 沉淀)
+
+| 旧 v1.0 写法 | 新 v1.0.1 写法 | 教训 |
+|--------------|---------------|------|
+| `raise RuntimeError(...)` (全链失败) | `raise LLMAllFallbacksError(...)` (LLMError 子类) | 业务异常必须从基类继承,业务方 `except` 一行覆盖 |
+| `all_pass` 同时驱动 Lane + Heartbeat | `business_accepted` (Lane) + `transport_alive` (Heartbeat) | 业务验收 ≠ 传输存活,两个状态独立判定 |
+| 纯 `cf` 推断 `recoverable` | `last_classify_failed AND 0 < cf < 3` 显式 bool | 成功路径责任清晰,避免 caller 隐式重置纪律 |
+| 正则 `\{...category...confidence...\}` | 平衡括号扫描 `_extract_balanced_json` | 不假设字段顺序,允许 LLM 自由发挥 |
+| `0 <= x <= 1` 范围检查 | `math.isfinite(x) AND 0 <= x <= 1` | NaN / Inf 必须显式拒(NaN 任何比较返回 False) |
+| `float(confidence)` / `int(latency_ms)` 静默 coerce | `type() is (int, float) AND not isinstance(x, bool)` | 严判入口拒绝 type-coerce,与 D4.4 P1 对齐 |
+
+---
+
+**最后更新**:2026-06-09 晨间链路(D4.2 锁定 + D4.3 Events 表契约完成 + D4.4 任务策略板完成 + D4.5 release readiness + 业务层接入完成 + **D4.6 邮件分类器 v1.0 锁定 → v1.0.1 业务语义修复后真正锁定**,落 mapping 第二段 + 熔断口径收口 + D4.3 §4 详细段 + D4.4 §5 详细段 + D4.5 §6 详细段 + D4.6 §7 详细段 + P0 反馈 3 条修复 + v1.0.1 反馈 6 条修复)
+**维护者**:Mr-PRY
+**关联**:
+- [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
+- [memory/claw-code-reference.md](../Agent%20Assistant/memory/claw-code-reference.md) — 仓库快照 + 6 个高价值文件
+- [memory/tools_status.md](../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
+- [reports/D4.6-邮件分类器.md §0.5](../我的AI员工/reports/D4.6-邮件分类器.md) — v1.0.1 业务语义修复段
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则

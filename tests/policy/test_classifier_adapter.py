@@ -17,6 +17,11 @@ D4.6 测试点:
      + lane_entry_id + run_id 写入 event_metadata (D4.5 v1.0.1 反馈闭环)
      + 业务字段: category + confidence 透传到 ClassifyDecisionReport
 
+D4.6 v1.0.1 增量测试(2026-06-09 用户复检 P1-2 + P1-3 + P2-5):
+  - TestD46V101AdapterFixes 类(末尾追加)
+  - P1-2: transport_alive 显式参数,与 business_accepted 解耦
+  - P2-5: classification duck type 严判,拒 bool/str coerce
+
 参考 EventStore API:
   - insert(event, status, source, subject_id, seq, session_id, ownership, provenance, extra, ...)
   - by_event_type(event_type, limit) 查同类型事件
@@ -28,6 +33,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -272,26 +278,75 @@ class TestFactoryFunctions:
             )
 
     def test_build_classify_policy_context_escalate_logic(self) -> None:
-        """escalate 语义: consecutive_classify_failures >= 3 → policy_eval_failed=True."""
+        """escalate 语义(D4.6 v1.0.1 P1-3): last_classify_failed AND cf >= 3.
+
+        新版需 last_classify_failed=True 才触发 policy_eval_failed;
+        默认 last_classify_failed=False 时 cf 任意值都不升级。
+        """
+        # last_classify_failed=False(默认): cf 多少都不升级
+        for cf in [0, 2, 3, 5, 100]:
+            ctx = build_classify_policy_context(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=1000,
+                consecutive_classify_failures=cf,
+            )
+            assert ctx["policy_eval_failed"] is False, f"failed=False, cf={cf}"
+
+        # last_classify_failed=True: cf >= 3 才升级
         for cf, expected in [(0, False), (2, False), (3, True), (5, True)]:
             ctx = build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
+                last_classify_failed=True,
                 consecutive_classify_failures=cf,
             )
-            assert ctx["policy_eval_failed"] is expected, f"cf={cf}"
+            assert ctx["policy_eval_failed"] is expected, f"failed=True, cf={cf}"
 
     def test_build_classify_policy_context_recoverable_logic(self) -> None:
-        """recoverable 语义: cf > 0 AND cf < 3."""
-        for cf, expected in [(0, False), (1, True), (2, True), (3, False), (5, False)]:
+        """recoverable 语义(D4.6 v1.0.1 P1-3): last_classify_failed AND 0 < cf < 3.
+
+        新版需 last_classify_failed=True 才看 cf 范围;
+        默认 last_classify_failed=False 时 cf 多少都不 recoverable。
+        """
+        # last_classify_failed=False(默认): cf 多少都不 recoverable
+        for cf in [0, 1, 2, 3, 5]:
             ctx = build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
                 consecutive_classify_failures=cf,
             )
-            assert ctx["last_error_recoverable"] is expected, f"cf={cf}"
+            assert ctx["last_error_recoverable"] is False, f"failed=False, cf={cf}"
+
+        # last_classify_failed=True: 0 < cf < 3 才 recoverable
+        for cf, expected in [(0, False), (1, True), (2, True), (3, False), (5, False)]:
+            ctx = build_classify_policy_context(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=1000,
+                last_classify_failed=True,
+                consecutive_classify_failures=cf,
+            )
+            assert ctx["last_error_recoverable"] is expected, f"failed=True, cf={cf}"
+
+    def test_build_classify_policy_context_last_failed_wrong_type(self) -> None:
+        """D4.6 v1.0.1 P1-3 严判入口: last_classify_failed 必须是原生 bool."""
+        with pytest.raises(ValueError, match="last_classify_failed"):
+            build_classify_policy_context(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=1000,
+                last_classify_failed="true",  # type: ignore[arg-type]
+            )
+        with pytest.raises(ValueError, match="last_classify_failed"):
+            build_classify_policy_context(
+                category_value="URGENT",
+                confidence=0.9,
+                latency_ms=1000,
+                last_classify_failed=1,  # type: ignore[arg-type]
+            )
 
 
 # ============================================================
@@ -423,7 +478,11 @@ class TestClassifyAndEmit:
         assert report.event_id is None
 
     def test_spam_triggers_blocked_lane(self, store) -> None:
-        """SPAM → AC[1]=False → BLOCKED + transport_dead(D4.5 P0-3 范本)."""
+        """SPAM → AC[1]=False → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2).
+
+        v1.0.1 修复: SPAM 业务拒绝 ≠ LLM 死了。Lane 用 business_accepted,
+        Heartbeat 用 transport_alive(默认 True,LLM 调用成功)。
+        """
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(category_value="SPAM", confidence=0.95)
         report = a.classify_and_emit(
@@ -431,12 +490,14 @@ class TestClassifyAndEmit:
             classification=classification,
             run_id="r-spam",
         )
-        assert report.liveness == Liveness.TRANSPORT_DEAD
+        # Lane: 业务拒绝 → BLOCKED
         entry = a._board.get(report.lane_entry_id)
         assert entry.status == LaneStatus.BLOCKED
+        # Heartbeat: LLM 调用成功 → HEALTHY(P1-2 修复后 transport_alive 不再耦合业务)
+        assert report.liveness == Liveness.HEALTHY
 
     def test_low_confidence_triggers_blocked_lane(self, store) -> None:
-        """置信度 < 0.7 → AC[0]=False → BLOCKED."""
+        """置信度 < 0.7 → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(confidence=0.5)
         report = a.classify_and_emit(
@@ -444,12 +505,12 @@ class TestClassifyAndEmit:
             classification=classification,
             run_id="r-low-conf",
         )
-        assert report.liveness == Liveness.TRANSPORT_DEAD
         entry = a._board.get(report.lane_entry_id)
         assert entry.status == LaneStatus.BLOCKED
+        assert report.liveness == Liveness.HEALTHY
 
     def test_high_latency_triggers_blocked_lane(self, store) -> None:
-        """延迟 ≥ 5000ms → AC[2]=False → BLOCKED."""
+        """延迟 ≥ 5000ms → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(latency_ms=6000)
         report = a.classify_and_emit(
@@ -457,17 +518,23 @@ class TestClassifyAndEmit:
             classification=classification,
             run_id="r-high-latency",
         )
-        assert report.liveness == Liveness.TRANSPORT_DEAD
         entry = a._board.get(report.lane_entry_id)
         assert entry.status == LaneStatus.BLOCKED
+        assert report.liveness == Liveness.HEALTHY
 
     def test_escalate_at_threshold_3(self, store) -> None:
-        """consecutive_classify_failures >= 3 → EscalateRequired 决策触发."""
+        """D4.6 v1.0.1 P1-3 修复: last_classify_failed=True AND cf >= 3 → EscalateRequired.
+
+        v1.0 旧逻辑只看 cf 单参数 → 成功路径仍会触发 escalate(P1-3 bug)。
+        v1.0.1 引入 last_classify_failed 显式 bool,本次为成功分类 → 默认 False。
+        本测试必须显式传 last_classify_failed=True 才能触发 escalate。
+        """
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()
         a.classify_and_emit(
             email_id=1,
             classification=classification,
+            last_classify_failed=True,
             consecutive_classify_failures=3,
             run_id="r-escalate",
         )
@@ -562,15 +629,185 @@ class TestClassifyAndEmit:
         assert meta.get("source") == "qq"
 
     def test_retry_available_at_cf_2(self, store) -> None:
-        """consecutive_classify_failures=2 → RetryAvailable 触发."""
+        """D4.6 v1.0.1 P1-3 修复: last_classify_failed=True AND cf=2 → RetryAvailable.
+
+        v1.0 旧逻辑纯看 cf → 成功分类也会触发 retry(P1-3 bug)。
+        v1.0.1 引入 last_classify_failed 显式 bool,本次为成功分类 → 默认 False。
+        本测试必须显式传 last_classify_failed=True 才能触发 retry。
+        """
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()
         a.classify_and_emit(
             email_id=1,
             classification=classification,
+            last_classify_failed=True,
             consecutive_classify_failures=2,
             run_id="r-retry",
         )
         ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
         kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
         assert PolicyDecisionKind.RETRY_AVAILABLE in kinds
+
+
+# ============================================================
+# D4.6 v1.0.1 业务语义修复测试(2026-06-09 用户复检)
+# ============================================================
+
+
+class TestD46V101AdapterFixes:
+    """D4.6 v1.0.1 Adapter 层业务语义修复测试.
+
+    覆盖用户 6/9 晨间复检的 P1-2 + P2-5。
+    P1-1 由 tests/ai/test_classifier.py::TestD46V101Fixes 覆盖。
+    P1-3 由上方的 test_build_classify_policy_context_* 系列覆盖。
+    """
+
+    # --- P1-2: transport_alive 显式参数 + 业务/传输解耦 ---
+
+    def test_transport_alive_false_triggers_transport_dead(self, store) -> None:
+        """P1-2 修复: transport_alive=False → Heartbeat=TRANSPORT_DEAD(与业务无关)."""
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        classification = FakeClassification.make()  # 业务验收通过
+        report = a.classify_and_emit(
+            email_id=1,
+            classification=classification,
+            transport_alive=False,  # 关键: 显式标记 LLM 死了
+            run_id="r-v101-transport-dead",
+        )
+        # 业务通过 → Lane FINISHED; 但 transport_alive=False → Heartbeat TRANSPORT_DEAD
+        entry = a._board.get(report.lane_entry_id)
+        assert entry.status == LaneStatus.FINISHED
+        assert report.liveness == Liveness.TRANSPORT_DEAD
+
+    def test_business_rejected_but_transport_alive(self, store) -> None:
+        """P1-2 修复: SPAM/低置信度 → Lane BLOCKED + Heartbeat HEALTHY(LLM 没死)."""
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        classification = FakeClassification.make(category_value="SPAM", confidence=0.95)
+        report = a.classify_and_emit(
+            email_id=1,
+            classification=classification,
+            transport_alive=True,  # 显式声明 LLM 活着
+            run_id="r-v101-biz-reject-transport-alive",
+        )
+        # 业务拒绝 → Lane BLOCKED; transport_alive=True → Heartbeat HEALTHY
+        entry = a._board.get(report.lane_entry_id)
+        assert entry.status == LaneStatus.BLOCKED
+        assert report.liveness == Liveness.HEALTHY
+
+    def test_transport_alive_wrong_type_rejected(self) -> None:
+        """P1-2 严判入口: transport_alive 必须是原生 bool."""
+        a = EmailClassifierAdapter(source="qq")
+        classification = FakeClassification.make()
+        with pytest.raises(ValueError, match="transport_alive"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=classification,
+                transport_alive=1,  # type: ignore[arg-type]
+                run_id="r-bool-transport",
+            )
+        with pytest.raises(ValueError, match="transport_alive"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=classification,
+                transport_alive="true",  # type: ignore[arg-type]
+                run_id="r-str-transport",
+            )
+
+    # --- P2-5: classification duck type 严判,拒 bool/str 静默 coerce ---
+
+    def test_duck_type_rejects_bool_confidence(self) -> None:
+        """P2-5 修复: confidence=True 旧版 float() → 1.0 通过; 新版严判拒收."""
+        a = EmailClassifierAdapter(source="qq")
+
+        @dataclass
+        class BadConfBool:
+            category_value: str = "URGENT"
+            confidence: object = True  # type: ignore[assignment]
+            model_full_id: str = "deepseek/deepseek-chat"
+            latency_ms: int = 1000
+
+            @property
+            def category(self) -> Any:
+                class _C:
+                    value = self.category_value
+
+                return _C()
+
+        with pytest.raises(ValueError, match="confidence"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=BadConfBool(),
+                run_id="r-v101-bool-conf",
+            )
+
+    def test_duck_type_rejects_str_confidence(self) -> None:
+        """P2-5 修复: confidence='0.5' 旧版 float() → 0.5 通过; 新版严判拒收."""
+        a = EmailClassifierAdapter(source="qq")
+
+        @dataclass
+        class BadConfStr:
+            category_value: str = "URGENT"
+            confidence: object = "0.5"  # type: ignore[assignment]
+            model_full_id: str = "deepseek/deepseek-chat"
+            latency_ms: int = 1000
+
+            @property
+            def category(self) -> Any:
+                class _C:
+                    value = self.category_value
+
+                return _C()
+
+        with pytest.raises(ValueError, match="confidence"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=BadConfStr(),
+                run_id="r-v101-str-conf",
+            )
+
+    def test_duck_type_rejects_bool_latency(self) -> None:
+        """P2-5 修复: latency_ms=True 旧版 int() → 1 通过; 新版严判拒收."""
+        a = EmailClassifierAdapter(source="qq")
+
+        @dataclass
+        class BadLatencyBool:
+            category_value: str = "URGENT"
+            confidence: float = 0.9
+            model_full_id: str = "deepseek/deepseek-chat"
+            latency_ms: object = True  # type: ignore[assignment]
+
+            @property
+            def category(self) -> Any:
+                class _C:
+                    value = self.category_value
+
+                return _C()
+
+        with pytest.raises(ValueError, match="latency_ms"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=BadLatencyBool(),
+                run_id="r-v101-bool-lat",
+            )
+
+    # --- P1-3 联动: 成功路径 last_classify_failed 默认 False,不触发 retry ---
+
+    def test_successful_classify_does_not_trigger_retry(self, store) -> None:
+        """P1-3 修复: 成功分类(默认 last_classify_failed=False) → 不触发 RETRY_AVAILABLE.
+
+        v1.0 旧逻辑纯看 cf,即使本次成功若 cf>0 仍触发 retry。
+        v1.0.1 显式 last_classify_failed=False → 强制 recoverable=False。
+        """
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        classification = FakeClassification.make()
+        a.classify_and_emit(
+            email_id=1,
+            classification=classification,
+            last_classify_failed=False,  # 显式声明本次为成功
+            consecutive_classify_failures=2,  # 旧逻辑会触发 retry
+            run_id="r-v101-success-no-retry",
+        )
+        ev = store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)[0]
+        kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
+        assert PolicyDecisionKind.RETRY_AVAILABLE not in kinds
+        assert PolicyDecisionKind.ESCALATE_REQUIRED not in kinds

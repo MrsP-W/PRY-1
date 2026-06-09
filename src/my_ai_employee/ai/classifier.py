@@ -17,11 +17,19 @@ D5+ 业务层接入用 `EmailClassifierAdapter`(`policy/integration.py` 新增),
 参考 D3.3.3 教训("异常范围要窄化"):
   - ClassifierResponseError 是业务异常(LLM 输出脏),由调用方决定重试
   - 编程错误(参数 type 错) → ValueError 透传,不在本模块包装
+
+D4.6 v1.0.1 修复(D4.6 复检 P1-1 + P1-4):
+  - P1-1 旁路:Classifier `except LLMError` 自动覆盖 LLMAllFallbacksError
+    (router 抛,不再逃逸)
+  - P1-4: 解析用平衡括号定位 JSON(原正则强制 category→confidence 字段顺序,
+    反序 JSON 误拒;允许 markdown 包裹但显式剥离 fence);
+    `math.isfinite()` 拒 NaN/Inf(原范围检查 0<=x<=1 NaN 通过)
 """
 
 from __future__ import annotations
 
 import json
+import math
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -290,20 +298,73 @@ def system_to_message(content: str) -> dict:
 # 5 类枚举值集合(用于响应解析的 O(1) 校验,避免每次 O(5) 遍历)
 _VALID_CATEGORIES: frozenset[str] = frozenset(c.value for c in EmailCategory)
 
-# 5 类 JSON 严格正则(双引号 + category 在枚举中 + 0-1 浮点)
-# 允许 LLM 在 JSON 前后加少量 markdown(实测很多模型会包 ```json),先 strip 再验
-_JSON_PATTERN = re.compile(r"\{[^{}]*\"category\"[^{}]*\"confidence\"[^{}]*\}")
+# D4.6 v1.0.1 P1-4 修复: 改用平衡括号定位 JSON
+# 旧版正则强制 category→confidence 字段顺序,反序合法 JSON 误拒
+# 新版扫描所有 { ... } 候选,选最外层平衡的 + 含 category+confidence 字段
+# 复杂度 O(N) 但响应通常 < 200 字符,实测无差
+
+
+def _strip_markdown_fence(raw: str) -> str:
+    """显式剥 markdown code fence(```json ... ```),返回剥后内容.
+
+    D4.6 v1.0.1 P1-4 修复: 旧版靠 strip() 隐式容忍,新版本显式处理:
+      - ```json ... ```
+      - ``` ... ```
+      - 首尾空白
+    不存在 fence 时原样返回。
+    """
+    stripped = raw.strip()
+    # 匹配 ```[可选语言] 开头到 ``` 结尾(可能跨行)
+    fence_match = re.match(r"^```(?:json|JSON)?\s*\n?(.*?)\n?```\s*$", stripped, re.DOTALL)
+    if fence_match:
+        return fence_match.group(1).strip()
+    return stripped
+
+
+def _extract_balanced_json(raw: str) -> str | None:
+    """扫描 raw,返回第一个平衡的 { ... } 块文本(不含外层字符).
+
+    D4.6 v1.0.1 P1-4 修复: 不再强制字段顺序,允许 LLM 输出
+    `{"confidence":0.8,"category":"URGENT"}` 等任意字段顺序。
+    """
+    start = raw.find("{")
+    while start != -1:
+        depth = 0
+        in_str = False
+        escape = False
+        for i in range(start, len(raw)):
+            ch = raw[i]
+            if escape:
+                escape = False
+                continue
+            if ch == "\\":
+                escape = True
+                continue
+            if ch == '"':
+                in_str = not in_str
+                continue
+            if in_str:
+                continue
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return raw[start : i + 1]
+        start = raw.find("{", start + 1)
+    return None
 
 
 def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
     """严判解析 LLM 响应, 返回 (EmailCategory, confidence).
 
-    解析策略(防御性, 不假设 LLM 一定输出干净 JSON):
+    解析策略(D4.6 v1.0.1 P1-4 修复版):
       1. type() 严判 content 是 str
-      2. 用正则提取最外层 { ... }(允许 LLM 包 markdown)
-      3. json.loads 严格解析(必须是 dict)
-      4. 严判 "category" 字段: 必须是 str, 必须 ∈ _VALID_CATEGORIES
-      5. 严判 "confidence" 字段: 必须是 float/int(0-1 范围)
+      2. 显式剥 markdown fence(```json ... ```)
+      3. 平衡括号定位最外层 { ... }(允许任意字段顺序)
+      4. json.loads 严格解析(必须是 dict)
+      5. 严判 "category" 字段: 必须是 str, 必须 ∈ _VALID_CATEGORIES
+      6. 严判 "confidence" 字段: type() is int/float(拒 bool)+ math.isfinite() + 0-1 范围
 
     任何一步失败 → ClassifierResponseError(业务异常, 可重试).
     编程错误(KeyError/TypeError 等在解析前) → 透传(不在本函数包装).
@@ -315,19 +376,19 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
             reason=f"type={type(content).__name__}",
         )
 
-    raw = content.strip()
+    # 1. 显式剥 markdown fence
+    raw = _strip_markdown_fence(content)
 
-    # 1. 提取 JSON 块(去掉 markdown 包裹)
-    match = _JSON_PATTERN.search(raw)
-    if match is None:
+    # 2. 平衡括号定位 JSON
+    json_text = _extract_balanced_json(raw)
+    if json_text is None:
         raise ClassifierResponseError(
-            "未找到 JSON 块(需含 category + confidence 字段)",
+            "未找到平衡的 JSON 块",
             raw_content=raw,
-            reason="no_json_block",
+            reason="no_balanced_json",
         )
-    json_text = match.group(0)
 
-    # 2. 严格 JSON 解析
+    # 3. 严格 JSON 解析
     try:
         data = json.loads(json_text)
     except (json.JSONDecodeError, ValueError) as e:
@@ -337,7 +398,7 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
             reason=f"json_decode_error={type(e).__name__}",
         ) from e
 
-    # 3. 严判结构(必须是 dict)
+    # 4. 严判结构(必须是 dict)
     if not isinstance(data, dict):
         raise ClassifierResponseError(
             "JSON 顶层必须是 object",
@@ -345,7 +406,7 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
             reason=f"top_level_type={type(data).__name__}",
         )
 
-    # 4. 严判 category 字段
+    # 5. 严判 category 字段
     category_raw = data.get("category")
     if not isinstance(category_raw, str):
         raise ClassifierResponseError(
@@ -361,15 +422,23 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
         )
     category = EmailCategory(category_raw)  # 此时一定成功
 
-    # 5. 严判 confidence 字段(0-1 范围, 拒 bool 子类陷阱:D4.4 P1 教训)
+    # 6. 严判 confidence 字段(D4.6 v1.0.1 P1-4 修复)
+    # - 拒 bool 子类陷阱(D4.4 P1 教训)
+    # - math.isfinite() 拒 NaN/Inf(NaN 任何比较返回 False,原范围检查漏过)
     confidence_raw = data.get("confidence")
     if type(confidence_raw) is bool or not isinstance(confidence_raw, (int, float)):
         raise ClassifierResponseError(
-            "confidence 字段必须是 0-1 的数字(非 bool)",
+            "confidence 字段必须是数字(非 bool)",
             raw_content=raw,
             reason=f"confidence_type={type(confidence_raw).__name__}",
         )
     confidence = float(confidence_raw)
+    if not math.isfinite(confidence):
+        raise ClassifierResponseError(
+            f"confidence 必须是有限数字(非 NaN/Inf): {confidence}",
+            raw_content=raw,
+            reason=f"confidence_not_finite={confidence}",
+        )
     if confidence < 0.0 or confidence > 1.0:
         raise ClassifierResponseError(
             f"confidence 超出 0-1 范围: {confidence}",

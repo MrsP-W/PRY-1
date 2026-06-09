@@ -125,26 +125,26 @@ class TestParseClassificationResponse:
     def test_no_json_raises(self) -> None:
         with pytest.raises(ClassifierResponseError) as exc_info:
             _parse_classification_response("not a json response")
-        assert exc_info.value.reason == "no_json_block"
+        assert exc_info.value.reason == "no_balanced_json"
 
     def test_invalid_json_raises(self) -> None:
-        """截断 JSON 没有完整 {...category...confidence...} 结构, → no_json_block.
+        """截断 JSON 没有完整 {...} 结构, → no_balanced_json.
 
-        防御性 fast-fail: 正则匹配不到即拒绝(比 json.loads 报错更早).
-        完整 JSON 但内容脏的 case 由 test_category_not_in_enum / test_confidence_out_of_range 覆盖.
+        D4.6 v1.0.1 P1-4: 改用平衡括号定位,允许任意字段顺序。
+        截断内容没有闭合 } 早抛 no_balanced_json(比 json.loads 报错更早)。
         """
         with pytest.raises(ClassifierResponseError) as exc_info:
             _parse_classification_response('{"category": "URGENT", "confidence":')  # 截断
-        assert exc_info.value.reason == "no_json_block"
+        assert exc_info.value.reason == "no_balanced_json"
 
     def test_top_level_not_dict(self) -> None:
-        """list 顶层 → 正则找不到 category+confidence 字段 → no_json_block.
+        """list 顶层 → 平衡括号定位找不到 → no_balanced_json.
 
         防御性 fast-fail: 顶层结构错早抛, 不深究类型.
         """
         with pytest.raises(ClassifierResponseError) as exc_info:
             _parse_classification_response('["URGENT", 0.9]')  # list
-        assert exc_info.value.reason == "no_json_block"
+        assert exc_info.value.reason == "no_balanced_json"
 
     def test_category_wrong_type(self) -> None:
         with pytest.raises(ClassifierResponseError) as exc_info:
@@ -430,3 +430,107 @@ class TestEmailClassifierBatch:
         assert len(results) == 2
         assert isinstance(results[0], ClassificationResult)
         assert isinstance(results[1], ValueError)
+
+
+# ===== D4.6 v1.0.1 修复测试(2026-06-09 用户复检 P1-1 + P1-4)=====
+
+
+class TestD46V101Fixes:
+    """D4.6 v1.0.1 业务语义修复测试集.
+
+    覆盖用户 6/9 晨间复检的 P1-1 + P1-4 修复点。
+    P1-2 + P1-3 + P2-5 由 tests/policy/test_classifier_adapter.py 覆盖(Adapter 层)。
+    """
+
+    # --- P1-1: LLMAllFallbacksError 应被 classify() 识别为 LLMError ---
+
+    def test_llm_all_fallbacks_error_caught(self) -> None:
+        """P1-1 修复: router 全链失败抛 LLMAllFallbacksError(LLMError), classify() 应捕获并计入 llm_error."""
+        from my_ai_employee.ai.providers import LLMAllFallbacksError
+
+        mock_router = MagicMock()
+        mock_router.route.side_effect = LLMAllFallbacksError(
+            task_type="classify",
+            primary="deepseek/deepseek-chat",
+            secondary="qwen/qwen-plus",
+            tertiary="MiniMax/MiniMax-M3",
+            last_error=RuntimeError("upstream 502"),
+        )
+        classifier = EmailClassifier(router=mock_router)
+        with pytest.raises(LLMAllFallbacksError):
+            classifier.classify(subject="s", sender="x", body_excerpt="b")
+        # 关键: _stats["llm_error"] 必须 +1(原 RuntimeError 逃逸时不增)
+        stats = classifier.stats()
+        assert stats["llm_error"] == 1
+        assert stats["total"] == 1
+
+    def test_llm_all_fallbacks_is_llm_error(self) -> None:
+        """P1-1 旁路: LLMAllFallbacksError 必须是 LLMError 子类, except LLMError 覆盖."""
+        from my_ai_employee.ai.providers import LLMAllFallbacksError, LLMError
+
+        err = LLMAllFallbacksError(
+            task_type="classify",
+            primary="a",
+            secondary="b",
+            tertiary="c",
+            last_error=RuntimeError("x"),
+        )
+        assert isinstance(err, LLMError)
+        # 关键属性透传
+        assert err.task_type == "classify"
+        assert err.primary == "a"
+        assert err.secondary == "b"
+        assert err.tertiary == "c"
+        assert err.last_error is not None
+
+    # --- P1-4: 反序 JSON / NaN / markdown fence / 平衡括号 ---
+
+    def test_reverse_field_order_accepted(self) -> None:
+        """P1-4 修复: confidence → category 反序合法 JSON 必须被接受."""
+        c, conf = _parse_classification_response('{"confidence": 0.85, "category": "URGENT"}')
+        assert c == EmailCategory.URGENT
+        assert conf == 0.85
+
+    def test_markdown_fence_stripped(self) -> None:
+        """P1-4 修复: ```json ... ``` 包裹应被显式剥离."""
+        c, conf = _parse_classification_response(
+            '```json\n{"category": "TODO", "confidence": 0.7}\n```'
+        )
+        assert c == EmailCategory.TODO
+        assert conf == 0.7
+
+    def test_markdown_fence_no_lang(self) -> None:
+        """P1-4: 裸 ``` ... ``` 也应剥离(不强制带 json 标识)."""
+        c, conf = _parse_classification_response('```\n{"category": "FYI", "confidence": 0.6}\n```')
+        assert c == EmailCategory.FYI
+        assert conf == 0.6
+
+    def test_confidence_nan_rejected(self) -> None:
+        """P1-4 修复: NaN 必须被拒收(原 0<=x<=1 范围 NaN 通过)."""
+        with pytest.raises(ClassifierResponseError) as exc_info:
+            _parse_classification_response('{"category": "URGENT", "confidence": NaN}')
+        # NaN 是合法 JSON number 但 math.isfinite() 拒
+        assert "not_finite" in exc_info.value.reason or "out_of_range" in exc_info.value.reason
+
+    def test_confidence_inf_rejected(self) -> None:
+        """P1-4 修复: Inf / -Inf 必须被拒收."""
+        for bad in ("Infinity", "-Infinity"):
+            with pytest.raises(ClassifierResponseError) as exc_info:
+                _parse_classification_response(f'{{"category": "URGENT", "confidence": {bad}}}')
+            assert "not_finite" in exc_info.value.reason
+
+    def test_balanced_json_with_nested_braces(self) -> None:
+        """P1-4 修复: 含嵌套 {} 的 JSON 应正确平衡(不误判)."""
+        c, conf = _parse_classification_response(
+            '{"category": "URGENT", "confidence": 0.8, "meta": {"a": 1, "b": 2}}'
+        )
+        assert c == EmailCategory.URGENT
+        assert conf == 0.8
+
+    def test_extra_text_around_json(self) -> None:
+        """P1-4 修复: JSON 前后有散文/解释文字, 平衡括号定位必须容忍."""
+        c, conf = _parse_classification_response(
+            'Here is my answer:\n{"category": "TODO", "confidence": 0.65}\nDone.'
+        )
+        assert c == EmailCategory.TODO
+        assert conf == 0.65

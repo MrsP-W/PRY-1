@@ -5,7 +5,7 @@
   2. 查 fallback 链(按 task_type)
   3. 遍历: primary → secondary → tertiary
   4. 跳过熔断的 provider + reasoning 模型强制 temperature=1.0
-  5. 返回首个成功响应(失败则继续链上, 全失败抛 RuntimeError)
+  5. 返回首个成功响应(失败则继续链上, 全失败抛 LLMAllFallbacksError)
 
 参考 claw-code:
   - docs/local-openai-compatible-providers.md: OpenAI-compatible 路由
@@ -15,6 +15,11 @@
 参考 D3.3.3 教训("异常范围要窄化"):
   - router 捕获 Exception(全失败兜底), 但每个 provider 调 chat() 自身
     不应 catch-all 兜底(让真错误透传出来, 由 router 决定 fallback)
+
+D4.6 v1.0.1 修复(D4.6 复检 P1-1):
+  - 全链失败从 RuntimeError 改为 LLMAllFallbacksError(LLMError 子类)
+  - 业务方 except LLMError 即可覆盖(不再逃逸)
+  - 错误消息保留 primary/secondary/tertiary + last_error 完整上下文
 
 D4.1.0 范围: 决策逻辑 + 统计 + 单例, **不调 HTTP** (provider.chat 占位).
 D4.1.1 实施: OpenAICompatibleProvider.chat() 实际 HTTP + 单元测试集成.
@@ -37,6 +42,7 @@ from .fallback import (
     get_chain,
 )
 from .providers import (
+    LLMAllFallbacksError,
     LLMError,
     LLMRequest,
     LLMResponse,
@@ -192,13 +198,16 @@ class LLMRouter:
                 )
                 continue
 
-        # 全链失败
+        # 全链失败(D4.6 v1.0.1 P1-1 修复:RuntimeError → LLMAllFallbacksError)
+        # 业务方 except LLMError 即可覆盖,不再逃逸到分类器/Adapter 外
         self._stats.failures += 1
         self._stats.total_latency_ms += int((time.time() - start) * 1000)
-        raise RuntimeError(
-            f"所有 fallback 都失败 | task_type={task_type.value} | "
-            f"primary={chain.primary} secondary={chain.secondary} "
-            f"tertiary={chain.tertiary} | last_error={last_error!r}"
+        raise LLMAllFallbacksError(
+            task_type=task_type.value,
+            primary=chain.primary,
+            secondary=chain.secondary,
+            tertiary=chain.tertiary,
+            last_error=last_error,
         )
 
     def stats(self) -> dict[str, Any]:

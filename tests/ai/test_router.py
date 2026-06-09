@@ -363,7 +363,13 @@ class TestRouterDecision:
         assert mock.calls[1].model_full_id == "qwen/qwen3-max"
 
     def test_all_fail_raises_runtime_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """全链业务异常 → RuntimeError(包含任务类型和 last_error)."""
+        """全链业务异常 → LLMAllFallbacksError(D4.6 v1.0.1 P1-1).
+
+        v1.0 旧实现:抛 RuntimeError(不属 LLMError,业务方 except 不到)
+        v1.0.1 修复:抛 LLMAllFallbacksError(LLMError 子类,业务方 except LLMError 覆盖)
+        """
+        from my_ai_employee.ai.providers import LLMAllFallbacksError
+
         mock = _MockProviderResult(
             {
                 "deepseek/deepseek-chat": LLMError("p1 fail"),
@@ -374,7 +380,7 @@ class TestRouterDecision:
         monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
 
         router = LLMRouter()
-        with pytest.raises(RuntimeError, match="所有 fallback 都失败"):
+        with pytest.raises(LLMAllFallbacksError, match="所有 fallback 都失败"):
             router.route(
                 task_type=TaskType.CLASSIFY,
                 messages=[{"role": "user", "content": "test"}],

@@ -65,6 +65,43 @@ class LLMResponseError(LLMError):
     """响应解析失败(响应体非 JSON / 缺字段 / 字段类型错)."""
 
 
+class LLMAllFallbacksError(LLMError):
+    """Router 全链失败(所有 fallback provider 都失败).
+
+    D4.6 v1.0.1 引入(D4.6 复检 P1-1):原抛 RuntimeError,业务方 except LLMError
+    无法捕获,导致:
+      - 分类器/Adapter 统计不到失败
+      - classify_batch 循环中断
+      - Heartbeat 不知道 LLM 死了
+    现在是 LLMError 子类,业务方 except LLMError 一行覆盖。
+
+    Attributes:
+        task_type: 任务类型(TaskType.value)
+        primary/secondary/tertiary: 实际尝试的 provider/model
+        last_error: 最后一跳的异常(可能是 LLMError 或其子类)
+    """
+
+    def __init__(
+        self,
+        *,
+        task_type: str,
+        primary: str,
+        secondary: str,
+        tertiary: str,
+        last_error: BaseException | None,
+    ) -> None:
+        super().__init__(
+            f"所有 fallback 都失败 | task_type={task_type} | "
+            f"primary={primary} secondary={secondary} "
+            f"tertiary={tertiary} | last_error={last_error!r}"
+        )
+        self.task_type = task_type
+        self.primary = primary
+        self.secondary = secondary
+        self.tertiary = tertiary
+        self.last_error = last_error
+
+
 @dataclass(frozen=True)
 class LLMRequest:
     """统一的 LLM 请求(OpenAI-compatible schema).
