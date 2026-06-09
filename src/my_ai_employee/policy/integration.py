@@ -66,13 +66,25 @@ D4.6 v1.0.2 二次复检修复(D4.6 6/9 早晨第二次复检 4 项):
   - 顶层导出(P2-3):build_classify_failure_packet + ClassifyFailureDecisionReport
     顶层暴露(top-level import 不再失败)
   - 文档同步(P3):ai 46 / adapter 50 / 全量 592 测试数 + uv build 通过 + v1.0.2 段补完
+
+D4.6 v1.0.2 第三次复检修复(D4.6 6/9 早晨第三次复检 4 项):
+  - 公共构造器严判(P1):build_classify_packet 复用 _validate_classify_category
+    公共 helper, 防止构造器直接绕过 5 类枚举(此前仅 type() 严判, 缺 5 类校验)
+  - 失败报告 Literal[True] + 字段自洽(P2):ClassifyFailureDecisionReport.failed
+    字段从 bool 升级为 Literal[True](类型层面固化), __post_init__ 校验
+    last_error 非空 + consecutive_classify_failures >= 1(D3.3.3 教训)
+  - 异常统一 ValueError(P2):classify_and_emit 走 _validate_classify_category
+    公共 helper(此前内联 `if x not in frozenset` 与 build_classify_packet 不一致)
+  - 文档同步(P3):classify_and_emit 用例 docstring 移除已删除的
+    consecutive_classify_failures 参数; record_classify_failure_and_emit 返回值
+    docstring 从 ClassifyDecisionReport 改为 ClassifyFailureDecisionReport
 """
 
 from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Literal
 
 from my_ai_employee.events.store import EventStore
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
@@ -614,8 +626,10 @@ def build_classify_packet(
         )
     if type(source) is not str or not source:
         raise ValueError(f"source 必填非空 str, 实际 {type(source).__name__}")
-    if type(category_value) is not str or not category_value:
-        raise ValueError(f"category_value 必填非空 str, 实际 {type(category_value).__name__}")
+    # D4.6 v1.0.2 第三次复检 P1 修复: category 严判下沉到 _validate_classify_category
+    # 公共 helper(与 compute_classification_acceptance / build_classify_policy_context
+    # 同一严判口径,防止 Adapter 重构后绕过)
+    _validate_classify_category(category_value)
     if type(model_full_id) is not str or not model_full_id:
         raise ValueError(f"model_full_id 必填非空 str, 实际 {type(model_full_id).__name__}")
     if type(confidence) is bool or not isinstance(confidence, (int, float)):
@@ -825,23 +839,59 @@ class ClassifyFailureDecisionReport:
       - last_error: 截断到 200 字符的失败原因(便于人读)
       - consecutive_classify_failures: 连续失败计数(便于触发升级)
 
+    D4.6 v1.0.2 第三次复检 P2 修复: failed 字段用 Literal[True] 类型层面固化,
+    防止手动构造 ClassifyFailureDecisionReport(failed=False) 混入成功报告;
+    __post_init__ 校验 last_error 非空 + consecutive_classify_failures >= 1,
+    字段契约自洽(D3.3.3 教训:数据类的字段约束必须自洽)。
+
     Attributes:
         evaluation: PolicyEngine.evaluate() 完整结果
         event_id: 落地到 events 表的 PolicyDecisionEvent id
         lane_entry_id: LaneBoard 中本次分类的 entry_id
         liveness: Heartbeat 评估的 Liveness
-        failed: 必为 True(类型层面与 ClassifyDecisionReport 区分)
-        last_error: 失败原因(str(last_error) 截断到 200 字符)
-        consecutive_classify_failures: 连续失败次数(>= 1)
+        failed: Literal[True](类型层面与 ClassifyDecisionReport 区分,只可能为 True)
+        last_error: 失败原因(必填非空,截断到 200 字符)
+        consecutive_classify_failures: 连续失败次数(必填 >= 1)
     """
 
     evaluation: PolicyEvaluation
     event_id: int | None
     lane_entry_id: str
     liveness: Liveness
-    failed: bool  # 必为 True(类型层面区分成功/失败)
-    last_error: str  # 截断到 200 字符
-    consecutive_classify_failures: int  # >= 1
+    failed: Literal[True]  # 必为 True(类型层面区分成功/失败)
+    last_error: str  # 必填非空(>0 字符),截断到 200 字符
+    consecutive_classify_failures: int  # 必填 >= 1
+
+    def __post_init__(self) -> None:
+        """D4.6 v1.0.2 第三次复检 P2 修复: 字段契约自洽校验.
+
+        D3.3.3 教训: 数据类的字段约束必须自洽,不能依赖 caller 显式传对。
+        失败报告若 last_error 为空 / consecutive_classify_failures < 1, 视为
+        数据类构造错误, 早失败比静默接受更安全(避免日志/审计误以为成功)。
+        Literal[True] 在运行时是 str 注解, mypy 阻拦但 Python 不阻拦,所以
+        __post_init__ 也要显式校验 failed 必为 True(双层防御:静态 + 动态)。
+        """
+        if self.failed is not True:
+            raise ValueError(
+                f"ClassifyFailureDecisionReport.failed 必为 True "
+                f"(Literal[True] 类型层面固化), 实际 {self.failed!r}"
+            )
+        if not isinstance(self.last_error, str) or not self.last_error:
+            raise ValueError(
+                f"ClassifyFailureDecisionReport.last_error 必填非空 str, "
+                f"实际 {type(self.last_error).__name__}={self.last_error!r}"
+            )
+        if (
+            not isinstance(self.consecutive_classify_failures, int)
+            or isinstance(self.consecutive_classify_failures, bool)
+            or self.consecutive_classify_failures < 1
+        ):
+            raise ValueError(
+                f"ClassifyFailureDecisionReport.consecutive_classify_failures "
+                f"必填原生 int >= 1, 实际 "
+                f"{type(self.consecutive_classify_failures).__name__}="
+                f"{self.consecutive_classify_failures!r}"
+            )
 
 
 class EmailClassifierAdapter:
@@ -873,7 +923,6 @@ class EmailClassifierAdapter:
         report = adapter.classify_and_emit(
             email_id=123,
             classification=result,
-            consecutive_classify_failures=0,
         )
 
     设计要点(沿用 D4.5 P0 + v1.0.1):
@@ -1023,18 +1072,18 @@ class EmailClassifierAdapter:
         # 严判 classification duck type — D4.6 v1.0.1 P2-5 + v1.0.2 P1-2 修复:
         # - v1.0.1: type() 严判,拒 bool 子类陷阱 + 字符串混入
         # - v1.0.2: 严判 category ∈ 5 类 + latency_ms >= 0
+        # D4.6 v1.0.2 第三次复检 P2 修复: 用 _validate_classify_category 公共 helper
+        # 统一 ValueError(防止后续用 frozenset / set / dict 等操作时漏走 TypeError 路径)
         if hasattr(classification, "category") and hasattr(classification.category, "value"):
             category_value = classification.category.value
         else:
             raise ValueError(
                 f"classification.category.value 缺失, 实际 {type(classification).__name__}"
             )
-        # D4.6 v1.0.2 P1-2: 严判 category 属于 5 类枚举(防止 LLM 输出脏 / 业务侧乱传)
-        if category_value not in _VALID_CLASSIFY_CATEGORIES:
-            raise ValueError(
-                f"classification.category.value 必须是 5 类之一 "
-                f"({sorted(_VALID_CLASSIFY_CATEGORIES)}), 实际 {category_value!r}"
-            )
+        # D4.6 v1.0.2 第三次复检 P2 修复: 严判走公共 helper,与 build_classify_packet
+        # / build_classify_policy_context 同一严判口径(防止列表/字典等不可哈希类型
+        # 通过 frozenset `in` 后又漏严判)
+        _validate_classify_category(category_value)
         if not isinstance(classification.confidence, (int, float)) or isinstance(
             classification.confidence, bool
         ):
@@ -1166,7 +1215,9 @@ class EmailClassifierAdapter:
             now_ms: 注入时间(默认 int(time.time() * 1000))
 
         Returns:
-            ClassifyDecisionReport(同 classify_and_emit 范本)
+            ClassifyFailureDecisionReport(D4.6 v1.0.2 二次复检 P2-2 独立数据类,
+                字段自洽: failed=True + last_error + consecutive_classify_failures,
+                无 category / confidence)
 
         Raises:
             ValueError: 参数 type 错 / consecutive_classify_failures < 1

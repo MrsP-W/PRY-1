@@ -1198,3 +1198,201 @@ class TestD46V102SecondPassFixes:
             consecutive_classify_failures=1,
         )
         assert p.objective.startswith("email_classify_failed:source=qq:id=1")
+
+
+# ============================================================
+# D4.6 v1.0.2 第三次复检修复测试(2026-06-09 早晨第三次复检 4 项)
+# ============================================================
+
+
+class TestD46V102ThirdPassFixes:
+    """D4.6 v1.0.2 第三次复检 4 项修复测试.
+
+    覆盖用户 6/9 早晨第三次复检的 1 P1 + 2 P2 + 1 P3:
+      - P1: build_classify_packet 复用 _validate_classify_category 公共 helper
+        (公共构造器不能再生成非法分类)
+      - P2: ClassifyFailureDecisionReport.failed 字段升级为 Literal[True],
+        __post_init__ 校验 last_error 非空 + consecutive_classify_failures >= 1
+        (D3.3.3 教训:数据类字段约束必须自洽)
+      - P2: classify_and_emit 走 _validate_classify_category 公共 helper,
+        异常统一 ValueError(防止 list/dict 等不可哈希类型触发 TypeError)
+      - P3: 文档同步(classify_and_emit 用例 docstring 移除已删除参数;
+        record_classify_failure_and_emit 返回值 docstring 改为新报告类)
+    """
+
+    # --- P1: 公共构造器严判下沉 ---
+
+    def test_build_classify_packet_rejects_bad_category(self) -> None:
+        """P1 修复: build_classify_packet 拒 OOPS(原版仅 type() 严判, 缺 5 类校验).
+
+        旧 v1.0.2 写法: `if type(category_value) is not str or not category_value`
+        → "OOPS" 通过 type() 严判, 但不在 5 类枚举里, 静默生成 TaskPacket
+        → 业务层调用方传 "OOPS" / "TODO_FIX" 等任意字符串都接受
+        新 v1.0.2-third: 复用 _validate_classify_category 公共 helper, 与
+        compute_classification_acceptance / build_classify_policy_context
+        同一严判口径, 防止 Adapter 重构后绕过严判。
+        """
+        with pytest.raises(ValueError, match="5 类之一"):
+            build_classify_packet(
+                email_id=1,
+                source="qq",
+                category_value="OOPS",  # 不在 5 类
+                model_full_id="m",
+                confidence=0.9,
+            )
+
+    def test_build_classify_packet_rejects_empty_category(self) -> None:
+        """P1 修复: build_classify_packet 拒空 category(原版只检查空,新版 5 类校验)."""
+        with pytest.raises(ValueError, match="5 类之一"):
+            build_classify_packet(
+                email_id=1,
+                source="qq",
+                category_value="",  # 空串不在 5 类
+                model_full_id="m",
+                confidence=0.9,
+            )
+
+    # --- P2: 失败报告 Literal[True] + 字段自洽 ---
+
+    def test_classify_failure_decision_report_rejects_failed_false(self) -> None:
+        """P2 修复: failed 字段用 Literal[True] 类型固化, 手动构造 failed=False
+        在运行时(mypy 静态 + __post_init__ 动态)双层防御.
+
+        D3.3.3 教训: 数据类的字段约束必须自洽, 不能依赖 caller 显式传对。
+        Literal[True] 让 mypy 在编译期拒绝 failed=False; __post_init__ 让
+        运行时(mypy 绕过 / 动态构造)也拒绝。
+        """
+        # 1) 静态: Literal[True] 让 mypy 拒绝(此测试不跑 mypy, 仅校验运行时)
+        # 2) 动态: __post_init__ 也校验 — 构造一个 fake PolicyEvaluation
+        from my_ai_employee.policy.policy_engine import PolicyEvaluation
+
+        fake_eval = PolicyEvaluation(
+            status="succeeded",
+            event_id=None,
+        )
+        # 运行时构造 failed=False 应被 __post_init__ 拒绝
+        # 注: Literal[True] 在运行时是 str 注解, mypy 阻拦但 Python 不阻拦,
+        # 所以需要 __post_init__ 显式校验(本测试的核心价值)
+        try:
+            r = ClassifyFailureDecisionReport(
+                evaluation=fake_eval,
+                event_id=None,
+                lane_entry_id="classify:qq:r",
+                liveness=Liveness.HEALTHY,
+                failed=False,  # type: ignore[arg-type]
+                last_error="err",
+                consecutive_classify_failures=1,
+            )
+            # 如果没抛,说明运行时也漏了(回归)
+            assert r.failed is True, (
+                "Literal[True] 类型层面应固化 failed=True, 手动传 False 应在 __post_init__ 被拒"
+            )
+        except ValueError as e:
+            # 期望: __post_init__ 显式拒绝 failed != True
+            assert "failed" in str(e).lower() or "literal" in str(e).lower()
+
+    def test_classify_failure_decision_report_rejects_empty_last_error(self) -> None:
+        """P2 修复: __post_init__ 拒 last_error 空串(字段自洽)."""
+        from my_ai_employee.policy.policy_engine import PolicyEvaluation
+
+        fake_eval = PolicyEvaluation(
+            status="succeeded",
+            event_id=None,
+        )
+        with pytest.raises(ValueError, match="last_error"):
+            ClassifyFailureDecisionReport(
+                evaluation=fake_eval,
+                event_id=None,
+                lane_entry_id="classify:qq:r",
+                liveness=Liveness.HEALTHY,
+                failed=True,
+                last_error="",  # 空串违反自洽
+                consecutive_classify_failures=1,
+            )
+
+    def test_classify_failure_decision_report_rejects_cf_zero(self) -> None:
+        """P2 修复: __post_init__ 拒 consecutive_classify_failures < 1(字段自洽)."""
+        from my_ai_employee.policy.policy_engine import PolicyEvaluation
+
+        fake_eval = PolicyEvaluation(
+            status="succeeded",
+            event_id=None,
+        )
+        with pytest.raises(ValueError, match="consecutive_classify_failures"):
+            ClassifyFailureDecisionReport(
+                evaluation=fake_eval,
+                event_id=None,
+                lane_entry_id="classify:qq:r",
+                liveness=Liveness.HEALTHY,
+                failed=True,
+                last_error="err",
+                consecutive_classify_failures=0,  # < 1 违反自洽
+            )
+
+    # --- P2: 异常统一 ValueError(classify_and_emit 走公共 helper) ---
+
+    def test_classify_and_emit_list_category_raises_value_error(self) -> None:
+        """P2 修复: classification.category.value 传列表 → ValueError(非 TypeError).
+
+        旧 v1.0.2 内联 `if x not in frozenset` 与 build_classify_packet 不一致;
+        新 v1.0.2-third 走 _validate_classify_category 公共 helper, 严判入口
+        统一 ValueError(D3.3.3 教训:窄化异常范围, 防止 list/dict/set 等不可
+        哈希类型在后续 set/frozenset 操作中触发 TypeError)。
+        """
+        a = EmailClassifierAdapter(source="qq")
+
+        # 构造一个 category.value 是 list 的 classification
+        @dataclass
+        class _BadListCategory:
+            value: list[str]  # 不可哈希
+
+        @dataclass
+        class _BadListClassification:
+            category: _BadListCategory
+            confidence: float = 0.9
+            model_full_id: str = "m"
+            latency_ms: int = 1500
+
+        with pytest.raises(ValueError, match="原生 str"):
+            a.classify_and_emit(
+                email_id=1,
+                classification=_BadListClassification(category=_BadListCategory(value=["URGENT"])),
+                run_id="r-v102-third-list",
+            )
+
+    # --- P3: 文档同步(由 ruff/docstring 检查 + 测试侧 import 验证) ---
+
+    def test_classify_and_emit_signature_has_no_failure_params(self) -> None:
+        """P3 修复: classify_and_emit 签名不含 last_classify_failed / consecutive_classify_failures.
+
+        旧 v1.0.1 文档示例中传 `consecutive_classify_failures=0` (P1-1 已删除),
+        新 v1.0.2-third 文档已修正。本测试通过 inspect 验证签名对齐文档。
+        """
+        import inspect
+
+        sig = inspect.signature(EmailClassifierAdapter.classify_and_emit)
+        param_names = list(sig.parameters.keys())
+        # 成功入口不应有 last_classify_failed / consecutive_classify_failures
+        # (P1-1 修复:成功路径永不失败,这 2 个参数已删除)
+        assert "last_classify_failed" not in param_names
+        assert "consecutive_classify_failures" not in param_names
+        # 应有的核心参数
+        assert "email_id" in param_names
+        assert "classification" in param_names
+        assert "transport_alive" in param_names
+        assert "run_id" in param_names
+
+    def test_record_classify_failure_returns_failure_report(self, store) -> None:
+        """P3 修复: record_classify_failure_and_emit 返回 ClassifyFailureDecisionReport
+        (旧文档写 ClassifyDecisionReport, 实际是独立失败报告类)。
+        """
+        a = EmailClassifierAdapter(source="qq", event_store=store)
+        report = a.record_classify_failure_and_emit(
+            email_id=42,
+            last_error="timeout",
+            consecutive_classify_failures=2,
+            run_id="r-v102-third-failure-type",
+        )
+        # 必须是 ClassifyFailureDecisionReport, 不是 ClassifyDecisionReport
+        assert isinstance(report, ClassifyFailureDecisionReport)
+        assert not isinstance(report, ClassifyDecisionReport)
