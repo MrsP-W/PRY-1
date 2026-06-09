@@ -104,6 +104,11 @@ _EMAIL_CATEGORY_VALUES: frozenset[str] = frozenset(c.value for c in EmailCategor
 
 # ===== 业务异常(D3.3.3 教训:窄化异常范围)=====
 
+# 6/9 v1.0.5 P2-2 修复: 阻断原因 reason 锁定白名单
+# 当前阻断类别仅 SPAM, reason 限定为 "spam_business_blocked"
+# 未来扩阻断类别(OTHER_BLOCKED / PHISHING_BLOCKED 等)需 B 类审批 + 扩白名单
+_BLOCKED_REASON_VALUES: frozenset[str] = frozenset({"spam_business_blocked"})
+
 
 class DrafterError(Exception):
     """草稿生成器业务异常基类."""
@@ -307,6 +312,13 @@ class DraftBlockedResult:
         if self.original_email_category not in {"SPAM"}:
             raise ValueError(
                 f"original_email_category 必须是 'SPAM', 实际 {self.original_email_category!r}"
+            )
+        # 6/9 v1.0.5 P2-2 修复: reason 锁定白名单(防 "other" 等任意字符串构造不一致状态)
+        # 当前阻断类别仅 SPAM, reason 限定为 "spam_business_blocked"
+        # 未来扩阻断类别需 B 类审批 + 扩 _BLOCKED_REASON_VALUES
+        if self.reason not in _BLOCKED_REASON_VALUES:
+            raise ValueError(
+                f"reason 必须是 {sorted(_BLOCKED_REASON_VALUES)} 之一, 实际 {self.reason!r}"
             )
         # 6/9 v1.0.3 P2-2 修复: subject 上限 200 字符(与 DraftResult.MAX_SUBJECT_CHARS 同步)
         # 阻断模板会自动拼 "(DRAFT-NO-REPLY) [SPAM] " 前缀, 实际可用 ≈ 175 字符
@@ -546,6 +558,9 @@ class EmailDrafter:
         # - email_category 枚举/字符串 → 内部统一 str 用于分发(SPAM 已在前面阻断,
         #   此处只可能走 URGENT/TODO/FYI/PERSONAL/None 5 路径)
         # - None → SYSTEM_PROMPT_DEFAULT(中性回退)
+        # 6/9 v1.0.5 P1-1 修复: 把 allow_spam_reply 透传给 build_user_message,
+        # SPAM 显式授权意图才能进入 user 消息(此前模型只看到 SYSTEM prompt 的
+        # "默认不生成回复"指令, 不知道调用方已显式放行, 模型仍按默认拒收生成)
         system_prompt = _build_draft_system_prompt(email_category_str)
         messages = [
             system_to_message(system_prompt),
@@ -555,6 +570,7 @@ class EmailDrafter:
                 body_excerpt=body_excerpt,
                 email_category=email_category_str,
                 tone=tone_enum.value,
+                allow_spam_reply=allow_spam_reply,
             ),
         ]
 
@@ -603,7 +619,13 @@ class EmailDrafter:
         *,
         allow_spam_reply: bool = False,
     ) -> list[
-        DraftResult | DraftBlockedResult | DrafterResponseError | LLMError | ValueError | KeyError | TypeError
+        DraftResult
+        | DraftBlockedResult
+        | DrafterResponseError
+        | LLMError
+        | ValueError
+        | KeyError
+        | TypeError
     ]:
         """批量草稿生成(顺序串行, 避免触发熔断).
 
@@ -749,6 +771,17 @@ class EmailDrafter:
             raise ValueError(
                 f"body_excerpt 必须是 str, 实际 {type(body_excerpt).__name__}={body_excerpt!r}"
             )
+        # 6/9 v1.0.5 P2-1 修复: 私有统计参数严判 type(value) is bool
+        # 实测传入 _stats_already_bumped="false" 或 1 时:
+        #   - "false"(str):  bool("false") == True → if not _stats_already_bumped 走 +1
+        #   - 1(int):        bool(1) == True → if not _stats_already_bumped 走 +1
+        #   两种误用都会让"批量路径不重复 total"语义被打破, stats 计数错误
+        # 私有参数也必须严判(防外部误传 / 误用), 与 v1.0.4 P1-1 批级严判保持范本一致
+        if type(_stats_already_bumped) is not bool:
+            raise ValueError(
+                f"draft_blocked_category _stats_already_bumped 必须是 bool, "
+                f"实际 {type(_stats_already_bumped).__name__}={_stats_already_bumped!r}"
+            )
         # email_category 必填(本入口专给阻断场景用, 不允许 None 走 DEFAULT)
         if email_category is None:
             raise ValueError("email_category 必填(本入口只接受阻断类别, 不允许 None)")
@@ -803,17 +836,31 @@ class EmailDrafter:
         blocked_subject_prefix_len = 24  # len("(DRAFT-NO-REPLY) [SPAM] ") = 24
         truncated_subject = original_subject[: 200 - blocked_subject_prefix_len]
         blocked_subject = f"(DRAFT-NO-REPLY) [{cat_str}] {truncated_subject}"
+        # 6/9 v1.0.5 P1-2 修复: 阻断模板 audit 字段**必须分别截断**, 防止攻击者
+        # 用 1800 字符 sender 注入式突破 blocked_body 2000 字符上限
+        # (实测 sender=1800 字符 + 固定提示 ~500 字符 → 2300 字符, 突破
+        # DraftBlockedResult.body MAX_BODY_CHARS=2000, 抛 ValueError, 安全降级失败)
+        # 截断策略:
+        #   - audit 字段(供审计) → 各 80 字符(避免注入式撑爆)
+        #   - audit 块总长预估: 80(原主题) + 80(原发件人) + 100(原正文摘要) + 固定提示 ~400 = 660 字符
+        #   - 远低于 2000 字符上限, 安全降级始终可用
+        audit_subject_max_len = 80
+        audit_sender_max_len = 80
+        audit_body_max_len = 100
+        audit_subject = original_subject[:audit_subject_max_len]
+        audit_sender = sender[:audit_sender_max_len] if sender else "(空)"
+        audit_body = body_excerpt[:audit_body_max_len] if body_excerpt else "(空)"
         blocked_body = (
             f"建议: 不回复\n\n"
             f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"
             f'  - 避免确认邮箱活跃(任何"已收到"都会让发件方知道你打开了邮件)\n'
             f'  - 避免触发钓鱼链接(任何"请移除/退订"反而可能触发更多同类邮件)\n'
             f"  - 如确需主动回复, 请走 drafter.draft(allow_spam_reply=True) 显式覆盖\n\n"
-            f"--- 邮件元信息(供 audit)---\n"
-            f"原主题: {original_subject}\n"
-            f"原发件人: {sender or '(空)'}\n"
+            f"--- 邮件元信息(供 audit, 字段已截断)---\n"
+            f"原主题: {audit_subject}\n"
+            f"原发件人: {audit_sender}\n"
             f"原分类: {cat_str}\n"
-            f"原正文摘要: {body_excerpt[:100] if body_excerpt else '(空)'}"
+            f"原正文摘要: {audit_body}"
         )
         return DraftBlockedResult(
             subject=blocked_subject,

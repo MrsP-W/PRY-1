@@ -83,6 +83,7 @@ from my_ai_employee.ai.drafter import (  # noqa: E402
     validate_draft_subject,
     validate_draft_tone,
 )
+from my_ai_employee.ai.prompts.draft import build_user_message  # noqa: E402, F401
 from my_ai_employee.ai.providers import LLMResponse  # noqa: E402
 
 # 修复未使用导入警告
@@ -1747,3 +1748,376 @@ class TestDraftBlockedResultV104FullContract:
         d = result.to_dict()
         assert d["blocked"] is True
         assert d["original_email_category"] == "SPAM"
+
+
+# ============================================================
+# D4.7.2 v1.0.5 第六次复检收口(2 P1 + 2 P2)
+# - P1-1: SPAM 授权意图显式进入 user 消息(allow_spam_reply 透传)
+# - P1-2: 阻断模板 audit 字段分别截断(sender 80 / 原主题 80 / body 100)
+# - P2-1: _stats_already_bumped 入口严判 type(value) is bool
+# - P2-2: reason 锁定白名单(只接受 spam_business_blocked)
+# ============================================================
+
+
+class TestDraftV105SpamAuthorizationPropagation:
+    """P1-1 验证(6/9 第六次复检): SPAM 显式授权意图必须进入 user 消息.
+
+    背景: v1.0.4 之前, allow_spam_reply=True 只在 drafter 业务层"开门",
+    实际 SYSTEM prompt 是默认 SPAM prompt("默认不生成回复"),
+    模型收到 SPAM + allow_spam_reply=True 时仍按"默认不回复"指令生成。
+    修复: draft() 把 allow_spam_reply 透传给 prompts/draft.build_user_message,
+    当 SPAM + allow_spam_reply=True 时, user 消息显式标注"用户已显式授权"。
+    """
+
+    def _mock_router_response(self, content: str) -> object:
+        """造一个 mock LLMResponse."""
+        from my_ai_employee.ai.providers import LLMResponse  # noqa: PLC0415
+
+        return LLMResponse(
+            content=content,
+            model_full_id="minimax/M3",
+            input_tokens=100,
+            output_tokens=50,
+            latency_ms=300,
+        )
+
+    def test_spam_with_allow_true_includes_authorization(self) -> None:
+        """P1-1 核心验证: SPAM + allow_spam_reply=True → user 消息含显式授权声明."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = self._mock_router_response(
+            '{"subject": "Re: x", "body": "valid body more than ten chars", "tone": "FORMAL"}'
+        )
+        drafter = EmailDrafter(router=mock_router)
+        drafter.draft(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,  # 显式授权
+        )
+        # 拦截真实 user 消息
+        user_content = mock_router.route.call_args.kwargs["messages"][1]["content"]
+        # P1-1 修复: 显式授权意图必须进 user 消息
+        assert "用户已显式授权" in user_content
+        assert "allow_spam_reply=True" in user_content
+        # SPAM 类别仍走 SYSTEM_PROMPT_SPAM(5+1 分发)
+        system_content = mock_router.route.call_args.kwargs["messages"][0]["content"]
+        from my_ai_employee.ai.prompts.draft import SYSTEM_PROMPT_SPAM  # noqa: PLC0415
+
+        assert system_content == SYSTEM_PROMPT_SPAM
+
+    def test_spam_default_does_not_include_authorization(self) -> None:
+        """P1-1 边界: SPAM + allow_spam_reply=False(默认) → user 消息不显式授权.
+
+        实际 SPAM 默认会在 drafter 业务层抛 SpamBlockedError(不调 LLM),
+        但为了验证"allow_spam_reply=False 时 user 消息不含授权", 用 URGENT + allow_spam_reply=False 反向验证
+        (SPAM + False 抛 SpamBlockedError 测不到消息内容).
+        """
+        mock_router = MagicMock()
+        mock_router.route.return_value = self._mock_router_response(
+            '{"subject": "Re: x", "body": "valid body more than ten chars", "tone": "FORMAL"}'
+        )
+        drafter = EmailDrafter(router=mock_router)
+        # URGENT + allow_spam_reply=False(不传递, 默认值) → user 消息不含"用户已显式授权"
+        drafter.draft(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="URGENT",
+            tone=DraftTone.FORMAL,
+        )
+        user_content = mock_router.route.call_args.kwargs["messages"][1]["content"]
+        # 默认 None / False 时不显示授权声明
+        assert "用户已显式授权" not in user_content
+
+    def test_non_spam_with_allow_true_does_not_include_authorization(self) -> None:
+        """P1-1 边界: URGENT + allow_spam_reply=True → user 消息仍不显示 SPAM 授权(避免污染其他类别)."""
+        mock_router = MagicMock()
+        mock_router.route.return_value = self._mock_router_response(
+            '{"subject": "Re: x", "body": "valid body more than ten chars", "tone": "FORMAL"}'
+        )
+        drafter = EmailDrafter(router=mock_router)
+        drafter.draft(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="URGENT",
+            tone=DraftTone.FORMAL,
+            allow_spam_reply=True,  # 即便传 True, 非 SPAM 不显示授权声明
+        )
+        user_content = mock_router.route.call_args.kwargs["messages"][1]["content"]
+        assert "用户已显式授权" not in user_content
+
+
+class TestBuildUserMessageV105AllowSpamReplyTypeGuard:
+    """P1-1 验证(6/9 第六次复检): build_user_message 严判 allow_spam_reply 类型.
+
+    与 drafter 入口严判保持范本一致: type(allow_spam_reply) is bool(拒 "true" / 1 等真值陷阱).
+    """
+
+    def test_rejects_string_value(self) -> None:
+        """字符串 'true' 拒收 → ValueError(与 v1.0.4 P1-1 bool 严判保持一致)."""
+        with pytest.raises(ValueError, match="allow_spam_reply 必须是 bool"):
+            build_user_message(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="SPAM",
+                tone="FORMAL",
+                allow_spam_reply="true",  # type: ignore[arg-type]
+            )
+
+    def test_rejects_int_value(self) -> None:
+        """int=1 拒收 → ValueError(bool() 真值陷阱严判)."""
+        with pytest.raises(ValueError, match="allow_spam_reply 必须是 bool"):
+            build_user_message(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="SPAM",
+                tone="FORMAL",
+                allow_spam_reply=1,  # type: ignore[arg-type]
+            )
+
+    def test_accepts_bool_true(self) -> None:
+        """bool=True 接受(回归)."""
+        msgs = build_user_message(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone="FORMAL",
+            allow_spam_reply=True,
+        )
+        content = msgs[0]["content"]
+        assert "用户已显式授权" in content
+
+    def test_accepts_bool_false(self) -> None:
+        """bool=False 接受(不显示授权声明)."""
+        msgs = build_user_message(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone="FORMAL",
+            allow_spam_reply=False,
+        )
+        content = msgs[0]["content"]
+        assert "用户已显式授权" not in content
+
+
+class TestDraftBlockedCategoryV105AuditTruncation:
+    """P1-2 验证(6/9 第六次复检): 阻断模板 audit 字段分别截断.
+
+    背景: 1800 字符 sender 注入式撑爆 blocked_body 2000 字符上限, 安全降级失败.
+    修复: audit 字段分别截断(sender 80 / 原主题 80 / body 100).
+    """
+
+    def test_1800_char_sender_does_not_explode_blocked_body(self) -> None:
+        """P1-2 核心验证: 1800 字符 sender 不再撑爆 blocked_body, 仍返回 DraftBlockedResult."""
+        huge_sender = "attacker" + "X" * 1792  # 总 1800 字符
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft_blocked_category(
+            subject="spam",
+            sender=huge_sender,  # 1800 字符攻击者 sender
+            body_excerpt="click",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+        )
+        # 关键: 不抛 ValueError, 正常返回 DraftBlockedResult
+        assert isinstance(result, DraftBlockedResult)
+        # blocked_body 必须 < 2000 字符(MAX_BODY_CHARS 上限)
+        assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
+        # audit 块中 sender 截断到 80 字符
+        assert "attackerXXX" in result.body  # 截断后的部分内容在
+        # 关键: 没调 LLM
+        mock_router.route.assert_not_called()
+
+    def test_huge_subject_in_audit_block_truncated(self) -> None:
+        """P1-2 验证: 原主题在 audit 块中截断到 80 字符(防 1000 字符主题撑爆)."""
+        huge_subject = "S" * 1000
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft_blocked_category(
+            subject=huge_subject,
+            sender="x",
+            body_excerpt="y",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+        )
+        # audit 块中的原主题被截断(原 1000 字符 → 80 字符)
+        # subject 字段本身已被截断到 200-24=176 字符
+        # 但 audit 块中"原主题:" 那行也只显示 80 字符
+        assert "原主题: " in result.body
+        # blocked_body 总长 < 2000
+        assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
+
+    def test_huge_body_excerpt_audit_truncated(self) -> None:
+        """P1-2 验证: 原正文摘要在 audit 块中截断到 100 字符(防 5000 字符正文撑爆)."""
+        huge_body = "B" * 5000
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft_blocked_category(
+            subject="x",
+            sender="y",
+            body_excerpt=huge_body,
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+        )
+        # audit 块中"原正文摘要:" 后只显示 100 字符
+        assert "原正文摘要: " in result.body
+        # blocked_body 总长 < 2000
+        assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
+
+    def test_combined_huge_fields_still_under_limit(self) -> None:
+        """P1-2 集成验证: sender + subject + body 全部超大时仍 < 2000 字符."""
+        huge_sender = "X" * 1800
+        huge_subject = "S" * 500
+        huge_body = "B" * 5000
+        mock_router = MagicMock()
+        drafter = EmailDrafter(router=mock_router)
+        result = drafter.draft_blocked_category(
+            subject=huge_subject,
+            sender=huge_sender,
+            body_excerpt=huge_body,
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+        )
+        # audit 字段全部分别截断 → blocked_body 总长 < 2000 字符
+        assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
+
+    def test_audit_block_annotation_present(self) -> None:
+        """P1-2 回归: audit 块标题含"字段已截断"提示(便于审计理解截断语义)."""
+        result = EmailDrafter(router=MagicMock()).draft_blocked_category(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+        )
+        assert "字段已截断" in result.body
+
+
+class TestDraftBlockedCategoryV105StatsBumpedTypeGuard:
+    """P2-1 验证(6/9 第六次复检): _stats_already_bumped 入口严判 type(value) is bool.
+
+    背景: 私有参数 _stats_already_bumped 未严判类型,
+    传入 "false" / 1 等真值陷阱会破坏"批量路径不重复 total"语义.
+    修复: 入口严判 type(value) is bool, 拒收所有非原生 bool.
+    """
+
+    def test_rejects_string_false(self) -> None:
+        """字符串 'false' 拒收 → ValueError(真值陷阱)."""
+        with pytest.raises(ValueError, match="_stats_already_bumped 必须是 bool"):
+            EmailDrafter(router=MagicMock()).draft_blocked_category(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="SPAM",
+                tone=DraftTone.CONCISE,
+                _stats_already_bumped="false",  # type: ignore[arg-type]
+            )
+
+    def test_rejects_int_one(self) -> None:
+        """int=1 拒收 → ValueError(bool() 真值陷阱)."""
+        with pytest.raises(ValueError, match="_stats_already_bumped 必须是 bool"):
+            EmailDrafter(router=MagicMock()).draft_blocked_category(
+                subject="x",
+                sender="y",
+                body_excerpt="z",
+                email_category="SPAM",
+                tone=DraftTone.CONCISE,
+                _stats_already_bumped=1,  # type: ignore[arg-type]
+            )
+
+    def test_accepts_bool_true(self) -> None:
+        """bool=True 接受(批量路径回归 — stats 不重复)."""
+        result = EmailDrafter(router=MagicMock()).draft_blocked_category(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+            _stats_already_bumped=True,
+        )
+        assert isinstance(result, DraftBlockedResult)
+        # 批量路径: stats 不重复 total(只在 draft() 已累加过, 本次 0 增量)
+        # 这里只验返回成功, 不验 stats(因 stats 路径由 draft_batch 触发)
+
+    def test_accepts_bool_false(self) -> None:
+        """bool=False 接受(独立调用路径回归)."""
+        result = EmailDrafter(router=MagicMock()).draft_blocked_category(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+            _stats_already_bumped=False,
+        )
+        assert isinstance(result, DraftBlockedResult)
+        # 独立调用: stats 应 +1 total +1 blocked(新 drafter 实例验证)
+        d2 = EmailDrafter(router=MagicMock())
+        d2.draft_blocked_category(
+            subject="x",
+            sender="y",
+            body_excerpt="z",
+            email_category="SPAM",
+            tone=DraftTone.CONCISE,
+            _stats_already_bumped=False,
+        )
+        assert d2.stats()["total"] == 1
+        assert d2.stats()["blocked"] == 1
+
+
+class TestDraftBlockedResultV105ReasonWhitelist:
+    """P2-2 验证(6/9 第六次复检): reason 锁定白名单.
+
+    背景: 任意非空 reason 接受(如 'other'), 构造不一致状态.
+    修复: reason 限定为 'spam_business_blocked'(当前唯一阻断类别).
+    """
+
+    def test_rejects_other_reason(self) -> None:
+        """非白名单 reason(如 'other')拒收 → ValueError."""
+        with pytest.raises(ValueError, match="reason 必须是"):
+            DraftBlockedResult(
+                subject="s",
+                body="b" * 20,
+                tone=DraftTone.FORMAL,
+                reason="other",  # 非白名单
+                original_email_category="SPAM",
+            )
+
+    def test_rejects_empty_reason(self) -> None:
+        """空白 reason 拒收 → ValueError(语义非空校验, 与 reason 字段先前 4 件套契约一致)."""
+        with pytest.raises(ValueError, match="reason 语义为空"):
+            DraftBlockedResult(
+                subject="s",
+                body="b" * 20,
+                tone=DraftTone.FORMAL,
+                reason="   ",  # 空白字符, strip() 严判拒绝
+                original_email_category="SPAM",
+            )
+
+    def test_rejects_spam_business_blocked_uppercase(self) -> None:
+        """大小写敏感: 'SPAM_BUSINESS_BLOCKED' 不接受(白名单仅小写)."""
+        with pytest.raises(ValueError, match="reason 必须是"):
+            DraftBlockedResult(
+                subject="s",
+                body="b" * 20,
+                tone=DraftTone.FORMAL,
+                reason="SPAM_BUSINESS_BLOCKED",  # 大小写不匹配
+                original_email_category="SPAM",
+            )
+
+    def test_accepts_spam_business_blocked(self) -> None:
+        """白名单 reason 'spam_business_blocked' 接受(回归)."""
+        result = DraftBlockedResult(
+            subject="s",
+            body="b" * 20,
+            tone=DraftTone.FORMAL,
+            reason="spam_business_blocked",
+            original_email_category="SPAM",
+        )
+        assert result.reason == "spam_business_blocked"
