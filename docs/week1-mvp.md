@@ -702,7 +702,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 - **业务层**：`ai/drafter.py` 实现 `EmailDrafter`（`draft` / `draft_batch`）+ `_parse_draft_response` 严判 LLM 响应
 - **Prompt 模板**：`ai/prompts/draft.py` SYSTEM prompt + `build_user_message`（接 `email_category` 入参，D4.6 输出作为 D4.7 输入）
-- **业务层接入**：`EmailDrafterAdapter` 复用 D4.6 双入口架构（`draft_and_emit` 成功 + `record_draft_failure_and_emit` 失败，cf 必填 >= 1）
+- **业务层接入**：`EmailDrafterAdapter` 复用 D4.6 三入口架构（`draft_and_emit` 成功 + `record_draft_business_blocked_and_emit` 业务阻断 + `record_draft_failure_and_emit` 技术失败，cf 必填 >= 1）
 - **业务字段透传**：`draft_subject` / `draft_body` / `tone`（3 选 1 枚举） / `model_full_id` / `email_id` / `category` 6 项到 `event_metadata` 顶层
 - **lane_entry_id 命名**：`draft:<source>:<run_id>`（与 `classify:` / `sync:` 区分）
 - **D3.3.3 教训应用**：严判入口 + 异常窄化 + 不 catch-all 兜底
@@ -720,11 +720,11 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 **v1.0 验收标准**：
 
 - [ ] `pytest tests/ai/test_drafter.py` 全过（目标 ≥ 50 tests）
-- [ ] `pytest tests/policy/test_drafter_adapter.py` 全过（目标 ≥ 70 tests）
+- [ ] `pytest tests/ai/test_drafter_adapter.py` 全过（实际 107 tests，三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致）
 - [ ] 单封草稿生成 < 10s（week1-mvp §D4 验收 L527）
 - [ ] 严判 LLM 响应：必须 `{"subject": str 非空 + body: str 非空 + tone: <enum>}` 拒 markdown / 拒空 subject / 拒空 body / 拒超长 body (> 8000 字符)
 - [ ] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
-- [ ] D4.6 `EmailClassifierAdapter` 双入口架构复用（`draft_and_emit` / `record_draft_failure_and_emit`）
+- [ ] D4.6 `EmailClassifierAdapter` 三入口架构复用（`draft_and_emit` / `record_draft_business_blocked_and_emit` / `record_draft_failure_and_emit`，业务阻断 vs 技术失败字段名级别硬区分）
 - [ ] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
 - [ ] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK
 - [ ] lane_entry_id 命名 `draft:<source>:<run_id>`,与 `classify:` / `sync:` 区分
@@ -739,7 +739,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | D4.7.3 | `src/my_ai_employee/policy/integration.py` EmailDrafterAdapter + `DraftDecisionReport` + `DraftFailureDecisionReport` + 3 `_validate_draft_*` helper | 90 min | Adapter | 🎯 |
 | D4.7.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.6 v1.0.2-second P2-3 教训） | 5 min | 导出 | 🎯 |
 | D4.7.5 | `tests/ai/test_drafter.py` 50 tests（30 严判 + 10 batch + 10 prompt） | 90 min | 单元测试 | 🎯 |
-| D4.7.6 | `tests/policy/test_drafter_adapter.py` 70 tests（双入口 + 公共 API + 顶层导出） | 120 min | 适配器测试 | 🎯 |
+| D4.7.6 | `tests/ai/test_drafter_adapter.py` 107 tests（三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致 + 跨字段校验 + 工厂严判 1:1 + 透传 cf + strip() 语义非空 + type 严判在 hash 前） | 120 min | 适配器测试 | 🎯 |
 | D4.7.7 | `docs/week1-mvp.md §D4.7` 本段（v1.0 → v1.0.1 → v1.0.2 演进） | 30 min | 文档 | 🎯 |
 | D4.7.8 | `docs/d4-claw-code-mapping.md §8` D4.7 mapping 段 | 30 min | mapping | 🎯 |
 | D4.7.9 | `reports/D4.7-草稿生成器.md` v1.0 报告（8 质量门 + 教训应用） | 30 min | 报告 | 🎯 |

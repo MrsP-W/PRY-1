@@ -136,6 +136,29 @@ _DRAFT_SPAM_REPLY_INTENT_CHOICES: frozenset[str] = frozenset(t.value for t in Dr
 _BLOCKED_REASON_VALUES: frozenset[str] = frozenset({"spam_business_blocked"})
 
 
+def _serialize_audit_field(value: str, *, max_chars: int = 100) -> str:
+    """Return a complete JSON string literal within the character budget."""
+    if type(value) is not str:
+        raise ValueError(f"audit field 必须是 str, 实际 {type(value).__name__}")
+    if type(max_chars) is not int or isinstance(max_chars, bool) or max_chars < 2:
+        raise ValueError(f"max_chars 必须是 >= 2 的 int, 实际 {max_chars!r}")
+
+    encoded = json.dumps(value, ensure_ascii=True)
+    if len(encoded) <= max_chars:
+        return encoded
+
+    low = 0
+    high = len(value)
+    while low < high:
+        middle = (low + high + 1) // 2
+        candidate = json.dumps(value[:middle], ensure_ascii=True)
+        if len(candidate) <= max_chars:
+            low = middle
+        else:
+            high = middle - 1
+    return json.dumps(value[:low], ensure_ascii=True)
+
+
 class DrafterError(Exception):
     """草稿生成器业务异常基类."""
 
@@ -389,8 +412,7 @@ class DraftBlockedResult:
     # 调用方实际授权意图(便于 D4.7.3 Adapter 事件审计)
     # - DraftSpamReplyIntent 枚举: 调用方传了 allow_spam_reply=True + 明确 intent
     # - None: 调用方未授权(intent 即使在 draft() 严判通过, 阻断场景下也不入产物)
-    # 注: 阻断场景 spam_reply_authorized 仍按调用方原 allow_spam_reply 记录(True/False),
-    #     意图单独记录, 不做"授权+意图一致性"强约束(阻断是降级, 记录调用方意图即可)
+    # 阻断产物同样执行授权与意图强一致校验。
     spam_reply_intent: DraftSpamReplyIntent | None = None
 
     def __post_init__(self) -> None:
@@ -639,9 +661,8 @@ class EmailDrafter:
                               None → UNSUBSCRIBE(最安全的"单向拒绝"语义)
                               UNSUBSCRIBE → 礼貌退订
                               REJECT → 明确拒收
-                            - allow_spam_reply=False + email_category=SPAM: SPAM 阻断,
-                              严判通过后 intent 进入 DraftBlockedResult.spam_reply_intent
-                              (便于 D4.7.3 audit 追溯"调用方意图")
+                            - allow_spam_reply=False + email_category=SPAM:
+                              intent 必须为 None, 否则在统计变更前抛 ValueError
                             - email_category=非 SPAM: 严判通过后, spam_reply_authorized
                               仍为 False(防误标, v1.0.7 P1-1), intent 记录为 None
                             v1.0.6 文档错误修正: 原文档"未授权时被忽略" 不准确, 实际
@@ -749,6 +770,11 @@ class EmailDrafter:
         email_category_str = (
             email_category.value if isinstance(email_category, EmailCategory) else email_category
         )
+        if email_category_str == "SPAM" and not allow_spam_reply and intent_enum is not None:
+            raise ValueError(
+                "SPAM 未授权回复时 spam_reply_intent 必须为 None"
+                "(allow_spam_reply=False, 防止阻断审计出现矛盾状态)"
+            )
         if email_category_str == "SPAM" and not allow_spam_reply:
             self._stats["total"] += 1
             self._stats["blocked"] = self._stats.get("blocked", 0) + 1
@@ -825,7 +851,6 @@ class EmailDrafter:
             )
             raise
 
-        self._stats["success"] += 1
         # 6/10 v1.0.7 P1-1 修复: spam_reply_authorized 计算必须结合 email_category_str
         # - v1.0.6 漏洞: 直接 spam_reply_authorized=allow_spam_reply, URGENT+allow=True
         #   被审计为"SPAM 授权", 与 D4.7.3 事件审计需求矛盾(非 SPAM 不应有授权标记)
@@ -835,7 +860,7 @@ class EmailDrafter:
         # - 6/10 v1.0.7 P2-1 修复: 同时透传 intent_enum(SPAM 授权场景下必非空,
         #   非 SPAM 场景为 None, 与 spam_reply_authorized 一致性绑定)
         spam_reply_authorized: bool = email_category_str == "SPAM" and allow_spam_reply
-        return DraftResult(
+        result = DraftResult(
             subject=draft_subject,
             body=draft_body,
             tone=draft_tone,
@@ -847,6 +872,8 @@ class EmailDrafter:
             spam_reply_authorized=spam_reply_authorized,
             spam_reply_intent=intent_enum if spam_reply_authorized else None,
         )
+        self._stats["success"] += 1
+        return result
 
     def draft_batch(
         self,
@@ -1170,27 +1197,10 @@ class EmailDrafter:
         raw_audit_subject = original_subject[:audit_subject_max_len]
         raw_audit_sender = sender[:audit_sender_max_len] if sender else "(空)"
         raw_audit_body = body_excerpt[:audit_body_max_len] if body_excerpt else "(空)"
-        # 6/10 v1.0.8 P1-1 修复: ensure_ascii=False + json.dumps 二次截断(防 emoji 代理对撑爆)
-        # - v1.0.6 漏洞: ensure_ascii=True 把 emoji 膨胀成 `😀` 代理对转义,
-        #   80 个 emoji → 480 字符代理对 → 加 json 引号 → ~500 字符字段.
-        #   实测: sender 80 + subject 80 + body 100 = 260 emoji → ~1560 字符代理对 +
-        #   固定提示 ~400 = ~1960 字符, 接近 2000 上限. 极端 case(更密集 emoji):
-        #   80/80/100 个 emoji → 3376 字符正文, 撑爆 2000, 抛 ValueError, 安全降级失败.
-        # - v1.0.8 真修:
-        #   1) **ensure_ascii=False**(中文字符 / emoji 不需要 escape 为 \u 转义,
-        #      json.dumps 仍会 escape `\n` / `\r` / `\t` / 双引号等控制字符,
-        #      抗换行注入防护不被破坏).
-        #   2) **json.dumps 后再校验长度**, 如果单字段 > 100 字符则按字符再次截断
-        #      (避免 emoji 占用更多 UTF-16 code unit 而突破单字段预估).
-        # 序列化后单字段: 中文 escape 后 ≲ 100 字符(emoji 不会膨胀), 远低于 2000 上限
         audit_field_max_len = 100
-        audit_subject = json.dumps(raw_audit_subject, ensure_ascii=False)
-        audit_sender = json.dumps(raw_audit_sender, ensure_ascii=False)
-        audit_body = json.dumps(raw_audit_body, ensure_ascii=False)
-        # 二次截断防御: 极端 emoji/控制字符场景(防代理对膨胀或超长 UTF-8 字节)
-        audit_subject = audit_subject[:audit_field_max_len]
-        audit_sender = audit_sender[:audit_field_max_len]
-        audit_body = audit_body[:audit_field_max_len]
+        audit_subject = _serialize_audit_field(raw_audit_subject, max_chars=audit_field_max_len)
+        audit_sender = _serialize_audit_field(raw_audit_sender, max_chars=audit_field_max_len)
+        audit_body = _serialize_audit_field(raw_audit_body, max_chars=audit_field_max_len)
         blocked_body = (
             f"建议: 不回复\n\n"
             f"原因: 该邮件被 D4.6 分类为 {cat_str}, 进入业务阻断流程.\n"

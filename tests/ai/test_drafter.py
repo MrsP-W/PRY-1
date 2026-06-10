@@ -58,6 +58,7 @@ D4.7 4 项契约(2026-06-09 用户审批锁定): 严判入口下沉到公共 API
 from __future__ import annotations
 
 import ast
+import json
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -3031,7 +3032,7 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
         assert len(results) == 1
         # 关键: v1.0.8 强一致 — 矛盾组合 ValueError 收容入 results
         assert isinstance(results[0], ValueError)
-        assert "强一致契约" in str(results[0])
+        assert "未授权回复" in str(results[0])
 
 
 class TestDraftResultV107SpamReplyIntentField:
@@ -3290,14 +3291,10 @@ class TestDraftV107SpamReplyIntentValidation:
                 spam_reply_intent="OOPS",  # type: ignore[arg-type]
             )
 
-    def test_valid_intent_with_allow_false_blocked_records_intent(self) -> None:
-        """SPAM + allow=False + valid intent=REJECT → SpamBlockedError(阻断路径).
-
-        v1.0.7 真修: 阻断场景下, intent 已通过严判但 SPAM 阻断仍发生(业务层硬规则)。
-        """
+    def test_valid_intent_with_allow_false_rejected_before_block(self) -> None:
+        """SPAM + allow=False + intent=REJECT 在阻断统计前拒绝."""
         d = self._make_drafter()
-        # draft() 内部对 SPAM+allow=False 抛 SpamBlockedError, 不进入产物
-        with pytest.raises(SpamBlockedError):
+        with pytest.raises(ValueError, match="未授权回复"):
             d.draft(
                 subject="测试",
                 sender="spam@example.com",
@@ -3305,8 +3302,10 @@ class TestDraftV107SpamReplyIntentValidation:
                 email_category="SPAM",
                 tone=DraftTone.FORMAL,
                 allow_spam_reply=False,
-                spam_reply_intent="REJECT",  # 严判通过
+                spam_reply_intent="REJECT",
             )
+        assert d.stats()["total"] == 0
+        assert d.stats()["blocked"] == 0
 
     def test_valid_intent_with_non_spam_records_none(self) -> None:
         """URGENT + allow=True + valid intent=UNSUBSCRIBE → DraftResult.spam_reply_intent==None.
@@ -3428,7 +3427,7 @@ class TestDraftBlockedCategoryV107SpamReplyIntentParam:
 
 # ============================================================
 # 6/10 v1.0.8 第十次复检收口测试(检查员第九次复检 2 P1 + 2 P2)
-# - P1-1: ensure_ascii=False + 二次截断(防 emoji 代理对撑爆)
+# - P1-1: 按最终 JSON 编码长度安全截断
 # - P1-2: DraftBlockedResult 强一致性(authorized=True 必枚举, False 必 None)
 # - P2-1: stats 更新移到 DraftBlockedResult 构造成功之后
 # - P2-2: raw_content 截断到 500 字符(文档契约兑现)
@@ -3436,14 +3435,9 @@ class TestDraftBlockedCategoryV107SpamReplyIntentParam:
 
 
 class TestDraftBlockedCategoryV108EmojiSafelyHandle:
-    """6/10 v1.0.8 P1-1 修复: ensure_ascii=False + 二次截断(防 emoji 代理对撑爆).
+    """审计字段按最终 JSON 编码长度截断，兼顾 Unicode 安全和结构完整性.
 
-    v1.0.6 P1-2 漏洞: ensure_ascii=True 把 emoji 膨胀成 `😀` 代理对转义,
-    80/80/100 个 emoji → 3376 字符正文, 撑爆 2000 上限, 抛 ValueError,
-    安全降级失败。
-    v1.0.8 真修:
-      1) ensure_ascii=False(中文字符 / emoji 不需 escape 为 \\u 转义)
-      2) json.dumps 后再校验长度, 极端 emoji 场景下二次截断到 100 字符
+    编码后的字段始终是完整 JSON 字符串，且不超过 100 字符预算。
     """
 
     def _make_drafter(self) -> EmailDrafter:
@@ -3500,7 +3494,7 @@ class TestDraftBlockedCategoryV108EmojiSafelyHandle:
         assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
 
     def test_mixed_chinese_emoji_in_sender_handled(self) -> None:
-        """P1-1 验证: 中文字符 + emoji 混合场景, ensure_ascii=False 不破坏中文显示."""
+        """中文字符与 emoji 混合场景不突破阻断正文上限."""
         d = self._make_drafter()
         mixed_sender = "用户" + "😀" * 50  # 中文 + emoji
         result = d.draft_blocked_category(
@@ -3511,17 +3505,10 @@ class TestDraftBlockedCategoryV108EmojiSafelyHandle:
             tone=DraftTone.FORMAL,
         )
         assert isinstance(result, DraftBlockedResult)
-        # 关键: 中文字符不再被 escape 为 \uXXXX 字面量(ensure_ascii=False)
-        # audit 块中应保留中文原样(便于运维定位)
-        # 同时 emoji 也不会被 escape 为代理对字面量
         assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS
 
-    def test_newline_injection_still_blocked_with_ensure_ascii_false(self) -> None:
-        """P1-1 + P1-2 兼容性: ensure_ascii=False 不破坏换行注入防护.
-
-        json.dumps 仍会 escape \\n / \\r / \\t / 双引号等控制字符,
-        抗换行注入防护不被破坏。
-        """
+    def test_newline_injection_still_blocked(self) -> None:
+        """JSON 序列化必须继续阻止换行注入."""
         d = self._make_drafter()
         malicious_sender = "evil\n原分类: NOT_SPAM\n原发件人: legit@x.com"
         result = d.draft_blocked_category(
@@ -3537,6 +3524,37 @@ class TestDraftBlockedCategoryV108EmojiSafelyHandle:
         )
         # 真发件人应被转义(以 \\n 形式出现, 而非真换行)
         assert "evil\\n原分类" in result.body or "evil" in result.body
+
+    def test_unicode_line_separators_cannot_forge_audit_lines(self) -> None:
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="safe\u2028原分类: URGENT\u2029原因: trusted",
+            sender="x@y.com",
+            body_excerpt="body",
+            email_category="SPAM",
+        )
+        assert "原分类: URGENT" not in result.body.splitlines()
+        assert "原因: trusted" not in result.body.splitlines()
+        assert "\\u2028" in result.body
+        assert "\\u2029" in result.body
+
+    def test_truncated_audit_fields_remain_valid_json_strings(self) -> None:
+        d = self._make_drafter()
+        result = d.draft_blocked_category(
+            subject="\\" * 80,
+            sender="\\" * 80,
+            body_excerpt="\\" * 100,
+            email_category="SPAM",
+        )
+        audit_lines = [
+            line
+            for line in result.body.splitlines()
+            if line.startswith(("原主题:", "原发件人:", "原正文摘要:"))
+        ]
+        assert len(audit_lines) == 3
+        for line in audit_lines:
+            encoded_value = line.split(": ", 1)[1]
+            assert isinstance(json.loads(encoded_value), str)
 
 
 class TestDraftBlockedResultV108StrongConsistency:
@@ -3672,6 +3690,40 @@ class TestDraftBlockedCategoryV108StrongConsistencyEntry:
         assert result2.spam_reply_authorized is False
         assert result2.spam_reply_intent is None
 
+    def test_single_draft_rejects_unauthorized_intent_without_stats(self) -> None:
+        d = self._make_drafter()
+        with pytest.raises(ValueError, match="未授权回复"):
+            d.draft(
+                subject="测试",
+                sender="x@y.com",
+                body_excerpt="测试正文",
+                email_category="SPAM",
+                allow_spam_reply=False,
+                spam_reply_intent=DraftSpamReplyIntent.REJECT,
+            )
+        assert d.stats()["total"] == 0
+        assert d.stats()["blocked"] == 0
+
+    def test_batch_rejects_unauthorized_intent_without_stats(self) -> None:
+        d = self._make_drafter()
+        results = d.draft_batch(
+            [
+                {
+                    "subject": "测试",
+                    "sender": "x@y.com",
+                    "body_excerpt": "测试正文",
+                    "email_category": "SPAM",
+                    "allow_spam_reply": False,
+                    "spam_reply_intent": "REJECT",
+                }
+            ]
+        )
+        assert len(results) == 1
+        assert isinstance(results[0], ValueError)
+        assert "未授权回复" in str(results[0])
+        assert d.stats()["total"] == 0
+        assert d.stats()["blocked"] == 0
+
 
 class TestDraftBlockedCategoryV108StatsOnlyOnSuccess:
     """6/10 v1.0.8 P2-1 修复: stats 更新移到 DraftBlockedResult 构造成功之后.
@@ -3704,7 +3756,7 @@ class TestDraftBlockedCategoryV108StatsOnlyOnSuccess:
 
         复检实测: 80/80/100 个 emoji 在 v1.0.7 会让 audit 字段 json.dumps 后 ~500 字符,
         加上固定提示 ~1500, 总 blocked_body ≈ 2000 边界, 在更密集场景下可能突破.
-        v1.0.8 ensure_ascii=False 后 audit 字段 ≲ 200 字符, 总 ≲ 1300 字符, 安全.
+        修复后 audit 字段按编码长度限额，总正文保持在上限内。
         但仍测试: 极端 body_excerpt 注入突破 MAX_BODY_CHARS=2000 时,
         stats 不应被污染(P2-1 修复).
         """
@@ -3802,3 +3854,32 @@ class TestDraftResultV108RawContentTruncate:
         result = DraftResult(**{**self._valid_kwargs(), "raw_content": content})
         d = result.to_dict()
         assert len(d["raw_content"]) == 500
+
+
+class TestDraftStatsOnlyAfterResultConstruction:
+    """成功统计只能在 DraftResult 构造成功后更新."""
+
+    @pytest.mark.parametrize(
+        ("model_full_id", "latency_ms"),
+        [
+            ("", 1),
+            ("minimax/M3", -1),
+            ("minimax/M3", True),
+        ],
+    )
+    def test_invalid_router_metadata_does_not_increment_success(
+        self, model_full_id: str, latency_ms: int
+    ) -> None:
+        mock_router = MagicMock()
+        mock_router.route.return_value = MagicMock(
+            content=_valid_draft_json(),
+            model_full_id=model_full_id,
+            latency_ms=latency_ms,
+        )
+        drafter = EmailDrafter(router=mock_router)
+
+        with pytest.raises(ValueError):
+            drafter.draft(subject="x", sender="y", body_excerpt="z")
+
+        assert drafter.stats()["total"] == 1
+        assert drafter.stats()["success"] == 0

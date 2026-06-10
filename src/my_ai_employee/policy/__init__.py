@@ -51,16 +51,25 @@ from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.integration import (
     ClassifyDecisionReport,
     ClassifyFailureDecisionReport,
+    DraftBlockedDecisionReport,
+    DraftDecisionReport,
+    DraftFailureDecisionReport,
     EmailClassifierAdapter,
+    EmailDrafterAdapter,
     SyncDecisionReport,
     SyncPolicyAdapter,
     build_classify_failure_packet,
     build_classify_packet,
     build_classify_policy_context,
+    build_draft_blocked_packet,
+    build_draft_failure_packet,
+    build_draft_packet,
+    build_draft_policy_context,
     build_imap_sync_packet,
     build_sync_policy_context,
     compute_acceptance_results,
     compute_classification_acceptance,
+    compute_draft_acceptance,
 )
 from my_ai_employee.policy.lane_board import (
     LaneBoard,
@@ -125,4 +134,15 @@ __all__ = [
     "build_classify_failure_packet",
     "build_classify_policy_context",
     "compute_classification_acceptance",
+    # D4.7.3 业务层接入(邮件草稿, 6/10 起始)
+    "EmailDrafterAdapter",
+    "DraftDecisionReport",
+    "DraftBlockedDecisionReport",
+    "build_draft_packet",
+    "build_draft_blocked_packet",
+    "build_draft_policy_context",
+    "compute_draft_acceptance",
+    # D4.7.3 v1.0.2 P1-1 新增: 技术失败独立 packet + 独立 report
+    "build_draft_failure_packet",
+    "DraftFailureDecisionReport",
 ]
