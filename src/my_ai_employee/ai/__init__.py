@@ -1,8 +1,9 @@
 """L3 智能层。
 
-4 个核心服务：
+5 个核心服务：
   - classifier          邮件 5 类分类（Claude Haiku）
   - drafter             邮件草稿生成（Claude Sonnet）
+  - reviewer            邮件草稿审阅（LLM + 本地规则）
   - finance_analyzer    财务异常检测 + 月度报告（Claude Sonnet）
   - note_structurer     剪贴板/Notes 结构化（Claude Haiku）
 
@@ -11,9 +12,10 @@ Fallback：规则引擎（关键词/正则）— 不做本地 Ollama
 
 D4（classifier + drafter）+ D8（finance_analyzer + note_structurer）实施。
 
-Prompts 子包(D4.6 + D4.7.2):
+Prompts 子包(D4.6 + D4.7.2 + D4.7.4):
   - ai.prompts.classify: D4.6 分类器 SYSTEM prompt + build_user_message
   - ai.prompts.draft:    D4.7.2 草稿 5+1 类 SYSTEM prompt + build_system_prompt 分发
+  - ai.prompts.review:   D4.7.4 审阅 5+1 类 SYSTEM prompt + 三字段裸 JSON 契约
 """
 
 from my_ai_employee.ai.capability import (
@@ -63,6 +65,8 @@ from my_ai_employee.ai.prompts import (
     build_classify_user_message,
     build_draft_system_prompt,
     build_draft_user_message,
+    build_review_system_prompt,
+    build_review_user_message,
 )
 from my_ai_employee.ai.providers import (
     LLMAPIError,
@@ -74,6 +78,19 @@ from my_ai_employee.ai.providers import (
     LLMTimeoutError,
     OpenAICompatibleProvider,
     get_provider,
+)
+from my_ai_employee.ai.reviewer import (
+    EmailReviewer,
+    ReviewBlockedResult,
+    ReviewBlockReason,
+    ReviewerError,
+    ReviewerResponseError,
+    ReviewFailureResult,
+    ReviewResult,
+    parse_review_response,
+)
+from my_ai_employee.ai.reviewer import (
+    has_markdown_fence as has_review_markdown_fence,
 )
 from my_ai_employee.ai.router import LLMRouter, RouterStats, get_router
 
@@ -105,7 +122,17 @@ __all__ = [
     "validate_draft_body",
     "validate_draft_subject",
     "validate_draft_tone",
-    # prompts (D4.6 classify + D4.7.2 draft)
+    # reviewer (D4.7.4)
+    "EmailReviewer",
+    "ReviewBlockedResult",
+    "ReviewBlockReason",
+    "ReviewerError",
+    "ReviewerResponseError",
+    "ReviewFailureResult",
+    "ReviewResult",
+    "has_review_markdown_fence",
+    "parse_review_response",
+    # prompts (D4.6 classify + D4.7.2 draft + D4.7.4 review)
     "CLASSIFY_SYSTEM_PROMPT",
     "build_classify_user_message",
     "SYSTEM_PROMPT_DEFAULT",
@@ -116,6 +143,8 @@ __all__ = [
     "SYSTEM_PROMPT_PERSONAL",
     "build_draft_system_prompt",
     "build_draft_user_message",
+    "build_review_system_prompt",
+    "build_review_user_message",
     # fallback
     "FALLBACK_CHAINS",
     "CircuitBreaker",
