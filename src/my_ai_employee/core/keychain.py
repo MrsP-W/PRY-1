@@ -32,6 +32,11 @@ SERVICE_DB: Final[str] = f"{SERVICE_PREFIX}.db"
 SERVICE_IMAP_QQ: Final[str] = f"{SERVICE_PREFIX}.imap.qq"
 SERVICE_IMAP_OUTLOOK: Final[str] = f"{SERVICE_PREFIX}.imap.outlook"
 SERVICE_IMAP_GMAIL: Final[str] = f"{SERVICE_PREFIX}.imap.gmail"
+# D5 业务调度器新增 SMTP 凭证 service(D5.1 — 与 IMAP 授权码分别存储,
+# 因 D2 IMAP 真实 QQ 验收 memory L10 沉淀:DB 密码不可复用 IMAP 授权码)
+SERVICE_SMTP_QQ: Final[str] = f"{SERVICE_PREFIX}.smtp.qq"
+SERVICE_SMTP_OUTLOOK: Final[str] = f"{SERVICE_PREFIX}.smtp.outlook"
+SERVICE_SMTP_GMAIL: Final[str] = f"{SERVICE_PREFIX}.smtp.gmail"
 
 
 @dataclass
@@ -208,6 +213,21 @@ def get_imap_password(email: str) -> KeychainResult:
     return get_password(SERVICE_IMAP_QQ, email)
 
 
+# D5.1 业务调度器 SMTP 凭证高层封装(沿 set_imap_password 范本)
+# 重要: SMTP 密码与 IMAP 授权码分别存,因 QQ 邮箱的 IMAP 授权码与 SMTP 授权码可不同
+# (D5.1 风险 #7: 凭据硬编码/日志泄露防护 — keychain.set_smtp_password 写入严禁 logger 打印 value)
+
+
+def set_smtp_password(email: str, auth_code: str) -> KeychainResult:
+    """存 SMTP 授权码(service=my-ai-employee.smtp.qq, account=email)。"""
+    return set_password(SERVICE_SMTP_QQ, email, auth_code)
+
+
+def get_smtp_password(email: str) -> KeychainResult:
+    """读 SMTP 授权码。"""
+    return get_password(SERVICE_SMTP_QQ, email)
+
+
 __all__ = [
     "KeychainResult",
     "is_available",
@@ -218,9 +238,14 @@ __all__ = [
     "get_db_password",
     "set_imap_password",
     "get_imap_password",
+    "set_smtp_password",
+    "get_smtp_password",
     "SERVICE_PREFIX",
     "SERVICE_DB",
     "SERVICE_IMAP_QQ",
     "SERVICE_IMAP_OUTLOOK",
     "SERVICE_IMAP_GMAIL",
+    "SERVICE_SMTP_QQ",
+    "SERVICE_SMTP_OUTLOOK",
+    "SERVICE_SMTP_GMAIL",
 ]
