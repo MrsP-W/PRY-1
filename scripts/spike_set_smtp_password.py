@@ -106,8 +106,15 @@ def main() -> int:
     parser.add_argument(
         "--provider",
         required=True,
-        choices=("qq", "outlook", "gmail"),
-        help="邮箱服务商(D5.1 仅 qq 启用授权码模式)",
+        # D5.1-fix 修复:choices 严判为 ("qq",) — outlook/gmail 不再接受
+        # 原因:原 choices 暴露 outlook/gmail 误导用户以为已实现,实际运行时
+        # NotImplementedError 抛错(D5 启动后被用户标记的 2 个代码风险之一)。
+        # 修复策略:argparse 入口硬拒收 outlook/gmail,清晰错误信息。
+        choices=("qq",),
+        help=(
+            "邮箱服务商(D5.1 仅 qq 启用授权码模式)。"
+            "outlook/gmail 当前 NotImplementedError,留 D5.5+ 重启。"
+        ),
     )
     parser.add_argument("--email", required=True, help="邮箱地址(作为 Keychain account 标识)")
 

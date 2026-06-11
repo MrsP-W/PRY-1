@@ -465,10 +465,18 @@ class SMTPConnector:
         self._provider = provider
         self._email = email
         self._config = SERVER_CONFIGS[provider]
-        # 依赖注入:is None 不用 or(D4.7.3 v1.0.3 P2-2 教训)
-        self._transport: SMTPTransport = (
-            transport if transport is not None else InMemorySmtpTransport()
-        )
+        # D5.1-fix 修复:默认 transport=None(不再静默 fallback 到 InMemorySmtpTransport)
+        # 原因:生产环境忘记显式注入 transport 时,connect()/healthcheck() 会
+        # "假成功"(InMemorySmtpTransport 默认 healthy),这是 D5 启动后被用户
+        # 标记的 2 个代码风险之一。修复策略:构造时 None,首次 connect()/healthcheck()
+        # 入口 is None 硬报错,生产环境必须显式传入 SmtpLibTransport()。
+        self._transport: SMTPTransport | None = transport
+        if transport is None:
+            logger.warning(
+                f"SMTPConnector 创建时未注入 transport: provider={provider} email={email}。"
+                f"生产环境必须显式传入 SmtpLibTransport(),测试可传 InMemorySmtpTransport()。"
+                f"首次 connect()/healthcheck() 调用将抛 SmtpTransportError。"
+            )
         self._password: str | None = None  # 内部缓存,connect() 时从 Keychain 读
         # 自维护熔断状态(沿用 base.py 阈值常量)
         self._circuit: _SmtpCircuitBreakerState = _SmtpCircuitBreakerState()
@@ -486,8 +494,12 @@ class SMTPConnector:
         return self._config.source_name_value
 
     @property
-    def transport(self) -> SMTPTransport:
-        """暴露 transport 给 D5.3 EmailSendAdapter 调用(读)。"""
+    def transport(self) -> SMTPTransport | None:
+        """暴露 transport 给 D5.3 EmailSendAdapter 调用(读)。
+
+        D5.1-fix 修订:返回类型改为 `SMTPTransport | None`,因为构造时未注入
+        transport 时返回 None。D5.3 EmailSendAdapter 必须先判 None 再用。
+        """
         return self._transport
 
     @property
@@ -531,6 +543,13 @@ class SMTPConnector:
         """同步连接 + 登录(内部走 SMTPTransport 抽象)。"""
         if self._password is None:
             raise SmtpAuthError("SMTP 密码未读取,需先调 connect()")
+        # D5.1-fix 修复:transport 未注入 → 硬报错,避免"假成功"
+        if self._transport is None:
+            raise SmtpTransportError(
+                f"SMTPConnector transport 未注入: provider={self._provider} email={self._email}。"
+                f"生产环境必须显式传入 SmtpLibTransport() (从 smtplib.SMTP_SSL 包装),"
+                f"测试可传 InMemorySmtpTransport()。D5.1-fix 风险 #2 缓解动作。"
+            )
         self._transport.connect(
             host=self._config.host,
             port=self._config.port,
@@ -571,7 +590,13 @@ class SMTPConnector:
             await self.close()
 
     async def close(self) -> None:
-        """关闭 SMTP 连接(优雅退出)。"""
+        """关闭 SMTP 连接(优雅退出)。
+
+        D5.1-fix 修复:transport 为 None 时静默跳过(不抛错),与 healthcheck 内部
+        调用契约一致(healthcheck try/finally 总会调 close)。
+        """
+        if self._transport is None:
+            return
         try:
             await asyncio.to_thread(self._transport.quit)
         except Exception as e:

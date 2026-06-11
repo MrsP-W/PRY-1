@@ -192,10 +192,11 @@ class TestSMTPConnectorConstruction:
         with pytest.raises(NotImplementedError, match="只实现 provider='qq'"):
             SMTPConnector(provider="gmail", email="user@gmail.com")
 
-    def test_default_transport_is_inmemory(self) -> None:
-        # D4.7.3 v1.0.3 P2-2 范本:is None 不用 or → 默认 InMemorySmtpTransport
+    def test_default_transport_is_none(self) -> None:
+        # D5.1-fix 修复:默认 transport=None(防假成功)
+        # 原因:生产环境忘记显式注入时,InMemorySmtpTransport 默认 healthy 会"假成功"
         connector = SMTPConnector(provider="qq", email="user@qq.com")
-        assert isinstance(connector.transport, InMemorySmtpTransport)
+        assert connector.transport is None
 
     def test_custom_transport_injection(self) -> None:
         # 显式注入自定义 transport
@@ -303,6 +304,145 @@ class TestServerConfigs:
         qq_config = SERVER_CONFIGS["qq"]
         assert qq_config.host == "smtp.qq.com"
         assert qq_config.port == 465
+
+
+# ===== 7. SMTPConnector transport 边界(D5.1-fix 修复,7 cases)=====
+# D5.1-fix 风险 #2 缓解:默认 transport=None(不再静默 fallback 到
+# InMemorySmtpTransport),构造时 loguru.warning,首次 connect()/healthcheck()
+# 入口 is None 硬报错 → 防生产环境"假成功"。覆盖以下 7 维:
+
+
+class TestSMTPConnectorTransportBoundary:
+    """D5.1-fix 修复后的 transport 边界完整测试(7 cases)。
+
+    覆盖维度:
+        1. 默认 transport=None(防假成功)
+        2. transport property 返回 None vs 注入值
+        3. 构造时未注入 → loguru.warning
+        4. connect() 未注入 transport → SmtpTransportError
+        5. healthcheck() 未注入 transport → 返回 unhealthy
+        6. 显式 InMemorySmtpTransport 注入 → connect 成功
+        7. 显式 SmtpLibTransport 注入 → connect 成功(mock smtplib)
+    """
+
+    def test_transport_property_returns_none_when_not_injected(self) -> None:
+        # 默认 transport=None 后,property 返回 None(不是 InMemorySmtpTransport)
+        connector = SMTPConnector(provider="qq", email="user@qq.com")
+        assert connector.transport is None
+
+    def test_transport_property_returns_injected_when_injected(self) -> None:
+        # 显式注入 → property 返回原对象
+        custom = InMemorySmtpTransport()
+        connector = SMTPConnector(provider="qq", email="user@qq.com", transport=custom)
+        assert connector.transport is custom
+
+    def test_constructor_logs_warning_when_transport_none(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # D5.1-fix:构造时未注入 transport → 触发 loguru.warning(提醒用户)
+        # 关键:loguru 不走 stdlib logging,caplog 抓不到 → 用 monkeypatch 替换
+        # smtp.logger.warning 为 mock,验证调用次数 + 内容
+        from my_ai_employee.connectors import smtp as smtp_module
+
+        captured_warnings: list[str] = []
+        monkeypatch.setattr(
+            smtp_module.logger, "warning", lambda msg: captured_warnings.append(str(msg))
+        )
+        SMTPConnector(provider="qq", email="user@qq.com")
+        assert len(captured_warnings) == 1
+        assert "未注入 transport" in captured_warnings[0]
+        assert "provider=qq" in captured_warnings[0]
+
+    def test_connect_without_transport_raises_smtp_transport_error(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # D5.1-fix 修复:未注入 transport 时,connect() 入口 is None 硬报错
+        # 避免生产环境忘记注入导致"假成功"
+        # 1. monkeypatch Keychain 让 connect() 通过凭据校验
+        from my_ai_employee.core import keychain
+
+        monkeypatch.setattr(
+            keychain,
+            "get_smtp_password",
+            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+        )
+        connector = SMTPConnector(provider="qq", email="user@qq.com")
+        # 2. 调 connect() → 应抛 SmtpTransportError
+        import asyncio
+
+        with pytest.raises(SmtpTransportError, match="transport 未注入"):
+            asyncio.run(connector.connect())
+
+    def test_healthcheck_without_transport_returns_unhealthy(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # D5.1-fix 修复:未注入 transport 时,healthcheck() 也走 connect() 链路 → 失败
+        from my_ai_employee.core import keychain
+
+        monkeypatch.setattr(
+            keychain,
+            "get_smtp_password",
+            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+        )
+        connector = SMTPConnector(provider="qq", email="user@qq.com")
+        import asyncio
+
+        result = asyncio.run(connector.healthcheck())
+        # healthcheck 返回 ok=False(不抛异常,符合 healthcheck 契约)
+        assert result.ok is False
+        assert result.error is not None
+        assert "transport 未注入" in result.error
+
+    def test_explicit_inmemory_transport_succeeds_connect(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # 显式注入 InMemorySmtpTransport → connect() 成功(测试场景)
+        from my_ai_employee.core import keychain
+
+        monkeypatch.setattr(
+            keychain,
+            "get_smtp_password",
+            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+        )
+        transport = InMemorySmtpTransport()
+        connector = SMTPConnector(provider="qq", email="user@qq.com", transport=transport)
+        import asyncio
+
+        # connect 不抛异常 + transport 已连
+        asyncio.run(connector.connect())
+        assert transport.connected is True
+        assert transport.logged_in is True
+
+    def test_explicit_smtplib_transport_succeeds_connect(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # 显式注入 SmtpLibTransport → connect() 成功(mock smtplib.SMTP_SSL)
+        from unittest.mock import MagicMock
+
+        from my_ai_employee.connectors.smtp import SmtpLibTransport
+        from my_ai_employee.core import keychain
+
+        monkeypatch.setattr(
+            keychain,
+            "get_smtp_password",
+            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+        )
+
+        # Mock smtplib.SMTP_SSL — 不真连 QQ 服务器
+        mock_smtp_instance = MagicMock()
+        mock_smtp_class = MagicMock(return_value=mock_smtp_instance)
+        monkeypatch.setattr("smtplib.SMTP_SSL", mock_smtp_class)
+
+        transport = SmtpLibTransport()
+        connector = SMTPConnector(provider="qq", email="user@qq.com", transport=transport)
+        import asyncio
+
+        # connect 不抛异常
+        asyncio.run(connector.connect())
+        # 验证 smtplib.SMTP_SSL 被调用(参数 = smtp.qq.com:465)
+        mock_smtp_class.assert_called_once()
+        # 验证 login 用了 email + password
+        mock_smtp_instance.login.assert_called_once_with("user@qq.com", "test-authcode")
 
 
 # ===== 私有 helper =====
