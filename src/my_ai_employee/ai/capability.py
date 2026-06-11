@@ -40,13 +40,15 @@ class Provider(StrEnum):
 
 
 class TaskType(StrEnum):
-    """4 个核心服务的任务类型(week1-mvp.md D4.1-D4.4 范围)."""
+    """6 个核心服务的任务类型(week1-mvp.md D4.1-D4.7.4 范围)."""
 
     CLASSIFY = "classify"  # 邮件 5 类分类 - 短文本 - 准确率敏感
     DRAFT = "draft"  # 草稿生成 - 中长文本 - 中文质量敏感
     ANALYZE = "analyze"  # 财务异常检测 - 结构化输出 - 推理深度
     STRUCTURE = "structure"  # 笔记结构化 - 中等长度 - 多模态
     SUMMARIZE = "summarize"  # 摘要 - 通用
+    # D4.7.4 起始新增(2026-06-10): 草稿审阅 - 规则 + LLM 联合审阅 - 准确率敏感
+    REVIEW = "review"
 
 
 @dataclass(frozen=True)

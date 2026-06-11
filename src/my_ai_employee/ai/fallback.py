@@ -85,6 +85,13 @@ FALLBACK_CHAINS: dict[TaskType, FallbackChainConfig] = {
         secondary="minimax/MiniMax-M3",
         tertiary="anthropic/claude-sonnet-4-6",
     ),
+    # D4.7.4 起始新增(2026-06-10): 草稿审阅 - 短文本 + 准确率敏感
+    # primary = DeepSeek 性价比, secondary = M3 中文质量, tertiary = Qwen 1M context
+    TaskType.REVIEW: FallbackChainConfig(
+        primary="deepseek/deepseek-chat",
+        secondary="minimax/MiniMax-M3",
+        tertiary="qwen/qwen3-max",
+    ),
 }
 
 
