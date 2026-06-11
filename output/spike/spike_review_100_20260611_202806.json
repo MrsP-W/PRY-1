@@ -1,0 +1,1453 @@
+{
+  "timestamp": "20260611_202806",
+  "total_elapsed_sec": 410.57,
+  "counters": {
+    "business_blocked": 29,
+    "block:sensitive_word_hit": 13,
+    "block:tone_mismatch": 5,
+    "block:template_violation": 5,
+    "block:factual_conflict": 6,
+    "review_rejected": 37,
+    "passed": 34
+  },
+  "latency_stats": {
+    "count": 71,
+    "min_ms": 2444,
+    "max_ms": 11862,
+    "avg_ms": 5722,
+    "p50_ms": 5271,
+    "p95_ms": 8901
+  },
+  "expected_match": {
+    "matched": 95,
+    "mismatch_count": 5,
+    "mismatches": [
+      {
+        "email_id": "fyi_01",
+        "category": "FYI",
+        "expected": "sensitive",
+        "actual": "passed"
+      },
+      {
+        "email_id": "spam_04",
+        "category": "SPAM",
+        "expected": "factual",
+        "actual": "sensitive_word_hit"
+      },
+      {
+        "email_id": "spam_05",
+        "category": "SPAM",
+        "expected": "factual",
+        "actual": "sensitive_word_hit"
+      },
+      {
+        "email_id": "personal_07",
+        "category": "PERSONAL",
+        "expected": "factual",
+        "actual": "passed"
+      },
+      {
+        "email_id": "personal_08",
+        "category": "PERSONAL",
+        "expected": "factual",
+        "actual": "passed"
+      }
+    ]
+  },
+  "results": [
+    {
+      "email_id": "urgent_01",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "身份证号",
+      "flagged_issues": [
+        "草稿命中敏感词: 身份证号"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_02",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "银行密码",
+      "flagged_issues": [
+        "草稿命中敏感词: 银行密码"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_03",
+      "category": "URGENT",
+      "tone": "CONCISE",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "内部代号",
+      "flagged_issues": [
+        "草稿命中敏感词: 内部代号"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_04",
+      "category": "URGENT",
+      "tone": "FRIENDLY",
+      "expected_block": "tone",
+      "actual_block": "tone_mismatch",
+      "reason": "tone_mismatch",
+      "blocked_word": "",
+      "flagged_issues": [
+        "URGENT 邮件不允许使用 FRIENDLY 语气"
+      ],
+      "review_summary": "草稿语气与邮件场景不匹配。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_05",
+      "category": "URGENT",
+      "tone": "FRIENDLY",
+      "expected_block": "tone",
+      "actual_block": "tone_mismatch",
+      "reason": "tone_mismatch",
+      "blocked_word": "",
+      "flagged_issues": [
+        "URGENT 邮件不允许使用 FRIENDLY 语气"
+      ],
+      "review_summary": "草稿语气与邮件场景不匹配。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_06",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": "template",
+      "actual_block": "template_violation",
+      "reason": "template_violation",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿包含不可投递的测试标记: [DRAFT-TEST]"
+      ],
+      "review_summary": "草稿违反投递模板约束。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_07",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_08",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "urgent_09",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确责任方",
+        "缺少具体截止时间或执行时间点",
+        "包含未经授权的承诺（'非核心功能30分钟不可用'）"
+      ],
+      "review_summary": "邮件草稿指出因上游服务异常将启动降级方案，并称非核心功能将有30分钟不可用，但未说明由哪个团队负责执行、未提供具体的时间安排（如开始/结束时间），且对服务中断时长做出明确承诺，可能构成未经授权的服务水平承诺。建议补充责任团队、明确时间窗口，并避免在未获授权情况下对外承诺影响时长。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5789
+    },
+    {
+      "email_id": "urgent_10",
+      "category": "URGENT",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿清晰说明了故障原因（数据库连接池耗尽）、已采取的措施（重启服务）、当前状态（监控观察30分钟）和恢复预期（1小时内完全恢复）。责任方虽未明确点名，但内容聚焦于技术事实，无模糊归属；截止时间以‘1小时内’合理预估；下一步行动（继续监控）明确；无任何未经授权的承诺。符合紧急邮件的简洁性和信息完整性要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5895
+    },
+    {
+      "email_id": "urgent_11",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿明确了年度合规审计材料的提交截止时间为6月15日18:00，指定了各部门负责人为责任方，并说明了逾期可能影响公司合规评级，属于合理警示而非未经授权的承诺。内容简洁、正式，符合紧急邮件要求，无责任不清、时间模糊或不当承诺等问题。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5189
+    },
+    {
+      "email_id": "urgent_12",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确说明责任方是否已授权进行续签",
+        "包含未经授权的承诺（'完成续签'）",
+        "缺少具体的下一步行动指引（如联系人、流程文档或系统操作说明）"
+      ],
+      "review_summary": "邮件草稿指出客户A公司合同将于6月20日到期，并要求销售负责人张总在6月18日前完成续签及法务配合审核。然而，该表述隐含了已确定将完成续签的承诺，但未说明该决定是否已获得内部授权或客户确认，构成未经授权的承诺。此外，未明确指出除张总外其他相关方（如法务）的具体职责和行动项，也未提供执行续签所需的具体步骤或联系信息，影响可操作性。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8496
+    },
+    {
+      "email_id": "urgent_13",
+      "category": "URGENT",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿明确了责任方（HR部门）、截止时间（本周内启动招聘，目标6月底前到岗）和下一步行动（启动招聘流程），未包含未经授权的承诺。内容简洁且符合紧急邮件要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4249
+    },
+    {
+      "email_id": "urgent_14",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿明确了财务月结截止日期提前至6月12日，并要求各业务部门在6月10日前提交单据。责任方（各业务部门）、截止时间（6月10日）和下一步行动（提交单据）清晰，未发现未经授权的承诺或模糊表述。内容简洁、正式，符合紧急通知的要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4559
+    },
+    {
+      "email_id": "urgent_15",
+      "category": "URGENT",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿明确指出了生产环境CPU使用率持续高于95%的问题，并说明已触发自动扩容。同时设定了10分钟的恢复时限，若未恢复则要求值班工程师立即介入。责任方（值班工程师）、截止时间（10分钟内）和下一步行动（立即介入）均清晰明确。未发现未经授权的承诺或模糊表述，符合紧急邮件的简洁性和行动导向要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3878
+    },
+    {
+      "email_id": "urgent_16",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确责任方",
+        "缺少下一步行动说明"
+      ],
+      "review_summary": "邮件草稿通知客户系统升级，但未指明负责此次升级的具体团队或联系人（责任方缺失），也未说明收件人需要采取的具体行动（如是否需确认、配合或仅知悉）。此外，虽提及服务短暂不可用，但未提供补偿措施或应急联系方式，可能影响客户体验。建议补充责任方信息和清晰的下一步指引。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4960
+    },
+    {
+      "email_id": "urgent_17",
+      "category": "URGENT",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任方",
+        "包含未经授权的承诺（'4小时内完成补丁'）",
+        "未说明下一步行动由谁执行"
+      ],
+      "review_summary": "邮件草稿指出存在高危漏洞 CVE-2026-1234 并要求立即修复，但未指明负责执行修复的具体团队或人员；同时承诺‘4小时内完成补丁’属于未经授权的明确时间承诺，可能带来合规或运营风险；此外，未说明收件人应采取的具体下一步行动（如确认、配合或等待通知等），影响响应效率。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7355
+    },
+    {
+      "email_id": "urgent_18",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任方（仅提到'采购部门'，但未指明具体负责人或团队）",
+        "截止时间模糊（'本月底'未明确具体日期）",
+        "缺少具体的下一步行动指引（如续期流程、联系人或所需文件）"
+      ],
+      "review_summary": "邮件草稿指出三家供应商资质证书将于本月底过期，并要求采购部门立即跟进续期。然而，存在以下问题：1）责任方不明确，仅泛称'采购部门'，未指定具体负责人；2）截止时间表述为'本月底'，缺乏确切日期，可能影响紧急响应效率；3）未说明下一步具体行动，例如应联系谁、提交哪些材料或遵循何种流程。建议补充具体责任人、明确过期日期（如2024年6月30日），并附上续期操作指南或对接人信息，以确保及时有效处理。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6532
+    },
+    {
+      "email_id": "urgent_19",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任方（如会议召集人或材料发送负责人）",
+        "缺少明确的截止时间（如材料发送的具体日期和时间）",
+        "未说明下一步行动（如是否需要董事确认出席或提供反馈）"
+      ],
+      "review_summary": "邮件草稿通知了临时董事会会议的时间（6月13日10:00）和议题（季度业务回顾），并提到会议材料将在会前1天发送。但存在以下问题：1）未指明由谁负责发送材料或组织会议，责任方缺失；2）'会前1天发送材料'表述模糊，未给出具体日期和时间点，不符合紧急邮件对清晰截止时间的要求；3）未说明收件董事需采取的下一步行动，例如是否需确认出席、提交意见或准备特定内容。建议补充上述信息以确保执行明确性。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7685
+    },
+    {
+      "email_id": "urgent_20",
+      "category": "URGENT",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "责任方不明确：未指明具体由哪位负责人或团队成员联系客户",
+        "包含未经授权的承诺：'提供解决方案'属于具体承诺，未经核实可能无法兑现"
+      ],
+      "review_summary": "邮件草稿要求客户成功团队在24小时内主动联系并提供解决方案，但未明确具体责任人，且'提供解决方案'构成未经核实的承诺，存在履约风险。建议明确指定对接人，并将措辞调整为'讨论可能的解决方案'等非承诺性表述。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5629
+    },
+    {
+      "email_id": "todo_01",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "客户名单",
+      "flagged_issues": [
+        "草稿命中敏感词: 客户名单"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_02",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "薪资明细",
+      "flagged_issues": [
+        "草稿命中敏感词: 薪资明细"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_03",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "访问令牌",
+      "flagged_issues": [
+        "草稿命中敏感词: 访问令牌"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_04",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": "template",
+      "actual_block": "template_violation",
+      "reason": "template_violation",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿包含不可投递的测试标记: [TEMP-DRAFT]"
+      ],
+      "review_summary": "草稿违反投递模板约束。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_05",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_06",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "todo_07",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定具体日期，仅写“本周三”可能导致歧义",
+        "缺少会议持续时间或预计结束时间",
+        "未说明是否需要提前准备材料或阅读文档"
+      ],
+      "review_summary": "邮件草稿已指明会议主题、时间（本周三14:00）、地点（A302）及参会人员（产品、研发、测试负责人），但存在若干关键信息缺失：首先，“本周三”未对应具体日期，在跨周或临近周末发送时易引发混淆；其次，未注明会议预计时长或结束时间，不利于参会者安排日程；最后，未说明是否需提前审阅用户权限模块重构方案相关材料，可能影响评审效率。建议补充上述信息以确保行动项清晰可执行。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7266
+    },
+    {
+      "email_id": "todo_08",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人（收件人不等于责任人）",
+        "未提供文档链接或附件，无法定位审阅对象"
+      ],
+      "review_summary": "邮件草稿缺少关键信息：1）未列出具体负责审阅的人员或角色，仅泛称“各位”不足以明确行动责任人；2）未附上API设计文档的链接或作为附件提供，导致收件人无法找到需审阅的文档。建议补充责任人列表及文档访问方式。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 11862
+    },
+    {
+      "email_id": "todo_09",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "缺少明确的截止时间",
+        "未指定行动项的责任人（如谁负责组织或提醒）",
+        "未说明是否需要回复确认"
+      ],
+      "review_summary": "邮件草稿列出了本周代码评审的时间安排（周一 PR#234、周三 PR#245、周五 PR#256），但存在关键信息缺失：1）未明确每项评审的具体截止时间；2）未指明责任人（例如谁负责发起评审、跟进或协调）；3）未说明收件人是否需要回复确认参与。这些缺失可能导致执行不明确或延误，建议补充上述信息以确保行动项可追踪和落实。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8614
+    },
+    {
+      "email_id": "todo_10",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "缺少明确的责任人",
+        "截止时间表述模糊（“本周内”未指定具体日期）",
+        "未说明边界场景的具体定义或范围"
+      ],
+      "review_summary": "邮件草稿要求测试组补充10个边界用例，但存在以下问题：1）未指明具体负责人；2）截止时间仅写“本周内”，缺乏确切日期，不利于跟踪；3）未定义何为“边界场景”，可能导致执行偏差。建议补充责任人姓名、明确截止日期（如YYYY-MM-DD），并简要说明边界场景的范围或提供参考依据。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7324
+    },
+    {
+      "email_id": "todo_11",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确周会的具体日期和时间",
+        "未指定提交材料的截止时间",
+        "未列出各团队负责人具体名单或联系方式"
+      ],
+      "review_summary": "邮件草稿要求各团队负责人在周会前提交本周工作总结和下周计划，但缺少关键信息：1）周会的具体日期和时间未说明，导致收件人无法判断准备时限；2）未明确材料提交的截止时间（例如“周会前”是提前一天还是当天上午）；3）未提供各团队负责人的具体名单或联系方式，可能导致责任不清。建议补充上述信息以确保行动项可执行。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6418
+    },
+    {
+      "email_id": "todo_12",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人",
+        "缺少具体的截止时间或日期",
+        "部署窗口的具体时间段未说明"
+      ],
+      "review_summary": "邮件草稿提到研发团队需在日历系统中预约部署窗口，并提前1天提交部署清单，但未指明具体由哪位成员或角色负责执行该任务，也未提供本周部署窗口的确切日期和时间范围（例如周一至周五的哪些时段）。此外，“提前1天”缺乏基准时间点，若部署窗口为周五，则应在周四何时前提交？建议补充具体责任人、部署窗口的详细时间安排，以及明确的截止时间点，以确保行动项可执行、可追踪。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7957
+    },
+    {
+      "email_id": "todo_13",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人",
+        "缺少具体行动项（如谁负责通知、谁负责准备培训材料等）",
+        "未说明培训地点或形式（线上/线下）"
+      ],
+      "review_summary": "邮件草稿提及新员工入职培训安排，但缺乏关键执行细节。未指定负责通知新同事的具体部门或人员，也未说明谁负责准备培训内容或协调场地/系统。此外，未明确培训是线上还是线下进行，可能导致执行混乱。建议补充责任人、具体行动项及培训形式或地点。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7473
+    },
+    {
+      "email_id": "todo_14",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "缺少明确的责任人",
+        "未指定截止时间",
+        "未说明是否已确认会议室可用性"
+      ],
+      "review_summary": "该待办邮件草稿提及需在周三14:00-16:00预订大会议室用于跨部门协作会议，但未指派具体责任人执行预订操作，也未设定完成预订的截止时间。此外，未说明是否已核实该时段会议室的可用性，可能导致后续协调问题。建议补充责任人、明确截止时间（如'请于本周一前完成预订'），并确认会议室档期。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5627
+    },
+    {
+      "email_id": "todo_15",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定具体责任人（仅提到“IT部门”，但无具体联系人或负责人）",
+        "未说明所需笔记本和外设的具体型号或配置要求",
+        "未提供新入职工程师的姓名或所属团队，可能导致设备分配不清"
+      ],
+      "review_summary": "邮件草稿提出了为3名新入职研发工程师配备开发设备的需求，并设定了6月16日前到位的目标，但存在几处关键信息缺失：首先，仅提及“IT部门”而未指定具体负责人或联系人，不利于任务跟进；其次，未说明所需笔记本和外设的具体型号、配置或技术要求，可能导致采购偏差；最后，未提供新员工的姓名或所属团队，影响设备分配的准确性和后续资产管理。建议补充上述信息以确保行动项可执行、可追踪。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 9203
+    },
+    {
+      "email_id": "todo_16",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确新员工姓名或工号，可能导致IT部门无法准确创建账号",
+        "缺少具体的入职日期，无法确定“入职前”的确切截止时间",
+        "未指定交付凭证的具体形式（如账号列表、访问权限截图等）"
+      ],
+      "review_summary": "该待办邮件草稿指派IT部门为5名新员工开通CRM、ERP和代码仓库的系统账号，并要求在入职前完成并交付凭证。然而，草稿中未提供新员工的姓名或工号，缺乏具体入职日期以界定截止时间，也未说明交付凭证的具体形式。这些遗漏可能导致执行延迟或错误，建议补充上述关键信息以确保任务可执行。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5847
+    },
+    {
+      "email_id": "todo_17",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人",
+        "缺少具体截止时间（仅提到“下周二”，但未注明日期）",
+        "行动项不够具体（如“产品演示”未说明内容和形式）"
+      ],
+      "review_summary": "邮件草稿提及下周二拜访A客户，并要求销售和技术分别准备产品演示与架构图，目标是签订年度合同。然而，邮件未指明具体责任人（如哪位销售、哪位技术人员），也未提供明确的截止时间（仅说“下周二”，若收件人时区或日历理解不同可能产生歧义）。此外，“产品演示”和“架构图”等行动项缺乏细节，例如演示范围、所需材料格式或交付方式，可能导致执行偏差。建议补充责任人姓名、具体日期（如2024年6月11日）、以及各项准备工作的详细要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7573
+    },
+    {
+      "email_id": "todo_18",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人或负责部门",
+        "缺少具体的年份信息，可能导致截止日期歧义"
+      ],
+      "review_summary": "邮件草稿要求各部门在本月25日前提交Q2季度汇报材料，但未指明具体由哪些部门或人员负责，也未说明是哪一年的Q2（例如2024年还是2025年），容易造成执行混乱。建议补充责任人/部门列表及完整的时间信息（如2024年6月25日）。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8016
+    },
+    {
+      "email_id": "todo_19",
+      "category": "TODO",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定具体责任人（仅提到'法务部门'，缺乏具体联系人或负责人）",
+        "缺少合同文件或相关附件的说明或链接，无法确认审核对象"
+      ],
+      "review_summary": "邮件草稿提及B供应商合同需在6月14日前由法务部门完成审核，涉及商务条款和合规要求。但存在两个关键问题：一是未指定具体责任人，仅泛称'法务部门'，可能导致任务无人认领；二是未提供合同文件、编号或访问方式，收件人无法定位待审材料。建议补充具体负责人姓名及合同相关信息。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6722
+    },
+    {
+      "email_id": "todo_20",
+      "category": "TODO",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "未明确指定责任人（仅提到“运维团队”，但无具体人员或联系人）",
+        "截止时间不明确（“本周”和“周一”未指明具体日期）",
+        "缺少检查范围或系统名称，可能导致执行偏差"
+      ],
+      "review_summary": "邮件草稿要求运维团队完成全量数据备份检查并验证可恢复性，结果周一提交。但存在以下问题：1）未指定具体责任人，仅提‘运维团队’不够明确；2）‘本周’和‘周一’缺乏具体日期，易引发歧义；3）未说明需检查的具体系统、数据库或备份范围，可能影响执行准确性。建议补充具体负责人、明确截止日期（如2024年6月10日），并列出需检查的系统或数据范围。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4891
+    },
+    {
+      "email_id": "fyi_01",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": "sensitive",
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅传达必要信息，未重复原文内容（原文摘录为“系统升级通知”，而正文具体说明涉及API密钥轮换及凭证发送方式），且未作出任何不必要的承诺。符合FYI类知会邮件的要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3179
+    },
+    {
+      "email_id": "fyi_02",
+      "category": "FYI",
+      "tone": "CONCISE",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "私钥",
+      "flagged_issues": [
+        "草稿命中敏感词: 私钥"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "fyi_03",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": "template",
+      "actual_block": "template_violation",
+      "reason": "template_violation",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿包含不可投递的测试标记: 测试草稿"
+      ],
+      "review_summary": "草稿违反投递模板约束。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "fyi_04",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "fyi_05",
+      "category": "FYI",
+      "tone": "CONCISE",
+      "expected_block": "factual",
+      "actual_block": "factual_conflict",
+      "reason": "factual_conflict",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿新增了原邮件未包含的具体金额承诺"
+      ],
+      "review_summary": "草稿与原邮件事实存在冲突。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "fyi_06",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述事实（研发部因部门扩张将于6月20日搬迁至5楼），未重复原文冗余内容，也未作出任何不必要的承诺。语气正式，符合FYI类通知要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4006
+    },
+    {
+      "email_id": "fyi_07",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "邮件正文承诺了'请各部门统计参加人数...反馈至行政部门'，属于不必要的行动承诺，与FYI（仅知会）类别不符",
+        "正文重复了原文'年会安排通知'的实质内容，未做必要简化"
+      ],
+      "review_summary": "该邮件草稿被归类为FYI（仅知会），但正文中包含要求收件人执行具体操作（统计人数并反馈）的指令，构成不必要承诺，违背FYI类别原则。同时，正文基本复述了原始通知的核心信息，未体现简洁性要求。建议删除行动要求，仅保留时间等关键事实性信息。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8701
+    },
+    {
+      "email_id": "fyi_08",
+      "category": "FYI",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "草稿内容简洁明了，仅陈述系统维护已完成、无邮件丢失、服务已恢复正常等事实信息，未重复原文（原文摘录仅为标题式短语，正文进行了必要扩展），也未作出任何不必要的承诺。符合 FYI 类知会邮件的要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4291
+    },
+    {
+      "email_id": "fyi_09",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述事实，未重复原文（仅引用原始摘要作为背景），也未作出任何不必要的承诺。语气友好，符合 FYI 类通知的定位。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 2975
+    },
+    {
+      "email_id": "fyi_10",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅传达必要信息（活动时间、主题、报名截止日及详情获取渠道），未重复原文冗余内容，也未作出任何不必要承诺。语气友好，符合 FYI 类别要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3115
+    },
+    {
+      "email_id": "fyi_11",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅传达技术分享的时间、主题、主讲人和地点，属于 FYI 类通知，未重复原文冗余内容，也未作出任何不必要承诺。语气正式，符合要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3429
+    },
+    {
+      "email_id": "fyi_12",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，准确传达了Q2业绩关键数据（同比+18%，环比+5%），并引导读者查阅内部公告获取详情。内容未重复原文（仅引用'季度业绩公告'作为背景），也未作出任何不必要承诺。语气正式，符合FYI类知会邮件的定位。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4915
+    },
+    {
+      "email_id": "fyi_13",
+      "category": "FYI",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述事实（回收率、评分及报告位置），未重复原文冗余内容，也未作出任何承诺或行动要求，符合 FYI 类别和 CONCISE 语气要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4709
+    },
+    {
+      "email_id": "fyi_14",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述产品发布日期及核心更新内容，未重复原文（原文仅为“产品发布预告”），也未作出任何不必要承诺。语气正式，符合FYI类邮件要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3887
+    },
+    {
+      "email_id": "fyi_15",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述事实性信息（福利调整内容及查阅方式），未重复原文措辞，也未作出超出通知范围的承诺。语气友好，符合 FYI 类别要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4816
+    },
+    {
+      "email_id": "fyi_16",
+      "category": "FYI",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述办公用品已补充的事实，并提供联系行政的指引，未重复原文冗余内容，也未作出不必要承诺。符合 FYI 类别和 CONCISE 语气要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3853
+    },
+    {
+      "email_id": "fyi_17",
+      "category": "FYI",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅传达事实性信息（2026中国互联网大会的时间、地点及参展申请方式），未重复原文冗余内容，也未作出任何不必要承诺。语气正式，符合FYI类知会邮件的定位。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3712
+    },
+    {
+      "email_id": "fyi_18",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅传达食堂菜单更新的事实信息，未重复原文，也未作出任何不必要的承诺。语气友好，符合 FYI 类别要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4673
+    },
+    {
+      "email_id": "fyi_19",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件草稿简洁明了，仅陈述事实（本月8位同事生日、公司准备了定制蛋糕和贺卡、详情见公告栏），未重复原文内容，也未作出任何不必要承诺。语气友好，符合FYI类别要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4983
+    },
+    {
+      "email_id": "fyi_20",
+      "category": "FYI",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "草稿简洁明了，仅传达事实信息（征稿主题、截止日期和展示安排），未重复原文内容，也未作出任何不必要承诺。符合 FYI 类邮件的定位和友好语气要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3033
+    },
+    {
+      "email_id": "spam_01",
+      "category": "SPAM",
+      "tone": "CONCISE",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "信用卡号",
+      "flagged_issues": [
+        "草稿命中敏感词: 信用卡号"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "spam_02",
+      "category": "SPAM",
+      "tone": "CONCISE",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "短信验证码",
+      "flagged_issues": [
+        "草稿命中敏感词: 短信验证码"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "spam_03",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": "template",
+      "actual_block": "template_violation",
+      "reason": "template_violation",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿包含不可投递的测试标记: [DRAFT-TEST]"
+      ],
+      "review_summary": "草稿违反投递模板约束。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "spam_04",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": "factual",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "百分百保证",
+      "flagged_issues": [
+        "草稿命中敏感词: 百分百保证"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "spam_05",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": "factual",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "无条件赔付",
+      "flagged_issues": [
+        "草稿命中敏感词: 无条件赔付"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "spam_06",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "包含诱导点击链接 'example.com/sale'",
+        "使用紧迫性话术 '限时秒杀'、'数量有限' 诱导用户行动",
+        "退订意图未体现，且内容属于未经请求的促销信息"
+      ],
+      "review_summary": "该邮件草稿属于典型的垃圾促销邮件，包含诱导性链接和制造紧迫感的营销话术（如“限时秒杀”、“5折起”、“数量有限”），极易被识别为垃圾邮件。同时，内容未提供退订选项或尊重用户退订意图，且直接引导用户点击外部链接，存在安全与合规风险。根据高风险标准，此类内容不应通过审核。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5197
+    },
+    {
+      "email_id": "spam_07",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "邮件正文包含促销诱导内容（如折扣、赠品），可能暴露邮箱活跃状态",
+        "未提供明确退订方式，违反退订意图"
+      ],
+      "review_summary": "该草稿属于促销类垃圾邮件，正文提及“前100名下单享8折优惠，赠精美礼品”，具有明显诱导点击和消费意图，易被识别为营销活动，从而暴露收件人邮箱处于活跃状态。同时，邮件未包含任何退订链接或说明，不符合用户退订意愿的尊重原则。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7083
+    },
+    {
+      "email_id": "spam_08",
+      "category": "SPAM",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击或操作（催促尽快使用积分兑换代金券）",
+        "未提供退订方式或退订链接",
+        "内容具有营销性质且归类为垃圾邮件"
+      ],
+      "review_summary": "该草稿主题和正文以正式语气提醒用户会员积分即将到期，并强调5000积分可兑换50元代金券，催促用户尽快使用，具有明显的营销诱导意图。邮件被明确归类为SPAM，但正文中未包含任何退订链接或退订说明，违反了用户退订意图的基本要求。此外，此类内容可能暴露邮箱活跃状态，增加被持续投放垃圾邮件的风险。因此，该草稿不符合安全发送标准。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6792
+    },
+    {
+      "email_id": "spam_09",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击链接或领取优惠（提及附赠100元购物券但未提供退订方式）",
+        "暴露邮箱活跃性（使用节日祝福等社交话术维持互动假象）",
+        "违反退订意图（作为垃圾邮件却采用友好语气弱化用户退订意愿）"
+      ],
+      "review_summary": "该草稿以端午节祝福为由，声称附赠100元购物券，属于典型的促销类垃圾邮件。内容虽未直接包含链接，但‘附赠购物券’的表述具有诱导用户进一步互动或访问网站的意图，违反高风险标准中关于诱导点击的要求。同时，使用节日问候和友好语气（如‘祝您和家人节日快乐’）试图营造正常通信假象，可能暴露收件邮箱处于活跃状态，增加后续被定向攻击的风险。此外，作为明确标记为SPAM的邮件，其友好语调与退订意图相悖，可能削弱用户行使退订权利的意愿。综上，该草稿存在多项违规问题，不应通过审核。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8331
+    },
+    {
+      "email_id": "spam_10",
+      "category": "SPAM",
+      "tone": "CONCISE",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击退订链接可能暴露邮箱活跃状态",
+        "退订链接未使用安全、标准的退订机制（如mailto或RFC 2919合规方式）"
+      ],
+      "review_summary": "该草稿包含一个指向 example.com/unsubscribe 的退订链接，直接诱导用户点击外部链接进行退订。根据高风险标准，此类做法可能被用于验证邮箱是否活跃，从而加剧垃圾邮件风险。此外，未采用标准退订机制（如List-Unsubscribe头或mailto链接），不符合安全退订最佳实践。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6538
+    },
+    {
+      "email_id": "spam_11",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导用户尽快结算，制造虚假紧迫感",
+        "作为垃圾邮件却使用友好语气伪装成正常通知",
+        "未提供退订选项或链接，违反退订意图"
+      ],
+      "review_summary": "该草稿以购物车提醒为名，实则属于垃圾邮件。内容通过声称商品保留7天且部分即将售罄，制造紧迫感诱导用户尽快结算，属于典型营销诱导行为。邮件类别虽标记为SPAM，但语气刻意友好，易被误认为合法交易通知，存在伪装风险。此外，全文未包含任何退订方式或链接，剥夺用户拒绝接收后续邮件的权利，违反基本退订原则。综合判断，该草稿不应通过审核。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7717
+    },
+    {
+      "email_id": "spam_12",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击链接或参与活动以获取奖励，违反退订意图",
+        "暴露邮箱活跃性，可能被用于进一步定向垃圾邮件"
+      ],
+      "review_summary": "该草稿以提供20元代金券为诱饵，邀请收件人参与5分钟调研，属于典型的诱导性垃圾邮件内容。此类内容不仅违反用户退订意图，还通过奖励机制试图确认邮箱活跃状态，增加后续骚扰风险。尽管语气友好，但其核心目的是促进互动而非尊重用户选择退出的权利，不符合安全回复标准。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 7777
+    },
+    {
+      "email_id": "spam_13",
+      "category": "SPAM",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "邮件正文诱导用户前往会员中心查看权益，可能包含隐藏链接或诱导点击行为",
+        "作为标记为SPAM类别的邮件，仍使用正式语气和VIP专属话术，试图营造合法营销假象，规避退订意图"
+      ],
+      "review_summary": "该草稿主题为“VIP专享”，正文称“您本月专享权益已到账，可在会员中心查看”，虽未直接附带链接，但引导用户主动访问所谓“会员中心”，存在诱导点击风险。邮件被明确归类为SPAM，却采用FORMAL语气和尊称（如“尊敬的VIP客户”），试图模拟合法通知，掩盖其垃圾邮件本质，可能误导用户认为账户存在真实权益变动，从而激活邮箱互动行为。根据高风险标准，此类内容易被用于钓鱼或提升邮件打开率，违反退订意图及反垃圾邮件原则。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 8395
+    },
+    {
+      "email_id": "spam_14",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导用户扫码（隐含点击或操作链接/二维码）",
+        "以免费试用为诱饵推广高价值商品，符合垃圾邮件特征",
+        "未提供明确退订方式，违反退订意图"
+      ],
+      "review_summary": "该草稿主题为“新品试用”，正文以“免费试用价值299元新品”为诱饵，并引导用户“扫码申请”，属于典型的垃圾营销内容。此类内容不仅诱导用户进行潜在风险操作（扫码可能导向外部链接），还利用高价值商品吸引点击，违反反垃圾邮件原则。同时，邮件未包含任何退订说明或机制，忽视用户退订权利，进一步增加风险。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 9387
+    },
+    {
+      "email_id": "spam_15",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击链接（'点击了解详情'未附带实际链接但暗示存在可点击内容）",
+        "违反退订意图（促销内容未提供退订方式）",
+        "暴露邮箱活跃性风险（使用紧迫性话术'前200名'可能诱导用户互动）"
+      ],
+      "review_summary": "该草稿属于垃圾邮件类别，内容包含课程促销信息，使用'5折促销'和'前200名报名赠送学习资料包'等紧迫性营销话术，并以'点击了解详情'诱导用户互动。虽然未直接嵌入链接，但此类措辞通常暗示存在可点击内容，易被用于钓鱼或追踪用户活跃状态。此外，全文未提供任何退订选项或说明，违反基本退订意图要求。综合判断存在多项高风险问题，不予通过。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6068
+    },
+    {
+      "email_id": "spam_16",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "内容为典型促销类垃圾邮件，诱导用户参与限时优惠活动",
+        "未提供退订方式或链接，违反基本退订意图要求",
+        "使用紧迫性话术（如“名额有限”“火热报名中”）诱导点击或行动"
+      ],
+      "review_summary": "该草稿属于旅游促销类垃圾邮件，以低价套餐和限时名额制造紧迫感，诱导用户响应。内容中未包含任何退订机制或声明，违反了用户退订意图的基本保障要求。同时，此类信息若被回复或互动，可能暴露邮箱活跃状态，增加后续垃圾邮件风险。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5271
+    },
+    {
+      "email_id": "spam_17",
+      "category": "SPAM",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导用户点击链接以验证身份",
+        "伪装成系统通知制造紧急感",
+        "属于垃圾邮件类别但仍试图引导交互"
+      ],
+      "review_summary": "该草稿伪装成正式系统通知，声称账户存在异常登录，并催促用户点击链接验证身份，具有典型的钓鱼邮件特征。此类内容不仅诱导点击潜在恶意链接，还通过制造紧急感增加用户操作风险。尽管标记为垃圾邮件，其正文仍试图引导用户交互，违反退订意图和安全准则。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6818
+    },
+    {
+      "email_id": "spam_18",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导点击链接以领取奖金，属于典型钓鱼或诈骗行为",
+        "冒充中奖通知，制造虚假利益诱导用户互动",
+        "内容明确属于垃圾邮件（email_category: SPAM），不应生成回复草稿"
+      ],
+      "review_summary": "该草稿内容为典型的中奖诈骗信息，声称用户被抽中并可领取10000元奖金，诱导其点击链接。此类内容不仅违反退订意图，还可能暴露邮箱活跃状态，增加后续被滥发风险。根据高风险标准，此类诱导性、欺骗性内容不得通过审核。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4985
+    },
+    {
+      "email_id": "spam_19",
+      "category": "SPAM",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "邮件正文未提供退订方式，违反退订意图",
+        "内容具有促销性质（如“新老客户同享7折”），属于诱导性营销"
+      ],
+      "review_summary": "该草稿主题为“品牌故事”，但正文包含明显促销信息（10周年庆、7折优惠），属于诱导性营销内容。作为标记为SPAM类别的邮件，未包含任何退订链接或说明，违反用户退订意图。此外，此类内容可能暴露邮箱活跃状态，增加被持续营销的风险。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6901
+    },
+    {
+      "email_id": "spam_20",
+      "category": "SPAM",
+      "tone": "FORMAL",
+      "expected_block": null,
+      "actual_block": "review_rejected",
+      "review_passed": false,
+      "flagged_issues": [
+        "诱导用户进行特定操作以获取奖励（5元红包），属于典型垃圾邮件行为",
+        "通过评论返现诱导互动，可能暴露邮箱活跃状态"
+      ],
+      "review_summary": "该邮件主题为“评论邀请”，正文以正式语气邀请收件人撰写50字以上评论以换取5元红包。此类“评论返现”内容属于典型的促销类垃圾邮件，旨在诱导用户互动并可能用于验证邮箱有效性。邮件明确提供物质激励以换取特定行为，违反退订意图和反垃圾邮件原则，存在诱导点击或回复风险，应判定为高风险垃圾邮件。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5605
+    },
+    {
+      "email_id": "personal_01",
+      "category": "PERSONAL",
+      "tone": "FORMAL",
+      "expected_block": "tone",
+      "actual_block": "tone_mismatch",
+      "reason": "tone_mismatch",
+      "blocked_word": "",
+      "flagged_issues": [
+        "PERSONAL 邮件不允许使用 FORMAL 语气"
+      ],
+      "review_summary": "草稿语气与邮件场景不匹配。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_02",
+      "category": "PERSONAL",
+      "tone": "FORMAL",
+      "expected_block": "tone",
+      "actual_block": "tone_mismatch",
+      "reason": "tone_mismatch",
+      "blocked_word": "",
+      "flagged_issues": [
+        "PERSONAL 邮件不允许使用 FORMAL 语气"
+      ],
+      "review_summary": "草稿语气与邮件场景不匹配。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_03",
+      "category": "PERSONAL",
+      "tone": "CONCISE",
+      "expected_block": "tone",
+      "actual_block": "tone_mismatch",
+      "reason": "tone_mismatch",
+      "blocked_word": "",
+      "flagged_issues": [
+        "PERSONAL 邮件不允许使用 CONCISE 语气"
+      ],
+      "review_summary": "草稿语气与邮件场景不匹配。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_04",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "身份证号",
+      "flagged_issues": [
+        "草稿命中敏感词: 身份证号"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_05",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": "sensitive",
+      "actual_block": "sensitive_word_hit",
+      "reason": "sensitive_word_hit",
+      "blocked_word": "银行密码",
+      "flagged_issues": [
+        "草稿命中敏感词: 银行密码"
+      ],
+      "review_summary": "草稿包含敏感信息或高风险承诺，已在本地规则层阻断。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_06",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": "template",
+      "actual_block": "template_violation",
+      "reason": "template_violation",
+      "blocked_word": "",
+      "flagged_issues": [
+        "草稿包含不可投递的测试标记: 测试草稿"
+      ],
+      "review_summary": "草稿违反投递模板约束。",
+      "latency_ms": 0
+    },
+    {
+      "email_id": "personal_07",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": "factual",
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合朋友间沟通的私人场景。内容简洁明了，提及聚会多付金额并主动退还部分款项，用词轻松（如“哈~”）体现亲切感，未使用任何商务套话，整体风格与‘FRIENDLY’语调和‘PERSONAL’类别一致。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5022
+    },
+    {
+      "email_id": "personal_08",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": "factual",
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人邮件场景。内容简洁亲切，使用了口语化表达（如“送你啦~”），没有出现不合时宜的商务套话，整体风格与‘FRIENDLY’语调和‘PERSONAL’类别一致。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 5274
+    },
+    {
+      "email_id": "personal_09",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人朋友间交流的语境。内容简洁亲切，表达了久未联系后的关心和邀约聚餐的意愿，没有使用任何商务套话或不合场景的表达。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 6679
+    },
+    {
+      "email_id": "personal_10",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人场合的生日祝福场景。内容简洁温馨，没有使用不合时宜的商务套话，表达了虽不能当面庆祝但仍送上真挚祝福的心意，整体得体恰当。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4938
+    },
+    {
+      "email_id": "personal_11",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人交流场景。内容简洁真诚，表达了推荐书籍的初衷并提出交流心得的邀请，没有使用不合时宜的商务套话或生硬表达。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3631
+    },
+    {
+      "email_id": "personal_12",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人场合的邀请语境。内容简洁亲切，使用了口语化表达（如“坐坐”“我再发你~”），没有出现不合场景的商务套话，整体风格与‘FRIENDLY’和‘PERSONAL’设定一致。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4186
+    },
+    {
+      "email_id": "personal_13",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合朋友间邀约爬山的私人场景。内容简洁亲切，使用了口语化表达（如“天气不错”“顺便野餐”“哈~”），没有出现不合时宜的商务套话或正式用语，整体风格轻松随意，符合 FRIENDLY 语气和 PERSONAL 类别要求。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4248
+    },
+    {
+      "email_id": "personal_14",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人感谢场景，未使用商务套话，表达真诚且口语化，整体合适。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 2566
+    },
+    {
+      "email_id": "personal_15",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人邮件场景，内容简洁亲切，没有使用不合时宜的商务套话。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 2444
+    },
+    {
+      "email_id": "personal_16",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合个人邀请场景。内容简洁热情，使用了口语化表达（如“记得来玩！”“一起哈~”），没有出现不合时宜的商务套话，整体风格亲切得体。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4359
+    },
+    {
+      "email_id": "personal_17",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人朋友间交流的语境。内容表达了近期心情和邀约意图，使用了轻松亲切的措辞（如“聊聊”“一起喝杯咖啡吧~”），没有出现不合场景的商务套话，整体风格与‘PERSONAL’类别及‘FRIENDLY’语气一致。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 3368
+    },
+    {
+      "email_id": "personal_18",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人朋友间推荐电影的场景。内容简洁热情，使用了口语化表达（如“拍得不错”“约个时间一起~”），没有出现不合时宜的商务套话或生硬措辞，整体风格亲切得体。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4643
+    },
+    {
+      "email_id": "personal_19",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人朋友间借书的语境。用词亲切（如“能借我看吗”“下周还你~”），没有使用商务套话，整体风格轻松得体，适合个人邮件场景。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4311
+    },
+    {
+      "email_id": "personal_20",
+      "category": "PERSONAL",
+      "tone": "FRIENDLY",
+      "expected_block": null,
+      "actual_block": "passed",
+      "review_passed": true,
+      "flagged_issues": [],
+      "review_summary": "邮件语气自然友好，符合私人邮件场景，没有使用商务套话。内容表达了对朋友推荐餐厅的真诚感谢，并以轻松亲切的方式提出下次再约，整体风格恰当得体。",
+      "model_full_id": "qwen/qwen3-max",
+      "latency_ms": 4489
+    }
+  ]
+}
