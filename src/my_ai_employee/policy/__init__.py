@@ -86,6 +86,21 @@ from my_ai_employee.policy.lane_board import (
     LaneFreshness,
     LaneStatus,
 )
+
+# D4.8 业务层接入(草稿入库,6/11 晚间启动)
+# 独立模块 outbox_adapter.py(避免 integration.py 4125 行膨胀)
+# 字段含义常量 OUTBOX_BLOCK_REASON_VALUES 留在 outbox_adapter.py(非导出)
+from my_ai_employee.policy.outbox_adapter import (
+    EmailOutboxAdapter,
+    OutboxBlockedDecisionReport,
+    OutboxDecisionReport,
+    OutboxFailureDecisionReport,
+    build_outbox_blocked_packet,
+    build_outbox_failure_packet,
+    build_outbox_packet,
+    build_outbox_policy_context,
+    compute_outbox_acceptance,
+)
 from my_ai_employee.policy.policy_engine import (
     PolicyDecision,
     PolicyDecisionKind,
@@ -165,4 +180,16 @@ __all__ = [
     "build_review_failure_packet",
     "build_review_policy_context",
     "compute_review_acceptance",
+    # D4.8 业务层接入(草稿入库, 6/11 晚间启动)
+    # 沿用 D4.7.4 三入口架构, 5 依赖可注入(新增 outbox_store)
+    # PermissionProfile = READ_WRITE(D4.8 首次引入, 写库需要)
+    "EmailOutboxAdapter",
+    "OutboxDecisionReport",
+    "OutboxBlockedDecisionReport",
+    "OutboxFailureDecisionReport",
+    "build_outbox_packet",
+    "build_outbox_blocked_packet",
+    "build_outbox_failure_packet",
+    "build_outbox_policy_context",
+    "compute_outbox_acceptance",
 ]

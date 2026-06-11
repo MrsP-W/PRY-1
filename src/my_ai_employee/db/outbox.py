@@ -27,12 +27,11 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
-from my_ai_employee.core.models.outbox import (
+from my_ai_employee.core.outbox import (
+    _OUTBOX_STATUS_CHOICES,
     OutboxEntry,
     OutboxStatus,
-    _OUTBOX_STATUS_CHOICES,
 )
-
 
 # ===== 自定义异常(D4.8 契约 4 — UNIQUE 冲突 → 业务阻断入口)=====
 
@@ -289,7 +288,7 @@ class OutboxStore:
             raise TypeError(
                 f"priority 必须是 str 或 OutboxPriority 枚举,实际 {type(value).__name__}={value!r}"
             )
-        from my_ai_employee.core.models.outbox import _OUTBOX_PRIORITY_CHOICES
+        from my_ai_employee.core.outbox import _OUTBOX_PRIORITY_CHOICES
 
         if value not in _OUTBOX_PRIORITY_CHOICES:
             raise ValueError(

@@ -1,5 +1,12 @@
 """D4.8 草稿入库/发送 ORM 模型 — outbox 表 + 3 个 StrEnum 枚举。
 
+位置说明:本文件位于 `core/outbox.py`(与 `core/models.py` 单文件平级),
+  原因:`core/models.py` 是 432 行单文件(6 Model + Base),Python 解释器会优先选
+  单文件而非同名 `core/models/` 子目录,导致 `core/models/outbox.py` 命名空间
+  不可达。解决方案是把 outbox 提到 `core/` 顶层,与 `core/sync.py` / `core/db.py`
+  平级,3 个 import 改 `from my_ai_employee.core.outbox import ...` 即可(sync.py
+  / env.py / events/models.py 仍 import `core.models`,不受影响)。
+
 承接 D4.8.1 outbox migration 0004(11 字段 + UNIQUE(email_id) + 2 索引 + 2 FK)。
 
 3 个 StrEnum 枚举(顺序固定,业务层做"按状态分组"时可直接用 list(Enum) 排序):
@@ -51,7 +58,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column
 
 from my_ai_employee.core.models import Base
-
 
 # ===== 3 个 StrEnum 枚举(契约层) =====
 
@@ -163,10 +169,14 @@ class OutboxEntry(Base):
     tone: Mapped[str] = mapped_column(Text, nullable=False)
     reviewer_decision_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     drafter_decision_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending_send", server_default="pending_send")
+    status: Mapped[str] = mapped_column(
+        Text, nullable=False, default="pending_send", server_default="pending_send"
+    )
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
     recipient_email: Mapped[str] = mapped_column(Text, nullable=False)
-    priority: Mapped[str] = mapped_column(Text, nullable=False, default="normal", server_default="normal")
+    priority: Mapped[str] = mapped_column(
+        Text, nullable=False, default="normal", server_default="normal"
+    )
 
     # 约束 + 索引(与 0004_outbox_table migration 一致,D3.2.3 DESC 索引用 text() 表达)
     __table_args__ = (

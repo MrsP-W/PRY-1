@@ -34,34 +34,31 @@ import time
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from my_ai_employee.core.models.outbox import (
+from my_ai_employee.core.outbox import (
+    _OUTBOX_PRIORITY_CHOICES,
     OutboxEntry,
     OutboxStatus,
-    _OUTBOX_PRIORITY_CHOICES,
-    _OUTBOX_STATUS_CHOICES,
-    _OUTBOX_TONE_CHOICES,
 )
-from my_ai_employee.db.outbox import OutboxEmailDuplicateError, OutboxStore
-from my_ai_employee.events.store import EventStore
+from my_ai_employee.db.outbox import OutboxStore
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
-from my_ai_employee.policy.lane_board import LaneBoard, LaneEntry, LaneStatus
-from my_ai_employee.policy.policy_engine import PolicyEngine, PolicyEvaluation
-from my_ai_employee.policy.task_packet import PermissionProfile, TaskPacket
 
 # 复用 D4.7.3 + D4.7.4 严判范本(D4.8 OutboxTone 字段值与 DraftTone 一致)
 from my_ai_employee.policy.integration import (
     _validate_draft_tone,
-    _validate_classify_category,
 )
-
+from my_ai_employee.policy.lane_board import LaneBoard, LaneEntry, LaneStatus
+from my_ai_employee.policy.policy_engine import PolicyEngine, PolicyEvaluation
+from my_ai_employee.policy.task_packet import PermissionProfile, TaskPacket
 
 # ===== 6 个 _validate_outbox_* 严判 helper(D4.7.3 25 教训应用)=====
 
 # 业务阻断 reason 白名单(D4.8 契约 1 — 业务阻断入口 2 类)
-OUTBOX_BLOCK_REASON_VALUES: frozenset[str] = frozenset({
-    "duplicate_email_id",   # UNIQUE(email_id) 冲突(D4.8 契约 4 幂等性)
-    "blacklisted_recipient",  # 收件人在黑名单(D5+ 接入 blacklist_recipients 配置表)
-})
+OUTBOX_BLOCK_REASON_VALUES: frozenset[str] = frozenset(
+    {
+        "duplicate_email_id",  # UNIQUE(email_id) 冲突(D4.8 契约 4 幂等性)
+        "blacklisted_recipient",  # 收件人在黑名单(D5+ 接入 blacklist_recipients 配置表)
+    }
+)
 
 # 字段边界(week1-mvp.md:877 锁定)
 _OUTBOX_SUBJECT_MIN = 1
@@ -78,8 +75,7 @@ def _validate_outbox_email_id(email_id: Any) -> int:
     """
     if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
         raise ValueError(
-            f"email_id 必须是原生 int(非 bool) >= 0, 实际 "
-            f"{type(email_id).__name__}={email_id!r}"
+            f"email_id 必须是原生 int(非 bool) >= 0, 实际 {type(email_id).__name__}={email_id!r}"
         )
     return email_id
 
@@ -93,14 +89,10 @@ def _validate_outbox_subject(subject: Any) -> str:
         - > 200 字符
     """
     if type(subject) is not str:
-        raise ValueError(
-            f"subject 必须是 str, 实际 {type(subject).__name__}={subject!r}"
-        )
+        raise ValueError(f"subject 必须是 str, 实际 {type(subject).__name__}={subject!r}")
     stripped = subject.strip()
     if not stripped:
-        raise ValueError(
-            f"subject 必填非空白(strip() 非空), 实际 {subject!r}"
-        )
+        raise ValueError(f"subject 必填非空白(strip() 非空), 实际 {subject!r}")
     if not (_OUTBOX_SUBJECT_MIN <= len(subject) <= _OUTBOX_SUBJECT_MAX):
         raise ValueError(
             f"subject 长度必须在 [{_OUTBOX_SUBJECT_MIN}, {_OUTBOX_SUBJECT_MAX}] 区间, "
@@ -112,18 +104,13 @@ def _validate_outbox_subject(subject: Any) -> str:
 def _validate_outbox_body(body: Any) -> str:
     """严判 body(10-8000 字符, strip() 后非空, 复用 drafter 契约 1 边界)."""
     if type(body) is not str:
-        raise ValueError(
-            f"body 必须是 str, 实际 {type(body).__name__}={body!r}"
-        )
+        raise ValueError(f"body 必须是 str, 实际 {type(body).__name__}={body!r}")
     stripped = body.strip()
     if not stripped:
-        raise ValueError(
-            f"body 必填非空白(strip() 非空), 实际 {body!r}"
-        )
+        raise ValueError(f"body 必填非空白(strip() 非空), 实际 {body!r}")
     if not (_OUTBOX_BODY_MIN <= len(body) <= _OUTBOX_BODY_MAX):
         raise ValueError(
-            f"body 长度必须在 [{_OUTBOX_BODY_MIN}, {_OUTBOX_BODY_MAX}] 区间, "
-            f"实际 len={len(body)}"
+            f"body 长度必须在 [{_OUTBOX_BODY_MIN}, {_OUTBOX_BODY_MAX}] 区间, 实际 len={len(body)}"
         )
     return body
 
@@ -142,26 +129,19 @@ def _validate_outbox_recipient_email(recipient: Any) -> str:
         )
     stripped = recipient.strip()
     if not stripped:
-        raise ValueError(
-            f"recipient_email 必填非空白(strip() 非空), 实际 {recipient!r}"
-        )
+        raise ValueError(f"recipient_email 必填非空白(strip() 非空), 实际 {recipient!r}")
     if "@" not in recipient:
-        raise ValueError(
-            f"recipient_email 必须含 '@' 字符, 实际 {recipient!r}"
-        )
+        raise ValueError(f"recipient_email 必须含 '@' 字符, 实际 {recipient!r}")
     return recipient
 
 
 def _validate_outbox_priority(priority: Any) -> str:
     """严判 priority(OutboxPriority 3 选 1, D4.7.3 v1.0.5 P2-1 范本: type 严判在 hash 前)."""
     if type(priority) is not str:
-        raise ValueError(
-            f"priority 必须是 str, 实际 {type(priority).__name__}={priority!r}"
-        )
+        raise ValueError(f"priority 必须是 str, 实际 {type(priority).__name__}={priority!r}")
     if priority not in _OUTBOX_PRIORITY_CHOICES:
         raise ValueError(
-            f"priority 必须是 OutboxPriority 3 选 1 {_OUTBOX_PRIORITY_CHOICES!r}, "
-            f"实际 {priority!r}"
+            f"priority 必须是 OutboxPriority 3 选 1 {_OUTBOX_PRIORITY_CHOICES!r}, 实际 {priority!r}"
         )
     return priority
 
@@ -169,13 +149,10 @@ def _validate_outbox_priority(priority: Any) -> str:
 def _validate_outbox_block_reason(reason: Any) -> str:
     """严判 block_reason(2 类白名单, D4.7.3 v1.0.5 P2-1 范本)."""
     if type(reason) is not str:
-        raise ValueError(
-            f"block_reason 必须是 str, 实际 {type(reason).__name__}={reason!r}"
-        )
+        raise ValueError(f"block_reason 必须是 str, 实际 {type(reason).__name__}={reason!r}")
     if reason not in OUTBOX_BLOCK_REASON_VALUES:
         raise ValueError(
-            f"block_reason 必须是 2 类白名单 {OUTBOX_BLOCK_REASON_VALUES!r}, "
-            f"实际 {reason!r}"
+            f"block_reason 必须是 2 类白名单 {OUTBOX_BLOCK_REASON_VALUES!r}, 实际 {reason!r}"
         )
     return reason
 
@@ -319,7 +296,9 @@ def build_outbox_policy_context(
             f"last_outbox_failed 必须是原生 bool, 实际 "
             f"{type(last_outbox_failed).__name__}={last_outbox_failed!r}"
         )
-    if type(consecutive_outbox_failures) is bool or not isinstance(consecutive_outbox_failures, int):
+    if type(consecutive_outbox_failures) is bool or not isinstance(
+        consecutive_outbox_failures, int
+    ):
         raise ValueError(
             f"consecutive_outbox_failures 必须是原生 int(非 bool), 实际 "
             f"{type(consecutive_outbox_failures).__name__}={consecutive_outbox_failures!r}"
@@ -402,7 +381,11 @@ class OutboxDecisionReport:
                 f"(D4.8 Literal[True] 类型层面固化, 成功入库专属), "
                 f"实际 {self.outbox_stored!r}"
             )
-        if type(self.outbox_id) is bool or not isinstance(self.outbox_id, int) or self.outbox_id < 1:
+        if (
+            type(self.outbox_id) is bool
+            or not isinstance(self.outbox_id, int)
+            or self.outbox_id < 1
+        ):
             raise ValueError(
                 f"OutboxDecisionReport.outbox_id 必须是 int(非 bool) >= 1, 实际 "
                 f"{type(self.outbox_id).__name__}={self.outbox_id!r}"
@@ -414,17 +397,29 @@ class OutboxDecisionReport:
         _validate_outbox_recipient_email(self.recipient_email)
         _validate_outbox_priority(self.priority)
         # 双向强一致(D4.7.3 v1.0.2 P1-2 范本)
-        if type(self.subject_length) is bool or not isinstance(self.subject_length, int) or self.subject_length < 0:
+        if (
+            type(self.subject_length) is bool
+            or not isinstance(self.subject_length, int)
+            or self.subject_length < 0
+        ):
             raise ValueError(
                 f"OutboxDecisionReport.subject_length 必须是 int(非 bool) >= 0, 实际 "
                 f"{type(self.subject_length).__name__}={self.subject_length!r}"
             )
-        if type(self.body_length) is bool or not isinstance(self.body_length, int) or self.body_length < 0:
+        if (
+            type(self.body_length) is bool
+            or not isinstance(self.body_length, int)
+            or self.body_length < 0
+        ):
             raise ValueError(
                 f"OutboxDecisionReport.body_length 必须是 int(非 bool) >= 0, 实际 "
                 f"{type(self.body_length).__name__}={self.body_length!r}"
             )
-        if type(self.latency_ms) is bool or not isinstance(self.latency_ms, int) or self.latency_ms < 0:
+        if (
+            type(self.latency_ms) is bool
+            or not isinstance(self.latency_ms, int)
+            or self.latency_ms < 0
+        ):
             raise ValueError(
                 f"OutboxDecisionReport.latency_ms 必须是 int(非 bool) >= 0, 实际 "
                 f"{type(self.latency_ms).__name__}={self.latency_ms!r}"
@@ -522,15 +517,17 @@ class OutboxFailureDecisionReport:
     def __post_init__(self) -> None:
         """D4.8 技术失败字段契约校验(7 项核心契约)."""
         if self.failed is not True:
-            raise ValueError(
-                f"OutboxFailureDecisionReport.failed 必为 True, 实际 {self.failed!r}"
-            )
+            raise ValueError(f"OutboxFailureDecisionReport.failed 必为 True, 实际 {self.failed!r}")
         if type(self.last_error) is not str or not self.last_error.strip():
             raise ValueError(
                 f"OutboxFailureDecisionReport.last_error 必填非空白 str, 实际 "
                 f"{type(self.last_error).__name__}={self.last_error!r}"
             )
-        if type(self.consecutive_outbox_failures) is bool or not isinstance(self.consecutive_outbox_failures, int) or self.consecutive_outbox_failures < 1:
+        if (
+            type(self.consecutive_outbox_failures) is bool
+            or not isinstance(self.consecutive_outbox_failures, int)
+            or self.consecutive_outbox_failures < 1
+        ):
             raise ValueError(
                 f"OutboxFailureDecisionReport.consecutive_outbox_failures 必须是 int(非 bool) >= 1, "
                 f"实际 {type(self.consecutive_outbox_failures).__name__}={self.consecutive_outbox_failures!r}"
@@ -700,12 +697,6 @@ class EmailOutboxAdapter:
 
         # 6. PolicyEngine.evaluate(透传 11 字段业务 payload)
         # 复用 integration.py 中已有的 ExtraBusinessPayload 通过 extra_business_payload 注入
-        try:
-            from my_ai_employee.policy.integration import (
-                _validate_classify_category,  # noqa: F401  保留 — 未来 outbox 联动 category 可用
-            )
-        except ImportError:
-            pass
         # 6 业务字段透传契约(week1-mvp.md:860 锁定)
         # outbox_id / subject_length / body_length / tone / recipient_email / priority
         # + 5 辅助字段(email_id / status / source / created_at / latency_ms)
@@ -949,7 +940,11 @@ class EmailOutboxAdapter:
                 f"transport_alive 必须是原生 bool, 实际 "
                 f"{type(transport_alive).__name__}={transport_alive!r}"
             )
-        if type(consecutive_outbox_failures) is bool or not isinstance(consecutive_outbox_failures, int) or consecutive_outbox_failures < 1:
+        if (
+            type(consecutive_outbox_failures) is bool
+            or not isinstance(consecutive_outbox_failures, int)
+            or consecutive_outbox_failures < 1
+        ):
             raise ValueError(
                 f"consecutive_outbox_failures 必须是原生 int(非 bool) >= 1, 实际 "
                 f"{type(consecutive_outbox_failures).__name__}={consecutive_outbox_failures!r}"
