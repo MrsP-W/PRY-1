@@ -575,3 +575,148 @@ claw-code 仓库无"邮件草稿审阅"或"草稿质量评分"模块。**D4.7.4 
 - [reports/D4.7.4-草稿审阅.md](../我的AI员工/reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段
 - [memory/d4.7.3-drafter-adapter-v1.0.6.md](../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 v1.0 ~ v1.0.6 25 教训沉淀
 - [memory/d4.7.3-drafter-adapter.md](../Agent%20Assistant/memory/d4.7.3-drafter-adapter.md) — D4.7.3 起始范本
+
+---
+
+## 10. D4.8 草稿入库/发送(🎯 2026-06-11 晚间启动,目标 v1.0 锁定)
+
+> **承接 D4.7.4 docs 收口 + spike commit**:`b1497b3`(D4.7.4 v1.0.2 锁定)+ `ac2cbec`(D4.7.4.10 spike 100/100 跑通 + 3 FALSE_PASS 列入 v1.0.3 改进项 B 类延后),D4.8 正式启动。
+>
+> **承接 D4.7.3 + D4.7.4 范本**:三入口架构(成功/业务阻断/技术失败)+ 25 教训沉淀(独立 dataclass + `Literal[True]` + `__post_init__` 三重校验 + 双层防御 + 双向强一致 + 固化哲学),在 D4.8 第三个真实业务场景(入库 outbox)上**复用**。
+
+### 10.1 claw-code 优先参考
+
+claw-code 仓库无"邮件 outbox 入库"模块,但与 D4.8 状态机 + 事件流高度相关的两个 g-治理范本:
+
+#### 10.1.1 g004 events contract(优先参考)
+
+[g004-events-reports-contract.md](https://github.com/ultraworkers/claw-code/blob/main/docs/g004-events-reports-contract.md) 是 claw-code **LaneEvent 流**的契约真相源,D4.8 outbox 状态机借鉴 4 点:
+
+- **状态机 + 事件驱动**:`LaneEventName` 7 类核心生命周期(`lane.started` / `lane.ready` / `lane.blocked` / `lane.red` / `lane.green` / `lane.finished` / `lane.failed`)对应 outbox 4 状态(`pending_send` / `approved` / `sent` / `cancelled`)— D4.8 仅入库到 `pending_send`,状态转换留 D5+
+- **event metadata 7 字段**:`seq` / `timestamp_ms` / `event_fingerprint` / `provenance` / `environment_label` / `emitter_identity` / `confidence_level` / `session_identity` / `ownership` — D4.8 outbox 透传 6 字段到 event_metadata:`outbox_id` / `subject_length` / `body_length` / `tone` / `recipient_email` / `priority`
+- **event_fingerprint 幂等性**:`compute_event_fingerprint` (SHA-256-derived canonical JSON) 用来去重 / 终端 reconciliation — D4.8 通过 `UNIQUE(email_id)` 约束实现入库幂等(UNIQUE 冲突 → 业务阻断入口,not 技术失败入口,**D3.3.3 异常窄化教训应用**)
+- **终端 reconciliation**:`dedupe_terminal_events` / `reconcile_terminal_events` 处理 terminal 状态冲突 — D4.8 通过 OutboxStore `by_email_id` 查重 + `update_status` 单向状态机实现
+
+#### 10.1.2 g006 task policy board(优先参考)
+
+[g006-task-policy-board-verification-map.md](https://github.com/ultraworkers/claw-code/blob/main/docs/g006-task-policy-board-verification-map.md) 是 claw-code **PolicyEngine** 范本,D4.8 业务层接入借鉴 2 点:
+
+- **6 决策可执行规则**:`RetryAvailable` / `RebaseRequired` / `StaleCleanupRequired` / approval-token conditions / `PolicyEvaluation` / `PolicyDecisionEvent` — D4.8 简化 3 决策(成功 / 业务阻断 / 技术失败),与 D4.7.3 + D4.7.4 三入口同架构
+- **5 字段决策日志**:`rule_name` / `priority` / `kind` / `explanation` / `approval_token_id` — D4.8 DecisionReport 字段设计范本(`outbox_stored: Literal[True]` + `outbox_id: int` + `event_id: int` + `last_outbox_failed: bool` + `consecutive_outbox_failures: int` 5 字段)
+
+### 10.2 不照搬的部分
+
+- **claw-code 通用 agent loop + OpenAI function-calling 模式**:D4.8 **无 LLM 调用**(草稿审阅通过后直接入库),不引入 agent loop
+- **claw-code Rust `serde` + `SHA-256 fingerprint`**:D4.8 走 Python `dataclass` + SQLAlchemy ORM,幂等性通过 UNIQUE 约束(数据库层)+ helper 查重(应用层)双层实现,不走 SHA-256 指纹
+- **claw-code 终端 reconciliation `reconcile_terminal_events`**:D4.8 状态机简单(4 状态,D4.8 仅入库到 pending_send),不需要 reconcile 多源 terminal 状态
+- **claw-code `ultragoal` audit 分离**(worker 不动 .omx/ultragoal,leader checkpointing):D4.8 不需要(我们 audit 通过 events 表 + event_metadata 完成,无 leader/worker 分工)
+- **claw-code 长时运行任务 + tool manifest 序列化**:D4.8 是单次同步 DB 写入(< 1s),无 tool manifest 序列化层
+
+### 10.3 故意不学的(D4.7.3 25 教训 + D3.3.3 教训反范本沉淀)
+
+- **不复用 v1.0 `failed: bool` 字段(D4.7.3 v1.0.3 P2-1 范本)**:`OutboxBlockedDecisionReport.blocked: Literal[True]` + `kind: Literal["business_blocked"]` 专属 vs `OutboxFailureDecisionReport.failed: Literal[True]` 专属,字段名级别硬区分(防通用 `if report.failed` 绕过)
+- **不把异常宽化接 `SQLAlchemyError` 基类(D3.3.3 教训)**:D4.8.3 `OutboxStore.insert` 严格 `except IntegrityError`(窄化捕获),非 UNIQUE 错误上抛触发 `record_store_failure_and_emit`,**不**静默算"业务阻断"
+- **不跨字段强一致漏方向(D4.7.3 v1.0.2 P1-2 范本)**:`outbox_stored=True → outbox_id >= 1` + `last_outbox_failed=True → cf >= 1` 双向强一致,`__post_init__` 三重校验
+- **不复用 v1.0 `bool` 字段严判(D4.7.3 v1.0.4 P2-2 范本)**:`reason` / `status` / `priority` 严判入口统一 `type() is str` 在 `in` `frozenset` 前(防 list/dict/set 触发 `TypeError`)
+- **不漏 cross-field 跨字段校验(D4.7.3 v1.0.4 P1-1 范本)**:`reason=duplicate_email_id → email_id 必填非负` / `priority=urgent → email_category 必 URGENT` / `subject_length 1-200` / `body_length 10-8000`(联动 D4.7.4 业务契约)
+- **不裸接 `email_id` 不验来源(D4.7.3 v1.0.4 P2-4 范本)**:`_validate_outbox_email_id` `type() is int` 拒 bool + str(拒负数 + 0)
+- **不写好但不导出(D4.6 v1.0.2-second P2-3 + D4.7.4 v1.0.2 范本)**:`EmailOutboxAdapter` 9 个新符号 `__all__` + `policy/__init__.py` 顶层转发,`from my_ai_employee.policy import ...` 零 ImportError
+- **不复用 `engine or PolicyEngine()` 当替身 `__bool__()=False` 被吞(D4.7.3 v1.0.3 P2-2 范本)**:`EmailOutboxAdapter.__init__` 沿用 `is None` 范式
+- **不混用 `engine` / `event_store` / `heartbeat` / `board` 4 依赖(D4.5 范本)**:4 依赖可注入范本保留,EmailOutboxAdapter 与 EmailReviewerAdapter / EmailDrafterAdapter 签名一致
+- **不静默 strip 抛 TypeError(D4.7.3 v1.0.4 P2-4 范本)**:`_validate_outbox_subject` / `_validate_outbox_body` strip() 严判语义非空(防 `subject="   "` 绕过 1-200 边界)
+- **不把 PermissionProfile 写死成 read_only(D4.5 v1.0.1 范本)**:`PermissionProfile.READ_WRITE` 是 D4.8 首次引入,与 D4.5/D4.6/D4.7.3/D4.7.4 `read_only` 区分(写入 outbox 表需要 READ_WRITE)
+- **不在 `record_store_business_blocked_and_emit` 用 `last_outbox_failed=False` + `cf=0` 隐式标记阻断(D4.7.3 v1.0.1 P1-1 范本)**:`cf` 必须显式传 0(业务阻断永不 retry)
+- **不在 `record_store_failure_and_emit` 复用 `OutboxBlockedDecisionReport` 充当失败报告(D4.7.3 v1.0.2 P1-1 范本)**:**独立类型** + `Literal[True]` + `__post_init__` 三重校验,杜绝"伪造"语义
+- **不在文档示例保留已删除参数(D4.6 v1.0.2-third P3 范本)**:`store_and_emit` docstring 严格匹配签名(无 `consecutive_outbox_failures=0` 等已删除参数)
+
+### 10.4 实施子任务(2026-06-11 晚间启动 + 预计 8 小时)
+
+| # | 任务 | 文件 | 关键产物 | 预计耗时 | 状态 |
+|---|------|------|---------|----------|------|
+| D4.8.1 | outbox migration 0004 | `src/my_ai_employee/core/migrations/versions/0004_outbox_table.py` | 11 字段 + UNIQUE(email_id) + 2 索引(`status_created_at` 调度器 / `priority_created_at` 紧急优先) | 45 min | 🎯 |
+| D4.8.2 | OutboxEntry ORM | `src/my_ai_employee/core/models/outbox.py` | `OutboxEntry` dataclass + 4 状态 `OutboxStatus` StrEnum(pending_send/approved/sent/cancelled) | 30 min | 🎯 |
+| D4.8.3 | OutboxStore 封装 | `src/my_ai_employee/db/outbox.py` | 4 公共方法(`insert` / `by_email_id` / `by_status` / `update_status`)+ IntegrityError 窄化 | 60 min | 🎯 |
+| D4.8.4 | EmailOutboxAdapter | `src/my_ai_employee/policy/integration.py` | 6 `_validate_outbox_*` helper + 3 factory + 3 DecisionReport + EmailOutboxAdapter 主类(3 入口)+ 6 业务字段透传 | 90 min | 🎯 |
+| D4.8.5 | 顶层暴露 | `src/my_ai_employee/policy/__init__.py` | 9 个 D4.8 新符号 | 5 min | 🎯 |
+| D4.8.6 | DB 单元测试 | `tests/db/test_outbox.py` | 30 tests(CRUD + UNIQUE 冲突 + 状态机 + 2 索引 + 4 状态枚举 + D3.3.3 异常窄化),`db/outbox.py` ≥ 90% 覆盖 | 60 min | 🎯 |
+| D4.8.7 | Adapter 单元测试 | `tests/policy/test_outbox_adapter.py` | 80+ tests(三入口 + 7 项契约 + 跨字段 + READ_WRITE + 幂等性 + 6 业务字段透传),`policy/integration.py` ≥ 91% 覆盖 | 120 min | 🎯 |
+| D4.8.8 | docs 同步 | `docs/week1-mvp.md §D4.8` | v1.0 → v1.0.1 演进表 + 验收 12 项 [x] + 子任务 12 项 ✅ | 15 min | 🎯 |
+| D4.8.9 | mapping 同步 | `docs/d4-claw-code-mapping.md §10` | 本段 mapping(🎯 实施前先写) | 30 min | ✅ v1.0 起始 |
+| D4.8.10 | 报告 | `reports/D4.8-草稿入库.md` | v1.0 段(8 质量门 + 教训应用 + 5 契约验证) | 30 min | 🎯 |
+| D4.8.11 | Spike | 100 封入库幂等性 + 状态机正确性 + 紧急邮件优先排序 | spike 报告(非阻塞 — v1.0 锁定后并行) | 60 min | 🎯 |
+| D4.8.12 | 8 质量门 + commit + 验收 | — | 8 质量门 8/8 全绿 + commit + 验收锁定 | 30 min | 🎯 |
+
+### 10.5 验证 anchor(8 质量门 8/8 全绿,目标 v1.0 锁定)
+
+| 门 | 命令 | v1.0 目标 |
+|----|------|-----------|
+| 1 | `pytest tests/db/test_outbox.py` | **≥ 30 passed** |
+| 2 | `pytest tests/policy/test_outbox_adapter.py` | **≥ 80 passed** |
+| 3 | `pytest`(全量) | **≥ 1350 passed in < 3s**(D4.7.4 v1.0.2 1240 → D4.8 +110) |
+| 4 | `ruff check` | All checks passed |
+| 5 | `ruff format --check` | 90+ files already formatted |
+| 6 | `mypy src` | 0 errors / 50+ files(D4.7.4 v1.0.2 47 → D4.8 +3) |
+| 7 | `mypy src+tests` | 0 errors / 90+ files(D4.7.4 v1.0.2 87 → D4.8 +3) |
+| 8 | `alembic upgrade head --sql` | exit 0(0004 latest / 200+ 行 SQL) |
+| 8b | `uv build` + `make lint` | tar.gz + .whl OK + 0 错误 |
+
+### 10.6 关键设计决策(D3.3.3 + D4.5 + D4.7.3 25 教训 + D4.7.4 7 项核心契约全应用)
+
+#### 10.6.1 5 项契约锁定(2026-06-10 用户审批 D4.8 启动时确认)
+
+- **契约 1:三入口架构(沿用 D4.7.3 v1.0.1 P1-1 范本)**:`store_and_emit`(成功)/ `record_store_business_blocked_and_emit`(`duplicate_email_id` / `blacklisted_recipient`)/ `record_store_failure_and_emit`(SQL 异常 / 锁失败)
+- **契约 2:outbox 表 schema 11 字段(2026-06-10 新增 migration 0004)**:`id` / `email_id`(UNIQUE)/ `subject`(1-200)/ `body`(10-8000)/ `tone`(3 选 1)/ `reviewer_decision_event_id`(FK → events.id)/ `drafter_decision_event_id`(FK → events.id)/ `status`(pending_send / approved / sent / cancelled,DEFAULT pending_send)/ `created_at`(epoch ms)/ `recipient_email`(2026-06-10 新增,避免 D5+ 发送时回查 emails 表)/ `priority`(urgent / normal / low,2026-06-10 新增,便于 D5+ 发送调度器排序)
+- **契约 3:PermissionProfile = READ_WRITE(D4.8 首次引入)**:写入 outbox 表需要 READ_WRITE 权限,与 D4.5/D4.6/D4.7.3/D4.7.4 `read_only` 区分
+- **契约 4:入库幂等性(D4.8 关键)**:`email_id` 唯一索引,UNIQUE 冲突 → 业务阻断入口 `record_store_business_blocked_and_emit(reason="duplicate_email_id")`,**不**走技术失败入口(**D3.3.3 异常窄化教训应用**)
+- **契约 5:不真发 SMTP(D4.8 范围边界)**:仅入库 outbox 表 + `status=pending_send`,**不**调 SMTP 发送,**不**写 `sent_at` / `sent_status` 字段(避免 D4.8 越界)。真实发送留 D5+ 业务调度器
+
+#### 10.6.2 D4.7.3 + D4.7.4 7 项核心契约全应用
+
+- **契约 1:工厂层 + `__post_init__` 双层防御**:6 helper + 3 DecisionReport `__post_init__` 三重校验
+- **契约 2:跨字段校验(v1.0.4 P1-1 范本)**:`reason=duplicate_email_id → email_id 必填非负` / `priority=urgent → email_category 必 URGENT` / `subject_length 1-200` / `body_length 10-8000`
+- **契约 3:双向强一致(v1.0.2 P1-2 范本)**:`outbox_stored=True → outbox_id >= 1` / `last_outbox_failed=True → cf >= 1` / `False → cf==0`
+- **契约 4:异常统一 `ValueError`(v1.0.5 P2-1 范本)**:6 helper 全部 `type() is not str` 在 `hash` 前
+- **契约 5:字段名硬区分(v1.0.3 P2-1 范本)**:`OutboxBlockedDecisionReport.blocked: Literal[True]` + `kind: Literal["business_blocked"]` 专属 vs `OutboxFailureDecisionReport.failed: Literal[True]` 专属
+- **契约 6:契约 helper 复用(v1.0.3 P1-1 范本)**:工厂层与数据类 `__post_init__` 复用同一严判入口
+- **契约 7:固化哲学(v1.0.6 范本)**:代码 + 注释 + 测试 + 导出 + 文档同 commit
+
+#### 10.6.3 D3.3.3 异常窄化教训应用
+
+- D4.8.3 `OutboxStore.insert` 严格 `except IntegrityError`(窄化),非 UNIQUE 错误上抛触发 `record_store_failure_and_emit` + `last_outbox_failed=True`
+- 反范本:D3.3.2 `(SQLAlchemyError, _sqlcipher_dbapi.IntegrityError)` 过宽,会误算 OperationalError / DB 锁 / InterfaceError / DataError 为 skipped,掩盖真实生产问题
+- D4.8.3 必须区分:`IntegrityError` → 业务阻断,`OperationalError` / `DataError` → 技术失败
+
+### 10.7 故意不学的范本(g009 §"反范本" 沉淀)
+
+| 旧 v1.0 假想写法 | 新 v1.0.1+ 写法 | 教训 |
+|------------------|----------------|------|
+| 严判只放 Adapter `store_and_emit` 入口(v1.0 假想) | 严判下沉到 `compute_outbox_acceptance` + `build_outbox_*` 公共 API(v1.0) | 公共 helper 必自防御,Adapter 重构不可绕过 |
+| 业务阻断 vs 技术失败用同一 `failed: bool` 字段(v1.0 假想) | `OutboxBlockedDecisionReport.blocked: Literal[True]` + `kind: Literal["business_blocked"]` vs `OutboxFailureDecisionReport.failed: Literal[True]`(v1.0) | 字段名级别硬区分,防通用 `if report.failed` 绕过 |
+| `outbox_stored: bool` 成功报告(v1.0 假想) | `OutboxDecisionReport.outbox_stored: Literal[True]`(v1.0) | `Literal[True]` 类型层面固化,防 `outbox_stored=False` 混入 |
+| 混用 `last_outbox_failed` 与 `cf` 隐式推断(v1.0 假想) | 双向强一致 `True → cf>=1` / `False → cf==0`(v1.0) | 显式 bool + 跨字段约束,防漏方向 |
+| 内联 `if status not in {pending_send, ...}`(v1.0 假想) | `_validate_outbox_status` helper(v1.0) | 统一 `ValueError`,防 list/dict/set 触发 `TypeError` |
+| 跨字段约束只在 Adapter 入口(v1.0 假想) | `__post_init__` 三重校验(reason ↔ email_id / priority ↔ category / stored ↔ id)(v1.0) | 数据类双层防御,工厂层+数据类兜底 |
+| 严判不区分"必为 True"与"必为 False"语义(v1.0 假想) | `Literal[True]` + `__post_init__` 显式校验(v1.0) | 数据类字段约束必须自洽,类型层面拒绝非法 |
+| `bool` / `int` 字段用 `isinstance` 严判(v1.0 假想) | `type(value) is bool` / `type(value) is int` 严判(v1.0) | `isinstance(True, int)==True` 陷阱,bool 是 int 子类 |
+| `policy/integration.py` 内部写好但不导出(v1.0 假想) | `policy/__init__.py` 顶层暴露 9 个新符号(v1.0) | `__all__` 声明 ≠ 实际可导入,顶层必须转发 |
+| `engine or PolicyEngine()` 当替身 `__bool__()` 返回 False 被吞(v1.0 假想) | `engine if engine is not None else PolicyEngine()`(v1.0) | 依赖注入用 `is None` 不用 `or`,保留 falsey 替身 |
+| 文档示例保留已删除参数(v1.0 假想) | 严格匹配签名(v1.0) | 文档与实现一一对应,过期注释比无注释更危险 |
+| 复用 D3.3.2 `(SQLAlchemyError, IntegrityError)` 过宽异常(v1.0 假想) | `except IntegrityError` 严格窄化(v1.0) | 基类异常会误算 OperationalError / DB 锁,掩盖生产问题 |
+| `UNIQUE` 冲突走技术失败入口(v1.0 假想) | UNIQUE 冲突 → 业务阻断入口 `duplicate_email_id`(v1.0) | 幂等性 = 业务语义,not 技术故障 |
+| 入库同时发 SMTP(v1.0 假想) | 仅入库 outbox + `status=pending_send`,不调 SMTP(v1.0) | 范围边界:D4.8 = 入库,D5+ = 发送 |
+| `priority` 字段透传 email_category 自行映射(v1.0 假想) | `priority=urgent ↔ email_category=URGENT` 跨字段强一致(v1.0) | 调度器排序依赖 priority,契约必须显式 |
+| `recipient_email` 从 emails 表回查(v1.0 假想) | 直接存 outbox 表(v1.0) | 避免 D5+ 发送时回查,outbox 自洽 |
+
+---
+
+**最后更新**:2026-06-11 晚间(**D4.8 起始 mapping 段**:5 契约锁定 + 12 子任务预判 + 7 项核心契约复用 + 10.4 实施计划)
+**维护者**:Mr-PRY
+**关联**:
+- [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
+- [memory/claw-code-reference.md](../Agent%20Assistant/memory/claw-code-reference.md) — 仓库快照 + 6 个高价值文件
+- [memory/tools_status.md](../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
+- [memory/d4.7.4-v1.0.3-deferred.md](../Agent%20Assistant/memory/d4.7.4-v1.0.3-deferred.md) — D4.7.4 spike 3 FALSE_PASS 列入 v1.0.3 改进项(B 类延后)
+- [memory/d4.7.3-drafter-adapter-v1.0.6.md](../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 25 教训沉淀源头(D4.8 7 项核心契约复用)
+- [memory/d4.7.4-docs-closure.md](../Agent%20Assistant/memory/d4.7.4-docs-closure.md) — D4.7.4 v1.0.2 docs-only 收口 commit `b1497b3`
+- [reports/D4.7.4.10-spike.md](../我的AI员工/reports/D4.7.4.10-spike.md) — D4.7.4.10 spike 100/100 跑通 + 阻断率/原因/延迟全分析
+- [docs/week1-mvp.md §D4.8 L841-909](../我的AI员工/docs/week1-mvp.md) — D4.8 详细计划(5 契约 + 12 子任务)
