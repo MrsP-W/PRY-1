@@ -1,0 +1,199 @@
+"""D4.8 草稿入库/发送 ORM 模型 — outbox 表 + 3 个 StrEnum 枚举。
+
+承接 D4.8.1 outbox migration 0004(11 字段 + UNIQUE(email_id) + 2 索引 + 2 FK)。
+
+3 个 StrEnum 枚举(顺序固定,业务层做"按状态分组"时可直接用 list(Enum) 排序):
+    - OutboxStatus: 4 状态(pending_send / approved / sent / cancelled)
+    - OutboxTone: 3 语气(FORMAL / FRIENDLY / CONCISE),与 D4.7.3 DraftTone 字段值一致
+                  (独立枚举,业务边界清晰:outbox 是入库产物,draft 是生成过程)
+    - OutboxPriority: 3 优先级(urgent / normal / low)
+
+OutboxEntry 11 字段(完全 mirror 0004_outbox_table migration):
+    - id                  INTEGER PK AUTOINCREMENT
+    - email_id            INTEGER NOT NULL UNIQUE — 入库幂等性键
+    - subject             TEXT NOT NULL — 1-200 字符(应用层 _validate_outbox_subject 严判)
+    - body                TEXT NOT NULL — 10-8000 字符(应用层 _validate_outbox_body 严判)
+    - tone                TEXT NOT NULL — OutboxTone 3 选 1
+    - reviewer_decision_event_id  INTEGER NULL — FK → events.id
+    - drafter_decision_event_id   INTEGER NULL — FK → events.id
+    - status              TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 4 选 1
+    - created_at          INTEGER NOT NULL — Unix epoch ms
+    - recipient_email     TEXT NOT NULL — 含 @ 即可
+    - priority            TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+
+约束 + 索引(与 0004 migration 一致):
+    - UNIQUE(email_id)
+    - idx_outbox_status_created_at(status, created_at DESC)
+    - idx_outbox_priority_created_at(priority, created_at DESC)
+    - 2 FK → events.id (reviewer / drafter, ON DELETE SET NULL)
+
+D4.7.3 v1.0.6 教训应用:
+    - 顺序固定(FORMAL → FRIENDLY → CONCISE),业务层做"按语气分组"时可直接用 list(Enum) 排序
+    - frozenset 严判白名单 _OUTBOX_TONE_CHOICES / _OUTBOX_STATUS_CHOICES / _OUTBOX_PRIORITY_CHOICES
+    - DDL 走 TEXT(SQLite 不支持 ENUM 类型),ORM 走 StrEnum 严判
+    - OutboxTone 独立枚举不复用 DraftTone(业务边界清晰 + 字段名级别硬区分 D4.7.3 v1.0.3 P2-1 范本)
+    - 跨字段校验 priority=urgent ↔ email_category=URGENT 在应用层 _validate_outbox_priority 严判
+      (D4.7.3 v1.0.4 P1-1 范本,ORM 层不表达跨表约束)
+"""
+
+from __future__ import annotations
+
+from enum import StrEnum
+
+from sqlalchemy import (
+    ForeignKeyConstraint,
+    Index,
+    Integer,
+    Text,
+    UniqueConstraint,
+    text,
+)
+from sqlalchemy.orm import Mapped, mapped_column
+
+from my_ai_employee.core.models import Base
+
+
+# ===== 3 个 StrEnum 枚举(契约层) =====
+
+
+class OutboxStatus(StrEnum):
+    """Outbox 4 状态枚举(D4.8 业务层契约,D4.8 仅入库到 pending_send)。
+
+    状态机转换规则(D4.8 范围):
+        - pending_send → approved(显式批准,D5+ 业务调度器)
+        - pending_send → cancelled(用户取消,D5+ 业务调度器)
+        - approved → sent(SMTP 发送成功,D5+)
+        - D4.8 范围:仅入库到 pending_send
+
+    顺序固定,业务层做"按状态分组"时可直接用 list(OutboxStatus) 排序
+    (pending_send 最先 / cancelled 最后)。
+    """
+
+    PENDING_SEND = "pending_send"  # 默认:D4.8 入库产物
+    APPROVED = "approved"  # 显式批准,D5+ 调度器才进入此状态
+    SENT = "sent"  # SMTP 发送成功,D5+ 才进入此状态(D4.8 不真发)
+    CANCELLED = "cancelled"  # 用户取消,D5+ 调度器
+
+
+# 4 状态枚举值集合(O(1) 校验)
+_OUTBOX_STATUS_CHOICES: frozenset[str] = frozenset(s.value for s in OutboxStatus)
+
+
+class OutboxTone(StrEnum):
+    """Outbox 3 类语气枚举(与 D4.7.3 DraftTone 字段值一致,独立枚举)。
+
+    独立枚举不复用 DraftTone 的理由:
+        - 业务边界清晰:outbox 是入库产物,draft 是生成过程
+        - 字段名级别硬区分(D4.7.3 v1.0.3 P2-1 范本,防通用 `if enum == DraftTone` 误用)
+        - 未来扩枚举(outbox 可能加"自动/AUTO"等业务专属 tone)不会跨模块污染
+
+    顺序固定(FORMAL → FRIENDLY → CONCISE),业务层做"按语气分组"时可直接用
+    list(OutboxTone) 排序。
+    """
+
+    FORMAL = "FORMAL"  # 正式:商务 / 官方 / 客户沟通
+    FRIENDLY = "FRIENDLY"  # 友好:同事 / 熟人 / 协作
+    CONCISE = "CONCISE"  # 简洁:通知 / 确认 / 单点沟通
+
+
+# 3 类语气枚举值集合(O(1) 校验)
+_OUTBOX_TONE_CHOICES: frozenset[str] = frozenset(t.value for t in OutboxTone)
+
+
+class OutboxPriority(StrEnum):
+    """Outbox 3 优先级枚举(D5+ 发送调度器排序用)。
+
+    跨字段校验(应用层 _validate_outbox_priority 严判,D4.7.3 v1.0.4 P1-1 范本):
+        - priority=urgent ↔ email_category=URGENT(D4.7.4 联动契约)
+        - 不允许 priority=urgent + email_category ∈ {TODO, FYI, SPAM, PERSONAL}
+          (D5+ 调度器会把 urgent 当作高优先级,误标会浪费调度资源)
+
+    顺序固定(urgent 最先 / low 最后),业务层做"按优先级排序"时可直接用
+    list(OutboxPriority) 排序(urgent 在前)。
+    """
+
+    URGENT = "urgent"  # 紧急:D4.7.4 联动 email_category=URGENT 触发,D5+ 优先发送
+    NORMAL = "normal"  # 普通:默认,大多数邮件
+    LOW = "low"  # 低优:D5+ 调度器排到最后
+
+
+# 3 优先级枚举值集合(O(1) 校验)
+_OUTBOX_PRIORITY_CHOICES: frozenset[str] = frozenset(p.value for p in OutboxPriority)
+
+
+# ===== ORM Model =====
+
+
+class OutboxEntry(Base):
+    """Outbox 入库表(草稿审阅通过后入库,等待 D5+ 发送调度器轮询)。
+
+    业务语义:
+        - D4.7.4 草稿审阅通过 + D4.7.3 草稿生成产物 → OutboxEntry.store_and_emit
+        - email_id 唯一索引 → 入库幂等性(同 email_id 二次入库走业务阻断入口)
+        - status DEFAULT 'pending_send' → D4.8 仅入库到此状态
+        - priority DEFAULT 'normal' → 大多数邮件 normal,urgent 需 D4.7.4 联动触发
+
+    字段注解(完全 mirror 0004_outbox_table migration):
+        - id:                     INTEGER PK AUTOINCREMENT
+        - email_id:               INTEGER NOT NULL UNIQUE — 关联 emails.id
+        - subject:                TEXT NOT NULL — 1-200 字符,strip() 后非空
+        - body:                   TEXT NOT NULL — 10-8000 字符,strip() 后非空
+        - tone:                   TEXT NOT NULL — OutboxTone 3 选 1
+        - reviewer_decision_event_id:  INTEGER NULL — FK → events.id,D5+ 收紧为 NOT NULL
+        - drafter_decision_event_id:   INTEGER NULL — FK → events.id,D5+ 收紧为 NOT NULL
+        - status:                 TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 4 选 1
+        - created_at:             INTEGER NOT NULL — Unix epoch ms
+        - recipient_email:        TEXT NOT NULL — 含 @ 即可
+        - priority:               TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+
+    约束:
+        - UNIQUE(email_id) — 入库幂等性(D4.8 契约 4)
+
+    索引:
+        - idx_outbox_status_created_at(status, created_at DESC) — D5+ 调度器轮询
+        - idx_outbox_priority_created_at(priority, created_at DESC) — 紧急优先排序
+    """
+
+    __tablename__ = "outbox"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    email_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    subject: Mapped[str] = mapped_column(Text, nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    tone: Mapped[str] = mapped_column(Text, nullable=False)
+    reviewer_decision_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    drafter_decision_event_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending_send", server_default="pending_send")
+    created_at: Mapped[int] = mapped_column(Integer, nullable=False)
+    recipient_email: Mapped[str] = mapped_column(Text, nullable=False)
+    priority: Mapped[str] = mapped_column(Text, nullable=False, default="normal", server_default="normal")
+
+    # 约束 + 索引(与 0004_outbox_table migration 一致,D3.2.3 DESC 索引用 text() 表达)
+    __table_args__ = (
+        UniqueConstraint("email_id", name="uq_outbox_email_id"),
+        ForeignKeyConstraint(
+            ["reviewer_decision_event_id"],
+            ["events.id"],
+            name="fk_outbox_reviewer_event",
+            ondelete="SET NULL",
+        ),
+        ForeignKeyConstraint(
+            ["drafter_decision_event_id"],
+            ["events.id"],
+            name="fk_outbox_drafter_event",
+            ondelete="SET NULL",
+        ),
+        Index("idx_outbox_status_created_at", "status", text("created_at DESC")),
+        Index("idx_outbox_priority_created_at", "priority", text("created_at DESC")),
+    )
+
+
+__all__ = [
+    "OutboxStatus",
+    "OutboxTone",
+    "OutboxPriority",
+    "OutboxEntry",
+    "_OUTBOX_STATUS_CHOICES",
+    "_OUTBOX_TONE_CHOICES",
+    "_OUTBOX_PRIORITY_CHOICES",
+]
