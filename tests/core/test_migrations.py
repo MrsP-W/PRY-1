@@ -132,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0003_fix_events_fingerprint_unique(D4.3.2 复检 P1 修复)."""
+    """alembic_version 表记录当前 head revision = 0004_outbox(D4.8 启动 head 推到 0004)."""
     from alembic import command
 
     command.upgrade(alembic_cfg, "head")
@@ -143,7 +143,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0003_fix_events_fingerprint_unique"
+        assert version[0] == "0004_outbox"
     finally:
         db.close()
 
@@ -312,7 +312,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
     模拟场景:
         1. 跑 alembic upgrade 到 0002_events（旧版 4 字段 UNIQUE)
         2. 手动 INSERT 两条 subject_id=NULL + 同 fingerprint 的行（旧 4 字段 UNIQUE bug 允许）
-        3. 跑 alembic upgrade 到 0003_fix_events_fingerprint_unique
+        3. 跑 alembic upgrade 到 0004_outbox(D4.8 启动 head 推到 0004)
         4. 验证:
            a. events 表的 UNIQUE 约束是单字段 fingerprint
            b. subject_id=NULL + 同 fingerprint 再次插入 → IntegrityError (dedupe 生效)
@@ -370,7 +370,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录 0003
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0003_fix_events_fingerprint_unique"
+            assert version[0] == "0004_outbox"
     finally:
         db.close()
 
@@ -404,7 +404,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0003_fix_events_fingerprint_unique"
+            assert version[0] == "0004_outbox"
     finally:
         db.close()
 

@@ -23,6 +23,7 @@ from __future__ import annotations
 import time
 from typing import Any
 
+import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # D3.3.2 教训: 双层 except 防 SQLCipher dialect 不包装 dbapi 异常
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
@@ -144,11 +145,15 @@ class OutboxStore:
                 session.commit()
                 session.refresh(row)
                 return row
-            except IntegrityError as err:
+            except (IntegrityError, _sqlcipher_dbapi.IntegrityError) as err:
                 session.rollback()
                 # 业务阻断: UNIQUE(email_id) 冲突 → 业务阻断入口
                 # 严判:必须 UNIQUE 约束冲突才视为业务阻断
-                if "UNIQUE constraint failed: outbox.email_id" in str(err.orig):
+                # D3.3.2 教训: SQLCipher dialect 实际抛 sqlcipher3.dbapi2.IntegrityError(原始 err),
+                #              sqlalchemy.exc.IntegrityError 反而是包装层(可能无 .orig)
+                # D3.3.3 教训: 范围窄化, 拒 SQLAlchemyError 基类(会掩盖 OperationalError 等)
+                err_str = str(getattr(err, "orig", err))
+                if "UNIQUE constraint failed: outbox.email_id" in err_str:
                     raise OutboxEmailDuplicateError(email_id=email_id, original_error=err) from err
                 # 其他 IntegrityError(FK 约束 / CHECK 约束) 走技术失败
                 raise

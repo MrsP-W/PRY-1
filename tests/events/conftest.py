@@ -13,7 +13,11 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from my_ai_employee.core.models import Base
+from my_ai_employee.core.outbox import (
+    OutboxEntry,  # noqa: F401  触发 SQLAlchemy 注册(outbox 表 D4.8)
+)
 from my_ai_employee.events import EventStore
+from my_ai_employee.events.models import Event  # noqa: F401  触发 SQLAlchemy 注册(events 表)
 
 if TYPE_CHECKING:
     pass
