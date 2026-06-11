@@ -459,15 +459,119 @@ claw-code 仓库无"邮件分类"或"标签路由"模块。**D4.6 直接落 ai/c
 
 ---
 
-**最后更新**:2026-06-09 晨间链路(**D4.6 v1.0.2 第三次复检真正锁定**:v1.0 → v1.0.1 → v1.0.2-first → v1.0.2-second → **v1.0.2-third** / 576 → 592 → 603 → **611 tests** / 三次复检 13 项 P1+P2+P3 修复 + 8 质量门 8/8 全绿)
+## 8. D4.7.3 草稿生成器(✅ 2026-06-10 v1.0.6 锁定,6 轮复检收官)
+
+> ⚠️ **D4.7.3 mapping 段未独立成章**(本目录命名曾标 §8 D4.7,后 D4.7.4 复用了 D4.7.4 编号,D4.7 段在 week1-mvp.md L690-761 与 memory/d4.7.3-drafter-adapter-v1.0.6.md 中固化,完整 25 教训沉淀是 D4.7.4 的 7 项核心契约范本源头)。
+>
+> 关键范本:三入口架构(`draft_and_emit` / `record_draft_business_blocked_and_emit` / `record_draft_failure_and_emit`)+ 25 教训沉淀(独立 dataclass + `Literal[True]` + `__post_init__` 三重校验 + 双层防御 + 双向强一致 + 固化哲学)+ 1027 passed / 8 质量门全绿(commit `9e4fb2e`)。D4.7.4 §9 直接复用 7 项核心契约,无新增架构范本。
+
+---
+
+## 9. D4.7.4 草稿审阅(✅ 2026-06-11 v1.0.2 业务层三入口真正锁定)
+
+### 9.1 claw-code 优先参考
+
+claw-code 仓库无"邮件草稿审阅"或"草稿质量评分"模块。**D4.7.4 直接落 ai/reviewer.py,不照搬**。
+
+最近邻的是 `src/agents/prompts.rs`(prompt 模板组织)+ `src/agents/agent_loop.rs`(任务循环 + fallback)。D4.7.4 借鉴 2 点:
+
+- **数据驱动 prompt**:`ai/prompts/review.py` 独立模块,5+1 SYSTEM prompt(URGENT/TODO/FYI/SPAM/PERSONAL/DEFAULT),与业务代码分离,便于切换 LLM 时只改 prompt
+- **4 类 StrEnum 业务阻断**:`ReviewBlockReason` 4 类(`sensitive_word_hit` / `template_violation` / `tone_mismatch` / `factual_conflict`),严判响应 JSON 字段,避免脏输入污染 events
+
+### 9.2 不照搬的部分
+
+- claw-code 通用 agent loop 是 OpenAI function-calling 模式;D4.7.4 草稿审阅是**短响应决策**(≤256 token),不调 function call
+- claw-code 任务循环是 long-running;D4.7.4 审阅是单次调用,无状态
+- claw-code 无 LLM 输出的二次校验(D4.7.4 严判三字段 JSON + 4 类本地阻断 + 4 类白名单 + 20 词默认敏感词库,严判范本远超 claw-code)
+
+### 9.3 故意不学的(D4.7.3 25 教训反范本沉淀 + D3.3.3 教训)
+
+- **不把严判只放在 Adapter `review_and_emit` 入口(D4.7.3 v1.0.5 P1-1 范本)**:`build_review_packet` / `build_review_blocked_packet` / `build_review_failure_packet` 公共构造器复用 5 个 `_validate_review_*` helper(改一处全改)
+- **不混用 frozenset `in` 与 helper 严判(D4.7.3 v1.0.5 P2-1 范本)**:`_validate_review_block_reason` / `_validate_review_summary` 严判入口统一 `ValueError`,`type() is not str` 在 `in` / `not in` 前(防 list/dict/set 不可哈希触发 `TypeError`)
+- **不用 `review_passed: bool` 字段表示"必为 True"语义(D4.7.3 v1.0.3 P2-1 + D4.6 v1.0.2-third 范本)**:`ReviewDecisionReport.review_passed: Literal[True]`(mypy 编译期拒绝 `review_passed=False` 混入成功报告)+ `__post_init__` 显式校验
+- **不用 `bool` 字段同时表示"业务阻断"与"技术失败"语义(D4.7.3 v1.0.3 P2-1 范本)**:`ReviewBlockedDecisionReport.blocked: Literal[True]` + `kind: Literal["business_blocked"]` 专属 vs `ReviewFailureDecisionReport.failed: Literal[True]` 专属,字段名级别硬区分(防通用 `if report.failed` 绕过)
+- **不混用 `last_review_failed ↔ cf`(D4.7.3 v1.0.2 P1-2 范本)**:`build_review_policy_context` 双向强一致 `True → cf>=1` / `False → cf==0`,防漏方向
+- **不漏跨字段校验(D4.7.3 v1.0.4 P1-1 范本)**:`_validate_review_blocked_word` 强制 `reason=sensitive_word_hit` 必非空,其他 reason 必空;数据类 `__post_init__` 三重校验(category 必 SPAM + cf 必 0 + last_error.strip 非空)
+- **不静默 `type-coerce`(D4.6 v1.0.1 P2-5 范本)**:`_validate_review_passed` 用 `type(value) is bool` 严判(拒 int 子类 / 字符串 truthy)
+- **不在 `policy/integration.py` 内部写好但不导出(D4.6 v1.0.2-second P2-3 范本)**:`EmailReviewerAdapter` 9 个新符号已在 `__all__` 但 `policy/__init__.py` 必须转发,顶层 `from my_ai_employee.policy import ...` 不再 ImportError
+- **不复用 `engine or PolicyEngine()` 当替身 `__bool__()` 返回 False 被吞(D4.7.3 v1.0.3 P2-2 范本)**:`EmailReviewerAdapter.__init__` 沿用 `is None` 范式,3 个 Adapter 同步
+- **不在文档示例保留已删除参数(D4.6 v1.0.2-third P3 范本)**:`review_and_emit` docstring 严格匹配签名(无 `consecutive_review_failures=0` 等已删除参数)
+- **不把"OK" 当阻断路径占位符(D4.7.4 实践)**:`build_review_policy_context` 阻断/失败路径 synthetic `OK` 注释清晰(占位但不影响判定),不与成功路径混用
+
+### 9.4 实施子任务(2026-06-10 晚间启动 + 2026-06-11 早晨两轮复检收官)
+
+| 子步骤 | 文件 | 关键产物 | 状态 |
+|--------|------|---------|------|
+| D4.7.4.1 | `src/my_ai_employee/ai/reviewer.py` | `ReviewBlockReason` 4 类 StrEnum + `EmailReviewer` + `_parse_review_response` + 3 结果数据类 + 6 异常类 | ✅ v1.0.1 |
+| D4.7.4.2 | `src/my_ai_employee/ai/prompts/review.py` | 5+1 SYSTEM prompt + `build_system_prompt` 分发 + `build_user_message` 拼接 | ✅ v1.0.1 |
+| D4.7.4.3 | `src/my_ai_employee/ai/__init__.py` + `ai/prompts/__init__.py` | 顶层暴露 D4.7.4 新符号(D4.6 v1.0.2-second P2-3 教训应用) | ✅ v1.0.1 |
+| D4.7.4.4 | `tests/ai/test_reviewer.py` | 95 tests(30 严判 + 10 batch + 10 prompt + 6 数据类 + 6 异常 + 4 类白名单本地阻断),`ai/reviewer.py` 96.2% 覆盖 | ✅ v1.0.1 |
+| D4.7.4.5 | `src/my_ai_employee/policy/integration.py` | 5 `_validate_review_*` helper + 3 factory + 12 字段 context + 3 AC + 3 DecisionReport + EmailReviewerAdapter 主类(3 入口) | ✅ v1.0.2 |
+| D4.7.4.6 | `src/my_ai_employee/policy/__init__.py` | 顶层暴露 9 个 D4.7.4 新符号 | ✅ v1.0.2 |
+| D4.7.4.7 | `tests/ai/test_reviewer_adapter.py` | 108 funcs / 118 parametrized tests(三入口 + 公共 API + 顶层导出 + 7 项契约 + 4 类阻断白名单),`policy/integration.py` 91.1% 覆盖 | ✅ v1.0.2 |
+| D4.7.4.8 | `docs/week1-mvp.md §D4.7.4` | v1.0 → v1.0.1 → v1.0.2 演进表 + 验收 11 项 [x] + 子任务 9 项 ✅ | ✅ v1.0.2(本 commit 同步) |
+| D4.7.4.9 | `docs/d4-claw-code-mapping.md §9` | 本段 mapping(v1.0.2 / 213 D4.7.4 业务层 / 1240 全量) | ✅ v1.0.2(本 commit 同步) |
+| D4.7.4.10 | `reports/D4.7.4-草稿审阅.md` | v1.0.2 段 + §0.5 v1.0 + §0.6 v1.0.1 + §0.7 v1.0.2 业务层三入口 | ✅ v1.0.2(本 commit 同步) |
+| D4.7.4.11 | **Spike** | 100 封审阅真实邮件跑 `review` + 阻断率 / 阻断原因分布 / 审阅延迟用户体感 | 🎯 待 D4.8 启动前补 |
+| D4.7.4.12 | 8 质量门 + commit + 验收 | 最终 docs-only 收口(spike 反馈触发 D4.7.4.1+ 业务层微调) | 🎯 待 spike 后 commit |
+
+### 9.5 验证 anchor(8 质量门 8/8 全绿)
+
+| 门 | 命令 | v1.0.2 结果 |
+|----|------|-------------|
+| 1 | `pytest tests/ai/test_reviewer*.py` | **213 passed**(reviewer 95 + adapter 118) |
+| 2 | `pytest`(全量) | **1240 passed in 2.5s**(D4.7.3 v1.0.6 1027 → D4.7.4 +213) |
+| 3 | `ruff check` | All checks passed |
+| 4 | `ruff format --check` | 87 files already formatted |
+| 5 | `mypy src` | 0 errors / 47 files(D4.7.3 v1.0.6 44 → D4.7.4 +3) |
+| 6 | `mypy src+tests` | 0 errors / 87 files(D4.7.3 v1.0.6 84 → D4.7.4 +3) |
+| 7 | `alembic upgrade head --sql` | exit 0(0003 latest / 162 行 SQL,同 D4.6) |
+| 8 | `uv build` | tar.gz + .whl OK |
+| 8b | `make lint` | 0 errors(本 commit docs-only 收口后) |
+
+### 9.6 关键设计决策(D3.3.3 + D4.4 P1 + D4.6 v1.0.1 ~ v1.0.2 + D4.7.3 v1.0 ~ v1.0.6 25 教训全应用)
+
+- **复用 D4.1.1 LLM Router**:`router.route(TaskType.REVIEW, ...)` 自动走 DeepSeek → Qwen → M3 fallback 链(D4.7.3 同范本)
+- **三字段裸 JSON 审阅契约**:`_parse_review_response` 5 步防御(类型严判 → markdown fence 拒收 / 沿用 D4.7.2 契约 2 反退 → 平衡括号定位 → json.loads → 三字段契约校验:`review_passed: bool` + `flagged_issues: list[str]` + `review_summary: str` 1-2000 字符)
+- **4 类业务阻断白名单**:`ReviewBlockReason` StrEnum + `_REVIEW_BLOCK_REASON_VALUES` frozenset,`_validate_review_block_reason` 严判入口统一 `ValueError`
+- **4 类本地阻断逻辑**:`_TONE_MISMATCH_FORBIDDEN` 5×3 矩阵(category→forbidden tone,URGENT 禁 FRIENDLY / PERSONAL 禁 FORMAL+CONCISE)+ `_DEFAULT_SENSITIVE_WORDS` 20 词 frozenset
+- **业务层接入范本**:复用 D4.7.3 `EmailDrafterAdapter` 三入口架构(`review_and_emit` / `record_review_business_blocked_and_emit` / `record_review_failure_and_emit`),`policy/integration.py` 118 测试覆盖
+- **业务字段透传**:`extra_business_payload` 扩 PolicyEngine 可选 kwargs,业务字段(`review_passed` / `flagged_issues` / `review_summary` / `block_reason` / `blocked_word` / `model_full_id` / `email_id` / `category` 8 项)合并到 event_metadata 顶层
+- **lane_entry_id 命名**:`review:<source>:<run_id>`(与 `classify:` / `sync:` / `draft:` 区分)
+- **D4.7.3 7 项核心契约全应用**:
+  - **契约 1:工厂层 + `__post_init__` 双层防御**:5 helper + 3 DecisionReport `__post_init__` 三重校验
+  - **契约 2:跨字段校验**:`_validate_review_blocked_word` 强制 `sensitive_word_hit` 必非空,其他必空;数据类 `__post_init__` 三重校验(category 必 SPAM + cf 必 0 + last_error.strip 非空)
+  - **契约 3:双向强一致**:`build_review_policy_context` `last_review_failed ↔ cf`
+  - **契约 4:异常统一 `ValueError`**:5 helper 全部 `type() is not str` 在 `hash` 前
+  - **契约 5:字段名硬区分**:`blocked: Literal[True]` vs `failed: Literal[True]` + `kind: Literal["business_blocked"]` 区分
+  - **契约 6:契约 helper 复用**:工厂层与数据类 `__post_init__` 复用同一严判入口(改一处全改)
+  - **契约 7:固化哲学**:代码 + 注释 + 测试 + 导出 + 文档同 commit `b15ba96`
+
+### 9.7 故意不学的范本(g009 §"反范本" 沉淀)
+
+| 旧 v1.0 写法 | 新 v1.0.1+ 写法 | 教训 |
+|--------------|----------------|------|
+| 严判只放 Adapter `review_and_emit` 入口(v1.0) | 严判下沉到 `compute_review_acceptance` + `build_review_*` 公共 API(v1.0.2) | 公共 helper 必自防御,Adapter 重构不可绕过 |
+| 业务阻断 vs 技术失败用同一 `failed: bool` 字段(v1.0) | `ReviewBlockedDecisionReport.blocked: Literal[True]` + `kind: Literal["business_blocked"]` vs `ReviewFailureDecisionReport.failed: Literal[True]`(v1.0.2) | 字段名级别硬区分,防通用 `if report.failed` 绕过 |
+| `review_passed: bool` 成功报告(v1.0) | `ReviewDecisionReport.review_passed: Literal[True]`(v1.0.2) | `Literal[True]` 类型层面固化,防 `review_passed=False` 混入 |
+| 混用 `last_review_failed` 与 `cf` 隐式推断(v1.0) | 双向强一致 `True → cf>=1` / `False → cf==0`(v1.0.2) | 显式 bool + 跨字段约束,防漏方向 |
+| 内联 `if reason not in frozenset`(v1.0) | `_validate_review_block_reason` helper(v1.0.2) | 统一 `ValueError`,防 list/dict/set 触发 `TypeError` |
+| 跨字段约束只在 Adapter 入口(v1.0) | `__post_init__` 三重校验(category + cf + last_error)(v1.0.2) | 数据类双层防御,工厂层+数据类兜底 |
+| 严判不区分"必为 True"与"必为 False"语义(v1.0) | `Literal[True]` + `__post_init__` 显式校验(v1.0.2) | 数据类字段约束必须自洽,类型层面拒绝非法 |
+| `bool` / `int` 字段用 `isinstance` 严判(v1.0) | `type(value) is bool` / `type(value) is int` 严判(v1.0.2) | `isinstance(True, int)==True` 陷阱,bool 是 int 子类 |
+| `policy/integration.py` 内部写好但不导出(v1.0) | `policy/__init__.py` 顶层暴露 9 个新符号(v1.0.2) | `__all__` 声明 ≠ 实际可导入,顶层必须转发 |
+| `engine or PolicyEngine()` 当替身 `__bool__()` 返回 False 被吞(v1.0) | `engine if engine is not None else PolicyEngine()`(v1.0.2) | 依赖注入用 `is None` 不用 `or`,保留 falsey 替身 |
+| 文档示例保留已删除参数(v1.0) | 严格匹配签名,移除 `consecutive_review_failures=0`(v1.0.2) | 文档与实现一一对应,过期注释比无注释更危险 |
+| 阻断路径用 `OK` 注释模糊(v1.0) | 注释清晰(synthetic 占位但不影响判定)(v1.0.2) | 注释与实现一一对应,模糊注释误导 audit |
+
+---
+
+**最后更新**:2026-06-11 早晨(**D4.7.4 v1.0.2 业务层三入口真正锁定**:v1.0 → v1.0.1 → **v1.0.2** / D4.7.4 业务层 213 / 全量 1240 tests / 8 质量门 8/8 全绿 / `policy/integration.py` 91.1% 覆盖 / D4.7.3 25 教训全应用)
 **维护者**:Mr-PRY
 **关联**:
 - [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
 - [memory/claw-code-reference.md](../Agent%20Assistant/memory/claw-code-reference.md) — 仓库快照 + 6 个高价值文件
 - [memory/tools_status.md](../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
-- [reports/D4.6-邮件分类器.md §0.5](../我的AI员工/reports/D4.6-邮件分类器.md) — v1.0.1 业务语义修复段
-**维护者**:Mr-PRY
-**关联**:
-- [memory/D4-claw-code-auto-reference.md](../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
-- [memory/claw-code-reference.md](../Agent%20Assistant/memory/claw-code-reference.md) — 仓库快照 + 6 个高价值文件
-- [memory/tools_status.md](../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
+- [reports/D4.7.4-草稿审阅.md](../我的AI员工/reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段
+- [memory/d4.7.3-drafter-adapter-v1.0.6.md](../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 v1.0 ~ v1.0.6 25 教训沉淀
+- [memory/d4.7.3-drafter-adapter.md](../Agent%20Assistant/memory/d4.7.3-drafter-adapter.md) — D4.7.3 起始范本

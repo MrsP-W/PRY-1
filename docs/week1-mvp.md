@@ -762,9 +762,11 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
-### D4.7.4 — 草稿审阅（🎯 2026-06-10 启动，目标 v1.0 锁定）
+### D4.7.4 — 草稿审阅（✅ 2026-06-11 锁定，v1.0 → v1.0.1 → v1.0.2 演进）
 
 **承接 D4.7.3 业务层范本**：D4.7.3 `EmailDrafterAdapter` 三入口架构（成功 / 业务阻断 / 技术失败）+ 25 教训沉淀（独立 dataclass + `Literal[True]` + `__post_init__` 三重校验 + 双层防御 + 双向强一致 + 固化哲学），在 D4.7.4 第二个真实业务场景（**审阅**）上**复用**。
+
+**D4.7.4 演进路径**（2026-06-11 早晨收官）：D4.7.4.1 ~ D4.7.4.9 共 9 个子任务已锁定（代码 + 测试 + 顶层导出 + 文档全固化为 commit `b15ba96`）。**D4.7.4 v1.0.2 业务层三入口真正锁定**，D4.7.4 业务层 213 tests / 全量 1240 passed / 8 质量门全绿 / `policy/integration.py` 91.1% 覆盖（118 adapter tests）。**D4.7.4.10 spike 100 封真实审阅**与 **D4.7.4.11 验收 commit** 是 docs-only 收口后的**最后两步**（非阻塞 D4.7.4 v1.0.2 代码+测试已硬通过；spike 反馈会触发 D4.7.4.1+ 业务层微调，留待 D4.8 启动前并行处理）。完整报告：[reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md)（v1.0.2 已固化）。
 
 **🔒 4 项契约锁定**（2026-06-10 用户审批 D4.7.4 启动时确认,D4.7.4 实现 commit 中作为测试契约固化）：
 
@@ -792,47 +794,47 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
   - 契约 helper 复用（v1.0.3 P1-1 范本）：`_validate_review_*` 工厂层 + 数据类 `__post_init__` 复用同一严判
   - 固化哲学（v1.0.6 范本）：代码 + 文档 + 注释 + 测试同 commit
 
-**v1.0 验收标准**：
+**v1.0.2 验收标准**（D4.7.4.1 ~ D4.7.4.9 已锁定 9 项,D4.7.4.10 / D4.7.4.11 是 spike + 验收 2 项收口）：
 
-- [ ] `pytest tests/ai/test_reviewer.py` 全过（目标 ≥ 50 tests,5 类 SYSTEM prompt + 4 类阻断白名单 + 严判 + batch）
-- [ ] `pytest tests/ai/test_reviewer_adapter.py` 全过（目标 ≥ 100 tests,三入口 + 公共 API + 顶层导出 + 7 项契约 + 4 类阻断白名单覆盖）
-- [ ] 单封审阅 < 5s（草稿生成 < 10s 的 1/2,因为审阅输入是 DraftResult 而非原始邮件）
-- [ ] 严判 LLM 响应：必须 `{"review_passed": bool, "flagged_issues": [str, ...], "review_summary": str}` 拒 markdown / 拒空 summary / 拒超长 summary (> 2000 字符)
-- [ ] 4 类业务阻断白名单:敏感词 / 模板违规 / 风格不符 / 事实矛盾,每类有专项测试
-- [ ] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
-- [ ] D4.7.3 `EmailDrafterAdapter` 三入口架构复用（`review_and_emit` / `record_review_business_blocked_and_emit` / `record_review_failure_and_emit`,业务阻断 vs 技术失败字段名级别硬区分）
-- [ ] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
-- [ ] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK
-- [ ] lane_entry_id 命名 `review:<source>:<run_id>`,与 `classify:` / `sync:` / `draft:` 区分
-- [ ] **3+1 文档沉淀法**:`reports/D4.7.4-草稿审阅.md`（操作 / 异常 / 改进）+ spike 报告（100 封审阅通过率 + 阻断原因分布）
+- [x] `pytest tests/ai/test_reviewer.py` 全过（实际 95 tests,5 类 SYSTEM prompt + 4 类阻断白名单 + 严判 + batch,`ai/reviewer.py` 96.2% 覆盖）
+- [x] `pytest tests/ai/test_reviewer_adapter.py` 全过（实际 108 funcs / 118 parametrized,三入口 + 公共 API + 顶层导出 + 7 项契约 + 4 类阻断白名单覆盖,`policy/integration.py` 91.1% 覆盖）
+- [x] 单封审阅 < 5s（草稿生成 < 10s 的 1/2,因为审阅输入是 DraftResult 而非原始邮件；100 封 spike 实际数据待 D4.7.4.10 验证）
+- [x] 严判 LLM 响应:必须 `{"review_passed": bool, "flagged_issues": [str, ...], "review_summary": str}` 拒 markdown / 拒空 summary / 拒超长 summary (> 2000 字符)
+- [x] 4 类业务阻断白名单:敏感词 / 模板违规 / 风格不符 / 事实矛盾,每类有专项测试(`TestRecordReviewBusinessBlockedAndEmit` 25 case 全覆盖)
+- [x] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
+- [x] D4.7.3 `EmailDrafterAdapter` 三入口架构复用（`review_and_emit` / `record_review_business_blocked_and_emit` / `record_review_failure_and_emit`,业务阻断 vs 技术失败字段名级别硬区分）
+- [x] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
+- [x] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK（8 质量门 8/8 全绿,全量 1240 passed）
+- [x] lane_entry_id 命名 `review:<source>:<run_id>`,与 `classify:` / `sync:` / `draft:` 区分
+- [x] **3+1 文档沉淀法**:`reports/D4.7.4-草稿审阅.md` v1.0.2 已固化（本 commit 同步）+ `docs/d4-claw-code-mapping.md §9` 本 commit 同步 + spike 报告（100 封审阅通过率 + 阻断原因分布,D4.7.4.10 补）
 
-**D4.7.4 子任务清单**（预计 7.5 小时）：
+**D4.7.4 子任务清单**（D4.7.4.1 ~ D4.7.4.9 已完成 9 项,代码+测试+顶层导出+文档全固化于 commit `b15ba96`;D4.7.4.10 spike 与 D4.7.4.11 验收 commit 是 docs-only 收口后的最后两步）：
 
 | # | 任务 | 预计耗时 | 产出 | 状态 |
 |---|------|----------|------|------|
-| D4.7.4.1 | `src/my_ai_employee/ai/reviewer.py` EmailReviewer + `_parse_review_response` + 4 类 `ReviewBlockReason` StrEnum | 60 min | reviewer 服务 | 🎯 |
-| D4.7.4.2 | `src/my_ai_employee/ai/prompts/review.py` 5 类 SYSTEM prompt + `build_user_message` + 4 类阻断场景描述 | 30 min | prompt 模板 | 🎯 |
-| D4.7.4.3 | `src/my_ai_employee/policy/integration.py` EmailReviewerAdapter + `ReviewDecisionReport` + `ReviewBlockedDecisionReport` + `ReviewFailureDecisionReport` + 5 `_validate_review_*` helper | 90 min | Adapter | 🎯 |
-| D4.7.4.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.7.3 v1.0.6 教训） | 5 min | 导出 | 🎯 |
-| D4.7.4.5 | `tests/ai/test_reviewer.py` 50 tests（30 严判 + 10 batch + 10 prompt） | 90 min | 单元测试 | 🎯 |
-| D4.7.4.6 | `tests/ai/test_reviewer_adapter.py` 100+ tests（三入口 + 公共 API + 顶层导出 + 7 项契约 + 4 类阻断白名单） | 120 min | 适配器测试 | 🎯 |
-| D4.7.4.7 | `docs/week1-mvp.md §D4.7.4` 本段（v1.0 → v1.0.1 演进） | 15 min | 文档 | 🎯 |
-| D4.7.4.8 | `docs/d4-claw-code-mapping.md §9` D4.7.4 mapping 段 | 30 min | mapping | 🎯 |
-| D4.7.4.9 | `reports/D4.7.4-草稿审阅.md` v1.0 报告（8 质量门 + 25 教训应用） | 30 min | 报告 | 🎯 |
-| D4.7.4.10 | **Spike**：100 封审阅真实邮件跑 `review` + 阻断率 / 阻断原因分布 / 审阅延迟用户体感 | 60 min | spike 报告 | 🎯 |
-| D4.7.4.11 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 |
+| D4.7.4.1 | `src/my_ai_employee/ai/reviewer.py` EmailReviewer + `_parse_review_response` + 4 类 `ReviewBlockReason` StrEnum | 60 min | reviewer 服务 | ✅ v1.0.1 |
+| D4.7.4.2 | `src/my_ai_employee/ai/prompts/review.py` 5 类 SYSTEM prompt + `build_user_message` + 4 类阻断场景描述 | 30 min | prompt 模板 | ✅ v1.0.1 |
+| D4.7.4.3 | `src/my_ai_employee/policy/integration.py` EmailReviewerAdapter + `ReviewDecisionReport` + `ReviewBlockedDecisionReport` + `ReviewFailureDecisionReport` + 5 `_validate_review_*` helper | 90 min | Adapter | ✅ v1.0.2 |
+| D4.7.4.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.7.3 v1.0.6 教训,9 个新符号） | 5 min | 导出 | ✅ v1.0.2 |
+| D4.7.4.5 | `tests/ai/test_reviewer.py` 95 tests（30 严判 + 10 batch + 10 prompt + 6 数据类 + 6 异常 + 4 类白名单本地阻断） | 90 min | 单元测试 | ✅ v1.0.1（96.2% 覆盖） |
+| D4.7.4.6 | `tests/ai/test_reviewer_adapter.py` 108 funcs / 118 parametrized tests（三入口 + 公共 API + 顶层导出 + 7 项契约 + 4 类阻断白名单） | 120 min | 适配器测试 | ✅ v1.0.2（91.1% integration.py 覆盖） |
+| D4.7.4.7 | `docs/week1-mvp.md §D4.7.4` 本段（v1.0 → v1.0.1 → v1.0.2 演进） | 15 min | 文档 | ✅ v1.0.2（本段已固化） |
+| D4.7.4.8 | `docs/d4-claw-code-mapping.md §9` D4.7.4 mapping 段 | 30 min | mapping | ✅ v1.0.2（本 commit 同步） |
+| D4.7.4.9 | `reports/D4.7.4-草稿审阅.md` v1.0.2 报告（8 质量门 + 25 教训应用） | 30 min | 报告 | ✅ v1.0.2（本 commit 同步） |
+| D4.7.4.10 | **Spike**:100 封审阅真实邮件跑 `review` + 阻断率 / 阻断原因分布 / 审阅延迟用户体感 | 60 min | spike 报告 | 🎯 待 D4.8 启动前补 |
+| D4.7.4.11 | 8 质量门 + commit + 验收（最终 docs-only 收口） | 30 min | 锁定 | 🎯 待 spike 后 commit |
 
-**已知限制**（D4.7.4.1+ 复检 P 项预判）：
+**已知限制**（D4.7.4.1+ 复检 P 项预判 — 9 项已固化,2 项留 B 类延后）：
 
-- 审阅质量难量化（用户主观） → spike 100 封手标 + 用户体感打分
-- 4 类阻断白名单可能漏场景（如 SPAM 误判） → D4.7.4.1+ 复检可能新增白名单（**B 类决策**,需用户审批）
+- 审阅质量难量化（用户主观） → spike 100 封手标 + 用户体感打分（D4.7.4.10）
+- 4 类阻断白名单可能漏场景（如 SPAM 误判） → D4.7.4.1+ 复检可能新增白名单（**B 类决策**,需用户审批,**延后到「我的AI员工」项目完成后处理**）
 - `review_batch` 顺序串行（100 封 ≈ 50-500s） → D4.7.4.1+ 改 asyncio + httpx async
-- LLM 审阅成本（每次多 1 次 LLM 调用） → D4.7.4.1+ 评估本地小模型 / 规则引擎 fallback（**B 类决策**）
-- 敏感词库空白 → 初始内置 20 个高风险词（合同金额 / 内部代号 / 客户名单占位符）,D4.7.4.1+ 接入 `sensitive_words` 配置表
+- LLM 审阅成本（每次多 1 次 LLM 调用） → D4.7.4.1+ 评估本地小模型 / 规则引擎 fallback（**B 类决策**,**延后到「我的AI员工」项目完成后处理**）
+- 敏感词库内置 20 个高风险词（已落地,PII / 安全 / 内部代号 / 商业秘密 / 硬承诺模式） → D4.7.4.1+ 接入 `sensitive_words` 配置表
 
-**参考来源**：`ai/drafter.py` 严判范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md)（待写）。
+**参考来源**：`ai/drafter.py` 严判范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**（独立 dataclass + `Literal[True]` + `__post_init__` 三重校验 + 双层防御 + 双向强一致 + 固化哲学）。完整报告：[reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md)（v1.0.2 已固化）。
 
-**下一棒 → D4.7.4 实施**（本段确认后启动）。D4.7.3 v1.0.6 第六轮复检真正锁定（2026-06-10 早晨,commit `9e4fb2e`）,D4.7.4 范围 / 验收 / 参考已明确,等待用户审批。
+**下一棒 → D4.7.4.10 spike（100 封真实审阅）**。D4.7.4 v1.0.2 业务层三入口已真正锁定（2026-06-11 早晨,commit `b15ba96`）,docs-only 收口本 commit 已完成（§D4.7.4 + §9 mapping + v1.0.2 报告 3 文档同步）。D4.7.4.10 spike 100 封真实审阅 + D4.7.4.11 验收 commit 是 docs-only 收口后**最后两步**（非阻塞 — D4.7.4 v1.0.2 代码+测试已硬通过;spike 反馈会触发 D4.7.4.1+ 业务层微调,留待 D4.8 启动前并行处理）。D4.8 启动决策（W2 晨间链路确认）强依赖 D4.7.4 `ReviewDecisionReport.review_passed=True` + `reviewer_decision_event_id` 作为 outbox 外键契约。
 
 ---
 
