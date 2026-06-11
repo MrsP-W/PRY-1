@@ -2895,6 +2895,1193 @@ class EmailDrafterAdapter:
         )
 
 
+# ===== D4.7.4 业务层接入(草稿审阅)=====
+# 承接 D4.7.3 EmailDrafterAdapter 三入口架构(成功 / 业务阻断 / 技术失败)
+# + 7 项核心契约,在第二个真实业务场景(审阅)上复用。
+
+# ===== 4 类业务阻断白名单(week1-mvp.md:772 锁定,扩枚举需 B 类决策)=====
+_REVIEW_BLOCK_REASON_VALUES: frozenset[str] = frozenset(
+    {"sensitive_word_hit", "template_violation", "tone_mismatch", "factual_conflict"}
+)
+
+# 审阅 review_summary 上下界(week1-mvp.md:800 锁定)
+_REVIEW_SUMMARY_MAX_CHARS: int = 2000
+_REVIEW_SUMMARY_MIN_CHARS: int = 1
+
+
+# ===== 公共严判 helper(D4.7.3 v1.0.5 P1 范本:严判下沉到 helper)=====
+
+
+def _validate_review_block_reason(reason: Any) -> str:
+    """严判 block_reason ∈ 4 类业务阻断白名单(week1-mvp.md:772 锁定).
+
+    Raises:
+        ValueError: type 错 / 不在白名单
+    """
+    if type(reason) is not str:
+        raise ValueError(f"block_reason 必须是 str, 实际 {type(reason).__name__}={reason!r}")
+    # D4.7.3 v1.0.5 P2-1 范本: type 严判在前, 防 unhashable 抛 TypeError 泄漏
+    if reason not in _REVIEW_BLOCK_REASON_VALUES:
+        raise ValueError(
+            f"block_reason 必须在 {sorted(_REVIEW_BLOCK_REASON_VALUES)} 之一, 实际 {reason!r}"
+        )
+    return reason
+
+
+def _validate_review_summary(summary: Any) -> str:
+    """严判 review_summary 必填非空 str, 1-2000 字符(week1-mvp.md:800 锁定).
+
+    Raises:
+        ValueError: type 错 / 空白 / 超 2000
+    """
+    if type(summary) is not str:
+        raise ValueError(f"review_summary 必须是 str, 实际 {type(summary).__name__}={summary!r}")
+    if not summary.strip():
+        # D4.7.3 v1.0.4 P1-1 范本: strip() 语义非空校验
+        raise ValueError(
+            f"review_summary 必填非空白 str(strip() 非空), 实际 "
+            f"{type(summary).__name__}={summary!r}"
+        )
+    if len(summary) > _REVIEW_SUMMARY_MAX_CHARS:
+        raise ValueError(
+            f"review_summary 字符数必须 <= {_REVIEW_SUMMARY_MAX_CHARS}, 实际 {len(summary)}"
+        )
+    return summary
+
+
+def _validate_review_passed(review_passed: Any) -> bool:
+    """严判 review_passed 必为原生 bool(拒 str 真值陷阱, 拒 bool 子类)."""
+    if type(review_passed) is not bool:
+        raise ValueError(
+            f"review_passed 必须是原生 bool, 实际 {type(review_passed).__name__}={review_passed!r}"
+        )
+    return review_passed
+
+
+def _validate_review_flagged_issues(
+    issues: Any,
+    *,
+    required: bool,
+) -> list[str]:
+    """严判 flagged_issues: list[str] / [], required 时必非空.
+
+    Args:
+        issues: 待严判的字段
+        required: True=阻断时必非空 / False=成功时可空
+
+    Raises:
+        ValueError: type 错 / required 时为空 / 元素非 str
+    """
+    if not isinstance(issues, list):
+        raise ValueError(f"flagged_issues 必须是 list, 实际 {type(issues).__name__}={issues!r}")
+    for idx, item in enumerate(issues):
+        if type(item) is not str:
+            raise ValueError(
+                f"flagged_issues[{idx}] 必须是 str, 实际 {type(item).__name__}={item!r}"
+            )
+    if required and not issues:
+        raise ValueError("flagged_issues 阻断时必非空(week1-mvp.md:772 锁定)")
+    return list(issues)
+
+
+def _validate_review_blocked_word(
+    blocked_word: Any,
+    *,
+    reason: str | None,
+) -> str:
+    """严判 blocked_word + reason 跨字段一致(week1-mvp.md:788 锁定契约).
+
+    - reason=sensitive_word_hit → blocked_word 必非空白 str
+    - 其他 reason → blocked_word 必为空字符串(防 URGENT 邮件错误填命中词)
+
+    Raises:
+        ValueError: type 错 / 跨字段矛盾
+    """
+    if type(blocked_word) is not str:
+        raise ValueError(
+            f"blocked_word 必须是 str, 实际 {type(blocked_word).__name__}={blocked_word!r}"
+        )
+    if reason == "sensitive_word_hit":
+        if not blocked_word.strip():
+            raise ValueError(
+                f"reason='sensitive_word_hit' 时 blocked_word 必填非空白 str "
+                f"(week1-mvp.md:788 跨字段锁定), 实际 {blocked_word!r}"
+            )
+    else:
+        if blocked_word:
+            raise ValueError(
+                f"reason={reason!r} 时 blocked_word 必须为空字符串 "
+                f"(week1-mvp.md:788 跨字段锁定, 防 URGENT 误填命中词), "
+                f"实际 {blocked_word!r}"
+            )
+    return str(blocked_word)
+
+
+# ===== 3 条 acceptance_criteria(D4.7.4 范本)=====
+
+
+def compute_review_acceptance(
+    *,
+    review_passed: bool,
+    review_summary: str,
+    latency_ms: int,
+) -> list[bool]:
+    """由 ReviewResult 计算 3 条 acceptance_criteria 是否 pass.
+
+    3 条 AC(week1-mvp.md:796 锁定, 与 build_review_packet 严判 1:1 对齐):
+      [0] review_passed=True(LLM 审阅通过)
+      [1] review_summary 非空(1-2000 字符)
+      [2] latency_ms < 5000(单封审阅 < 5s, 草稿生成 < 10s 的 1/2)
+
+    Returns:
+        list[bool](PolicyEngine 严判 type() is bool, D4.4 P1 教训)
+
+    Raises:
+        ValueError: 参数 type 错 / 越界
+    """
+    _validate_review_passed(review_passed)
+    _validate_review_summary(review_summary)
+    _validate_draft_latency_ms(latency_ms)
+    return [
+        bool(review_passed),
+        bool(_REVIEW_SUMMARY_MIN_CHARS <= len(review_summary) <= _REVIEW_SUMMARY_MAX_CHARS),
+        bool(latency_ms < _DRAFT_MAX_LATENCY_MS),
+    ]
+
+
+# ===== TaskPacket factory(沿用 D4.7.3 build_draft_packet 范本)=====
+
+
+def build_review_packet(
+    *,
+    email_id: int,
+    source: str,
+    tone: str | DraftTone,
+    model_full_id: str,
+    body_length: int,
+) -> TaskPacket:
+    """D4.7.4 业务模板: 草稿审阅任务 → TaskPacket (8 必含字段).
+
+    与 D4.7.3 build_draft_packet 范本对齐, 业务字段不同:
+      - acceptance_criteria: [review_passed, summary 1-2000, latency<5000ms]
+      - objective: "email_review:source=...:id=..."
+
+    Args:
+        email_id: 邮件主键(emails.id)
+        source: 邮件来源 "qq" / "outlook" / "gmail"
+        tone: 3 类枚举值 (FORMAL / FRIENDLY / CONCISE)
+        model_full_id: 实际调用的 provider/model (如 "deepseek/deepseek-chat")
+        body_length: 草稿正文长度(字符数, 与 draft.body 1:1)
+
+    Returns:
+        TaskPacket(8 字段, 与 SyncPolicyAdapter 范本对齐)
+
+    Raises:
+        ValueError: 参数 type 错 / 越界
+    """
+    if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+        raise ValueError(
+            f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+        )
+    if type(source) is not str or not source.strip():
+        raise ValueError(
+            f"source 必填非空白 str(strip() 非空), 实际 {type(source).__name__}={source!r}"
+        )
+    _validate_draft_tone(tone)
+    if type(model_full_id) is not str or not model_full_id.strip():
+        raise ValueError(
+            f"model_full_id 必填非空白 str(strip() 非空), 实际 "
+            f"{type(model_full_id).__name__}={model_full_id!r}"
+        )
+    # D4.7.3 v1.0.4 P1-2 范本: body_length 严判 10-8000 区间(契约 1 固定, 与 drafter 对齐)
+    _validate_draft_body_length_range(body_length)
+
+    return TaskPacket(
+        objective=f"email_review:source={source}:id={email_id}",
+        scope=["ai/reviewer.py", "core/models.py"],
+        resources=["db:sqlcipher", "llm:router"],
+        # D4.7.3 v1.0.3 P2-3 范本: acceptance_criteria 固定契约描述字符串, 不写自证式
+        acceptance_criteria=[
+            "review_passed=true",
+            "1<=review_summary<=2000",
+            "latency<5000ms",
+        ],
+        model=model_full_id,
+        provider=model_full_id.split("/", 1)[0] if "/" in model_full_id else "unknown",
+        # D4.7.4 范本: 审阅只读草稿, READ_ONLY(与 drafter 一致)
+        permission_profile=PermissionProfile.READ_ONLY.value,
+        recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
+    )
+
+
+def build_review_blocked_packet(
+    *,
+    email_id: int,
+    source: str,
+    tone: str | DraftTone,
+    reason: str,
+    blocked_word: str,
+    original_email_category: str,
+) -> TaskPacket:
+    """D4.7.4 业务模板: 业务阻断草稿审阅 → TaskPacket.
+
+    与 D4.7.3 build_draft_blocked_packet 范本对齐, 业务字段不同:
+      - objective: "email_review_blocked:..." 前缀
+      - acceptance_criteria: 4 类 reason 白名单 + 跨字段校验 blocked_word
+      - reason 锁定 4 类白名单(week1-mvp.md:772 锁定)
+
+    Raises:
+        ValueError: 参数 type 错 / reason 不在白名单 / 跨字段矛盾
+    """
+    if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+        raise ValueError(
+            f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+        )
+    if type(source) is not str or not source.strip():
+        raise ValueError(
+            f"source 必填非空白 str(strip() 非空), 实际 {type(source).__name__}={source!r}"
+        )
+    _validate_draft_tone(tone)
+    _validate_review_block_reason(reason)
+    # 跨字段校验: reason=sensitive_word_hit → blocked_word 必非空
+    _validate_review_blocked_word(blocked_word, reason=reason)
+    # original_email_category 严判 ∈ 5 类(与 drafter 范本对齐)
+    if type(original_email_category) is not str or not original_email_category:
+        raise ValueError(
+            f"original_email_category 必填非空 str, 实际 "
+            f"{type(original_email_category).__name__}={original_email_category!r}"
+        )
+    _validate_classify_category(original_email_category)
+
+    return TaskPacket(
+        objective=f"email_review_blocked:source={source}:id={email_id}",
+        scope=["ai/reviewer.py", "core/models.py"],
+        resources=["db:sqlcipher", "llm:router"],
+        acceptance_criteria=[
+            f"reason={reason}",
+            f"original_email_category={original_email_category}",
+            f"blocked_word={blocked_word[:80]}",  # 截断 80 防 prompt 撑爆
+        ],
+        model="unknown",  # 阻断路径无 LLM 调用, 标记 unknown
+        provider="unknown",
+        permission_profile=PermissionProfile.READ_ONLY.value,
+        recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
+    )
+
+
+def build_review_failure_packet(
+    *,
+    email_id: int,
+    source: str,
+    last_error_str: str,
+    consecutive_review_failures: int,
+) -> TaskPacket:
+    """D4.7.4 业务模板: 技术失败审阅 → TaskPacket(独立 factory, D4.7.3 v1.0.2 P1-1 范本).
+
+    与 build_review_blocked_packet 差异(关键):
+      - objective: "email_review_failed:..." 前缀(便于 lane 串联)
+      - acceptance_criteria: 3 条技术失败相关(无 reason / blocked_word 业务字段)
+      - last_error_str 截断到 100 字符(防 prompt 撑爆)
+      - consecutive_review_failures 必填 >= 1(确为失败, 不是首次)
+
+    Raises:
+        ValueError: 参数 type 错 / consecutive_review_failures < 1
+    """
+    if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+        raise ValueError(
+            f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+        )
+    if type(source) is not str or not source.strip():
+        raise ValueError(
+            f"source 必填非空白 str(strip() 非空), 实际 {type(source).__name__}={source!r}"
+        )
+    if type(last_error_str) is not str or not last_error_str.strip():
+        raise ValueError(
+            f"last_error_str 必填非空白 str(strip() 非空), 实际 "
+            f"{type(last_error_str).__name__}={last_error_str!r}"
+        )
+    if (
+        type(consecutive_review_failures) is bool
+        or not isinstance(consecutive_review_failures, int)
+        or consecutive_review_failures < 1
+    ):
+        raise ValueError(
+            f"consecutive_review_failures 必须是原生 int >= 1, 实际 "
+            f"{type(consecutive_review_failures).__name__}="
+            f"{consecutive_review_failures!r}"
+        )
+
+    return TaskPacket(
+        objective=f"email_review_failed:source={source}:id={email_id}",
+        scope=["ai/reviewer.py", "core/models.py"],
+        resources=["db:sqlcipher", "llm:router"],
+        acceptance_criteria=[
+            f"last_error={last_error_str[:100]}",
+            f"consecutive_review_failures={consecutive_review_failures}",
+            "retry_policy=retry_on_transient",
+        ],
+        model="unknown",
+        provider="unknown",
+        permission_profile=PermissionProfile.READ_ONLY.value,
+        recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
+    )
+
+
+def build_review_policy_context(
+    *,
+    tone: str | DraftTone,
+    latency_ms: int,
+    body_length: int,
+    last_review_failed: bool = False,
+    consecutive_review_failures: int = 0,
+    branch_stale: bool = False,
+    now_ms: int | None = None,
+) -> dict[str, Any]:
+    """ReviewResult → PolicyEngine context (12 字段严判, 沿用 D4.7.3 范本).
+
+    字段映射(对照 D4.7.3 build_draft_policy_context):
+      - last_error_recoverable: last_review_failed AND 0 < cf < 3
+      - current_attempts: consecutive_review_failures(透传, D4.7.3 v1.0.4 P2-3 范本)
+      - max_attempts: 3
+      - branch_stale: caller 决定
+      - last_heartbeat_ms / stale_threshold_ms / now_ms: 默认 0
+      - action_sensitive: False(审阅是 READ_ONLY + 待人工审)
+      - has_approval_token: True(审阅无需审批, 仅写入 review_logs 表)
+      - approval_token_id: ""
+      - acceptance_results: [review_passed=true, 1<=summary<=2000, latency<5000]
+        (与 build_review_packet / compute_review_acceptance 严判 1:1 对齐)
+      - policy_eval_failed: last_review_failed AND cf >= 3
+
+    D4.7.3 v1.0.5 P1-2 范本: last_review_failed 与 consecutive_review_failures
+    双向强一致(防矛盾状态):
+      - last_review_failed=True → 必配 cf >= 1
+      - last_review_failed=False → 必配 cf == 0
+
+    Raises:
+        ValueError: 参数 type 错 / 双向强一致矛盾
+    """
+    import time
+
+    # 业务字段走严判 helper(下沉, 任何 caller 都受保护)
+    _validate_draft_tone(tone)
+    _validate_draft_latency_ms(latency_ms)
+    _validate_draft_body_length(body_length)
+
+    if type(last_review_failed) is not bool:
+        raise ValueError(
+            f"last_review_failed 必须是原生 bool, 实际 "
+            f"{type(last_review_failed).__name__}={last_review_failed!r}"
+        )
+    if (
+        type(consecutive_review_failures) is bool
+        or not isinstance(consecutive_review_failures, int)
+        or consecutive_review_failures < 0
+    ):
+        raise ValueError(
+            f"consecutive_review_failures 必须是原生 int >= 0, 实际 "
+            f"{type(consecutive_review_failures).__name__}="
+            f"{consecutive_review_failures!r}"
+        )
+    if type(branch_stale) is not bool:
+        raise ValueError(f"branch_stale 必须是原生 bool, 实际 {type(branch_stale).__name__}")
+    if now_ms is not None and type(now_ms) is not int:
+        raise ValueError(
+            f"now_ms 必须是 int 或 None(非 bool), 实际 {type(now_ms).__name__}={now_ms!r}"
+        )
+
+    # 双向强一致(D4.7.3 v1.0.5 P1-2 范本)
+    if last_review_failed and consecutive_review_failures < 1:
+        raise ValueError(
+            f"last_review_failed=True 时 consecutive_review_failures 必须 >= 1, "
+            f"实际 last_review_failed={last_review_failed!r} "
+            f"consecutive_review_failures={consecutive_review_failures!r}"
+        )
+    if not last_review_failed and consecutive_review_failures > 0:
+        raise ValueError(
+            f"last_review_failed=False 时 consecutive_review_failures 必须 == 0, "
+            f"实际 last_review_failed={last_review_failed!r} "
+            f"consecutive_review_failures={consecutive_review_failures!r}"
+        )
+
+    recoverable = bool(last_review_failed and 0 < consecutive_review_failures < 3)
+    policy_eval_failed = bool(last_review_failed and consecutive_review_failures >= 3)
+
+    return {
+        "last_error_recoverable": recoverable,
+        "current_attempts": consecutive_review_failures,
+        "max_attempts": 3,
+        "branch_stale": branch_stale,
+        "last_heartbeat_ms": 0,
+        "stale_threshold_ms": 60_000,
+        "now_ms": now_ms if now_ms is not None else int(time.time() * 1000),
+        "action_sensitive": False,  # 审阅写入 review_logs 表, 待人工审
+        "has_approval_token": True,
+        "approval_token_id": "",
+        # 成功路径 3 AC(review_passed=true / summary 1-2000 / latency<5000)
+        "acceptance_results": compute_review_acceptance(
+            review_passed=not last_review_failed,
+            review_summary="OK",  # synthetic, 成功路径用 OK 占位
+            latency_ms=latency_ms,
+        ),
+        "policy_eval_failed": policy_eval_failed,
+    }
+
+
+# ===== D4.7.4 报告数据类(强一致 + 入口预校验双层防御)=====
+
+
+@dataclass(frozen=True)
+class ReviewDecisionReport:
+    """D4.7.4 业务层接入的可观测报告(成功审阅版本).
+
+    复用 D4.7.3 DraftDecisionReport 范本:
+      - evaluation / event_id / lane_entry_id / liveness
+      - 业务侧字段: review_passed / review_summary / flagged_issues / tone /
+        model_full_id / email_id / latency_ms / category
+
+    Attributes:
+        evaluation: PolicyEngine.evaluate() 完整结果
+        event_id: 落地到 events 表的 PolicyDecisionEvent id
+        lane_entry_id: LaneBoard 中本次审阅的 entry_id
+        liveness: Heartbeat 评估的 Liveness
+        review_passed: Literal[True](类型层面固化成功语义, 替代 v0 的 bool)
+        review_summary: 1-2000 字符(week1-mvp.md:800 锁定)
+        flagged_issues: list[str](成功时可空, 阻断时必非空)
+        tone: 3 类枚举值(DraftTone.value)
+        model_full_id: 实际调用的 provider/model
+        email_id: 邮件主键 >= 0
+        latency_ms: 审阅耗时 >= 0
+        category: 5 类邮件分类之一(D4.6 分类结果透传)
+    """
+
+    evaluation: PolicyEvaluation
+    event_id: int | None
+    lane_entry_id: str
+    liveness: Liveness
+    review_passed: Literal[True]  # 类型层面固化成功语义
+    review_summary: str  # 1-2000 字符
+    flagged_issues: list[str]  # 成功时可空
+    tone: str  # DraftTone.value
+    model_full_id: str  # 非空白
+    email_id: int  # >= 0
+    latency_ms: int  # >= 0
+    category: str  # 5 类之一
+    body_length: int = 0  # 默认 0, 兼容旧调用
+
+    def __post_init__(self) -> None:
+        """D4.7.4 字段契约自洽校验(7 项核心契约 + 3 类入口数据类一致范本)."""
+        if self.review_passed is not True:
+            raise ValueError(
+                f"ReviewDecisionReport.review_passed 必为 True "
+                f"(D4.7.4 Literal[True] 类型层面固化, 成功审阅专属), "
+                f"实际 {self.review_passed!r}"
+            )
+        _validate_review_summary(self.review_summary)
+        _validate_review_flagged_issues(self.flagged_issues, required=False)
+        _validate_draft_tone(self.tone)
+        if type(self.model_full_id) is not str or not self.model_full_id.strip():
+            raise ValueError(
+                f"ReviewDecisionReport.model_full_id 必填非空白 str(strip() 非空), 实际 "
+                f"{type(self.model_full_id).__name__}={self.model_full_id!r}"
+            )
+        if type(self.email_id) is bool or not isinstance(self.email_id, int) or self.email_id < 0:
+            raise ValueError(
+                f"ReviewDecisionReport.email_id 必须是 int(非 bool) >= 0, 实际 "
+                f"{type(self.email_id).__name__}={self.email_id!r}"
+            )
+        _validate_draft_latency_ms(self.latency_ms)
+        _validate_classify_category(self.category)
+        # D4.7.4: body_length 10-8000 区间(与 drafter 契约 1 对齐, 防 0/9/8001 绕过)
+        if type(self.body_length) is bool or not isinstance(self.body_length, int):
+            raise ValueError(
+                f"ReviewDecisionReport.body_length 必须是 int(非 bool), 实际 "
+                f"{type(self.body_length).__name__}={self.body_length!r}"
+            )
+        if self.body_length < 0:
+            raise ValueError(f"ReviewDecisionReport.body_length 必须 >= 0, 实际 {self.body_length}")
+
+
+@dataclass(frozen=True)
+class ReviewBlockedDecisionReport:
+    """D4.7.4 业务层接入的可观测报告(业务阻断版本).
+
+    D4.7.4 范本(沿用 D4.7.3 v1.0.3 P2-1 字段名硬区分):
+      - blocked: Literal[True](业务阻断专属字段名, 不可与 failed 混用)
+      - kind: Literal["business_blocked"](D4.7.3 v1.0.2 P2-1 类型层面固化)
+      - reason: 4 类白名单(week1-mvp.md:772 锁定)
+      - blocked_word: 跨字段校验(reason=sensitive_word_hit 必非空, week1-mvp.md:788)
+
+    Attributes:
+        evaluation: PolicyEngine.evaluate() 完整结果
+        event_id: 落地到 events 表的 PolicyDecisionEvent id
+        lane_entry_id: LaneBoard 中本次阻断的 entry_id
+        liveness: Heartbeat 评估的 Liveness
+        blocked: Literal[True](业务阻断专属字段名, 替代 v1.0.2 的 failed)
+        kind: Literal["business_blocked"](与 ReviewFailureDecisionReport 区分)
+        last_error: 阻断原因描述(必填非空, 截断 200)
+        consecutive_review_failures: 必为 0(业务阻断不计入失败累加器)
+        tone: 3 类枚举值
+        reason: 4 类白名单之一
+        blocked_word: 命中词(reason=sensitive_word_hit 必非空, 其他必空)
+        flagged_issues: 阻断时必非空
+        review_summary: 1-2000 字符
+        original_email_category: 触发阻断的邮件分类(5 类之一)
+        email_id: 邮件主键
+    """
+
+    evaluation: PolicyEvaluation
+    event_id: int | None
+    lane_entry_id: str
+    liveness: Liveness
+    last_error: str  # 必填非空(>0 字符)
+    tone: str  # DraftTone.value
+    reason: str  # 4 类白名单
+    blocked_word: str  # 跨字段校验
+    flagged_issues: list[str]  # 阻断时必非空
+    review_summary: str  # 1-2000 字符
+    original_email_category: str  # 5 类之一
+    email_id: int  # >= 0
+    # 业务阻断不计入失败累加器, consecutive_review_failures 必为 0
+    consecutive_review_failures: int = 0
+    # 字段名硬区分(D4.7.3 v1.0.3 P2-1 范本)
+    blocked: Literal[True] = True
+    kind: Literal["business_blocked"] = "business_blocked"
+
+    def __post_init__(self) -> None:
+        """D4.7.4 业务阻断字段契约校验(7 项核心契约 + 4 类白名单)."""
+        if self.blocked is not True:
+            raise ValueError(
+                f"ReviewBlockedDecisionReport.blocked 必为 True "
+                f"(D4.7.4 Literal[True] 类型层面固化, 业务阻断专属字段名), "
+                f"实际 {self.blocked!r}"
+            )
+        if self.kind != "business_blocked":
+            raise ValueError(
+                f"ReviewBlockedDecisionReport.kind 必为 'business_blocked' "
+                f"(D4.7.4 类型层面固化, 与 ReviewFailureDecisionReport 区分), "
+                f"实际 {self.kind!r}"
+            )
+        if type(self.last_error) is not str or not self.last_error.strip():
+            raise ValueError(
+                f"ReviewBlockedDecisionReport.last_error 必填非空白 str(strip() 非空), 实际 "
+                f"{type(self.last_error).__name__}={self.last_error!r}"
+            )
+        if (
+            not isinstance(self.consecutive_review_failures, int)
+            or isinstance(self.consecutive_review_failures, bool)
+            or self.consecutive_review_failures != 0
+        ):
+            # D4.7.4: 业务阻断 cf 必为 0(不计入失败累加器)
+            raise ValueError(
+                f"ReviewBlockedDecisionReport.consecutive_review_failures 业务阻断必为 0 "
+                f"(D4.7.4 业务阻断不计入失败累加器, 与 ReviewFailureDecisionReport "
+                f"cf>=1 区分), 实际 "
+                f"{type(self.consecutive_review_failures).__name__}="
+                f"{self.consecutive_review_failures!r}"
+            )
+        _validate_draft_tone(self.tone)
+        _validate_review_block_reason(self.reason)
+        _validate_review_blocked_word(self.blocked_word, reason=self.reason)
+        _validate_review_flagged_issues(self.flagged_issues, required=True)
+        _validate_review_summary(self.review_summary)
+        _validate_classify_category(self.original_email_category)
+        if type(self.email_id) is bool or not isinstance(self.email_id, int) or self.email_id < 0:
+            raise ValueError(
+                f"ReviewBlockedDecisionReport.email_id 必须是 int(非 bool) >= 0, 实际 "
+                f"{type(self.email_id).__name__}={self.email_id!r}"
+            )
+
+
+@dataclass(frozen=True)
+class ReviewFailureDecisionReport:
+    """D4.7.4 业务层接入的可观测报告(技术失败版本).
+
+    D4.7.4 范本(沿用 D4.7.3 v1.0.2 P1-1 独立类型):
+      - failed: Literal[True](技术失败专属字段名, 与 blocked 不可混用)
+      - last_error: 失败原因描述
+      - consecutive_review_failures: 必填 >= 1(技术失败必计入失败累加器)
+
+    Attributes:
+        evaluation: PolicyEngine.evaluate() 完整结果
+        event_id: 落地到 events 表的 PolicyDecisionEvent id
+        lane_entry_id: LaneBoard 中本次失败的 entry_id
+        liveness: Heartbeat 评估的 Liveness
+        failed: Literal[True](技术失败专属字段名)
+        last_error: 失败原因(必填非空, 截断 200)
+        consecutive_review_failures: 必填 >= 1
+    """
+
+    evaluation: PolicyEvaluation
+    event_id: int | None
+    lane_entry_id: str
+    liveness: Liveness
+    failed: Literal[True]  # 必为 True(类型层面与成功 / 业务阻断区分)
+    last_error: str  # 必填非空
+    consecutive_review_failures: int  # 必填 >= 1
+
+    def __post_init__(self) -> None:
+        """D4.7.4 技术失败字段契约校验(三重校验范本)."""
+        if self.failed is not True:
+            raise ValueError(
+                f"ReviewFailureDecisionReport.failed 必为 True "
+                f"(Literal[True] 类型层面固化, D4.7.4 范本), 实际 {self.failed!r}"
+            )
+        if type(self.last_error) is not str or not self.last_error.strip():
+            raise ValueError(
+                f"ReviewFailureDecisionReport.last_error 必填非空白 str(strip() 非空), 实际 "
+                f"{type(self.last_error).__name__}={self.last_error!r}"
+            )
+        if (
+            not isinstance(self.consecutive_review_failures, int)
+            or isinstance(self.consecutive_review_failures, bool)
+            or self.consecutive_review_failures < 1
+        ):
+            raise ValueError(
+                f"ReviewFailureDecisionReport.consecutive_review_failures 必须是 int(非 bool) >= 1"
+                f"(D4.7.4: 技术失败必填 cf, 与业务阻断 cf=0 区分), 实际 "
+                f"{type(self.consecutive_review_failures).__name__}="
+                f"{self.consecutive_review_failures!r}"
+            )
+
+
+# ===== D4.7.4 业务层适配器主类 =====
+
+
+class EmailReviewerAdapter:
+    """D4.7.4 业务层接入适配器 — EmailReviewer 接入 PolicyEngine 4 件套.
+
+    复用 D4.7.3 EmailDrafterAdapter 三入口架构:
+      - event_store: 落 PolicyDecisionEvent(D4.3)
+      - engine: PolicyEngine(D4.4 决策引擎)
+      - heartbeat: Heartbeat(LLM 探活)
+      - board: LaneBoard(审阅任务看板)
+
+    三入口互斥(沿用 D4.7.3 v1.0.1 P1-1 拆分):
+      - review_and_emit(成功, review_passed=True) → ReviewDecisionReport
+      - record_review_business_blocked_and_emit(业务阻断, 4 类白名单)
+        → ReviewBlockedDecisionReport, kind="business_blocked"
+      - record_review_failure_and_emit(技术失败, LLM 异常)
+        → ReviewFailureDecisionReport, failed: Literal[True]
+    """
+
+    def __init__(
+        self,
+        *,
+        source: str,
+        event_store: EventStore | None = None,
+        engine: PolicyEngine | None = None,
+        heartbeat: Heartbeat | None = None,
+        board: LaneBoard | None = None,
+    ) -> None:
+        # D4.7.3 v1.0.5 P2-2 范本: source 严判 strip() 语义非空
+        if not isinstance(source, str) or not source.strip():
+            raise ValueError(
+                f"source 必填非空白 str(strip() 非空), 实际 {type(source).__name__}={source!r}"
+            )
+        self._source = source
+        self._event_store = event_store
+        # D4.7.3 v1.0.3 P2-2 范本: is None 范式(保留 falsey 替身)
+        self._engine = engine if engine is not None else PolicyEngine()
+        self._heartbeat = (
+            heartbeat if heartbeat is not None else Heartbeat(idle_threshold_ms=30_000)
+        )
+        self._board = board if board is not None else LaneBoard(idle_threshold_ms=60_000)
+
+    def build_lane_entry_id(self, run_id: str) -> str:
+        """生成 LaneBoard entry_id: 'review:<source>:<run_id>'."""
+        if not isinstance(run_id, str) or not run_id.strip():
+            raise ValueError(
+                f"run_id 必填非空白 str(strip() 非空), 实际 {type(run_id).__name__}={run_id!r}"
+            )
+        return f"review:{self._source}:{run_id}"
+
+    def record_to_lane(
+        self,
+        *,
+        run_id: str,
+        status: LaneStatus,
+        objective: str = "",
+        owner: str = "email_reviewer",
+    ) -> LaneEntry:
+        """LaneBoard 记录: add (ACTIVE/BLOCKED) 或 update (FINISHED)."""
+        entry_id = self.build_lane_entry_id(run_id)
+        if not objective:
+            objective = f"Email review source={self._source}"
+        existing: LaneEntry | None = None
+        try:
+            existing = self._board.get(entry_id)
+        except Exception:
+            existing = None
+        if existing is None:
+            if status == LaneStatus.FINISHED:
+                self._board.add(
+                    LaneEntry(
+                        entry_id=entry_id,
+                        objective=objective,
+                        status=LaneStatus.ACTIVE,
+                        owner=owner,
+                    )
+                )
+                return self._board.update(entry_id, status=LaneStatus.FINISHED, owner=owner)
+            self._board.add(
+                LaneEntry(
+                    entry_id=entry_id,
+                    objective=objective,
+                    status=status,
+                    owner=owner,
+                )
+            )
+            return self._board.get(entry_id)
+        return self._board.update(entry_id, status=status, owner=owner)
+
+    def tick_heartbeat(
+        self,
+        *,
+        transport_alive: bool = True,
+        now_ms: int | None = None,
+    ) -> Liveness:
+        """刷新心跳(LLM 路由成功 → alive=True)."""
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        self._heartbeat.update(transport_alive=transport_alive, now_ms=now_ms)
+        return self._heartbeat.evaluate(now_ms=now_ms)
+
+    def review_and_emit(
+        self,
+        *,
+        email_id: int,
+        review_result: Any,  # duck type, ReviewResult(成功版本)
+        category: str,
+        transport_alive: bool = True,
+        run_id: str = "",
+        now_ms: int | None = None,
+    ) -> ReviewDecisionReport:
+        """成功审阅主入口: 评估审阅结果 + 落 1 条 PolicyDecisionEvent.
+
+        D4.7.4 范本(沿用 D4.7.3 v1.0.1 P1-1 三入口互斥):
+          - 成功路径 = review_passed=True + cf=0, 触发 merge_required
+            (全部 AC pass)或 BLOCKED
+          - 业务阻断请走 record_review_business_blocked_and_emit(返回
+            ReviewBlockedDecisionReport, kind="business_blocked")
+          - 技术失败请走 record_review_failure_and_emit(返回
+            ReviewFailureDecisionReport, failed: Literal[True])
+
+        Args:
+            email_id: 邮件主键(emails.id)
+            review_result: EmailReviewer.review() 的 ReviewResult(成功版本, duck type)
+            category: 5 类邮件分类(D4.6 分类结果透传)
+            transport_alive: LLM 路由本次是否可用
+            run_id: LaneBoard entry 唯一 ID
+            now_ms: 注入时间(默认 int(time.time() * 1000))
+
+        Returns:
+            ReviewDecisionReport
+
+        Raises:
+            ValueError: 参数 type 错 / 字段越界 / review_passed != True
+        """
+        import time as _time
+
+        # 严判 email_id
+        if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+            raise ValueError(
+                f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+            )
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        # 严判 review_result duck type(D4.7.3 v1.0.0 范本)
+        for required in (
+            "subject",
+            "body",
+            "tone",
+            "email_category",
+            "review_passed",
+            "flagged_issues",
+            "review_summary",
+            "model_full_id",
+            "latency_ms",
+        ):
+            if not hasattr(review_result, required):
+                raise ValueError(
+                    f"review_result.{required} 缺失, 实际 {type(review_result).__name__}"
+                )
+        # 入口预校验: review_passed 必为 True(成功入口)
+        if review_result.review_passed is not True:
+            raise ValueError(
+                f"review_and_emit 仅接受 review_passed=True 的结果, "
+                f"实际 {review_result.review_passed!r}(阻断请走 record_review_business_blocked_and_emit)"
+            )
+        _validate_classify_category(category)
+
+        tone = review_result.tone
+        if hasattr(tone, "value"):
+            tone_value: str = tone.value
+        elif isinstance(tone, str):
+            tone_value = tone
+        else:
+            raise ValueError(
+                f"review_result.tone 必须是 DraftTone 枚举或 str, 实际 "
+                f"{type(tone).__name__}={tone!r}"
+            )
+        _validate_draft_tone(tone_value)
+
+        if type(review_result.latency_ms) is bool or not isinstance(review_result.latency_ms, int):
+            raise ValueError(
+                f"review_result.latency_ms 必须是 int(非 bool), 实际 "
+                f"{type(review_result.latency_ms).__name__}={review_result.latency_ms!r}"
+            )
+        _validate_draft_latency_ms(review_result.latency_ms)
+        latency_ms = review_result.latency_ms
+
+        if type(review_result.model_full_id) is not str or not review_result.model_full_id.strip():
+            raise ValueError(
+                f"review_result.model_full_id 必填非空白 str, 实际 "
+                f"{type(review_result.model_full_id).__name__}={review_result.model_full_id!r}"
+            )
+        model_full_id = review_result.model_full_id
+
+        # 严判 review_summary + flagged_issues
+        _validate_review_summary(review_result.review_summary)
+        _validate_review_flagged_issues(review_result.flagged_issues, required=False)
+
+        body_length = len(review_result.body)
+        if type(body_length) is not int:
+            raise ValueError(
+                f"body_length 必须是 int, 实际 {type(body_length).__name__}={body_length!r}"
+            )
+        if body_length < 0:
+            raise ValueError(f"body_length 必须 >= 0, 实际 {body_length}")
+
+        # 1) 构造 TaskPacket
+        packet = build_review_packet(
+            email_id=email_id,
+            source=self._source,
+            tone=tone_value,
+            model_full_id=model_full_id,
+            body_length=body_length,
+        )
+
+        # 2) 构造 context(成功路径强制 last_review_failed=False / cf=0)
+        context = build_review_policy_context(
+            tone=tone_value,
+            latency_ms=latency_ms,
+            body_length=body_length,
+            last_review_failed=False,
+            consecutive_review_failures=0,
+            now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
+        )
+
+        # 3) run_id + lane_entry_id
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate(透传业务字段)
+        extra_business_payload = {
+            # week1-mvp.md:781 锁定 6 字段透传契约
+            "review_passed": review_result.review_passed,
+            "flagged_issues": list(review_result.flagged_issues),
+            "review_summary": review_result.review_summary,
+            "model_full_id": model_full_id,
+            "email_id": email_id,
+            "category": category,
+            "tone": tone_value,
+            "latency_ms": latency_ms,
+            "body_length": body_length,
+            "source": self._source,
+        }
+        evaluation = self._engine.evaluate(
+            packet=packet,
+            context=context,
+            store=self._event_store,
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
+            extra_business_payload=extra_business_payload,
+        )
+
+        # 5) LaneBoard 记录(单一真相源 = acceptance_results)
+        ac_results = compute_review_acceptance(
+            review_passed=True,
+            review_summary=review_result.review_summary,
+            latency_ms=latency_ms,
+        )
+        business_accepted = bool(all(ac_results))
+        self.record_to_lane(
+            run_id=rid,
+            status=LaneStatus.FINISHED if business_accepted else LaneStatus.BLOCKED,
+        )
+
+        # 6) Heartbeat
+        liveness = self.tick_heartbeat(transport_alive=transport_alive, now_ms=now_ms)
+
+        return ReviewDecisionReport(
+            evaluation=evaluation,
+            event_id=evaluation.event_id,
+            lane_entry_id=lane_entry_id,
+            liveness=liveness,
+            review_passed=True,
+            review_summary=review_result.review_summary,
+            flagged_issues=list(review_result.flagged_issues),
+            tone=tone_value,
+            model_full_id=model_full_id,
+            email_id=email_id,
+            latency_ms=latency_ms,
+            category=category,
+            body_length=body_length,
+        )
+
+    def record_review_business_blocked_and_emit(
+        self,
+        *,
+        email_id: int,
+        tone: str | DraftTone,
+        original_email_category: str,
+        reason: str,
+        blocked_word: str,
+        flagged_issues: list[str],
+        review_summary: str,
+        last_error: Any,  # str | Exception
+        transport_alive: bool = True,
+        run_id: str = "",
+        now_ms: int | None = None,
+    ) -> ReviewBlockedDecisionReport:
+        """业务阻断草稿审阅入口: 记录阻断原因, 强制 BLOCKED, 不触发 retry / escalate.
+
+        D4.7.4 范本(沿用 D4.7.3 v1.0.1 P1-1 业务阻断 ≠ 技术失败):
+          - 业务阻断 last_review_failed=False(等同成功路径), cf 必为 0
+          - 4 类 reason 白名单(week1-mvp.md:772 锁定):
+            sensitive_word_hit / template_violation / tone_mismatch / factual_conflict
+          - blocked_word 跨字段校验(week1-mvp.md:788 锁定):
+            reason=sensitive_word_hit 必非空, 其他必空
+        """
+        import time as _time
+
+        if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+            raise ValueError(
+                f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+            )
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        if last_error is None:
+            raise ValueError("last_error 不能为 None, 阻断必须带原因")
+        last_error_str = str(last_error)
+        if not last_error_str.strip():
+            raise ValueError(
+                f"last_error 必填非空白 (str() 后 strip() 非空), 实际 "
+                f"{type(last_error).__name__}={last_error_str!r}"
+            )
+        # tone 严判
+        if hasattr(tone, "value"):
+            tone_value = tone.value
+        elif isinstance(tone, str):
+            tone_value = tone
+        else:
+            raise ValueError(
+                f"tone 必须是 DraftTone 枚举或 str, 实际 {type(tone).__name__}={tone!r}"
+            )
+        _validate_draft_tone(tone_value)
+        # 严判 category ∈ 5 类
+        _validate_classify_category(original_email_category)
+        # reason 4 类白名单
+        _validate_review_block_reason(reason)
+        # blocked_word 跨字段校验
+        _validate_review_blocked_word(blocked_word, reason=reason)
+        # flagged_issues 阻断时必非空
+        _validate_review_flagged_issues(flagged_issues, required=True)
+        # review_summary 严判 1-2000
+        _validate_review_summary(review_summary)
+
+        # 1) 构造 TaskPacket
+        packet = build_review_blocked_packet(
+            email_id=email_id,
+            source=self._source,
+            tone=tone_value,
+            reason=reason,
+            blocked_word=blocked_word,
+            original_email_category=original_email_category,
+        )
+
+        # 2) 构造 context — 业务阻断 last_review_failed=False(等同成功路径),
+        # 永不 retry / escalate, 用 synthetic tone=FORMAL + latency=0 + body_length=0
+        # 让 AC 全 False → BLOCKED(不 merge)
+        context = build_review_policy_context(
+            tone="FORMAL",
+            latency_ms=0,
+            body_length=0,
+            last_review_failed=False,
+            consecutive_review_failures=0,
+            now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
+        )
+
+        # 3) run_id + lane_entry_id
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate — 业务 payload 标记为业务阻断
+        extra_business_payload = {
+            "tone": tone_value,
+            "original_email_category": original_email_category,
+            "reason": reason,
+            "blocked_word": blocked_word,
+            "flagged_issues": flagged_issues,
+            "review_summary": review_summary,
+            "last_error": last_error_str[:200],
+            "email_id": email_id,
+            "source": self._source,
+            "blocked": True,
+            "blocked_kind": "business",
+        }
+        evaluation = self._engine.evaluate(
+            packet=packet,
+            context=context,
+            store=self._event_store,
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
+            extra_business_payload=extra_business_payload,
+        )
+
+        # 5) LaneBoard: 阻断入口强制 BLOCKED
+        self.record_to_lane(run_id=rid, status=LaneStatus.BLOCKED)
+
+        # 6) Heartbeat
+        liveness = self.tick_heartbeat(transport_alive=transport_alive, now_ms=now_ms)
+
+        return ReviewBlockedDecisionReport(
+            evaluation=evaluation,
+            event_id=evaluation.event_id,
+            lane_entry_id=lane_entry_id,
+            liveness=liveness,
+            last_error=last_error_str[:200],
+            tone=tone_value,
+            reason=reason,
+            blocked_word=blocked_word,
+            flagged_issues=flagged_issues,
+            review_summary=review_summary,
+            original_email_category=original_email_category,
+            email_id=email_id,
+            consecutive_review_failures=0,
+        )
+
+    def record_review_failure_and_emit(
+        self,
+        *,
+        email_id: int,
+        last_error: Any,  # str | ReviewerError | LLMError | Exception
+        consecutive_review_failures: int,
+        transport_alive: bool = True,
+        run_id: str = "",
+        now_ms: int | None = None,
+    ) -> ReviewFailureDecisionReport:
+        """技术失败草稿审阅入口: ReviewerError / LLM 异常, 触发 retry / escalate.
+
+        D4.7.4 范本(沿用 D4.7.3 v1.0.2 P1-1 独立类型):
+          - 独立 ReviewFailureDecisionReport(不再伪装 SPAM + 业务阻断)
+          - build_review_failure_packet(独立失败 factory)
+          - 与业务阻断 record_review_business_blocked_and_emit 完全分离
+
+        Args:
+            email_id: 邮件主键
+            last_error: 失败原因(str | ReviewerError | LLMError)
+            consecutive_review_failures: 必填 >= 1(技术失败必计入累加器)
+
+        Returns:
+            ReviewFailureDecisionReport
+        """
+        import time as _time
+
+        if type(email_id) is bool or not isinstance(email_id, int) or email_id < 0:
+            raise ValueError(
+                f"email_id 必须是原生 int >= 0, 实际 {type(email_id).__name__}={email_id!r}"
+            )
+        if (
+            type(consecutive_review_failures) is bool
+            or not isinstance(consecutive_review_failures, int)
+            or consecutive_review_failures < 1
+        ):
+            raise ValueError(
+                f"consecutive_review_failures 必须是原生 int >= 1, 实际 "
+                f"{type(consecutive_review_failures).__name__}="
+                f"{consecutive_review_failures!r}"
+            )
+        if type(transport_alive) is not bool:
+            raise ValueError(
+                f"transport_alive 必须是原生 bool, 实际 "
+                f"{type(transport_alive).__name__}={transport_alive!r}"
+            )
+        if last_error is None:
+            raise ValueError("last_error 不能为 None, 技术失败必须带原因")
+        last_error_str = str(last_error)
+        if not last_error_str.strip():
+            raise ValueError(
+                f"last_error 必填非空白 (str() 后 strip() 非空), 实际 "
+                f"{type(last_error).__name__}={last_error_str!r}"
+            )
+
+        # 1) 构造 TaskPacket
+        packet = build_review_failure_packet(
+            email_id=email_id,
+            source=self._source,
+            last_error_str=last_error_str,
+            consecutive_review_failures=consecutive_review_failures,
+        )
+
+        # 2) 构造 context — 技术失败 last_review_failed=True, 触发 retry / escalate
+        context = build_review_policy_context(
+            tone="FORMAL",
+            latency_ms=0,
+            body_length=0,
+            last_review_failed=True,
+            consecutive_review_failures=consecutive_review_failures,
+            now_ms=now_ms if now_ms is not None else int(_time.time() * 1000),
+        )
+
+        # 3) run_id + lane_entry_id
+        rid = run_id or str(int(_time.time() * 1000))
+        lane_entry_id = self.build_lane_entry_id(rid)
+
+        # 4) PolicyEngine.evaluate — 业务 payload 标记为技术失败
+        extra_business_payload = {
+            "email_id": email_id,
+            "source": self._source,
+            "last_error": last_error_str[:200],
+            "consecutive_review_failures": consecutive_review_failures,
+            "failed": True,
+            "failed_kind": "technical",
+        }
+        evaluation = self._engine.evaluate(
+            packet=packet,
+            context=context,
+            store=self._event_store,
+            lane_entry_id=lane_entry_id,
+            run_id=rid,
+            extra_business_payload=extra_business_payload,
+        )
+
+        # 5) LaneBoard: 技术失败入口强制 BLOCKED
+        self.record_to_lane(run_id=rid, status=LaneStatus.BLOCKED)
+
+        # 6) Heartbeat
+        liveness = self.tick_heartbeat(transport_alive=transport_alive, now_ms=now_ms)
+
+        return ReviewFailureDecisionReport(
+            evaluation=evaluation,
+            event_id=evaluation.event_id,
+            lane_entry_id=lane_entry_id,
+            liveness=liveness,
+            failed=True,
+            last_error=last_error_str[:200],
+            consecutive_review_failures=consecutive_review_failures,
+        )
+
+
 # ===== 模块导出 =====
 
 
@@ -2925,4 +4112,14 @@ __all__ = [
     # 注: 这两个方法是 EmailDrafterAdapter 类的成员方法, 不在模块顶层 __all__ 列出
     # 业务层调用: adapter.record_draft_business_blocked_and_emit(...) /
     # adapter.record_draft_failure_and_emit(...)
+    # D4.7.4 邮件审阅适配器(D4.7.4 草稿审阅器业务层接入点, 2026-06-11 启动)
+    "EmailReviewerAdapter",
+    "ReviewDecisionReport",
+    "ReviewBlockedDecisionReport",
+    "ReviewFailureDecisionReport",
+    "build_review_packet",
+    "build_review_blocked_packet",
+    "build_review_failure_packet",
+    "build_review_policy_context",
+    "compute_review_acceptance",
 ]

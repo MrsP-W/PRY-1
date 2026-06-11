@@ -56,6 +56,10 @@ from my_ai_employee.policy.integration import (
     DraftFailureDecisionReport,
     EmailClassifierAdapter,
     EmailDrafterAdapter,
+    EmailReviewerAdapter,
+    ReviewBlockedDecisionReport,
+    ReviewDecisionReport,
+    ReviewFailureDecisionReport,
     SyncDecisionReport,
     SyncPolicyAdapter,
     build_classify_failure_packet,
@@ -66,10 +70,15 @@ from my_ai_employee.policy.integration import (
     build_draft_packet,
     build_draft_policy_context,
     build_imap_sync_packet,
+    build_review_blocked_packet,
+    build_review_failure_packet,
+    build_review_packet,
+    build_review_policy_context,
     build_sync_policy_context,
     compute_acceptance_results,
     compute_classification_acceptance,
     compute_draft_acceptance,
+    compute_review_acceptance,
 )
 from my_ai_employee.policy.lane_board import (
     LaneBoard,
@@ -145,4 +154,15 @@ __all__ = [
     # D4.7.3 v1.0.2 P1-1 新增: 技术失败独立 packet + 独立 report
     "build_draft_failure_packet",
     "DraftFailureDecisionReport",
+    # D4.7.4 业务层接入(邮件审阅, 6/11 启动)
+    # 沿用 D4.7.3 三入口架构(成功 / 业务阻断 / 技术失败), 4 类阻断白名单
+    "EmailReviewerAdapter",
+    "ReviewDecisionReport",
+    "ReviewBlockedDecisionReport",
+    "ReviewFailureDecisionReport",
+    "build_review_packet",
+    "build_review_blocked_packet",
+    "build_review_failure_packet",
+    "build_review_policy_context",
+    "compute_review_acceptance",
 ]
