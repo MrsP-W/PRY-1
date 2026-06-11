@@ -246,7 +246,7 @@ def build_outbox_blocked_packet(
         model="outbox-store-blocked",
         provider="internal",
         permission_profile=PermissionProfile.READ_ONLY.value,  # 业务阻断不改库
-        recovery_policy="never_retry",  # 业务阻断永不重试
+        recovery_policy="none",  # 业务阻断永不重试(D4.8 v1.0.1 修复:task_packet 白名单内)
     )
 
 
@@ -269,7 +269,7 @@ def build_outbox_failure_packet(
         model="outbox-store-failure",
         provider="internal",
         permission_profile=PermissionProfile.READ_ONLY.value,
-        recovery_policy="retry_with_backoff",  # 技术失败可重试
+        recovery_policy="retry_on_transient",  # 技术失败可重试(D4.8 v1.0.1 修复:task_packet 白名单内)
     )
 
 
@@ -721,6 +721,8 @@ class EmailOutboxAdapter:
         )
 
         # 7. LaneBoard 记录(单一真相源 = acceptance_results)
+        # D4.8 v1.0.1 修复:首次 add 必用 ACTIVE(LaneBoard.add 拒绝 FINISHED 终态),
+        # 然后 update 到 FINISHED/BLOCKED(ACTIVE → FINISHED/BLOCKED 合法转换)
         ac_results = compute_outbox_acceptance(
             subject_length=len(subject),
             body_length=len(body),
@@ -728,6 +730,7 @@ class EmailOutboxAdapter:
         )
         business_accepted = bool(all(ac_results))
         entry_id = lane_entry_id
+        final_status = LaneStatus.FINISHED if business_accepted else LaneStatus.BLOCKED
         existing: LaneEntry | None = None
         try:
             existing = self._board.get(entry_id)
@@ -738,16 +741,15 @@ class EmailOutboxAdapter:
                 LaneEntry(
                     entry_id=entry_id,
                     objective=f"Outbox store source={self._source} email_id={email_id}",
-                    status=LaneStatus.FINISHED if business_accepted else LaneStatus.BLOCKED,
+                    status=LaneStatus.ACTIVE,  # add 拒绝 FINISHED 终态(D4.8 v1.0.1 修复)
                     owner="email_outbox",
                 )
             )
-        else:
-            self._board.update(
-                entry_id,
-                status=LaneStatus.FINISHED if business_accepted else LaneStatus.BLOCKED,
-                owner="email_outbox",
-            )
+        self._board.update(
+            entry_id,
+            status=final_status,
+            owner="email_outbox",
+        )
 
         # 8. Heartbeat(update 刷新 last_seen_ms, evaluate 拿到 Liveness)
         self._heartbeat.update(transport_alive=transport_alive, now_ms=end_ms)
@@ -866,6 +868,7 @@ class EmailOutboxAdapter:
         )
 
         # 7. LaneBoard 记录 — 业务阻断强制 BLOCKED
+        # D4.8 v1.0.1 范本统一:首次 add 用 ACTIVE → update 到 BLOCKED(允许 ACTIVE→BLOCKED 转换)
         entry_id = lane_entry_id
         existing: LaneEntry | None = None
         try:
@@ -877,12 +880,11 @@ class EmailOutboxAdapter:
                 LaneEntry(
                     entry_id=entry_id,
                     objective=f"Outbox blocked source={self._source} reason={reason}",
-                    status=LaneStatus.BLOCKED,
+                    status=LaneStatus.ACTIVE,
                     owner="email_outbox",
                 )
             )
-        else:
-            self._board.update(entry_id, status=LaneStatus.BLOCKED, owner="email_outbox")
+        self._board.update(entry_id, status=LaneStatus.BLOCKED, owner="email_outbox")
 
         # 8. Heartbeat(update 刷新 last_seen_ms, evaluate 拿到 Liveness)
         self._heartbeat.update(transport_alive=transport_alive, now_ms=end_ms)
@@ -1005,6 +1007,7 @@ class EmailOutboxAdapter:
         )
 
         # 7. LaneBoard 记录 — 技术失败走 BLOCKED(caller 决定是否 retry)
+        # D4.8 v1.0.1 范本统一:首次 add 用 ACTIVE → update 到 BLOCKED
         entry_id = lane_entry_id
         existing: LaneEntry | None = None
         try:
@@ -1016,12 +1019,11 @@ class EmailOutboxAdapter:
                 LaneEntry(
                     entry_id=lane_entry_id,
                     objective=f"Outbox failure source={self._source} cf={consecutive_outbox_failures}",
-                    status=LaneStatus.BLOCKED,
+                    status=LaneStatus.ACTIVE,
                     owner="email_outbox",
                 )
             )
-        else:
-            self._board.update(entry_id, status=LaneStatus.BLOCKED, owner="email_outbox")
+        self._board.update(entry_id, status=LaneStatus.BLOCKED, owner="email_outbox")
 
         # 8. Heartbeat(update 刷新 last_seen_ms, evaluate 拿到 Liveness)
         self._heartbeat.update(transport_alive=transport_alive, now_ms=end_ms)
