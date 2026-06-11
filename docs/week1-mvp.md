@@ -12,17 +12,25 @@
 
 ### 0.1 范围（In-Scope）
 
+> **2026-06-11 修订**:D5 重新定义为业务调度器(SMTP 发送链路),CalDAV / 菜单栏 / launchd 顺延到 D6+(Week 2 决策点再细化)。
+
 | 功能 | 验收标准 |
 |------|----------|
 | 邮件自动分类 | 5 类标签准确率 ≥ 80% |
 | 1-click 草稿生成 | 单封邮件响应 < 10s |
-| CalDAV 日程同步 | iCloud 双向同步（Google 延后）|
+| **D5 业务调度器(SMTP 发送)** | **outbox 草稿真实发送 + 状态机推进 + SLA 告警**(D4.8 v1.0.1 后瓶颈) |
 | Apple Reminders 同步 | 复用 Agent Assistant 已建能力 |
-| Mac 菜单栏状态 | 今日未读 + 今日待办实时显示 |
+
+**D6+ 顺延清单**(B 类保留,不在 Week 1 必达):
+
+- ⏸️ CalDAV 日程同步(iCloud 双向,Google 延后)
+- ⏸️ Mac 菜单栏状态(今日未读 + 今日待办实时显示)
+- ⏸️ launchd 保活(macOS launchd 集成)
+- ⏸️ Web Dashboard(Week 2+)
 
 ### 0.2 反例（Out-of-Scope）
 
-- ❌ 邮件发送（Week 1 只生成草稿，用户手动确认）
+- ❌ ~~邮件发送(Week 1 只生成草稿,用户手动确认)~~ **D5 已解封,改为 0.1 In-Scope**
 - ❌ 财务模块（Week 2）
 - ❌ 笔记模块（Week 2）
 - ❌ iOS 伴侣（Phase 2）
@@ -906,60 +914,145 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | D4.8.11 | **Spike**：100 封入库幂等性 + 状态机正确性 + 紧急邮件优先排序 | 60 min | spike 报告 | ✅ output/spike/spike_outbox_100_20260611_221105.md |
 | D4.8.12 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 当前 |
 
-**已知限制**（D4.8 v1.0.1 已固化,B 类决策延后）：
+**已知限制**（D4.8 v1.0.1 已固化,2026-06-11 D5 启动后 B3 / B5 自然解封）：
 
-- outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界） → D5+ 加 migration 0005（**B 类决策延后**）
-- 真实 SMTP 发送不在 D4.8 范围 → D5+ 业务调度器接管（**B 类决策延后**）
-- 紧急邮件优先排序仅 `priority + created_at` 二维索引,真实调度可能涉及更多维度（**B 类决策延后**:扩 priority 枚举 / 加 SLA 字段）
-- 黑名单收件人库空白 → 初始 2 类白名单(`duplicate_email_id` / `blacklisted_recipient`),D4.8.1+ 接入 `blacklist_recipients` 配置表（**B 类决策延后**）
-- 状态机转换规则不完整（D4.8 仅入库到 `pending_send`） → D5+ 加 `pending_send → approved / cancelled` 状态转换（**B 类决策延后**）
+- ~~outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界）~~ → **B5 已解封**:D5.2 migration 0005 加 `sending` 状态 + `ALLOWED_TRANSITIONS` 白名单
+- ~~真实 SMTP 发送不在 D4.8 范围~~ → **B3 已解封**:D5 业务调度器接管(2026-06-11 D5.1 commit `cce567a` 启动)
+- 紧急邮件优先排序仅 `priority + created_at` 二维索引,真实调度可能涉及更多维度(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段)
+- 黑名单收件人库空白 → 初始 2 类白名单(`duplicate_email_id` / `blacklisted_recipient`),D4.8.1+ 接入 `blacklist_recipients` 配置表(**B 类决策延后**)
+- ~~状态机转换规则不完整（D4.8 仅入库到 `pending_send`）~~ → **B5 已解封**:D5.2 加 `pending_send → approved / cancelled` 状态转换白名单
 
-**参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)（D4.8.10 待写）。
+**参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D4.8.9 mapping 段 + D4.8.12 验收锁定**。D4.8 v1.0.1 代码+测试+文档+报告+spike 已 5 件全固化（2026-06-11 晚间,commit `e3f0d80` + 本 docs commit + `reports/D4.8-草稿入库.md` + `output/spike/spike_outbox_100_20260611_221105.md`）,剩 mapping 段 + 8 质量门验收（**B 类决策延后**:扩 priority 枚举 / 加 SLA 字段 / 接 SMTP 发送）。
+**下一棒 → D5.1-fix 修 2 代码风险 + D5.2 migration 0005**。D4.8 v1.0.1 代码+测试+文档+报告+spike 已 5 件全固化(2026-06-11 晚间,commit `e3f0d80` + 本 docs commit + `reports/D4.8-草稿入库.md` + `output/spike/spike_outbox_100_20260611_221105.md`),剩 D5 业务调度器 7 子阶段(已启动 D5.1)+ 8 质量门终验(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表)。
 
 ---
 
-## D5 — CalDAV 同步 + 菜单栏
+## D5 — 业务调度器(SMTP 发送链路)
 
-### 目标
+> **2026-06-11 重新定义**:D5 启动计划原本是"CalDAV + 菜单栏 + launchd",但 D4.8 v1.0.1 锁定后出现**实际瓶颈** — outbox 表能入库 `pending_send` 状态的草稿,但**没有任何消费者把这些草稿真正发出**。D4.8 契约 5 明确"不真发 SMTP,D5+ 调度器接管",这是 B3 自然解封位置。
+>
+> **范围调整**:D5 = 真实 SMTP 发送链路(7 子阶段)。CalDAV / 菜单栏 / launchd **顺延到 D6+**(Week 2 决策点再细化)。
+>
+> **D5.0-redirect docs commit**:`docs(d5.0-redirect): 重新定义 D5 = SMTP 业务调度链路`(本段 + §0 反例 + §D4.8 已知限制 + 末棒 + 状态行同 commit 重写)
 
-iCloud CalDAV 双向同步 + Mac 菜单栏状态显示。
+### D5.1 Context — 为什么启动 D5
 
-### 任务清单
+**问题**:D4.8 v1.0.1 锁定后,`outbox.status=pending_send` 草稿堆积,无消费者。
 
-| # | 任务 | 预计耗时 | 产出 |
-|---|------|----------|------|
-| 5.1 | 写 `connectors/caldav.py`（iCloud 优先 + 双向同步 + 冲突解决）| 90 min | CalDAV 适配器 |
-| 5.2 | 写 `scripts/sync_caldav.py`（增量同步）| 60 min | 同步入口 |
-| 5.3 | 写 `menu_bar/app.py`（rumps + 状态显示）| 90 min | 菜单栏 UI |
-| 5.4 | 写 `agents/管家.md`（@管家 Agent 提示词）| 30 min | 主动提醒角色 |
-| 5.5 | 写 `scripts/launchd_install.sh`（保活安装）| 30 min | launchd 集成 |
-| 5.6 | 写 `scripts/launchd_uninstall.sh` | 15 min | 卸载脚本 |
-| 5.7 | **Spike**：launchd 保活效果（24h 监测）| 30 min | 保活报告 |
-| 5.8 | 写 `README.md` 更新（首次启动向导）| 30 min | 用户文档 |
-| 5.9 | Week 1 集成测试（端到端 5 场景）| 60 min | 验收 |
+**目标**:落地 D5 业务调度器 — 消费 `pending_send` / `approved` 行 → SMTP 真实发送 → 状态机推进 `pending_send → sending → sent` / `→ failed`,失败按指数退避(封顶 1h)重试,URGENT 5min SLA 告警,Heartbeat 3 态联动(HEALTHY / STALLED / TRANSPORT_DEAD)。
 
-**总耗时**：约 7 小时
+**预期结果**:D5.7 收口后,8 质量门 8/8 全绿(预计 1498 passed)、`reports/D5-业务调度器.md` 归档、跨项目 memory 同步到 Agent Assistant。**B3(接 SMTP) + B5(sending 状态) 自然解封,B1 / B2 / B4 仍延后**。
 
-### 验收标准
+### D5.2 核心契约(6 条范围边界)
 
-- [ ] iCloud CalDAV 双向同步 100% 成功
-- [ ] 菜单栏图标显示：今日未读 / 今日待办 / 本月支出（占位）
-- [ ] launchd 保活 24h 不掉（spike 报告）
-- [ ] 端到端 5 场景全过：
-  1. 新邮件到达 → 分类 → 菜单栏更新
-  2. 用户点草稿 → drafter → Mail.app 草稿
-  3. iCloud 新事件 → 同步进 SQLite
-  4. SQLite 新事件 → 同步进 iCloud
-  5. launchd 启动 → 全部适配器初始化
+| # | 契约 | 范本来源 | 必达 |
+|---|------|---------|------|
+| 1 | **SMTP transport 抽象 + Keychain 凭证** | `connectors/imap.py:45-74` + `core/keychain.py:201-208` | `SMTPConnector` + `SmtpLibTransport` 生产 + `InMemorySmtpTransport` 测试 + `set_smtp_password / get_smtp_password` 高层封装 |
+| 2 | **`sending` 状态 + 显式状态机白名单** | `db/outbox.py` `update_status` 扩字段 + `policy/heartbeat.py:104` 状态机范本 | migration 0005 enum-only + `ALLOWED_TRANSITIONS` + `OutboxIllegalTransitionError` |
+| 3 | **EmailSendAdapter 三入口** | `policy/outbox_adapter.py:597-611` + `:640-650` 严判 | `send_and_emit` / `record_send_business_blocked_and_emit` / `record_send_failure_and_emit` + `SendDecisionReport` 双向强一致 |
+| 4 | **SMTP 异常窄化(D3.3.3 教训)** | `core/sync.py:47-58` 分层 except + `db/outbox.py:148-159` 窄化 | `SMTPRecipientsRefused` → 业务阻断 + `SMTPServerDisconnected / SMTPConnectError / socket.timeout` → 技术失败,**不**接 `SMTPException` / `Exception` 基类 |
+| 5 | **OutboxDispatcher 主循环** | `core/sync.py:60-80` 构造 + `run_once` 6 步 | `run_once()` 6 步:heartbeat → 拉批 → 逐条 send → 累加 → 落日志 → 返回 `DispatcherResult` |
+| 6 | **SLA + 退避 + Heartbeat 联动** | `policy/heartbeat.py:73-90` + `:130-140` | `SLAEvaluator(priority, age_ms)` + `min(2^failures * 60s, 1h)` + `assert_alive` 严格 |
 
-### 风险点
+### D5.3 7 子阶段任务清单
 
-- **iCloud CalDAV 限流**：连续同步可能被拒，需加 retry + 退避
-- **CalDAV 时区**：iCloud 用 UTC，本地显示需转换
-- **launchd 权限**：首次安装需 sudo + 引导用户进"系统设置 > 登录项"
-- **rumps 兼容性**：macOS 14+ 菜单栏 API 有变化
+| 子阶段 | 目标 | 关键文件 | 预计 cases | commit |
+|--------|------|---------|----------|--------|
+| **D5.1** ✅ | Keychain SMTP service + transport 抽象 | `core/keychain.py` + `connectors/smtp.py` + `tests/connectors/test_smtp.py` + `scripts/spike_set_smtp_password.py` | 32 | `cce567a` |
+| **D5.1-fix** | 默认 transport 边界(避免假成功) + CLI provider 严判(只 qq) | `connectors/smtp.py` + `scripts/spike_set_smtp_password.py` + 新 tests | +11 | (本次) |
+| **D5.2** | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | (待) |
+| **D5.3** | EmailSendAdapter 三入口 + 4 异常窄化 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` | +36 | (待) |
+| **D5.4** | OutboxDispatcher 主循环 + 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +45 | (待) |
+| **D5.5** | SLA 评估 + 退避公式 + Heartbeat 联动 | `scheduler/sla.py` + `scheduler/backoff.py` + `tests/scheduler/test_sla.py` + `tests/scheduler/test_retry_backoff.py` | +28 | (待) |
+| **D5.6** | spike 100 真实发送 + 验收报告 | `scripts/spike_send_100.py` + `reports/D5-spike-100.md` + `reports/d5-acceptance.md` | (无新 cases,跑 8 质量门) | (待) |
+| **D5.7** | docs 收口 8 件套(week1-mvp §D5 末棒 + README + mapping §11 + D5 报告 + 跨项目 memory) | 5 docs 文件 | (无新 cases) | (待) |
+
+**预计累计**:1498 cases(1375 D4.8 锁定 → +123 D5)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
+
+### D5.4 状态机白名单(B5 解封项)
+
+```
+PENDING_SEND → {SENDING, FAILED, CANCELLED}
+APPROVED     → {SENDING, FAILED, CANCELLED}
+SENDING      → {SENT, FAILED}
+SENT         → {}    (终态)
+FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
+CANCELLED    → {}    (终态)
+```
+
+### D5.5 异常窄化映射(D3.3.3 教训应用)
+
+| smtplib 异常 | Adapter 业务异常 | 业务语义 | recovery_policy | consecutive_send_failures |
+|--------------|-----------------|----------|-----------------|--------------------------|
+| `SMTPRecipientsRefused` | `SMTPSendRecipientsRefusedError` | **业务阻断** | `none` | **不递增** |
+| `SMTPSenderRefused` | `SMTPSendSenderRefusedError` | **业务阻断** | `none` | **不递增** |
+| `SMTPServerDisconnected` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
+| `SMTPConnectError` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
+| `socket.timeout` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
+
+**关键约束**:**不**接 `SMTPException` / `Exception` 基类,只接具体子类(D3.3.3 教训 — 防 OperationalError / 编程错误被误吞)。
+
+### D5.6 SLA 阈值表 + 退避公式
+
+**SLA**:
+```
+URGENT:  threshold=5min,    warning=3min
+HIGH:    threshold=30min,   warning=15min
+NORMAL:  threshold=4hour,   warning=2hour
+```
+
+**退避**:`retry_after_ms = min(2^consecutive_send_failures * 60_000, 3_600_000)`(60s 起,封顶 1h)
+
+**应用层过滤**:`consecutive_send_failures >= 1` 且 `last_failed_at + retry_after > now` 跳过,计入 `DispatcherResult.skipped`
+
+### D5.7 验收标准(8 质量门)
+
+| # | 质量门 | 首次过 | 累计 tests |
+|---|--------|--------|----------|
+| 1 | `uv run pytest` | D5.1(1375)/D5.2(1393)/D5.3(1429)/D5.4(1474)/D5.5(1502)/D5.6(1502) | **+127 cases** |
+| 2 | `uv run ruff check` | D5.1 | 0 errors |
+| 3 | `uv run ruff format --check` | D5.1 | 全绿 |
+| 4 | `uv run mypy src` | D5.3 | 0 errors |
+| 5 | `uv run mypy src+tests` | D5.5 | 0 errors |
+| 6 | `uv run alembic upgrade head --sql` | D5.2 | exit 0 |
+| 7 | `uv build` | D5.6 | OK |
+| 8 | `make lint` | D5.7 | 0 errors |
+
+**D5 启动一票否决**:8 质量门 8/8 全过 + 8 风险缓解 checklist 全应用 + 25 教训应用(D4.7.3 v1.0.6)+ docs 收口 8 件套。
+
+### D5.8 风险点(8 项 → D5 范围内缓解)
+
+| # | 风险 | 等级 | 缓解动作 | 落地子阶段 |
+|---|------|------|----------|-----------|
+| 1 | **SMTP 凭据 Keychain 写入失败** | 🚨 严重 | D5.1 `set_smtp_password` 写入后立即 round-trip 自检 + `spike_set_smtp_password.py --check` 入口 | D5.1 ✅ |
+| 2 | **默认 transport = InMemorySmtpTransport 假成功** | 🚨 严重 | D5.1-fix 默认 `transport=None`,`connect()` 时 fallback,显式传 `SmtpLibTransport()` 才走真实 SMTP | D5.1-fix (本次) |
+| 3 | **CLI `--provider` choices 暴露未实现 provider** | ⚠️ 中 | D5.1-fix `spike_set_smtp_password.py --provider` 严判 `== "qq"`,outlook/gmail 显式 `NotImplementedError` 提示 | D5.1-fix (本次) |
+| 4 | **`cancelled → sent` 非法状态转换** | 🚨 严重 | D5.2 `ALLOWED_TRANSITIONS` 白名单 + `OutboxIllegalTransitionError` 严判 | D5.2 |
+| 5 | **业务阻断(收件人拒收)被误归类为可重试** | 🚨 严重 | D5.3 异常窄化:recipients_refused / sender_refused 单独捕获 → 业务阻断 + `consecutive_send_failures` 不递增 | D5.3 |
+| 6 | **`last_send_failed ↔ consecutive_send_failures` 跨字段不一致** | ⚠️ 中 | D5.3 `SendDecisionReport.__post_init__` 双向校验(D4.7.3 v1.0.5 P1-2 范本) | D5.3 |
+| 7 | **SMTP 掉线无限重试撑爆 CPU** | ⚠️ 中 | D5.5 退避公式 `2^failures * 60s` 封顶 1h + 应用层过滤 | D5.5 |
+| 8 | **URGENT 邮件 5min 超时未被发现** | ⚠️ 中 | D5.5 `SLAEvaluator.evaluate` 每次 run_once 逐条判 + `ESCALATE_REQUIRED` 决策写 event | D5.5 |
+
+### D5.9 CalDAV / 菜单栏 / launchd 顺延清单(B 类保留)
+
+> **不在 D5 范围**。以下三项**顺延到 D6+**(Week 2 决策点再细化),当前**保留 13 行 B 类延后清单**规则。
+
+- **CalDAV 双向同步** — 落 `connectors/caldav.py` + `scripts/sync_caldav.py`(B 类顺延)
+- **Mac 菜单栏状态** — 落 `menu_bar/app.py`(rumps)+ `agents/管家.md`(B 类顺延)
+- **launchd 保活** — 落 `scripts/launchd_install.sh / launchd_uninstall.sh`(B 类顺延)
+
+**触发条件**:D5 锁定 + Week 1 末决策点通过 + Week 2 启动后,按实际体感决定 D6+ 优先启动哪一项。
+
+### D5.10 已知限制(D5.1 已固化)
+
+- **SMTPConnector 不继承 `BaseConnector`** — 自维护 `_SmtpCircuitBreakerState`,避免 `fetch` 抽象方法 TypeError(D4.7.3 v1.0.3 duck type 范本)
+- **SMTP 凭据严禁 logger 打印 value** — `keychain.set_smtp_password` + `spike_set_smtp_password.py` 只打印 service+account+长度
+- **SMTP 授权码与 IMAP 授权码分别存** — 因 QQ 邮箱 IMAP/SMTP 授权码可不同(D2 IMAP 真实 QQ 验收 memory 沉淀)
+- **默认 transport 边界** — `SMTPConnector(transport=None)` 不允许忘记显式注入,`connect()` 时才 fallback 到 `InMemorySmtpTransport` 并 loguru WARNING
+- **CLI provider 严判** — `spike_set_smtp_password.py --provider {qq,outlook,gmail}`,outlook/gmail 显式 `NotImplementedError` 提示"D5.1 只实现 qq"
+
+**下一棒 → D5.1-fix 修 2 代码风险 + D5.2 migration 0005**。D5.1 代码+测试+文档+CLI 4 件已固化(2026-06-11 晚间,commit `cce567a`),剩 2 代码风险 + 6 子阶段 + 8 质量门终验。
 
 ---
 
@@ -988,19 +1081,26 @@ iCloud CalDAV 双向同步 + Mac 菜单栏状态显示。
 
 ## Week 1 验收清单（DoD）
 
+> **2026-06-11 修订**:CalDAV / 菜单栏 / launchd 三项**从 Week 1 DoD 移除**(D5 顺延 D6+),新增 D5 业务调度器 DoD。
+
 - [ ] 邮件自动分类 5 类 ≥ 80%
 - [ ] 1-click 草稿 < 10s
-- [ ] iCloud CalDAV 双向同步 100%
-- [ ] Mac 菜单栏 4 状态实时
-- [ ] launchd 24h 保活
-- [ ] 端到端 5 场景全过
+- [ ] **D5 业务调度器:outbox 草稿真实 SMTP 发送 + 状态机推进 + SLA 告警**(D5.7 锁定)
+- [ ] 端到端 5 场景全过(适配 D5 业务调度器,CalDAV/iCloud 场景移除)
 - [ ] 自用 3 天体感 ≥ "省时间"
 - [ ] MDLint 0 错误
-- [ ] 单元测试覆盖率 ≥ 70%
-- [ ] `docs/spike-*.md` 3 份报告齐
+- [ ] 单元测试覆盖率 ≥ 70%(D5 目标 90%+)
+- [ ] 8 质量门 8/8 全绿(D5.7 锁定)
+- [ ] `reports/D*.md` 7 份归档(D1 / D2 / D3.1 / D3.2 / D3.3 / D4.7.4 / D4.8)+ D5 业务调度器报告(D5.7)+ spike 报告 7 份
+
+**D6+ 顺延清单**(Week 1 DoD 不含,Week 2 决策点再评估):
+
+- ⏸️ iCloud CalDAV 双向同步 100%
+- ⏸️ Mac 菜单栏 4 状态实时
+- ⏸️ launchd 24h 保活
 
 ---
 
-**最后更新**：2026-06-09（D4.6 v1.0.2-third 锁定 + D4.7 范围明确）
-**状态**：D1-D4.6 已完成（v1.0.2-third 锁定 6/9 早晨），D4.7 草稿生成器范围已明确待审批启动
+**最后更新**：2026-06-11（D5.0-redirect docs 收口:D5 重新定义为业务调度器,CalDAV/菜单栏/launchd 顺延 D6+）
+**状态**：D1-D4.8 + D5.1 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a`),D5 业务调度器 7 子阶段启动中(D5.1-fix 修 2 代码风险 → D5.2 migration 0005 → ... → D5.7 docs 收口)
 **维护者**：Mr-PRY

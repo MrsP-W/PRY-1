@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1 已完成（脚手架 + 目录树 + `make hello`）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D4.8 + D5.1 已完成（D5 业务调度器启动中）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -38,7 +38,9 @@
 
 ### 我不做什么（铁律）
 
-- ❌ **不抢控制权** — 草稿生成只填入 Mail.app，**永远不点"发送"**
+> **2026-06-11 修订**:D5 业务调度器解封"邮件发送",1-click 草稿可走 SMTP 真实发送(用户 1-click 审批后),仍保留"不抢控制权"原则 — 自动发送**必须有用户预先确认过的草稿**。
+
+- ❌ **不抢控制权** — 草稿生成走两阶段:**① AI 生成 → outbox 库 → 1-click 审批 ② 用户审批后 D5 SMTP 真实发送**(D4.8 v1.0.1 + D5.7 锁定)
 - ❌ **不联网外传** — 敏感数据（身份证/银行卡/私密笔记）走本地规则
 - ❌ **不收费 SaaS** — 这是**你的工具**，不是订阅服务
 
@@ -155,15 +157,18 @@ make help
 
 ## 🗓️ 里程碑
 
+> **2026-06-11 修订**:D4 智能层 + D4.8 草稿入库已锁定,D5 重新定义为业务调度器(SMTP 发送链路),CalDAV/菜单栏/launchd 顺延 D6+。
+
 | 阶段 | 状态 | 完成日期 |
 |------|------|----------|
 | **D1 脚手架** | ✅ 完成 | 2026-06-07 |
 | **D2 IMAP 适配器**（QQ 授权码 + Keychain + 熔断）| ✅ 完成 | 2026-06-07 |
 | **D3 数据层 + 同步**（D3.1 加密 SQLite + D3.2 ORM/alembic + D3.3 IMAP 同步 1万封 0.35s）| ✅ 完成 | 2026-06-08 |
-| D4 智能层（LLM 分类/标签/优先级）| ⏳ 下一棒 | - |
-| D5 CalDAV + 菜单栏 | ⏳ | - |
+| **D4 智能层**（D4.1 LLM 路由 + D4.6 分类器 + D4.7 草稿生成 + D4.8 草稿入库 v1.0.1）| ✅ 完成 | 2026-06-11 |
+| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 启动中 | D5.1 ✅ / D5.7 待 |
+| D6+ CalDAV + 菜单栏 + launchd | ⏸️ 顺延 | Week 2 决策点 |
 | **Week 1 末决策点** | ⏳ | - |
-| D6-D10 Week 2 | ⏳ | - |
+| D7-D11 Week 2 | ⏳ | - |
 | **v0.1 发布** | ⏳ | - |
 
 ---
@@ -176,11 +181,11 @@ make help
 | 依赖管理 | **PEP 621 + uv**（D1.1 从 Poetry 切换）| `pyproject.toml` + `uv.lock`（提交）|
 | 数据库 | SQLite + **sqlcipher3**（D1.1 从 pysqlcipher3 切换）| 加密 + 本地（coleifer 维护的活跃 fork）|
 | LLM | **minimax M3**（统一链路）| 通过 Claude Code SDK |
-| 邮件 | imapclient + OAuth 2.0 | Keychain 凭证 |
-| CalDAV | iCloud 优先 | Week 1 D5 |
-| GUI | rumps（Mac 菜单栏）| Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% |
-| 调度 | APScheduler + launchd | launchd 保活 |
+| 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
+| CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
+| GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5 目标 90%+ |
+| 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本),launchd D6+ 顺延 |
 
 ---
 
@@ -232,6 +237,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-07（D1.1 脚手架重构：PEP 621 + uv + Python 3.12 + 包名重构）
+**最后更新**：2026-06-11（D5.0-redirect docs 收口:D5 重新定义为业务调度器 SMTP 发送链路,CalDAV/菜单栏/launchd 顺延 D6+）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
