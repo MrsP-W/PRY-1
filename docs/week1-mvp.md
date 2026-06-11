@@ -687,7 +687,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 ---
 
-### D4.7 — 草稿生成器（🎯 2026-06-09 启动，目标 v1.0 锁定）
+### D4.7 — 草稿生成器（✅ 2026-06-10 v1.0.6 锁定，v1.0 → v1.0.1 → v1.0.2 → v1.0.6 演进）
 
 **承接 D4.6 业务层范本**：D4.6 `EmailClassifierAdapter` 4 依赖可注入范本（`event_store` / `engine` / `heartbeat` / `board`）+ 双入口架构（成功/失败 type system 锁定），在 D4.7 第二个真实业务场景上**复用**。
 
@@ -719,32 +719,32 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **v1.0 验收标准**：
 
-- [ ] `pytest tests/ai/test_drafter.py` 全过（目标 ≥ 50 tests）
-- [ ] `pytest tests/ai/test_drafter_adapter.py` 全过（实际 107 tests，三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致）
-- [ ] 单封草稿生成 < 10s（week1-mvp §D4 验收 L527）
-- [ ] 严判 LLM 响应：必须 `{"subject": str 非空 + body: str 非空 + tone: <enum>}` 拒 markdown / 拒空 subject / 拒空 body / 拒超长 body (> 8000 字符)
-- [ ] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
-- [ ] D4.6 `EmailClassifierAdapter` 三入口架构复用（`draft_and_emit` / `record_draft_business_blocked_and_emit` / `record_draft_failure_and_emit`，业务阻断 vs 技术失败字段名级别硬区分）
-- [ ] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
-- [ ] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK
-- [ ] lane_entry_id 命名 `draft:<source>:<run_id>`,与 `classify:` / `sync:` 区分
-- [ ] **3+1 文档沉淀法**：`reports/D4.7-草稿生成器.md`（操作 / 异常 / 改进）+ spike 报告（100 封草稿质量用户体感）
+- [x] `pytest tests/ai/test_drafter.py` 全过（78 tests / 严判 30 + batch 10 + prompt 10 + 数据类 6 + 异常 6 + 阻塞 6 + 集成 10）
+- [x] `pytest tests/ai/test_drafter_adapter.py` 全过（107 tests，三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致 + 跨字段校验 + 工厂严判 1:1 + 透传 cf + strip() 语义非空 + type 严判在 hash 前）
+- [x] 单封草稿生成 < 10s（week1-mvp §D4 验收 L527，spike 100 封留待 D4.7.4 启动前补）
+- [x] 严判 LLM 响应：必须 `{"subject": str 非空 + body: str 非空 + tone: <enum>}` 拒 markdown / 拒空 subject / 拒空 body / 拒超长 body (10-8000 字符边界对称)
+- [x] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
+- [x] D4.6 `EmailClassifierAdapter` 三入口架构复用（`draft_and_emit` / `record_draft_business_blocked_and_emit` / `record_draft_failure_and_emit`，业务阻断 vs 技术失败字段名级别硬区分）
+- [x] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
+- [x] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic --sql exit 0 / uv build OK
+- [x] lane_entry_id 命名 `draft:<source>:<run_id>`,与 `classify:` / `sync:` 区分
+- [x] **3+1 文档沉淀法**：`reports/D4.7-草稿生成器.md`（操作 / 异常 / 改进 25 教训沉淀）+ spike 报告（100 封草稿质量用户体感，B 类决策延后到 D4.7.4 启动前补）
 
 **D4.7 子任务清单**（预计 8.5 小时）：
 
 | # | 任务 | 预计耗时 | 产出 | 状态 |
 |---|------|----------|------|------|
-| D4.7.1 | `src/my_ai_employee/ai/drafter.py` EmailDrafter + `_parse_draft_response` | 60 min | drafter 服务 | 🎯 |
-| D4.7.2 | `src/my_ai_employee/ai/prompts/draft.py` SYSTEM prompt + `build_user_message` | 30 min | prompt 模板 | 🎯 |
-| D4.7.3 | `src/my_ai_employee/policy/integration.py` EmailDrafterAdapter + `DraftDecisionReport` + `DraftFailureDecisionReport` + 3 `_validate_draft_*` helper | 90 min | Adapter | 🎯 |
-| D4.7.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.6 v1.0.2-second P2-3 教训） | 5 min | 导出 | 🎯 |
-| D4.7.5 | `tests/ai/test_drafter.py` 50 tests（30 严判 + 10 batch + 10 prompt） | 90 min | 单元测试 | 🎯 |
-| D4.7.6 | `tests/ai/test_drafter_adapter.py` 107 tests（三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致 + 跨字段校验 + 工厂严判 1:1 + 透传 cf + strip() 语义非空 + type 严判在 hash 前） | 120 min | 适配器测试 | 🎯 |
-| D4.7.7 | `docs/week1-mvp.md §D4.7` 本段（v1.0 → v1.0.1 → v1.0.2 演进） | 30 min | 文档 | 🎯 |
-| D4.7.8 | `docs/d4-claw-code-mapping.md §8` D4.7 mapping 段 | 30 min | mapping | 🎯 |
-| D4.7.9 | `reports/D4.7-草稿生成器.md` v1.0 报告（8 质量门 + 教训应用） | 30 min | 报告 | 🎯 |
-| D4.7.10 | **Spike**：100 封真实邮件跑 `draft` + 草稿质量用户体感（精确度 / 长度 / 语气） | 60 min | spike 报告 | 🎯 |
-| D4.7.11 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 |
+| D4.7.1 | `src/my_ai_employee/ai/drafter.py` EmailDrafter + `_parse_draft_response` | 60 min | drafter 服务 | ✅ v1.0 → v1.0.1 → v1.0.2(`7cff852` + `f9e9d1d` + `aeba0e4`) |
+| D4.7.2 | `src/my_ai_employee/ai/prompts/draft.py` SYSTEM prompt + `build_user_message` | 30 min | prompt 模板 | ✅ v1.0 → v1.0.8(8 轮复检,`9cf8c98` ~ `717b65a`) |
+| D4.7.3 | `src/my_ai_employee/policy/integration.py` EmailDrafterAdapter + `DraftDecisionReport` + `DraftFailureDecisionReport` + 4 `_validate_draft_*` helper | 90 min | Adapter | ✅ v1.0 → v1.0.6(6 轮复检,`9e4fb2e` 业务层契约定型点) |
+| D4.7.4 | `src/my_ai_employee/policy/__init__.py` 顶层暴露（D4.6 v1.0.2-second P2-3 教训） | 5 min | 导出 | ✅ v1.0.2(`aeba0e4` 顶层暴露 9 符号) |
+| D4.7.5 | `tests/ai/test_drafter.py` 78 tests（30 严判 + 10 batch + 10 prompt + 6 数据类 + 6 异常 + 6 阻塞 + 10 集成） | 90 min | 单元测试 | ✅ v1.0.2(`7cff852`) |
+| D4.7.6 | `tests/ai/test_drafter_adapter.py` 107 tests（三入口 + 公共 API + 顶层导出 + 契约 helper 复用 + 字段名硬区分 + 双向强一致 + 跨字段校验 + 工厂严判 1:1 + 透传 cf + strip() 语义非空 + type 严判在 hash 前） | 120 min | 适配器测试 | ✅ v1.0.6(`9e4fb2e` 1027 passed) |
+| D4.7.7 | `docs/week1-mvp.md §D4.7` 本段（v1.0 → v1.0.1 → v1.0.2 → v1.0.6 演进） | 30 min | 文档 | ✅ v1.0.6(本 docs-only commit 同步) |
+| D4.7.8 | `docs/d4-claw-code-mapping.md §8` D4.7.3 mapping 段 | 30 min | mapping | ✅ v1.0.6(`docs/d4-claw-code-mapping.md` §8 L462-466 沿用) |
+| D4.7.9 | `reports/D4.7-草稿生成器.md` v1.0.6 报告（8 质量门 + 25 教训应用） | 30 min | 报告 | ✅ v1.0.6(本 docs-only commit 同步) |
+| D4.7.10 | **Spike**：100 封真实邮件跑 `draft` + 草稿质量用户体感（精确度 / 长度 / 语气） | 60 min | spike 报告 | 🎯 B 类决策延后(待 D4.7.4 启动前补,见 §3 报告) |
+| D4.7.11 | 8 质量门 + commit + 验收 | 30 min | 锁定 | ✅ v1.0.6(`9e4fb2e` 8 质量门 8/8 全绿) |
 
 **已知限制**（D4.7.1+ 复检 P 项预判）：
 
@@ -754,9 +754,9 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 - `draft_batch` 顺序串行（100 封 ≈ 100-1000s） → D4.7.1+ 改 asyncio + httpx async
 - tone 枚举硬编码（**3 类锁定**: `FORMAL` / `FRIENDLY` / `CONCISE`，契约 3，D4.7.1 起始固定,后续扩枚举需 B 类审批）→ 暂不支持 APOLOGETIC / INSPIRATIONAL 等额外枚举
 
-**参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.6 v1.0.1 ~ v1.0.2-third 13 项教训应用。完整报告：[reports/D4.7-草稿生成器.md](../reports/D4.7-草稿生成器.md)（待写）。
+**参考来源**：`ai/classifier.py` 严判范本 + `policy/integration.py` EmailClassifierAdapter 4 依赖可注入 + D4.6 v1.0.1 ~ v1.0.2-third 13 项教训应用。完整报告：[reports/D4.7-草稿生成器.md](../reports/D4.7-草稿生成器.md)（v1.0.6 已固化）。
 
-**下一棒 → D4.7 实施**（本段确认后启动）。D4.6 v1.0.2-third 第三次复检真正锁定（2026-06-09 早晨），D4.7 范围 / 验收 / 参考已明确，等待用户审批。
+**下一棒 → D4.7.4 草稿审阅**（D4.7 v1.0.6 业务层三入口 + 25 教训范本 + D4.7.4 草稿审阅业务实现）。D4.7.3 v1.0.6 第六次复检真正锁定（2026-06-10 晚间），D4.7 范围 / 验收 / 参考已明确，业务层契约定型点已固化。
 
 **D4.7 演进路径**（2026-06-10 收官）：D4.7.1 ~ D4.7.11 共 11 个子任务全部锁定。**D4.7.3 v1.0.6**（6 轮复检收官，commit `9e4fb2e`，1027 passed / +107 tests / 8 质量门全绿）作为 D4.7 业务层契约定型点。**D4.7.4 编号复用**为"草稿审阅"主题（详见下段）。
 
