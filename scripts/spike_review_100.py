@@ -34,7 +34,6 @@ from my_ai_employee.ai.reviewer import (  # noqa: E402
     ReviewResult,
 )
 
-
 # ==================== 100 封邮件数据 ====================
 # 每条格式:(subject, body, tone, email_category, original_body_excerpt, expected_block)
 # expected_block: None=预期 LLM 判定, "sensitive"/"tone"/"template"/"factual"=预期本地阻断
@@ -894,10 +893,10 @@ def run_spike(output_dir: Path) -> None:
     raw_path = output_dir / f"spike_review_100_{timestamp}.json"
     report_path = output_dir / f"spike_review_100_{timestamp}.md"
 
-    print(f"🚀 D4.7.4.10 spike — 100 封合成邮件审阅")
+    print("🚀 D4.7.4.10 spike — 100 封合成邮件审阅")
     print(f"   输出目录: {output_dir}")
     print(f"   时间戳:   {timestamp}")
-    print(f"   EmailReviewer 初始化...")
+    print("   EmailReviewer 初始化...")
 
     reviewer = EmailReviewer()
     drafts = [
@@ -912,7 +911,7 @@ def run_spike(output_dir: Path) -> None:
         for e in ALL_EMAILS
     ]
 
-    print(f"   100 封邮件开始审阅(LLM 调用 < 5s/封,总时长 ~ 5-8 分钟)...")
+    print("   100 封邮件开始审阅(LLM 调用 < 5s/封,总时长 ~ 5-8 分钟)...")
     start = time.time()
     results = reviewer.review_batch(drafts)
     total_elapsed = time.time() - start
@@ -925,7 +924,7 @@ def run_spike(output_dir: Path) -> None:
     raw_results: list[dict] = []
     matches_expected = {"total": 0, "mismatch": []}
 
-    for email, result in zip(ALL_EMAILS, results):
+    for email, result in zip(ALL_EMAILS, results, strict=False):
         if isinstance(result, ReviewBlockedResult):
             counters["business_blocked"] += 1
             counters[f"block:{result.reason.value}"] += 1
@@ -989,13 +988,16 @@ def run_spike(output_dir: Path) -> None:
             # 期望 LLM 判定
             if actual_block in ("passed", "review_rejected", "failure", "error"):
                 matches_expected["total"] += 1
-        elif expected == "sensitive" and actual_block == "sensitive_word_hit":
-            matches_expected["total"] += 1
-        elif expected == "tone" and actual_block == "tone_mismatch":
-            matches_expected["total"] += 1
-        elif expected == "template" and actual_block == "template_violation":
-            matches_expected["total"] += 1
-        elif expected == "factual" and actual_block == "factual_conflict":
+        elif (
+            expected == "sensitive"
+            and actual_block == "sensitive_word_hit"
+            or expected == "tone"
+            and actual_block == "tone_mismatch"
+            or expected == "template"
+            and actual_block == "template_violation"
+            or expected == "factual"
+            and actual_block == "factual_conflict"
+        ):
             matches_expected["total"] += 1
         else:
             matches_expected["mismatch"].append(
@@ -1020,7 +1022,9 @@ def run_spike(output_dir: Path) -> None:
                     "max_ms": max(latencies) if latencies else 0,
                     "avg_ms": int(statistics.mean(latencies)) if latencies else 0,
                     "p50_ms": int(statistics.median(latencies)) if latencies else 0,
-                    "p95_ms": int(statistics.quantiles(latencies, n=20)[18]) if len(latencies) >= 20 else 0,
+                    "p95_ms": int(statistics.quantiles(latencies, n=20)[18])
+                    if len(latencies) >= 20
+                    else 0,
                 },
                 "expected_match": {
                     "matched": matches_expected["total"],
@@ -1038,40 +1042,40 @@ def run_spike(output_dir: Path) -> None:
 
     # ===== 写 Markdown 报告 =====
     report_lines = [
-        f"# D4.7.4.10 Spike 报告 — 100 封合成邮件审阅",
-        f"",
+        "# D4.7.4.10 Spike 报告 — 100 封合成邮件审阅",
+        "",
         f"> **时间**: {timestamp}  ",
         f"> **总耗时**: {total_elapsed:.1f}s  ",
-        f"> **总封数**: 100 封(URGENT/TODO/FYI/SPAM/PERSONAL 各 20 封)",
+        "> **总封数**: 100 封(URGENT/TODO/FYI/SPAM/PERSONAL 各 20 封)",
         f"> **LLM 调用**: {len(latencies)} 次(本地阻断不调用 LLM)",
-        f"",
-        f"---",
-        f"",
-        f"## 1. 总体结果",
-        f"",
-        f"| 类型 | 数量 | 占比 |",
-        f"|------|------|------|",
+        "",
+        "---",
+        "",
+        "## 1. 总体结果",
+        "",
+        "| 类型 | 数量 | 占比 |",
+        "|------|------|------|",
         f"| ✅ review_passed | {counters.get('passed', 0)} | {counters.get('passed', 0)}% |",
         f"| ❌ review_rejected(LLM 拒) | {counters.get('review_rejected', 0)} | {counters.get('review_rejected', 0)}% |",
         f"| 🛑 business_blocked(本地阻断) | {counters.get('business_blocked', 0)} | {counters.get('business_blocked', 0)}% |",
         f"| ⚠️ failure(LLM 全链失败) | {counters.get('failure', 0)} | {counters.get('failure', 0)}% |",
         f"| 💥 error(入参错误) | {counters.get('error', 0)} | {counters.get('error', 0)}% |",
-        f"",
+        "",
     ]
 
     # 阻断原因分布
     report_lines.extend(
         [
-            f"## 2. 业务阻断原因分布",
-            f"",
-            f"| 阻断原因 | 数量 | 预期 | 一致性 |",
-            f"|----------|------|------|--------|",
+            "## 2. 业务阻断原因分布",
+            "",
+            "| 阻断原因 | 数量 | 预期 | 一致性 |",
+            "|----------|------|------|--------|",
             f"| sensitive_word_hit | {counters.get('block:sensitive_word_hit', 0)} | 12 | {'✅' if counters.get('block:sensitive_word_hit', 0) == 12 else '⚠️'} |",
             f"| tone_mismatch | {counters.get('block:tone_mismatch', 0)} | 5 | {'✅' if counters.get('block:tone_mismatch', 0) == 5 else '⚠️'} |",
             f"| template_violation | {counters.get('block:template_violation', 0)} | 5 | {'✅' if counters.get('block:template_violation', 0) == 5 else '⚠️'} |",
             f"| factual_conflict | {counters.get('block:factual_conflict', 0)} | 10 | {'✅' if counters.get('block:factual_conflict', 0) == 10 else '⚠️'} |",
             f"| **合计** | **{counters.get('business_blocked', 0)}** | **32** | {'✅' if counters.get('business_blocked', 0) == 32 else '⚠️'} |",
-            f"",
+            "",
         ]
     )
 
@@ -1079,10 +1083,10 @@ def run_spike(output_dir: Path) -> None:
     if latencies:
         report_lines.extend(
             [
-                f"## 3. LLM 延迟统计",
-                f"",
-                f"| 指标 | 数值 |",
-                f"|------|------|",
+                "## 3. LLM 延迟统计",
+                "",
+                "| 指标 | 数值 |",
+                "|------|------|",
                 f"| 调用次数 | {len(latencies)} |",
                 f"| 最小 | {min(latencies)} ms |",
                 f"| 最大 | {max(latencies)} ms |",
@@ -1090,64 +1094,68 @@ def run_spike(output_dir: Path) -> None:
                 f"| 中位 (P50) | {int(statistics.median(latencies))} ms |",
                 f"| P95 | {int(statistics.quantiles(latencies, n=20)[18]) if len(latencies) >= 20 else 'N/A'} ms |",
                 f"| 目标 (< 5000ms) | {'✅ 达标' if max(latencies) < 5000 else '❌ 超标'} |",
-                f"",
+                "",
             ]
         )
 
     # 期望匹配
     report_lines.extend(
         [
-            f"## 4. 期望 vs 实际匹配",
-            f"",
+            "## 4. 期望 vs 实际匹配",
+            "",
             f"- **匹配数**: {matches_expected['total']} / 100",
             f"- **失配数**: {len(matches_expected['mismatch'])}",
-            f"",
+            "",
         ]
     )
     if matches_expected["mismatch"]:
         report_lines.extend(
             [
-                f"### 失配详情",
-                f"",
-                f"| email_id | category | expected | actual |",
-                f"|----------|----------|----------|--------|",
+                "### 失配详情",
+                "",
+                "| email_id | category | expected | actual |",
+                "|----------|----------|----------|--------|",
             ]
         )
         for mm in matches_expected["mismatch"]:
             report_lines.append(
                 f"| {mm['email_id']} | {mm['category']} | {mm['expected']} | {mm['actual']} |"
             )
-        report_lines.append(f"")
+        report_lines.append("")
 
     # 按 category 分组统计
     report_lines.extend(
         [
-            f"## 5. 按邮件分类分组",
-            f"",
-            f"| Category | Total | business_blocked | passed | review_rejected | failure |",
-            f"|----------|-------|------------------|--------|-----------------|---------|",
+            "## 5. 按邮件分类分组",
+            "",
+            "| Category | Total | business_blocked | passed | review_rejected | failure |",
+            "|----------|-------|------------------|--------|-----------------|---------|",
         ]
     )
     for category in ("URGENT", "TODO", "FYI", "SPAM", "PERSONAL"):
         cat_results = [r for r in raw_results if r["category"] == category]
         if not cat_results:
             continue
-        blocked = sum(1 for r in cat_results if r["actual_block"].startswith("sensitive")
-                      or r["actual_block"] in ("tone_mismatch", "template_violation", "factual_conflict"))
+        blocked = sum(
+            1
+            for r in cat_results
+            if r["actual_block"].startswith("sensitive")
+            or r["actual_block"] in ("tone_mismatch", "template_violation", "factual_conflict")
+        )
         passed = sum(1 for r in cat_results if r["actual_block"] == "passed")
         rejected = sum(1 for r in cat_results if r["actual_block"] == "review_rejected")
         failure = sum(1 for r in cat_results if r["actual_block"] == "failure")
         report_lines.append(
             f"| {category} | {len(cat_results)} | {blocked} | {passed} | {rejected} | {failure} |"
         )
-    report_lines.append(f"")
+    report_lines.append("")
 
     # 阻断示例
     report_lines.extend(
         [
-            f"## 6. 阻断示例(各 1 例)",
-            f"",
-            f"### 6.1 sensitive_word_hit",
+            "## 6. 阻断示例(各 1 例)",
+            "",
+            "### 6.1 sensitive_word_hit",
         ]
     )
     for r in raw_results:
@@ -1158,13 +1166,15 @@ def run_spike(output_dir: Path) -> None:
                     f"  - category: {r['category']}, tone: {r['tone']}",
                     f"  - blocked_word: `{r.get('blocked_word', '')}`",
                     f"  - flagged_issues: {r['flagged_issues']}",
-                    f"",
+                    "",
                 ]
             )
             break
 
     for block_reason in ("tone_mismatch", "template_violation", "factual_conflict"):
-        report_lines.append(f"### 6.{['tone_mismatch', 'template_violation', 'factual_conflict'].index(block_reason) + 2} {block_reason}")
+        report_lines.append(
+            f"### 6.{['tone_mismatch', 'template_violation', 'factual_conflict'].index(block_reason) + 2} {block_reason}"
+        )
         for r in raw_results:
             if r["actual_block"] == block_reason:
                 report_lines.extend(
@@ -1173,54 +1183,60 @@ def run_spike(output_dir: Path) -> None:
                         f"  - category: {r['category']}, tone: {r['tone']}",
                         f"  - flagged_issues: {r['flagged_issues']}",
                         f"  - review_summary: {r['review_summary'][:100]}",
-                        f"",
+                        "",
                     ]
                 )
                 break
 
     # 异常 case
-    anomalies = [r for r in raw_results if r["actual_block"] in ("failure", "error", "review_rejected")]
+    anomalies = [
+        r for r in raw_results if r["actual_block"] in ("failure", "error", "review_rejected")
+    ]
     if anomalies:
         report_lines.extend(
             [
-                f"## 7. 异常 Case(review_rejected / failure / error)",
-                f"",
+                "## 7. 异常 Case(review_rejected / failure / error)",
+                "",
                 f"共 {len(anomalies)} 例:",
-                f"",
+                "",
             ]
         )
         for r in anomalies[:5]:  # 仅展示前 5 例
             report_lines.append(
                 f"- **{r['email_id']}** ({r['category']}/{r['tone']}): {r['actual_block']}"
             )
-        report_lines.append(f"")
+        report_lines.append("")
 
     # 结论
     report_lines.extend(
         [
-            f"## 8. 结论与建议",
-            f"",
+            "## 8. 结论与建议",
+            "",
             f"- **业务阻断**: {counters.get('business_blocked', 0)}/{counters.get('business_blocked', 0) + counters.get('passed', 0) + counters.get('review_rejected', 0) + counters.get('failure', 0) + counters.get('error', 0)} 命中本地硬规则",
             f"- **LLM 调用延迟**: 平均 {int(statistics.mean(latencies)) if latencies else 0}ms, P95 {(int(statistics.quantiles(latencies, n=20)[18]) if len(latencies) >= 20 else 0)}ms",
             f"- **匹配度**: {matches_expected['total']}/100",
-            f"",
+            "",
         ]
     )
 
     report_path.write_text("\n".join(report_lines), encoding="utf-8")
     print(f"   📝 报告:     {report_path}")
     print()
-    print(f"=== Spike 跑完 ===")
-    print(f"  passed={counters.get('passed', 0)}, "
-          f"rejected={counters.get('review_rejected', 0)}, "
-          f"blocked={counters.get('business_blocked', 0)}, "
-          f"failure={counters.get('failure', 0)}, "
-          f"error={counters.get('error', 0)}")
+    print("=== Spike 跑完 ===")
+    print(
+        f"  passed={counters.get('passed', 0)}, "
+        f"rejected={counters.get('review_rejected', 0)}, "
+        f"blocked={counters.get('business_blocked', 0)}, "
+        f"failure={counters.get('failure', 0)}, "
+        f"error={counters.get('error', 0)}"
+    )
     if latencies:
-        print(f"  LLM latency: min={min(latencies)}ms / "
-              f"avg={int(statistics.mean(latencies))}ms / "
-              f"p95={int(statistics.quantiles(latencies, n=20)[18]) if len(latencies) >= 20 else 0}ms / "
-              f"max={max(latencies)}ms")
+        print(
+            f"  LLM latency: min={min(latencies)}ms / "
+            f"avg={int(statistics.mean(latencies))}ms / "
+            f"p95={int(statistics.quantiles(latencies, n=20)[18]) if len(latencies) >= 20 else 0}ms / "
+            f"max={max(latencies)}ms"
+        )
 
 
 def main() -> None:

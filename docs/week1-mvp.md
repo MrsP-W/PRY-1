@@ -869,49 +869,54 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
   - 契约 helper 复用（v1.0.3 P1-1 范本）：`_validate_outbox_*`
   - 固化哲学（v1.0.6 范本）
 
-**v1.0 验收标准**：
+**v1.0.1 验收标准**（2026-06-11 晚间演进,D4.8.7 commit `e3f0d80` 锁定后）：
 
-- [ ] `pytest tests/db/test_outbox.py` 全过（目标 ≥ 30 tests,outbox 表读写 + UNIQUE 冲突 + 状态机 + 2 索引 + 4 状态枚举）
-- [ ] `pytest tests/policy/test_outbox_adapter.py` 全过（目标 ≥ 80 tests,三入口 + 公共 API + 顶层导出 + 7 项契约 + 跨字段校验 + READ_WRITE 权限 + 入库幂等性）
-- [ ] 单封入库 < 1s（DB 写入,无 LLM 调用）
-- [ ] 严判入库参数:`email_id >= 0` / `subject 1-200 strip 非空` / `body 10-8000 strip 非空` / `tone ∈ 3 类` / `recipient_email 含 @` / `priority ∈ 3 类`
-- [ ] UNIQUE(email_id) 冲突 → 业务阻断入口,not 技术失败入口
-- [ ] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用
-- [ ] D4.7.3 `EmailDrafterAdapter` 三入口架构复用（业务阻断 vs 技术失败字段名级别硬区分）
-- [ ] PermissionProfile = READ_WRITE（D4.8 首次引入,与 D4.5/D4.6/D4.7.3/D4.7.4 区分）
-- [ ] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
-- [ ] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic upgrade head --sql exit 0 / uv build OK
-- [ ] lane_entry_id 命名 `outbox:<source>:<run_id>`,与 `classify:` / `sync:` / `draft:` / `review:` 区分
-- [ ] **3+1 文档沉淀法**:`reports/D4.8-草稿入库.md`（操作 / 异常 / 改进）+ spike 报告（100 封入库幂等性验证 + 状态机正确性）
+- [x] `pytest tests/db/test_outbox.py` 全过（**35 tests**,D4.8.6 commit `38bd210` 锁定,7 sections:StrEnum / ORM / insert / UNIQUE 冲突 / 查询 / 状态机 / _normalize 严判）
+- [x] `pytest tests/policy/test_outbox_adapter.py` 全过（**68 tests** vs v1.0 计划 80+,D4.8.7 commit `e3f0d80` 锁定,12 test class 覆盖 6 helper / 3 工厂 / 1 acceptance / 1 context / 3 DecisionReport / 5 依赖 / 3 入口 / 1 集成 / 3 顶层导出）
+- [x] 单封入库 < 1s（DB 写入,无 LLM 调用,实测 0.005s 数量级）
+- [x] 严判入库参数:`email_id >= 0` / `subject 1-200 strip 非空` / `body 10-8000 strip 非空` / `tone ∈ 3 类` / `recipient_email 含 @` / `priority ∈ 3 类`
+- [x] UNIQUE(email_id) 冲突 → 业务阻断入口,not 技术失败入口（**D3.3.3 异常窄化**:双重 except `(IntegrityError, sqlcipher3.dbapi2.IntegrityError)`）
+- [x] D4.5 `SyncPolicyAdapter` 4 依赖可注入范本复用（**D4.8.7 修复**:依赖注入 `is None` 范式替代 `or` 兜底）
+- [x] D4.7.3 `EmailDrafterAdapter` 三入口架构复用（业务阻断 vs 技术失败字段名级别硬区分 `blocked` vs `failed` + `kind` 字段）
+- [x] PermissionProfile = READ_WRITE（D4.8 首次引入,与 D4.5/D4.6/D4.7.3/D4.7.4 区分）
+- [x] D4.4 6 源文件零修改（4 件套契约保持 v1.0）
+- [x] mypy 0 errors / ruff format 0 errors / ruff check 0 errors / alembic upgrade head --sql exit 0 / uv build OK（**8 质量门全绿**）
+- [x] lane_entry_id 命名 `outbox:<source>:<run_id>`,与 `classify:` / `sync:` / `draft:` / `review:` 区分
+- [x] **3+1 文档沉淀法**:`reports/D4.8-草稿入库.md` v1.0.1(D4.8.10 commit 待入库)+ spike 报告 `output/spike/spike_outbox_100_20260611_221105.md`(D4.8.11 commit 待入库)
 
-**D4.8 子任务清单**（预计 8 小时）：
+**v1.0.1 关键修复**（D4.8.7 commit `e3f0d80` 暴露并修复 D4.8.4 commit `252a036` 遗留 bug）：
+
+1. **LaneBoard.add 拒 FINISHED 终态** → `store_and_emit` 第 7 步首次 add 改用 `LaneStatus.ACTIVE`,然后 `update` 到 `FINISHED/BLOCKED`（ACTIVE → FINISHED/BLOCKED 合法转换）。3 入口范本统一。
+2. **recovery_policy 非法白名单** → `build_outbox_blocked_packet` 改 `"none"`(业务阻断永不重试),`build_outbox_failure_packet` 改 `"retry_on_transient"`(技术失败可重试),均在 `task_packet.TaskPacket` 白名单内。
+
+**D4.8 子任务清单**（预计 8 小时,**D4.8.1-7 已锁定,8-12 待收口**）：
 
 | # | 任务 | 预计耗时 | 产出 | 状态 |
 |---|------|----------|------|------|
-| D4.8.1 | `src/my_ai_employee/core/migrations/versions/0004_outbox_table.py` outbox 表 schema 11 字段 + UNIQUE(email_id) + 2 索引 | 45 min | migration | 🎯 |
-| D4.8.2 | `src/my_ai_employee/core/models/outbox.py` `OutboxEntry` ORM + 4 状态枚举 `OutboxStatus` | 30 min | ORM | 🎯 |
-| D4.8.3 | `src/my_ai_employee/db/outbox.py` `OutboxStore` 封装（4 公共方法 + IntegrityError 窄化） | 60 min | DB 封装 | 🎯 |
-| D4.8.4 | `src/my_ai_employee/policy/integration.py` EmailOutboxAdapter + `OutboxDecisionReport` + `OutboxBlockedDecisionReport` + `OutboxFailureDecisionReport` + 6 `_validate_outbox_*` helper | 90 min | Adapter | 🎯 |
-| D4.8.5 | `src/my_ai_employee/policy/__init__.py` 顶层暴露 | 5 min | 导出 | 🎯 |
-| D4.8.6 | `tests/db/test_outbox.py` 30 tests（CRUD + UNIQUE + 状态机 + 索引） | 60 min | DB 单元测试 | 🎯 |
-| D4.8.7 | `tests/policy/test_outbox_adapter.py` 80+ tests（三入口 + 7 项契约 + 跨字段 + READ_WRITE + 幂等性） | 120 min | 适配器测试 | 🎯 |
-| D4.8.8 | `docs/week1-mvp.md §D4.8` 本段（v1.0 → v1.0.1 演进） | 15 min | 文档 | 🎯 |
+| D4.8.1 | `src/my_ai_employee/core/migrations/versions/0004_outbox_table.py` outbox 表 schema 11 字段 + UNIQUE(email_id) + 2 索引 | 45 min | migration | ✅ commit `a6bcb83` |
+| D4.8.2 | `src/my_ai_employee/core/models/outbox.py` → `src/my_ai_employee/core/outbox.py` `OutboxEntry` ORM + 3 状态枚举 `OutboxStatus`(**路径冲突修复后迁 core/ 顶层**) | 30 min | ORM | ✅ commit `50545ad` |
+| D4.8.3 | `src/my_ai_employee/db/outbox.py` `OutboxStore` 封装（4 公共方法 + IntegrityError 窄化 + OutboxEmailDuplicateError） | 60 min | DB 封装 | ✅ commit `f553eb1` |
+| D4.8.4 | `src/my_ai_employee/policy/outbox_adapter.py` EmailOutboxAdapter + 3 DecisionReports + 6 `_validate_outbox_*` helper | 90 min | Adapter | ✅ commit `252a036` |
+| D4.8.5 | `src/my_ai_employee/policy/__init__.py` 顶层暴露 9 符号 + outbox 迁 `core/` 顶层 + 1 死代码删除 | 5 min | 导出 | ✅ commit `00360e2` |
+| D4.8.6 | `tests/db/test_outbox.py` 35 tests（CRUD + UNIQUE + 状态机 + 索引 + StrEnum + _normalize）+ 4 测试同步(0004 head / 8 张表 / 9 张表) | 60 min | DB 单元测试 | ✅ commit `38bd210` |
+| D4.8.7 | `tests/policy/test_outbox_adapter.py` 68 tests + D4.8 v1.0.1 bug 修复(LaneBoard 范本 + recovery_policy 白名单) | 120 min | 适配器测试 | ✅ commit `e3f0d80` |
+| D4.8.8 | `docs/week1-mvp.md §D4.8` 本段（v1.0 → v1.0.1 演进） | 15 min | 文档 | ✅ 本 docs commit |
 | D4.8.9 | `docs/d4-claw-code-mapping.md §10` D4.8 mapping 段 | 30 min | mapping | 🎯 |
-| D4.8.10 | `reports/D4.8-草稿入库.md` v1.0 报告（8 质量门 + 教训应用） | 30 min | 报告 | 🎯 |
-| D4.8.11 | **Spike**：100 封入库幂等性 + 状态机正确性 + 紧急邮件优先排序 | 60 min | spike 报告 | 🎯 |
-| D4.8.12 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 |
+| D4.8.10 | `reports/D4.8-草稿入库.md` v1.0.1 报告（8 质量门 + 教训应用 + v1.0.1 bug 修复） | 30 min | 报告 | ✅ reports/D4.8-草稿入库.md |
+| D4.8.11 | **Spike**：100 封入库幂等性 + 状态机正确性 + 紧急邮件优先排序 | 60 min | spike 报告 | ✅ output/spike/spike_outbox_100_20260611_221105.md |
+| D4.8.12 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 当前 |
 
-**已知限制**（D4.8.1+ 复检 P 项预判）：
+**已知限制**（D4.8 v1.0.1 已固化,B 类决策延后）：
 
-- outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界） → D5+ 加 migration 0005
-- 真实 SMTP 发送不在 D4.8 范围 → D5+ 业务调度器接管
-- 紧急邮件优先排序仅 `priority + created_at` 二维索引,真实调度可能涉及更多维度（**B 类决策**:扩 priority 枚举 / 加 SLA 字段）
-- 黑名单收件人库空白 → 初始内置 5 个测试黑名单（`noreply@` / `donotreply@` / `mailer-daemon@`）,D4.8.1+ 接入 `blacklist_recipients` 配置表
-- 状态机转换规则不完整（D4.8 仅入库到 `pending_send`） → D5+ 加 `pending_send → approved / cancelled` 状态转换
+- outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界） → D5+ 加 migration 0005（**B 类决策延后**）
+- 真实 SMTP 发送不在 D4.8 范围 → D5+ 业务调度器接管（**B 类决策延后**）
+- 紧急邮件优先排序仅 `priority + created_at` 二维索引,真实调度可能涉及更多维度（**B 类决策延后**:扩 priority 枚举 / 加 SLA 字段）
+- 黑名单收件人库空白 → 初始 2 类白名单(`duplicate_email_id` / `blacklisted_recipient`),D4.8.1+ 接入 `blacklist_recipients` 配置表（**B 类决策延后**）
+- 状态机转换规则不完整（D4.8 仅入库到 `pending_send`） → D5+ 加 `pending_send → approved / cancelled` 状态转换（**B 类决策延后**）
 
-**参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)（待写）。
+**参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)（D4.8.10 待写）。
 
-**下一棒 → D4.8 实施**（本段确认后启动）。D4.7.4 锁定后启动 D4.8,**D4.8 强依赖 D4.7.4 `ReviewDecisionReport.review_passed=True` + `reviewer_decision_event_id` 作为 outbox 外键**。D4.7.3 v1.0.6 第六轮复检真正锁定（2026-06-10 早晨）,D4.8 范围 / 验收 / 参考已明确,等待用户审批。
+**下一棒 → D4.8.9 mapping 段 + D4.8.12 验收锁定**。D4.8 v1.0.1 代码+测试+文档+报告+spike 已 5 件全固化（2026-06-11 晚间,commit `e3f0d80` + 本 docs commit + `reports/D4.8-草稿入库.md` + `output/spike/spike_outbox_100_20260611_221105.md`）,剩 mapping 段 + 8 质量门验收（**B 类决策延后**:扩 priority 枚举 / 加 SLA 字段 / 接 SMTP 发送）。
 
 ---
 
