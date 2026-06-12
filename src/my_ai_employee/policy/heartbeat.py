@@ -88,7 +88,8 @@ class Heartbeat:
                 避免 STALLED 状态被自己覆盖。
 
         Raises:
-            ValueError: transport_alive 不是 bool(now_ms 不是 int 暂不校验)
+            ValueError: transport_alive 不是 bool / refresh_last_seen 不是原生 bool
+                / now_ms 不是 int 暂不校验
         """
         if transport_alive is not None:
             if not isinstance(transport_alive, bool):
@@ -96,6 +97,18 @@ class Heartbeat:
                     f"transport_alive 必须是 bool, 实际 {type(transport_alive).__name__}"
                 )
             self.transport_alive = transport_alive
+        # D5.5.4 修复 refresh_last_seen 缺原生 bool 严判(检查员 P3):
+        #   修复前:refresh_last_seen 静默接受 0/1/字符串/None 真值,真值陷阱风险
+        #          与本项目 type(value) is bool 严判规则不一致(D4.7.3 v1.0.5 教训)
+        #   修复后:type(refresh_last_seen) is bool 严判,拒 0/1/"False"/None 静默接受
+        #   必传语义:False 显式"不动 last_seen"(如 step 1 仅刷 transport_alive),
+        #            True 显式"本轮刷 last_seen"(如 step 3b 本轮刷新)
+        #   默认值仍为 True(向后兼容历史 caller)
+        if type(refresh_last_seen) is not bool:
+            raise ValueError(
+                f"refresh_last_seen 必须是原生 bool, 实际 "
+                f"{type(refresh_last_seen).__name__}={refresh_last_seen!r}"
+            )
         if refresh_last_seen:
             self.last_seen_ms = now_ms if now_ms is not None else int(time.time() * 1000)
 

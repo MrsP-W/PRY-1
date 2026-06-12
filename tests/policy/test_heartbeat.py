@@ -103,6 +103,43 @@ class TestUpdate:
         with pytest.raises(ValueError, match="transport_alive 必须是 bool"):
             h.update(transport_alive="not_bool")  # type: ignore[arg-type]
 
+    def test_update_refresh_last_seen_int_0_raises(self) -> None:
+        """update(refresh_last_seen=0) → ValueError(拒 int 真值陷阱,D5.5.4 P3)."""
+        h = Heartbeat()
+        with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
+            h.update(refresh_last_seen=0)  # type: ignore[arg-type]
+
+    def test_update_refresh_last_seen_int_1_raises(self) -> None:
+        """update(refresh_last_seen=1) → ValueError(拒 int 1 显式真值陷阱)."""
+        h = Heartbeat()
+        with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
+            h.update(refresh_last_seen=1)  # type: ignore[arg-type]
+
+    def test_update_refresh_last_seen_str_false_raises(self) -> None:
+        """update(refresh_last_seen="False") → ValueError(拒字符串真值)."""
+        h = Heartbeat()
+        with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
+            h.update(refresh_last_seen="False")  # type: ignore[arg-type]
+
+    def test_update_refresh_last_seen_none_raises(self) -> None:
+        """update(refresh_last_seen=None) → ValueError(拒 None,必须显式传 bool)."""
+        h = Heartbeat()
+        with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
+            h.update(refresh_last_seen=None)  # type: ignore[arg-type]
+
+    def test_update_refresh_last_seen_false_keeps_last_seen(self) -> None:
+        """update(refresh_last_seen=False) → 不动 last_seen_ms(D5.5.2 设计契约)."""
+        h = Heartbeat(last_seen_ms=1000)
+        h.update(refresh_last_seen=False, now_ms=9999)
+        assert h.last_seen_ms == 1000  # 未刷
+        # 注:transport_alive 也未动(只显式传才动)
+
+    def test_update_refresh_last_seen_true_refreshes(self) -> None:
+        """update(refresh_last_seen=True) → 刷 last_seen_ms 到 now_ms(D5.5.2 契约)."""
+        h = Heartbeat(last_seen_ms=0)
+        h.update(refresh_last_seen=True, now_ms=5000)
+        assert h.last_seen_ms == 5000
+
 
 class TestEvaluatePriority:
     """evaluate() 优先级: TRANSPORT_DEAD > STALLED > HEALTHY."""

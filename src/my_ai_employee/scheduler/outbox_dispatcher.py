@@ -251,6 +251,11 @@ class OutboxDispatcher:
         #    - 成功时清空(避免历史 cf 干扰)
         #    - 进程崩溃后状态丢失(B 类决策延后,真实生产需持久化)
         self._failure_state: dict[int, dict[str, int]] = {}
+        # 5. D5.5.4 跨轮次轮换状态(batch_size=1 时防新邮件永久饿死,见 P1-2 修复)
+        #    - 用途:batch_size=1 且 new_pool + retry_pool 都有数据时,跨 run_once 轮换选哪一池
+        #    - 设计:实例级 bool,toggle 一次就换一边,避免饥饿
+        #    - 边界:仅 batch_size=1 + 两池都有数据时使用,其他场景无影响
+        self._last_was_retry: bool = False
 
     # ===== 公共 helper: 注入未注入依赖时的硬报错 =====
 
@@ -371,19 +376,60 @@ class OutboxDispatcher:
         #   修复后:严格预留 + smart fill — retry_quota 必预(存在 FAILED 时必填),
         #          剩余槽位由 new_pool 填充;反之亦然(无 FAILED 时 new 占满 batch_size)
         #   配额计算:retry_quota = max(1, batch_size // 2) → batch_size=10 → retry_quota=5
-        #   场景:50 PENDING_SEND + 0 FAILED + batch_size=10 → picked=10(new=10, retry=0)
-        #        50 PENDING_SEND + 50 FAILED + batch_size=10 → picked=10(new=5, retry=5)
-        #        5 PENDING_SEND + 50 FAILED + batch_size=10 → picked=10(new=5, retry=5)
-        #        0 PENDING_SEND + 50 FAILED + batch_size=10 → picked=5(retry=5, new=0)
+        # D5.5.4 修复配额浪费 + 单槽饥饿(检查员第四轮 P1):
+        #   缺陷 1 — 配额浪费:0 PENDING + 50 FAILED + batch=10 → retry_pick=5, new_pick=[]
+        #             浪费 5 槽(batch_size-1/2 全空)。修复:双向回填 — 哪池还有货填空槽
+        #   缺陷 2 — 单槽饥饿:1 PENDING + 50 FAILED + batch=1 → retry_pick=1, new_pick=[]
+        #             永远选 FAILED,新邮件永久饿死。修复:跨 run_once 轮换 self._last_was_retry
+        #   场景(全量):
+        #     50 PENDING + 0 FAILED + batch=10 → picked=10(new=10, retry=0)
+        #     50 PENDING + 50 FAILED + batch=10 → picked=10(new=5, retry=5)
+        #     5 PENDING + 50 FAILED + batch=10 → picked=10(new=5, retry=5)   [D5.5.3 修复后]
+        #     0 PENDING + 50 FAILED + batch=10 → picked=10(retry=10, new=0)  [D5.5.4 修复 1 后]
+        #     50 PENDING + 1 FAILED + batch=1 → 轮换,第 1 次 retry=1, 第 2 次 new=1
+        #                                            → 第 3 次 retry=1, 第 4 次 new=1
+        #                                            [D5.5.4 修复 2 后,新邮件不再永久饿死]
         retry_quota = max(1, self._batch_size // 2)
+        new_quota = self._batch_size - retry_quota
         new_pool = [e for e in all_entries if e.status != OutboxStatus.FAILED.value]
         retry_pool = [e for e in all_entries if e.status == OutboxStatus.FAILED.value]
-        # 步骤 1:retry 必预 retry_quota 个(若 FAILED 不足则按实际取)
+        # 步骤 1:各池先按配额取
         retry_pick = retry_pool[:retry_quota]
-        # 步骤 2:剩余槽位由 new_pool 填充(保证 batch_size 满载,无 FAILED 时仍不浪费)
-        remaining_slots = self._batch_size - len(retry_pick)
-        new_pick = new_pool[:remaining_slots]
-        # 步骤 3:合并 + 全局重排(各池已 sorted;批内统一按 priority+created_at 排序)
+        new_pick = new_pool[:new_quota]
+        # 步骤 2:D5.5.4 双向回填 — 哪池还有余量就把空槽填满(消除配额浪费)
+        #   优先回填到 retry(因为 retry 配额被严判限制 ≤ retry_quota,
+        #   但配额不足 retry_quota 时浪费 → 回填补救)
+        #   再回填到 new(配额 batch_size-retry_quota,new 不够时也补救)
+        total_picked = len(retry_pick) + len(new_pick)
+        leftover = self._batch_size - total_picked
+        if leftover > 0:
+            more_retry = retry_pool[retry_quota : retry_quota + leftover]
+            if more_retry:
+                take = min(len(more_retry), leftover)
+                retry_pick = retry_pick + more_retry[:take]
+                leftover -= take
+        if leftover > 0:
+            more_new = new_pool[new_quota : new_quota + leftover]
+            if more_new:
+                take = min(len(more_new), leftover)
+                new_pick = new_pick + more_new[:take]
+                leftover -= take
+        # 步骤 3:D5.5.4 单槽跨轮次轮换(batch_size=1 时防新邮件永久饿死)
+        #   仅在 batch_size=1 + 两池都有数据时启用,其他场景无影响
+        #   设计:本次如果 retry_pick 有 1 条,记 _last_was_retry=True;下次强制 new_pick
+        #        (覆盖本次 retry_pick + new_pick 清空 + 重选)
+        if self._batch_size == 1 and retry_pick and new_pick:
+            # 两池都有 → 跨轮次轮换
+            if self._last_was_retry:
+                # 这次选 new,清掉 retry
+                retry_pick = []
+                new_pick = new_pool[:1]
+            else:
+                # 这次选 retry,清掉 new
+                new_pick = []
+                retry_pick = retry_pool[:1]
+            self._last_was_retry = not self._last_was_retry
+        # 步骤 4:合并 + 全局重排(各池已 sorted;批内统一按 priority+created_at 排序)
         selected: list[OutboxEntry] = list(new_pick) + list(retry_pick)
         selected.sort(
             key=lambda e: (
