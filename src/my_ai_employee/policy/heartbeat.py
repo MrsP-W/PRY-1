@@ -75,12 +75,17 @@ class Heartbeat:
         transport_alive: bool | None = None,
         *,
         now_ms: int | None = None,
+        refresh_last_seen: bool = True,
     ) -> None:
         """刷新心跳.
 
         Args:
             transport_alive: 显式指定 transport 状态(None = 保持当前)
             now_ms: 注入"当前时间"(测试用, None = int(time.time() * 1000))
+            refresh_last_seen: 是否同步刷新 last_seen_ms(D5.5.2 新增,默认 True)。
+                False = 仅刷新 transport_alive,不动 last_seen_ms,
+                用于 OutboxDispatcher.run_once 这种"先 evaluate 再 update"场景,
+                避免 STALLED 状态被自己覆盖。
 
         Raises:
             ValueError: transport_alive 不是 bool(now_ms 不是 int 暂不校验)
@@ -91,7 +96,8 @@ class Heartbeat:
                     f"transport_alive 必须是 bool, 实际 {type(transport_alive).__name__}"
                 )
             self.transport_alive = transport_alive
-        self.last_seen_ms = now_ms if now_ms is not None else int(time.time() * 1000)
+        if refresh_last_seen:
+            self.last_seen_ms = now_ms if now_ms is not None else int(time.time() * 1000)
 
     # ===== evaluate =====
 

@@ -17,6 +17,9 @@
 
 合计 45 cases。
 
+D5.5.2 扩展 H 段(检查员第二轮 P1 修复专项,+2 tests):
+    H. D5.5.2 批次饥饿配额分割 + STALLED 真实路径(2 tests)
+
 25 教训应用(沿 D4.7.3 v1.0.6):
   1. 工厂层 + __post_init__ 双层防御(DispatcherResult 6 字段)
   2. 跨字段校验(total_picked = sent + business_blocked + technical_failed + skipped)
@@ -1057,3 +1060,117 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     assert second.sent == 0
     assert second.skipped == 1
     assert second.technical_failed == 0
+
+
+# ===== I. D5.5.2 P1 修复专项 — 批次饥饿配额 + STALLED 真实可达(2 tests)=====
+
+
+def test_run_once_failed_retry_quota_does_not_starve_new_entries(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    smtp_transport: InMemorySmtpTransport,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.2 P1-1:批次饥饿防护 — new_quota + retry_quota 配额分割。
+
+    场景:
+      - 50 个 FAILED 条目(老,退避已过) + 1 个 PENDING_SEND 条目(新)
+      - batch_size=10
+      - 修复前:全部 FAILED 填满批次,1 个新 PENDING_SEND 可能被挤掉
+      - 修复后:retry_quota=5 / new_quota=5 配额分割,
+              FAILED 最多 retry_quota=5 个,新 PENDING_SEND 必被拉到(<= new_quota)
+    """
+    # 1) 注入 50 个 FAILED(老 created_at=0) + 1 个 PENDING_SEND(新 created_at=1_000_000)
+    old_failed_ids: list[int] = []
+    for i in range(50):
+        fid = _insert_entry(
+            store,
+            email_id=i + 100,
+            status=OutboxStatus.FAILED.value,
+            created_at=0,
+        )
+        old_failed_ids.append(fid)
+    new_pending_id = _insert_entry(
+        store,
+        email_id=999,
+        status=OutboxStatus.PENDING_SEND.value,
+        created_at=1_000_000,
+    )
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    result = dispatcher.run_once(now_ms=1_000_000)
+
+    # 2) 配额分割验证:
+    #    - new_quota=5,pending_entries limit=5 → 拉到 1 个 PENDING_SEND
+    #    - retry_quota=5,failed_entries limit=5 → 拉到 5 个 FAILED(最早失败的优先)
+    #    - 总 picked=6
+    assert result.total_picked == 6
+    # 3) 新 PENDING_SEND 必被处理(不应被 50 个 FAILED 挤掉)→ 状态变 SENT
+    assert store.by_id(new_pending_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
+    # 4) 50 个 FAILED 中只有 5 个被处理(配额上限),剩余 45 个仍 FAILED
+    sent_failed = len(
+        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.SENT.value]  # type: ignore[union-attr]
+    )
+    still_failed = len(
+        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.FAILED.value]  # type: ignore[union-attr]
+    )
+    assert sent_failed == 5
+    assert still_failed == 45
+    # 5) 全部 6 条都 sent
+    assert result.sent == 6
+    assert result.skipped == 0
+    # 6) 配额被严格遵守:1 个 PENDING_SEND + 5 个 FAILED(1 + 5 = 6 = total_picked)
+    #    若配额失效,total_picked 会是 10(全部 5 FAILED 配额 + 5 pending quota 仍 = 6)
+    #    但若 NEW 配额失效,PENDING_SEND 不会被 picked(全部 FAILED 填满)
+    #    若 RETRY 配额失效,会拉到 50 个 FAILED(被 batch_size=10 截断到 10)
+    #    这两个边界都通过 total_picked=6 同时验证
+
+
+def test_run_once_stalled_state_is_reachable_and_still_processes(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.2 P1-2:STALLED 状态真实可达 + 仍正常处理。
+
+    场景:
+      - heartbeat 100 秒前 update 过(超过 30s 阈值,transport_alive=True → STALLED)
+      - 调用 run_once(now_ms=1_100_000)
+      - 修复前:update(now_ms=start_ms) + evaluate(now_ms=start_ms) → idle=0 → HEALTHY
+              STALLED 不可达,历史状态被自己覆盖
+      - 修复后:update(refresh_last_seen=False) 不动 last_seen_ms,
+              evaluate 看到真实 idle=100_000ms > 30_000ms → STALLED
+              run_once 仍正常处理(沿 D5.5 设计:STALLED 仅性能降级,transport 还活着)
+    """
+    _insert_entry(store, email_id=1)
+    # 1) 预置 heartbeat:100 秒前 update 过,transport_alive=True → 必 STALLED
+    heartbeat.update(transport_alive=True, now_ms=1_000_000)
+    assert heartbeat.evaluate(now_ms=1_100_000) == Liveness.STALLED
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    # 2) run_once(now_ms=1_100_000): 修复后应真实看到 STALLED
+    #    内部调用栈:update(transport_alive=True, refresh_last_seen=False) + evaluate(now_ms=1_100_000)
+    #    last_seen_ms 保持 1_000_000(没被刷新) → idle=100_000ms > 30_000ms → STALLED
+    result = dispatcher.run_once(now_ms=1_100_000)
+
+    # 3) STALLED 状态仍处理(不阻断,D5.5 设计:HEALTHY/STALLED 都正常处理)
+    assert result.sent == 1
+    assert result.total_picked == 1
+    # 4) last_seen_ms 应仍是 1_000_000(refresh_last_seen=False 没改)
+    #    证明 STALLED 是真实可达的(若被刷新,后续 evaluate 立刻返 HEALTHY)
+    assert heartbeat.last_seen_ms == 1_000_000
+    assert heartbeat.evaluate(now_ms=1_100_000) == Liveness.STALLED

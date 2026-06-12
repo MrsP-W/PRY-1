@@ -313,7 +313,12 @@ class OutboxDispatcher:
         adapter = self._require_send_adapter()
 
         # 1. Heartbeat 刷新 + 3 态评估(D5.5 新增:从 D5.4 assert_alive 改为 evaluate 分支)
-        self._heartbeat.update(transport_alive=transport_alive, now_ms=start_ms)
+        # D5.5.2 修复 STALLED 不可达(检查员 P1-2):
+        #   修复前:update(now_ms=start_ms) + evaluate(now_ms=start_ms) → idle_ms=0 → 必 HEALTHY
+        #          STALLED 历史状态被自己覆盖,实际不可达
+        #   修复后:update(refresh_last_seen=False) 仅刷 transport_alive,不动 last_seen_ms
+        #          evaluate(now_ms=start_ms) 看到真实 idle_ms,STALLED 状态真实可达
+        self._heartbeat.update(transport_alive=transport_alive, refresh_last_seen=False)
         liveness = self._heartbeat.evaluate(now_ms=start_ms)
         if liveness == Liveness.TRANSPORT_DEAD:
             # transport_dead → 早 return,全部 skipped(D5.4 沿用 + D5.5 加 liveness 上下文)
@@ -332,10 +337,14 @@ class OutboxDispatcher:
         logger.debug(f"OutboxDispatcher heartbeat={liveness.value}, 正常处理")
 
         # 2. 拉批 — PENDING_SEND + APPROVED + FAILED 三种状态(FAILED 由退避窗口控制)
+        # D5.5.2 修复批次饥饿(检查员 P1-1):
+        #   策略:新邮件(PENDING_SEND + APPROVED)按 batch_size 全额优先,FAILED 用剩余槽位
+        #         + 受 retry_quota 双重限制,避免 50 个 FAILED 占满批次饿死新邮件
+        #   各池仍以 limit=batch_size 拉批,但合并后做"新邮件优先 + FAILED 配额"二次切分
         pending_entries = store.by_status(OutboxStatus.PENDING_SEND.value, limit=self._batch_size)
         approved_entries = store.by_status(OutboxStatus.APPROVED.value, limit=self._batch_size)
         failed_entries = store.by_status(OutboxStatus.FAILED.value, limit=self._batch_size)
-        # 合并 + 优先级排序
+        # 合并 + 优先级排序(批内统一排序,失败重试与新邮件同台竞争)
         all_entries = pending_entries + approved_entries + failed_entries
         all_entries.sort(
             key=lambda e: (
@@ -343,12 +352,24 @@ class OutboxDispatcher:
                 e.created_at,  # created_at ASC(同优先级先入先出)
             )
         )
-        # 限批(batch_size 上限)
-        entries = all_entries[: self._batch_size]
+        # D5.5.2 批次饥饿防护:分离新邮件(new)与重试(retry),新邮件按 batch_size 优先
+        retry_quota = max(1, self._batch_size // 2)
+        new_pool = [e for e in all_entries if e.status != OutboxStatus.FAILED.value]
+        retry_pool = [e for e in all_entries if e.status == OutboxStatus.FAILED.value]
+        # 新邮件按排序最多 batch_size 个(已排序,直接 slice)
+        selected: list[OutboxEntry] = list(new_pool[: self._batch_size])
+        # 剩余槽位给 FAILED,但不超过 retry_quota
+        remaining_slots = self._batch_size - len(selected)
+        if remaining_slots > 0 and retry_pool:
+            selected.extend(retry_pool[: min(retry_quota, remaining_slots)])
+        entries = selected
         total_picked = len(entries)
+        picked_new = sum(1 for e in entries if e.status != OutboxStatus.FAILED.value)
+        picked_retry = total_picked - picked_new
         logger.info(
             f"OutboxDispatcher 拉批: PENDING_SEND={len(pending_entries)} "
             f"APPROVED={len(approved_entries)} FAILED={len(failed_entries)} "
+            f"选批(new/retry)={picked_new}/{picked_retry} 配额={retry_quota} "
             f"批内={total_picked}/{self._batch_size}"
         )
 
