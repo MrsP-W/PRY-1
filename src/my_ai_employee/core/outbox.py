@@ -10,10 +10,21 @@
 承接 D4.8.1 outbox migration 0004(11 字段 + UNIQUE(email_id) + 2 索引 + 2 FK)。
 
 3 个 StrEnum 枚举(顺序固定,业务层做"按状态分组"时可直接用 list(Enum) 排序):
-    - OutboxStatus: 4 状态(pending_send / approved / sent / cancelled)
+    - OutboxStatus: 6 状态(pending_send / approved / sending / sent / failed / cancelled)
+                    D4.8 4 状态 → D5.2 6 状态(加 sending / failed,B5 解封项)
     - OutboxTone: 3 语气(FORMAL / FRIENDLY / CONCISE),与 D4.7.3 DraftTone 字段值一致
                   (独立枚举,业务边界清晰:outbox 是入库产物,draft 是生成过程)
     - OutboxPriority: 3 优先级(urgent / normal / low)
+
+状态机白名单 ALLOWED_TRANSITIONS(D5.2 B5 解封项 — 6 状态 × 各自目标集):
+    PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}
+                   (D5.2 vs D5 启动计划文档偏差: 启动计划不含 APPROVED,
+                    实际保留 APPROVED 以兼容 D4.8 v1.0.1 test_update_status_pending_to_approved 契约)
+    APPROVED     → {SENDING, FAILED, CANCELLED}
+    SENDING      → {SENT, FAILED}
+    SENT         → {}    (终态)
+    FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
+    CANCELLED    → {}    (终态)
 
 OutboxEntry 11 字段(完全 mirror 0004_outbox_table migration):
     - id                  INTEGER PK AUTOINCREMENT
@@ -23,7 +34,7 @@ OutboxEntry 11 字段(完全 mirror 0004_outbox_table migration):
     - tone                TEXT NOT NULL — OutboxTone 3 选 1
     - reviewer_decision_event_id  INTEGER NULL — FK → events.id
     - drafter_decision_event_id   INTEGER NULL — FK → events.id
-    - status              TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 4 选 1
+    - status              TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 6 选 1(D5.2 扩)
     - created_at          INTEGER NOT NULL — Unix epoch ms
     - recipient_email     TEXT NOT NULL — 含 @ 即可
     - priority            TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
@@ -63,26 +74,62 @@ from my_ai_employee.core.models import Base
 
 
 class OutboxStatus(StrEnum):
-    """Outbox 4 状态枚举(D4.8 业务层契约,D4.8 仅入库到 pending_send)。
+    """Outbox 6 状态枚举(D5.2 业务层契约 — D5.2 从 4 状态扩 6 状态,B5 解封)。
 
-    状态机转换规则(D4.8 范围):
-        - pending_send → approved(显式批准,D5+ 业务调度器)
-        - pending_send → cancelled(用户取消,D5+ 业务调度器)
-        - approved → sent(SMTP 发送成功,D5+)
-        - D4.8 范围:仅入库到 pending_send
+    D5.2 状态机白名单 ALLOWED_TRANSITIONS(见下方模块级常量):
+        PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}
+        APPROVED     → {SENDING, FAILED, CANCELLED}
+        SENDING      → {SENT, FAILED}
+        SENT         → {}    (终态)
+        FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
+        CANCELLED    → {}    (终态)
 
     顺序固定,业务层做"按状态分组"时可直接用 list(OutboxStatus) 排序
     (pending_send 最先 / cancelled 最后)。
+
+    D5.2 vs D5 启动计划文档偏差(报告必标注):
+        D5 启动计划文档 PENDING_SEND → {SENDING, FAILED, CANCELLED}(3 目标)
+        D5.2 实际白名单 PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}(4 目标)
+        偏差原因: 保留 APPROVED 兼容 D4.8 v1.0.1 test_update_status_pending_to_approved 契约
+        (D4.8 L498-509 锁定),D5 业务调度器可走快路径(SENDING 直接)或
+        显式批准路径(APPROVED → SENDING)
     """
 
     PENDING_SEND = "pending_send"  # 默认:D4.8 入库产物
-    APPROVED = "approved"  # 显式批准,D5+ 调度器才进入此状态
+    APPROVED = "approved"  # 显式批准,D5+ 调度器可走显式批准路径
+    SENDING = "sending"  # D5.2 新增:SMTP 发送中(中间态,避免"假发送"风险)
     SENT = "sent"  # SMTP 发送成功,D5+ 才进入此状态(D4.8 不真发)
+    FAILED = "failed"  # D5.2 新增:SMTP 发送失败(可重试回 PENDING_SEND 或转 CANCELLED)
     CANCELLED = "cancelled"  # 用户取消,D5+ 调度器
 
 
-# 4 状态枚举值集合(O(1) 校验)
+# 6 状态枚举值集合(O(1) 校验,D5.2 扩 4→6)
 _OUTBOX_STATUS_CHOICES: frozenset[str] = frozenset(s.value for s in OutboxStatus)
+
+
+# ===== D5.2 状态机白名单 ALLOWED_TRANSITIONS(模块级常量,业务层严判依据)=====
+# 6 状态 × 各自合法目标集,显式枚举,无推导逻辑。
+# 任何状态机严判都查这张表,不在表内的转换直接 OutboxIllegalTransitionError。
+#
+# 设计原则(D5.2 B5 解封):
+#   1. 显式优于隐式: 白名单硬编码,不靠运行时推导(沿 D4.7.3 v1.0.4 P1-2 范本)
+#   2. 终态空集: SENT/CANCELLED 不可转出(显式 frozenset() 表达)
+#   3. 重试回路: FAILED → PENDING_SEND(指数退避后重试,D5.5 退避公式应用)
+#   4. 显式批准: APPROVED 作为 PENDING_SEND 合法目标,保留 D4.8 v1.0.1 契约
+#
+# D5.2 vs D5 启动计划文档偏差: PENDING_SEND 目标集加 APPROVED(决策理由见 OutboxStatus docstring)
+ALLOWED_TRANSITIONS: dict[OutboxStatus, frozenset[OutboxStatus]] = {
+    OutboxStatus.PENDING_SEND: frozenset(
+        {OutboxStatus.SENDING, OutboxStatus.APPROVED, OutboxStatus.FAILED, OutboxStatus.CANCELLED}
+    ),
+    OutboxStatus.APPROVED: frozenset(
+        {OutboxStatus.SENDING, OutboxStatus.FAILED, OutboxStatus.CANCELLED}
+    ),
+    OutboxStatus.SENDING: frozenset({OutboxStatus.SENT, OutboxStatus.FAILED}),
+    OutboxStatus.SENT: frozenset(),  # 终态
+    OutboxStatus.FAILED: frozenset({OutboxStatus.PENDING_SEND, OutboxStatus.CANCELLED}),
+    OutboxStatus.CANCELLED: frozenset(),  # 终态
+}
 
 
 class OutboxTone(StrEnum):
@@ -147,7 +194,7 @@ class OutboxEntry(Base):
         - tone:                   TEXT NOT NULL — OutboxTone 3 选 1
         - reviewer_decision_event_id:  INTEGER NULL — FK → events.id,D5+ 收紧为 NOT NULL
         - drafter_decision_event_id:   INTEGER NULL — FK → events.id,D5+ 收紧为 NOT NULL
-        - status:                 TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 4 选 1
+        - status:                 TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 6 选 1(D5.2 扩)
         - created_at:             INTEGER NOT NULL — Unix epoch ms
         - recipient_email:        TEXT NOT NULL — 含 @ 即可
         - priority:               TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
@@ -203,6 +250,7 @@ __all__ = [
     "OutboxTone",
     "OutboxPriority",
     "OutboxEntry",
+    "ALLOWED_TRANSITIONS",  # D5.2 新增:状态机白名单(模块级常量)
     "_OUTBOX_STATUS_CHOICES",
     "_OUTBOX_TONE_CHOICES",
     "_OUTBOX_PRIORITY_CHOICES",

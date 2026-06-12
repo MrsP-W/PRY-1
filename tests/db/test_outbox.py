@@ -1,8 +1,16 @@
-"""D4.8 — OutboxStore + OutboxEntry ORM 测试(35+ tests)。
+"""D4.8 + D5.2 — OutboxStore + OutboxEntry ORM 测试(35 tests + 兼容性修订)。
 
 承接 D4.8.1 outbox migration 0004(11 字段 + UNIQUE + 2 索引 + 2 FK)
 + D4.8.2 OutboxEntry ORM(11 字段 + 3 个 StrEnum)
-+ D4.8.3 OutboxStore(4 公共方法 + IntegrityError 窄化 + OutboxEmailDuplicateError)。
++ D4.8.3 OutboxStore(4 公共方法 + IntegrityError 窄化 + OutboxEmailDuplicateError)
++ D5.2 outbox sending state migration 0005(OutboxStatus 4→6 + ALLOWED_TRANSITIONS
+  + update_status(*, from_status) 必传严判 + OutboxIllegalTransitionError)
+
+D5.2 兼容性修订(本文件):
+    - test_outbox_status_has_4_states → test_outbox_status_has_6_states(加 SENDING + FAILED 断言)
+    - _OUTBOX_STATUS_CHOICES 4 元素 → 6 元素(加 sending + failed)
+    - 4 个 update_status 测试加 from_status 关键字(沿 D5.2 新签名)
+    - test_normalize_status_rejects_invalid_value 字面量 4 选 1 → 6 选 1
 
 7 段测试覆盖:
     1. 3 个 StrEnum 枚举值与 frozenset 选择(6 tests)
@@ -10,9 +18,9 @@
     3. OutboxStore.insert 6 字段透传(6 tests)
     4. UNIQUE 冲突 → OutboxEmailDuplicateError(3 tests)
     5. by_email_id / by_id / by_status / by_priority 查询(5 tests)
-    6. update_status 状态机(4 tests)
+    6. update_status 状态机(4 tests,D5.2 from_status 必传)
     7. _normalize 严判范本(3 tests)
-合计 35 tests。
+合计 35 tests(D5.2 兼容性修订,数量不变)。
 
 D3.3.3 教训应用:
     - UNIQUE 冲突严格区分业务阻断 vs 技术失败(OperationalError 透传)
@@ -115,13 +123,15 @@ def store(session_factory) -> OutboxStore:  # type: ignore[no-untyped-def]
 # ===== 1. 3 个 StrEnum 枚举值与 frozenset 选择(6 tests)=====
 
 
-def test_outbox_status_has_4_states() -> None:
-    """OutboxStatus 4 状态枚举值(week1-mvp.md:843 锁定)。"""
+def test_outbox_status_has_6_states() -> None:
+    """OutboxStatus 6 状态枚举值(D5.2 扩 4→6,加 SENDING + FAILED,B5 解封)。"""
     assert OutboxStatus.PENDING_SEND.value == "pending_send"
     assert OutboxStatus.APPROVED.value == "approved"
+    assert OutboxStatus.SENDING.value == "sending"  # D5.2 新增
     assert OutboxStatus.SENT.value == "sent"
+    assert OutboxStatus.FAILED.value == "failed"  # D5.2 新增
     assert OutboxStatus.CANCELLED.value == "cancelled"
-    assert len(OutboxStatus) == 4
+    assert len(OutboxStatus) == 6
 
 
 def test_outbox_tone_has_3_values() -> None:
@@ -140,10 +150,13 @@ def test_outbox_priority_has_3_values() -> None:
     assert len(OutboxPriority) == 3
 
 
-def test_outbox_status_choices_is_frozenset_4() -> None:
-    """_OUTBOX_STATUS_CHOICES = frozenset 4 元素(O(1) 校验)。"""
+def test_outbox_status_choices_is_frozenset_6() -> None:
+    """_OUTBOX_STATUS_CHOICES = frozenset 6 元素(O(1) 校验,D5.2 扩 4→6)。"""
     assert isinstance(_OUTBOX_STATUS_CHOICES, frozenset)
-    assert frozenset({"pending_send", "approved", "sent", "cancelled"}) == _OUTBOX_STATUS_CHOICES
+    assert (
+        frozenset({"pending_send", "approved", "sending", "sent", "failed", "cancelled"})
+        == _OUTBOX_STATUS_CHOICES
+    )
 
 
 def test_outbox_tone_choices_is_frozenset_3() -> None:
@@ -496,7 +509,7 @@ def test_by_priority_filters_correctly(store: OutboxStore) -> None:
 
 
 def test_update_status_pending_to_approved(store: OutboxStore) -> None:
-    """状态机:pending_send → approved(D5+ 显式批准)。"""
+    """状态机:pending_send → approved(D5+ 显式批准,D5.2 ALLOWED_TRANSITIONS 保留)。"""
     entry = store.insert(
         email_id=600,
         subject="状态机测试 - 批准",
@@ -505,12 +518,12 @@ def test_update_status_pending_to_approved(store: OutboxStore) -> None:
         recipient_email="approve@example.com",
     )
     assert entry.status == "pending_send"
-    updated = store.update_status(entry.id, "approved")
+    updated = store.update_status(entry.id, "approved", from_status="pending_send")
     assert updated.status == "approved"
 
 
 def test_update_status_pending_to_cancelled(store: OutboxStore) -> None:
-    """状态机:pending_send → cancelled(用户取消)。"""
+    """状态机:pending_send → cancelled(用户取消,D5.2 ALLOWED_TRANSITIONS 合法)。"""
     entry = store.insert(
         email_id=601,
         subject="状态机测试 - 取消",
@@ -518,28 +531,33 @@ def test_update_status_pending_to_cancelled(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="cancel@example.com",
     )
-    updated = store.update_status(entry.id, "cancelled")
+    updated = store.update_status(entry.id, "cancelled", from_status="pending_send")
     assert updated.status == "cancelled"
 
 
-def test_update_status_approved_to_sent(store: OutboxStore) -> None:
-    """状态机:approved → sent(SMTP 发送成功,D5+ 接管)。"""
+def test_update_status_approved_to_sending(store: OutboxStore) -> None:
+    """状态机:approved → sending(D5+ 显式批准路径,D5.2 ALLOWED_TRANSITIONS 合法)。
+
+    D5.2 修订说明: D4.8 旧版 test_update_status_approved_to_sent 走 approved → sent 直接
+    跳级路径,D5.2 加 ALLOWED_TRANSITIONS 白名单后,APPROVED 只能转 SENDING(SENT 必须在
+    SENDING 之后),改测试为 approved → sending 走 D5 显式批准路径。
+    """
     entry = store.insert(
         email_id=602,
-        subject="状态机测试 - 发送",
-        body="状态机测试发送的邮件正文,需要超过十个字符。",
+        subject="状态机测试 - 显式批准",
+        body="状态机测试显式批准的邮件正文,需要超过十个字符。",
         tone="FORMAL",
-        recipient_email="send@example.com",
+        recipient_email="approve-send@example.com",
     )
-    store.update_status(entry.id, "approved")
-    updated = store.update_status(entry.id, "sent")
-    assert updated.status == "sent"
+    store.update_status(entry.id, "approved", from_status="pending_send")
+    updated = store.update_status(entry.id, "sending", from_status="approved")
+    assert updated.status == "sending"
 
 
 def test_update_status_nonexistent_id_raises_value_error(store: OutboxStore) -> None:
     """update_status 不存在 outbox_id 抛 ValueError(防静默状态损坏)。"""
     with pytest.raises(ValueError, match="outbox_id=999"):
-        store.update_status(999, "approved")
+        store.update_status(999, "approved", from_status="pending_send")
 
 
 # ===== 7. _normalize 严判范本(3 tests)=====
@@ -555,7 +573,7 @@ def test_normalize_status_rejects_non_str(store: OutboxStore) -> None:
 
 def test_normalize_status_rejects_invalid_value(store: OutboxStore) -> None:
     """_normalize_status 白名单(invalid status → ValueError)。"""
-    with pytest.raises(ValueError, match="status 必须是 OutboxStatus 4 选 1"):
+    with pytest.raises(ValueError, match="status 必须是 OutboxStatus 6 选 1"):
         store._normalize_status("invalid_status")
 
 

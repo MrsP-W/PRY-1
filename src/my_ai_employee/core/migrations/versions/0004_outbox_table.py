@@ -75,7 +75,8 @@ def upgrade() -> None:
         # drafter_decision_event_id: FK → events.id,D4.7.3 草稿生成事件的 event.id
         # 可空:D4.8 启动初期可能无 drafter event,D5+ 必填
         sa.Column("drafter_decision_event_id", sa.Integer(), nullable=True),
-        # status: OutboxStatus 4 状态 {pending_send, approved, sent, cancelled}
+        # status: OutboxStatus 6 状态 {pending_send, approved, sending, sent, failed, cancelled}
+        # D5.2 扩 4→6(加 SENDING + FAILED),B5 解封,见 0005_outbox_sending_state migration
         # DDL 走 TEXT,ORM 走 OutboxStatus StrEnum 严判
         # DEFAULT 'pending_send' — D4.8 仅入库到 pending_send 状态
         sa.Column("status", sa.Text(), nullable=False, server_default="pending_send"),

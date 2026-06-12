@@ -1,13 +1,21 @@
 """D4.8 — OutboxStore: outbox 表读写封装.
 
 承接 D4.8.1 outbox migration 0004(11 字段 + UNIQUE + 2 索引 + 2 FK)
-+ D4.8.2 OutboxEntry ORM(11 字段 + 3 个 StrEnum).
++ D4.8.2 OutboxEntry ORM(11 字段 + 3 个 StrEnum)
++ D5.2 outbox sending state migration 0005(无 DDL,业务层 StrEnum 4→6 +
+  ALLOWED_TRANSITIONS 状态机白名单 + OutboxIllegalTransitionError + update_status from_status 严判)
 
 设计(沿用 D4.3 EventStore 范本):
   - insert(): 走 D4.8 契约(入库 + IntegrityError 窄化 → 业务阻断)
   - by_email_id / by_status / by_priority: 3 类热路径查询
-  - update_status: 状态机更新(D4.8 范围:仅 pending_send → 其他,D5+ 扩转换)
+  - update_status(D5.2 新签名): 必传 from_status + ALLOWED_TRANSITIONS 白名单严判
   - 严判只放在 D4.8.4 Adapter 层(契约层 OutboxStore 接受已校验参数,不再二次严判)
+
+D5.2 状态机白名单(B5 解封):
+  - 6 状态 PENDING_SEND / APPROVED / SENDING / SENT / FAILED / CANCELLED
+  - ALLOWED_TRANSITIONS 见 core/outbox.py
+  - update_status(*, from_status) 必传 from_status + from_status == row.status 严判
+  - 不在白名单内 → OutboxIllegalTransitionError(状态机漂移检测)
 
 D3.3.3 教训应用:
   - except 范围窄化: 只接 sqlalchemy.exc.IntegrityError, 不接 SQLAlchemyError 基类
@@ -16,6 +24,12 @@ D3.3.3 教训应用:
   - 反范本: D3.3.2 (SQLAlchemyError, _sqlcipher_dbapi.IntegrityError) 过宽,
     会把 OperationalError / DB 锁 / InterfaceError / DataError 误算为业务阻断,
     掩盖真实生产问题
+
+D4.7.3 v1.0.5/v1.0.6 25 教训应用:
+  - P1-1 跨字段校验: from_status == row.status(D5.2 from_status 必传严判)
+  - P1-2 双向强一致: ALLOWED_TRANSITIONS 6 状态 × 各自目标集完整(无遗漏)
+  - P2-1 type 严判: _normalize_status 严判 type() is str + in frozenset
+  - 注释同步是契约一部分: 本文件状态机段同步 ALLOWED_TRANSITIONS(D5.2)
 """
 
 from __future__ import annotations
@@ -30,6 +44,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from my_ai_employee.core.outbox import (
     _OUTBOX_STATUS_CHOICES,
+    ALLOWED_TRANSITIONS,
     OutboxEntry,
     OutboxStatus,
 )
@@ -54,6 +69,56 @@ class OutboxEmailDuplicateError(Exception):
             f"UNIQUE(email_id) 冲突: email_id={email_id} "
             f"(已存在 outbox 条目,入库幂等性触发 — 走业务阻断入口)"
         )
+
+
+class OutboxIllegalTransitionError(Exception):
+    """状态机非法转换异常(D5.2 B5 解封 — 防 cancelled → sent 等非法转换)。
+
+    触发场景(任一):
+      1. update_status 调用方 from_status 与 row.status 不一致(并发写状态漂移检测)
+      2. update_status 调用方 from_status → new_status 不在 ALLOWED_TRANSITIONS 白名单
+         (例 cancelled → sent, sent → anything, pending_send → sent 跳级)
+
+    调用方(D5.3 EmailSendAdapter)按业务语义区分:
+      - 状态漂移检测: 走 record_send_failure_and_emit(concurrent write,需 retry|escalate)
+      - 白名单外转换: 走 record_send_business_blocked_and_emit(bug,需人工 review)
+
+    Attributes:
+        outbox_id: OutboxEntry.id
+        from_status: 调用方传入的 from_status(可能与 row.status 不一致)
+        to_status: 目标 status
+        actual_status: 实际 row.status(可能与 from_status 不一致)
+        allowed: from_status 的合法目标集(从 ALLOWED_TRANSITIONS 查)
+    """
+
+    def __init__(
+        self,
+        outbox_id: int,
+        from_status: str,
+        to_status: str,
+        *,
+        actual_status: str | None = None,
+        allowed: frozenset[OutboxStatus] | None = None,
+    ) -> None:
+        self.outbox_id = outbox_id
+        self.from_status = from_status
+        self.to_status = to_status
+        self.actual_status = actual_status
+        self.allowed = allowed
+        if actual_status is not None and actual_status != from_status:
+            # 场景 1:状态漂移检测
+            super().__init__(
+                f"outbox_id={outbox_id} 状态机漂移: 调用方 from_status={from_status!r},"
+                f"实际 row.status={actual_status!r} "
+                f"(可能并发写导致,调用方应重读 row.status 再调 update_status)"
+            )
+        else:
+            # 场景 2:白名单外转换
+            allowed_str = sorted(s.value for s in allowed) if allowed is not None else "UNKNOWN"
+            super().__init__(
+                f"outbox_id={outbox_id} 状态机非法转换: {from_status!r} → {to_status!r} "
+                f"(allowed from {from_status!r}: {allowed_str},见 ALLOWED_TRANSITIONS)"
+            )
 
 
 # ===== OutboxStore =====
@@ -229,38 +294,72 @@ class OutboxStore:
             )
             return list(session.execute(stmt).scalars().all())
 
-    # ===== 状态机更新 =====
+    # ===== 状态机更新(D5.2 — B5 解封,from_status 必传 + 白名单严判)=====
 
     def update_status(
         self,
         outbox_id: int,
         new_status: str | OutboxStatus,
+        *,
+        from_status: str | OutboxStatus,
     ) -> OutboxEntry:
-        """更新 outbox 条目 status(状态机更新入口)。
+        """更新 outbox 条目 status(D5.2 状态机更新入口 — 6 状态 × 白名单严判)。
 
         Args:
             outbox_id: OutboxEntry.id
-            new_status: 目标 status(OutboxStatus 4 选 1)
+            new_status: 目标 status(OutboxStatus 6 选 1)
+            from_status: 调用方预期的当前 status(必传关键字,D5.2 严判一致性)
+                         防止 concurrent 写导致状态机漂移(行已被其他调用方推到其他状态)
 
         Returns:
             更新后的 OutboxEntry(已 refresh)
 
         Raises:
-            ValueError: new_status 非法 / outbox_id 不存在
-            TypeError: new_status 类型非法
+            OutboxIllegalTransitionError: 状态机漂移(from_status != row.status)
+                                          或 白名单外转换(ALLOWED_TRANSITIONS 不含 to_status)
+            ValueError: new_status / from_status 非法枚举值 / outbox_id 不存在
+            TypeError: new_status / from_status 类型非法
 
-        状态机转换规则(D4.8 范围):
-            - pending_send → approved(显式批准,D5+ 业务调度器)
-            - pending_send → cancelled(用户取消,D5+ 业务调度器)
-            - approved → sent(SMTP 发送成功,D5+)
-            - D4.8 范围:仅入库到 pending_send,update_status 留 D5+ 业务调度器调用
+        状态机白名单(ALLOWED_TRANSITIONS,D5.2 B5 解封):
+            PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}
+            APPROVED     → {SENDING, FAILED, CANCELLED}
+            SENDING      → {SENT, FAILED}
+            SENT         → {}    (终态)
+            FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
+            CANCELLED    → {}    (终态)
+
+        D5.2 决策(双层防御 — 工厂层 + 严判):
+            1. from_status == row.status 严判 → 状态漂移检测(防 concurrent 写)
+            2. ALLOWED_TRANSITIONS[from_status] ⊇ {to_status} 严判 → 白名单外转换
+            3. 异常 OutboxIllegalTransitionError 含 actual_status / allowed 字段,
+               调用方(D5.3 Adapter)按业务语义区分 concurrent write vs bug
         """
         new_status_value = self._normalize_status(new_status)
+        from_status_value = self._normalize_status(from_status)
         with self._session_factory() as session:
             row = session.get(OutboxEntry, outbox_id)
             if row is None:
                 raise ValueError(
                     f"outbox_id={outbox_id} 不存在,无法 update_status 为 {new_status_value!r}"
+                )
+            # D5.2 严判 #1: 状态漂移检测(concurrent write 防护)
+            if row.status != from_status_value:
+                raise OutboxIllegalTransitionError(
+                    outbox_id=outbox_id,
+                    from_status=from_status_value,
+                    to_status=new_status_value,
+                    actual_status=row.status,
+                )
+            # D5.2 严判 #2: 白名单外转换严判
+            from_enum = OutboxStatus(from_status_value)
+            allowed = ALLOWED_TRANSITIONS[from_enum]
+            new_enum = OutboxStatus(new_status_value)
+            if new_enum not in allowed:
+                raise OutboxIllegalTransitionError(
+                    outbox_id=outbox_id,
+                    from_status=from_status_value,
+                    to_status=new_status_value,
+                    allowed=allowed,
                 )
             row.status = new_status_value
             session.commit()
@@ -282,7 +381,7 @@ class OutboxStore:
             )
         if value not in _OUTBOX_STATUS_CHOICES:
             raise ValueError(
-                f"status 必须是 OutboxStatus 4 选 1 {_OUTBOX_STATUS_CHOICES!r},实际 {value!r}"
+                f"status 必须是 OutboxStatus 6 选 1 {_OUTBOX_STATUS_CHOICES!r},实际 {value!r}"
             )
         return value
 
@@ -305,4 +404,5 @@ class OutboxStore:
 __all__ = [
     "OutboxStore",
     "OutboxEmailDuplicateError",
+    "OutboxIllegalTransitionError",  # D5.2 新增:状态机非法转换异常
 ]
