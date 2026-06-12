@@ -246,12 +246,19 @@ class OutboxStore:
     ) -> list[OutboxEntry]:
         """按 status 查多条(走 idx_outbox_status_created_at 索引,O(log n))。
 
+        D5.5.3 修复旧积压永远进不了候选池(检查员 P1-1):
+          修复前:`order_by(created_at DESC).limit(N)` → 只取最新 N 条,超 N 的旧条目
+            永远进不了候选池(新增持续发生时老积压饿死)。
+          修复后:`order_by(created_at ASC).limit(N)` → 严格按 FIFO 取最老 N 条,
+            旧积压优先出,新邮件按到达顺序排队。
+          业务影响:OutboxDispatcher 拉批时旧邮件不再被饿死,符合"先入先出"语义。
+
         Args:
             status: OutboxStatus 4 选 1(enum 或字符串,严判 + 归一)
             limit: 返回上限,默认 100(D5+ 调度器轮询典型场景)
 
         Returns:
-            按 created_at DESC 排序的 OutboxEntry 列表
+            按 created_at ASC 排序的 OutboxEntry 列表(FIFO)
 
         Raises:
             ValueError: status 非法(不在 _OUTBOX_STATUS_CHOICES 4 选 1)
@@ -262,7 +269,7 @@ class OutboxStore:
             stmt = (
                 select(OutboxEntry)
                 .where(OutboxEntry.status == status_value)
-                .order_by(OutboxEntry.created_at.desc())
+                .order_by(OutboxEntry.created_at.asc())  # D5.5.3 FIFO 严格升序
                 .limit(limit)
             )
             return list(session.execute(stmt).scalars().all())
@@ -274,12 +281,15 @@ class OutboxStore:
     ) -> list[OutboxEntry]:
         """按 priority 查多条(走 idx_outbox_priority_created_at 索引,O(log n))。
 
+        D5.5.3:FIFO 一致性 — 与 by_status 保持相同排序方向(ASC)。
+          旧积压优先出,新邮件按到达顺序排队。
+
         Args:
             priority: OutboxPriority 3 选 1(字符串,严判)
             limit: 返回上限,默认 100
 
         Returns:
-            按 created_at DESC 排序的 OutboxEntry 列表
+            按 created_at ASC 排序的 OutboxEntry 列表(FIFO)
 
         Raises:
             ValueError: priority 非法
@@ -289,7 +299,7 @@ class OutboxStore:
             stmt = (
                 select(OutboxEntry)
                 .where(OutboxEntry.priority == priority_value)
-                .order_by(OutboxEntry.created_at.desc())
+                .order_by(OutboxEntry.created_at.asc())  # D5.5.3 FIFO 严格升序
                 .limit(limit)
             )
             return list(session.execute(stmt).scalars().all())

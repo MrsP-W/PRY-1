@@ -1,10 +1,10 @@
 # 我的AI员工 — 全天候个人 AI 数字员工
 
-> **一句话**：把 Agent Assistant 的 13 角色从"晨晚链路"升级为"全天候数字员工"，能力 = 邮件 + 日程 + 财务 + 笔记 + 主动提醒。
+> **一句话**：把 Agent Assistant 的 10 角色从"晨晚链路"升级为"全天候数字员工"，能力 = 邮件 + 日程 + 财务 + 笔记 + 主动提醒。
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ SLA 告警 + 退避重试闭环 + Heartbeat 联动；下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.5.3 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复；下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -12,7 +12,7 @@
 
 **兄弟项目**：
 
-- **Agent Assistant**（`../Agent Assistant/`）— 13 角色多 Agent 系统、Skill 生态、MD 维护纪律、跨会话记忆
+- **Agent Assistant**（`../Agent Assistant/`）— 10 角色多 Agent 系统、Skill 生态、MD 维护纪律、跨会话记忆
 - **我的AI员工**（本项目）— Agent Assistant 的"执行器"载体：把"晨晚链路半成品"升级为"全天候数字员工"
 
 **互不重复**：
@@ -24,7 +24,7 @@
 | 存储 | Markdown 文档 | SQLite 加密 + 向量索引 |
 | 接口 | 文档产出 | 菜单栏 + Web Dashboard + 移动伴侣 |
 | 隐私 | 公开 | 本地优先（**sqlcipher3**，D1.1 替代 pysqlcipher3）|
-| 复用 | 提供 13 角色 | 软链接 + 委派 |
+| 复用 | 提供 10 角色 | 软链接 + 委派 |
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 软链）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D5.5.1:1514 个，覆盖率约 90%）
+├── tests/                    # pytest 单元测试（D5.5.3:1522 个，覆盖率约 90.2%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D5.5.1:1514 个，覆盖率约 90%）
+make test    # pytest 单元测试（D5.5.3:1522 个，覆盖率约 90.2%）
 ```
 
 ### 4. 文档 lint
@@ -184,7 +184,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.1 1514 passed / 90%+ |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本),launchd D6+ 顺延 |
 
 ---
@@ -232,11 +232,11 @@ make help
 
 ## 🤝 相关项目
 
-- **Agent Assistant**（`../Agent Assistant/`）：13 角色多 Agent 系统（本项目复用的 agent 来源）
+- **Agent Assistant**（`../Agent Assistant/`）：10 角色多 Agent 系统（本项目复用的 agent 来源）
 - **海天水务 SAP 运维项目**（`../SAP运维项目/`）：SAP FICO 业务知识（被 Agent Assistant 引用）
 
 ---
 
-**最后更新**：2026-06-12（D5.5.1:FAILED 重试闭环 + SLA breach 统计语义修正,1514 passed / 8 质量门全绿 / 90.1% 覆盖）
+**最后更新**：2026-06-12（D5.5.3:P0 外部 symlink 修复 + P1 调度公平性(by_status 升序 + retry 严格配额) + P2 Heartbeat 本轮刷新恢复,1522 passed / 8 质量门全绿 / 90.2% 覆盖）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY

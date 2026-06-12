@@ -470,6 +470,37 @@ def test_by_status_filters_correctly(store: OutboxStore) -> None:
     assert all(e.status == "pending_send" for e in pending)
 
 
+def test_by_status_returns_oldest_first_fifo(store: OutboxStore) -> None:
+    """D5.5.3:by_status 严格按 created_at ASC 升序返回(FIFO)。
+
+    修复 P1-1 旧积压永远进不了候选池:
+      修复前 DESC + limit → 只取最新 N 条,旧积压饿死
+      修复后 ASC + limit → 严格 FIFO,旧积压优先出
+
+    场景:插入 3 条 PENDING_SEND,中间 sleep 10ms 模拟时间差,
+          limit=2 应返回最早 2 条(不是最新 2 条)。
+    """
+    import time as _time
+
+    first_ids: list[int] = []
+    for i in range(3):
+        entry = store.insert(
+            email_id=600 + i,
+            subject=f"FIFO 测试 {i}",
+            body=f"FIFO 测试邮件正文 {i},需要超过十个字符。",
+            tone="FORMAL",
+            recipient_email=f"fifo{i}@example.com",
+        )
+        first_ids.append(entry.id)
+        _time.sleep(0.01)  # 10ms 时间差保证 created_at 严格递增
+    # limit=2 必返回最早 2 条
+    pending = store.by_status("pending_send", limit=2)
+    assert len(pending) == 2
+    # D5.5.3 修复:严格升序,最早 2 条(不是最新 2 条)
+    assert pending[0].id == first_ids[0]
+    assert pending[1].id == first_ids[1]
+
+
 def test_by_priority_filters_correctly(store: OutboxStore) -> None:
     """by_priority 走 idx_outbox_priority_created_at 索引,正确过滤(week1-mvp.md:855 锁定)。"""
     # 2 个 normal,1 个 urgent

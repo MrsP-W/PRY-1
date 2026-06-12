@@ -313,15 +313,24 @@ class OutboxDispatcher:
         adapter = self._require_send_adapter()
 
         # 1. Heartbeat 刷新 + 3 态评估(D5.5 新增:从 D5.4 assert_alive 改为 evaluate 分支)
-        # D5.5.2 修复 STALLED 不可达(检查员 P1-2):
-        #   修复前:update(now_ms=start_ms) + evaluate(now_ms=start_ms) → idle_ms=0 → 必 HEALTHY
-        #          STALLED 历史状态被自己覆盖,实际不可达
-        #   修复后:update(refresh_last_seen=False) 仅刷 transport_alive,不动 last_seen_ms
-        #          evaluate(now_ms=start_ms) 看到真实 idle_ms,STALLED 状态真实可达
+        # D5.5.3 修复 Heartbeat 本轮没有刷新(检查员 P2):
+        #   修复前(D5.5.2):update(transport_alive=arg, refresh_last_seen=False) + evaluate
+        #     → STALLED 真实可达,但 last_seen_ms 永远不刷 → 持续 STALLED
+        #   修复后:
+        #     步骤 1:update(transport_alive=arg, refresh_last_seen=False) 仅刷 transport
+        #             不动 last_seen_ms(关键:让 evaluate 看到真实 idle_ms → STALLED 真实可达)
+        #     步骤 2:evaluate(now_ms=start_ms) 看老态
+        #     步骤 3a:TRANSPORT_DEAD 早 return,不刷(死了就该不刷)
+        #     步骤 3b:HEALTHY/STALLED update(refresh_last_seen=True) 本轮刷 last_seen_ms
+        #              → 下次 run_once 必 HEALTHY(只要间隔 < idle_threshold_ms)
+        #   场景:default last_seen_ms=0 → 第 1 次 STALLED → 第 1 次刷 → 第 2 次 HEALTHY
+        #        正常间隔跑 → 持续 HEALTHY
+        #        间隔 > 30s → STALLED → 仍正常处理 + 刷 → 下次恢复 HEALTHY
+        #        transport_alive=False → evaluate 必返 TRANSPORT_DEAD → 早 return
         self._heartbeat.update(transport_alive=transport_alive, refresh_last_seen=False)
         liveness = self._heartbeat.evaluate(now_ms=start_ms)
         if liveness == Liveness.TRANSPORT_DEAD:
-            # transport_dead → 早 return,全部 skipped(D5.4 沿用 + D5.5 加 liveness 上下文)
+            # transport_dead → 早 return(已显式 update transport_alive=False,无需再刷)
             duration = time.perf_counter() - t0
             logger.warning(f"OutboxDispatcher 早 return: heartbeat={liveness.value},全部 skipped")
             return DispatcherResult(
@@ -333,8 +342,12 @@ class OutboxDispatcher:
                 skip_breach=0,
                 duration_seconds=duration,
             )
-        # HEALTHY / STALLED 正常处理(Stalled 仅性能降级,仍可发送)
-        logger.debug(f"OutboxDispatcher heartbeat={liveness.value}, 正常处理")
+        # HEALTHY / STALLED 正常处理 + 刷本轮心跳(Stalled 仅性能降级,仍可发送)
+        # 关键:本轮必须刷 last_seen_ms → 下次 run_once 必 HEALTHY
+        # 注:必须传 now_ms=start_ms,否则 update 会回退到 int(time.time()*1000) 即真实时间
+        #     这会让注入测试时间 1_000_000 的测试在第二次 run_once 时撞上"时间倒流"ValueError
+        self._heartbeat.update(refresh_last_seen=True, now_ms=start_ms)
+        logger.debug(f"OutboxDispatcher heartbeat={liveness.value}, 正常处理,本轮已刷新")
 
         # 2. 拉批 — PENDING_SEND + APPROVED + FAILED 三种状态(FAILED 由退避窗口控制)
         # D5.5.2 修复批次饥饿(检查员 P1-1):
@@ -352,20 +365,36 @@ class OutboxDispatcher:
                 e.created_at,  # created_at ASC(同优先级先入先出)
             )
         )
-        # D5.5.2 批次饥饿防护:分离新邮件(new)与重试(retry),新邮件按 batch_size 优先
+        # D5.5.3 修复重试永久饿死(检查员 P1-2):
+        #   修复前:new_pool[:batch_size] 后剩槽位才给 FAILED → new≥batch_size 时 retry_quota=0
+        #          FAILED 永远进不了批,重试无限期被饿死
+        #   修复后:严格预留 + smart fill — retry_quota 必预(存在 FAILED 时必填),
+        #          剩余槽位由 new_pool 填充;反之亦然(无 FAILED 时 new 占满 batch_size)
+        #   配额计算:retry_quota = max(1, batch_size // 2) → batch_size=10 → retry_quota=5
+        #   场景:50 PENDING_SEND + 0 FAILED + batch_size=10 → picked=10(new=10, retry=0)
+        #        50 PENDING_SEND + 50 FAILED + batch_size=10 → picked=10(new=5, retry=5)
+        #        5 PENDING_SEND + 50 FAILED + batch_size=10 → picked=10(new=5, retry=5)
+        #        0 PENDING_SEND + 50 FAILED + batch_size=10 → picked=5(retry=5, new=0)
         retry_quota = max(1, self._batch_size // 2)
         new_pool = [e for e in all_entries if e.status != OutboxStatus.FAILED.value]
         retry_pool = [e for e in all_entries if e.status == OutboxStatus.FAILED.value]
-        # 新邮件按排序最多 batch_size 个(已排序,直接 slice)
-        selected: list[OutboxEntry] = list(new_pool[: self._batch_size])
-        # 剩余槽位给 FAILED,但不超过 retry_quota
-        remaining_slots = self._batch_size - len(selected)
-        if remaining_slots > 0 and retry_pool:
-            selected.extend(retry_pool[: min(retry_quota, remaining_slots)])
+        # 步骤 1:retry 必预 retry_quota 个(若 FAILED 不足则按实际取)
+        retry_pick = retry_pool[:retry_quota]
+        # 步骤 2:剩余槽位由 new_pool 填充(保证 batch_size 满载,无 FAILED 时仍不浪费)
+        remaining_slots = self._batch_size - len(retry_pick)
+        new_pick = new_pool[:remaining_slots]
+        # 步骤 3:合并 + 全局重排(各池已 sorted;批内统一按 priority+created_at 排序)
+        selected: list[OutboxEntry] = list(new_pick) + list(retry_pick)
+        selected.sort(
+            key=lambda e: (
+                -_PRIORITY_SORT_KEY.get(e.priority, 0),
+                e.created_at,
+            )
+        )
         entries = selected
         total_picked = len(entries)
-        picked_new = sum(1 for e in entries if e.status != OutboxStatus.FAILED.value)
-        picked_retry = total_picked - picked_new
+        picked_new = len(new_pick)
+        picked_retry = len(retry_pick)
         logger.info(
             f"OutboxDispatcher 拉批: PENDING_SEND={len(pending_entries)} "
             f"APPROVED={len(approved_entries)} FAILED={len(failed_entries)} "

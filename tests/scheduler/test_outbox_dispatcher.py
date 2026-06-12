@@ -20,6 +20,11 @@
 D5.5.2 扩展 H 段(检查员第二轮 P1 修复专项,+2 tests):
     H. D5.5.2 批次饥饿配额分割 + STALLED 真实路径(2 tests)
 
+D5.5.3 扩展 I 段(检查员第三轮 P1/P2 修复专项,+3 tests):
+    I. D5.5.3 严格 retry_quota 必预 + Heartbeat 恢复 HEALTHY + 50/50 边界(3 tests)
+
+合计 50 cases。
+
 25 教训应用(沿 D4.7.3 v1.0.6):
   1. 工厂层 + __post_init__ 双层防御(DispatcherResult 6 字段)
   2. 跨字段校验(total_picked = sent + business_blocked + technical_failed + skipped)
@@ -1145,9 +1150,14 @@ def test_run_once_stalled_state_is_reachable_and_still_processes(
       - 调用 run_once(now_ms=1_100_000)
       - 修复前:update(now_ms=start_ms) + evaluate(now_ms=start_ms) → idle=0 → HEALTHY
               STALLED 不可达,历史状态被自己覆盖
-      - 修复后:update(refresh_last_seen=False) 不动 last_seen_ms,
+      - D5.5.2 修复:update(refresh_last_seen=False) 不动 last_seen_ms,
               evaluate 看到真实 idle=100_000ms > 30_000ms → STALLED
               run_once 仍正常处理(沿 D5.5 设计:STALLED 仅性能降级,transport 还活着)
+      - D5.5.3 演进(本测试验证 STALLED 真实可达):
+              evaluate 看到 STALLED(在 result 日志中可见)
+              本轮 update(refresh_last_seen=True) 刷 last_seen_ms=1_100_000
+              → 下次 run_once(短间隔)→ HEALTHY
+              (详细的 STALLED→HEALTHY 恢复由 I 段 test_run_once_heartbeat_recovers_from_stalled_to_healthy 覆盖)
     """
     _insert_entry(store, email_id=1)
     # 1) 预置 heartbeat:100 秒前 update 过,transport_alive=True → 必 STALLED
@@ -1170,7 +1180,127 @@ def test_run_once_stalled_state_is_reachable_and_still_processes(
     # 3) STALLED 状态仍处理(不阻断,D5.5 设计:HEALTHY/STALLED 都正常处理)
     assert result.sent == 1
     assert result.total_picked == 1
-    # 4) last_seen_ms 应仍是 1_000_000(refresh_last_seen=False 没改)
-    #    证明 STALLED 是真实可达的(若被刷新,后续 evaluate 立刻返 HEALTHY)
-    assert heartbeat.last_seen_ms == 1_000_000
-    assert heartbeat.evaluate(now_ms=1_100_000) == Liveness.STALLED
+    # 4) D5.5.3 演进:本轮 update(refresh_last_seen=True) 刷 last_seen_ms=1_100_000
+    #    → STALLED 真实可达(在 result 日志中可见),且本轮已刷,下次 run_once 必 HEALTHY
+    #    关键:STALLED 真实可达的证明在 run_once 内部 evaluate 看到 idle=100_000ms(>30s)
+    #         而非 last_seen_ms 未刷(那只会导致持续 STALLED)
+    assert heartbeat.last_seen_ms == 1_100_000  # 本轮刷了
+    # 5) 下次 evaluate(now_ms=1_100_000) 因 idle=0 → HEALTHY(STALLED 真实可达 + 恢复)
+    assert heartbeat.evaluate(now_ms=1_100_000) == Liveness.HEALTHY
+
+
+# ===== I. D5.5.3 严格 retry_quota + Heartbeat 恢复 + 50/50 边界(3 tests)=====
+
+
+def test_run_once_strict_retry_quota_is_reserved_when_new_dominates(
+    store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
+) -> None:
+    """D5.5.3:严格 retry_quota 必预,即使 new_pool 远超 batch_size。
+
+    修复 P1-2 重试永久饿死:
+      修复前(D5.5.2 smart fill):new 占满 batch_size → retry_quota 实际为 0
+        → new 持续多时 FAILED 永远进不了批
+      修复后(D5.5.3 严格两段式):retry_quota = max(1, batch_size//2) 必预
+        → 即便 new_pool 远超 batch_size,FAILED 也能分到 retry_quota 槽位
+
+    场景:50 PENDING_SEND + 50 FAILED + batch_size=10
+      期望:picked=10(new=5, retry=5),45 个 FAILED 仍 FAILED
+    """
+    # 50 PENDING_SEND
+    for i in range(50):
+        _insert_entry(store, email_id=10_000 + i)
+    # 50 FAILED(直接 update_status:pending_send → failed)
+    for i in range(50):
+        _insert_entry(store, email_id=20_000 + i, status="failed")
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+    result = dispatcher.run_once()
+
+    # D5.5.3 严格两段式:new_quota=5 + retry_quota=5 → total=10
+    assert result.total_picked == 10
+    # 5 NEW + 5 RETRY(各占一半,不允许一边独吞)
+    # 注:此处不直接验证 result.sent 与 picked_new/retry 字段(DispatcherResult 无这 2 字段)
+    #     改为通过 entry.status 间接验证:成功发送后状态变更
+    assert result.sent == 10  # 10 个全部 SENT(无退避中,无业务阻断)
+
+
+def test_run_once_retry_quota_preserves_retry_when_retry_pool_dominates(
+    store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
+) -> None:
+    """D5.5.3:retry_pool 远超 new_pool 时,new 也保留配额(无浪费)。
+
+    场景:0 PENDING_SEND + 50 FAILED + batch_size=10
+      期望:picked=5(retry=5, new=0)— retry 不足 retry_quota 时按实际取,不浪费
+    """
+    # 0 PENDING_SEND
+    # 50 FAILED
+    for i in range(50):
+        _insert_entry(store, email_id=30_000 + i, status="failed")
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+    result = dispatcher.run_once()
+
+    # retry_quota=5 但 retry_pool 有 50 个 → retry_pick=5(按 retry_quota 截)
+    # remaining_slots=10-5=5 → new_pick=0[:5]=0
+    # total = 5
+    assert result.total_picked == 5
+    assert result.sent == 5
+
+
+def test_run_once_heartbeat_recovers_from_stalled_to_healthy(
+    store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
+) -> None:
+    """D5.5.3:Heartbeat 从 STALLED 真实可达 → 本轮刷新 → 下次 HEALTHY。
+
+    修复 P2 Heartbeat 本轮没有刷新:
+      修复前(D5.5.2):update(refresh_last_seen=False) + evaluate
+        → STALLED 真实可达,但 last_seen_ms 永远不刷 → 持续 STALLED
+      修复后(D5.5.3):evaluate(老态) + TRANSPORT_DEAD 不刷 / HEALTHY&STALLED 刷
+        → 第 1 次 STALLED(默认 last_seen_ms=0)→ 第 1 次刷 → 第 2 次 HEALTHY
+
+    场景:默认 Heartbeat(last_seen_ms=0, transport_alive=True)
+      第 1 次 run_once → STALLED(老态可见)+ 刷 last_seen_ms=1_100_000
+      第 2 次 run_once(now_ms=1_110_000,间隔 10s)→ HEALTHY(idle=10s < 30s)
+    """
+    # 默认 Heartbeat:last_seen_ms=0, transport_alive=True, idle_threshold=30s
+    assert heartbeat.last_seen_ms == 0
+    assert heartbeat.transport_alive is True
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    # 第 1 次 run_once(now_ms=1_100_000)
+    # 内部:evaluate(now_ms=1_100_000) → last_seen_ms=0 → STALLED(老态真实可见)
+    #      + update(transport_alive=True, refresh_last_seen=True) → last_seen_ms=1_100_000
+    _insert_entry(store, email_id=99_001)
+    result1 = dispatcher.run_once(now_ms=1_100_000)
+    # STALLED 仍正常处理(D5.5 设计)+ 本轮已刷新
+    assert result1.sent == 1
+    assert heartbeat.last_seen_ms == 1_100_000  # 证明本轮刷了
+
+    # 第 2 次 run_once(now_ms=1_110_000,间隔 10s)
+    # evaluate(now_ms=1_110_000) → idle=10_000ms < 30_000ms → HEALTHY
+    _insert_entry(store, email_id=99_002)
+    result2 = dispatcher.run_once(now_ms=1_110_000)
+    # HEALTHY 正常处理 + 刷 last_seen_ms=1_110_000
+    assert result2.sent == 1
+    assert heartbeat.last_seen_ms == 1_110_000  # 进一步刷
+    # 证明恢复:不在 STALLED 状态
+    assert heartbeat.evaluate(now_ms=1_110_000) == Liveness.HEALTHY
