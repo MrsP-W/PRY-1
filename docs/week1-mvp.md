@@ -934,7 +934,8 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 >
 > **范围调整**:D5 = 真实 SMTP 发送链路(7 子阶段)。CalDAV / 菜单栏 / launchd **顺延到 D6+**(Week 2 决策点再细化)。
 >
-> **D5.0-redirect docs commit**:`docs(d5.0-redirect): 重新定义 D5 = SMTP 业务调度链路`(本段 + §0 反例 + §D4.8 已知限制 + 末棒 + 状态行同 commit 重写)
+> **D5.0-redirect docs commit**:`docs(d5.0-redirect): 重新定义 D5 = SMTP 业务调度链路`(本段 + §0 反例 + §D4.8 已知限制 + 末棒 + 状态行同 commit 重写,commit `b0943ff`)
+**D5.1-fix docs 收口 commit**:本次 commit 同步 D5.1-fix 状态行(4 处"本次"→ ✅ commit `18284fa`)+ 风险表 fallback 错误描述修订(原"connect() 时 fallback"实际是"硬报错"误描述,按实际代码行为重写)
 
 ### D5.1 Context — 为什么启动 D5
 
@@ -960,7 +961,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | 子阶段 | 目标 | 关键文件 | 预计 cases | commit |
 |--------|------|---------|----------|--------|
 | **D5.1** ✅ | Keychain SMTP service + transport 抽象 | `core/keychain.py` + `connectors/smtp.py` + `tests/connectors/test_smtp.py` + `scripts/spike_set_smtp_password.py` | 32 | `cce567a` |
-| **D5.1-fix** | 默认 transport 边界(避免假成功) + CLI provider 严判(只 qq) | `connectors/smtp.py` + `scripts/spike_set_smtp_password.py` + 新 tests | +11 | (本次) |
+| **D5.1-fix** ✅ | 默认 transport 边界(避免假成功) + CLI provider 严判(只 qq) | `connectors/smtp.py` + `scripts/spike_set_smtp_password.py` + 2 new files(`tests/scripts/`)+ 7 transport boundary + 3 CLI cases | +10 | `18284fa` |
 | **D5.2** | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | (待) |
 | **D5.3** | EmailSendAdapter 三入口 + 4 异常窄化 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` | +36 | (待) |
 | **D5.4** | OutboxDispatcher 主循环 + 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +45 | (待) |
@@ -968,7 +969,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | **D5.6** | spike 100 真实发送 + 验收报告 | `scripts/spike_send_100.py` + `reports/D5-spike-100.md` + `reports/d5-acceptance.md` | (无新 cases,跑 8 质量门) | (待) |
 | **D5.7** | docs 收口 8 件套(week1-mvp §D5 末棒 + README + mapping §11 + D5 报告 + 跨项目 memory) | 5 docs 文件 | (无新 cases) | (待) |
 
-**预计累计**:1498 cases(1375 D4.8 锁定 → +123 D5)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
+**预计累计**:1498 cases(1385 D5.1-fix 锁定 → +113 D5.2-D5.5)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
 
 ### D5.4 状态机白名单(B5 解封项)
 
@@ -1026,8 +1027,8 @@ NORMAL:  threshold=4hour,   warning=2hour
 | # | 风险 | 等级 | 缓解动作 | 落地子阶段 |
 |---|------|------|----------|-----------|
 | 1 | **SMTP 凭据 Keychain 写入失败** | 🚨 严重 | D5.1 `set_smtp_password` 写入后立即 round-trip 自检 + `spike_set_smtp_password.py --check` 入口 | D5.1 ✅ |
-| 2 | **默认 transport = InMemorySmtpTransport 假成功** | 🚨 严重 | D5.1-fix 默认 `transport=None`,`connect()` 时 fallback,显式传 `SmtpLibTransport()` 才走真实 SMTP | D5.1-fix (本次) |
-| 3 | **CLI `--provider` choices 暴露未实现 provider** | ⚠️ 中 | D5.1-fix `spike_set_smtp_password.py --provider` 严判 `== "qq"`,outlook/gmail 显式 `NotImplementedError` 提示 | D5.1-fix (本次) |
+| 2 | **默认 transport = InMemorySmtpTransport 假成功** | 🚨 严重 | D5.1-fix 默认 `transport=None` + 构造时 `loguru.warning` 提醒 + `connect()` 入口 `is None` 硬报错(`SmtpTransportError`)。生产必须显式传 `SmtpLibTransport()`,测试场景才传 `InMemorySmtpTransport()`,**不**走 fallback | D5.1-fix ✅ `18284fa` |
+| 3 | **CLI `--provider` choices 暴露未实现 provider** | ⚠️ 中 | D5.1-fix `spike_set_smtp_password.py --provider` 严判 `choices=("qq",)`,outlook/gmail 由 argparse 自动 `SystemExit 2`(无需运行时抛 `NotImplementedError`,沿 D4.7.3 教训) | D5.1-fix ✅ `18284fa` |
 | 4 | **`cancelled → sent` 非法状态转换** | 🚨 严重 | D5.2 `ALLOWED_TRANSITIONS` 白名单 + `OutboxIllegalTransitionError` 严判 | D5.2 |
 | 5 | **业务阻断(收件人拒收)被误归类为可重试** | 🚨 严重 | D5.3 异常窄化:recipients_refused / sender_refused 单独捕获 → 业务阻断 + `consecutive_send_failures` 不递增 | D5.3 |
 | 6 | **`last_send_failed ↔ consecutive_send_failures` 跨字段不一致** | ⚠️ 中 | D5.3 `SendDecisionReport.__post_init__` 双向校验(D4.7.3 v1.0.5 P1-2 范本) | D5.3 |

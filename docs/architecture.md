@@ -2,7 +2,7 @@
 
 > **目的**：把 5 层架构、关键决策理由、适配器契约、数据流、安全模型、失败模式讲清楚，作为 D1+ 所有编码的参考。
 >
-> **状态**：D1.1 脚手架重构完成（PEP 621 + uv + Python 3.12 + sqlcipher3 + 包名重构 + 覆盖率 62%），架构待 Week 1 验证。
+> **状态**：D1-D4.8 + D5.1 + D5.1-fix 已完成（1385 passed / 91.1% 覆盖 / 8 质量门 8/8 全过,2026-06-12 同步 D5 顺延方向）。D5 业务调度器启动中,CalDAV / 菜单栏 / launchd 顺延 D6+。
 
 ---
 
@@ -67,11 +67,11 @@
 | 适配器 | 数据源 | 协议 | 频率 | 实施时间 |
 |--------|--------|------|------|----------|
 | **imap** | QQ / Outlook / Gmail | IMAP4 + OAuth 2.0 | 5 min 轮询 | Week 1 D2 |
-| **caldav** | iCloud（**优先**）/ Google Calendar | CalDAV | 5 min 轮询 | Week 1 D5 |
+| **caldav** | iCloud（**优先**）/ Google Calendar | CalDAV | 5 min 轮询 | **D6+ 顺延**(原 Week 1 D5,2026-06-11 重新定义) |
 | **wechat_csv** | 微信账单 | CSV 文件导入 | 用户手动 / 每日 | Week 2 D6 |
 | **alipay_csv** | 支付宝账单 | CSV 文件导入 | 用户手动 / 每日 | Week 2 D7 |
 | **apple_notes** | Apple Notes | AppleScript 读取 | 事件触发 | Week 2 D9 |
-| **apple_reminders** | Reminders（复用 Agent Assistant）| AppleScript | 5 min 轮询 | Week 1 D5 |
+| **apple_reminders** | Reminders（复用 Agent Assistant）| AppleScript | 5 min 轮询 | **D6+ 顺延**(原 Week 1 D5,2026-06-11 重新定义) |
 
 **适配器接口契约**（abstract）：
 
@@ -294,7 +294,7 @@ CREATE TABLE health_log (
 ### 场景 3：每月 1 号财务月报
 
 ```
-[launchd 定时任务: 每月 1 号 09:00]
+[launchd 定时任务: 每月 1 号 09:00(D6+ 顺延)]
   ↓
 [L4 @审计员 Agent]
   ↓ 查询 transactions (当月)
@@ -394,12 +394,12 @@ CREATE TABLE health_log (
 - [ ] IMAP OAuth 2.0 跨邮箱复杂度（**D2.5 spike**：Outlook/Gmail 推到 spike 阶段）
 - [ ] minimax M3 调用稳定性（已知可用，待持续监控）
 - [ ] sqlite-vss 向量索引中文支持
-- [ ] launchd 保活效果（macOS 18+ 后台策略更严格）
+- [ ] launchd 保活效果（macOS 18+ 后台策略更严格,**D6+ 顺延**）
 
 **Week 1 末决策点**（见 [week1-mvp.md](week1-mvp.md) 末尾）：技术栈通过 → 继续 Week 2；不通过 → 砍到最小可用 + 报告失败原因。
 
 ---
 
-**最后更新**：2026-06-07（D1.1 脚手架重构：PEP 621 + uv + Python 3.12 + sqlcipher3 + 包名重构 + 覆盖率 62%，LLM 决策：minimax M3 + 规则 fallback）
-**状态**：D1.1 已完成（D2 启动就绪）
+**最后更新**：2026-06-12（D5 顺延方向同步:CalDAV / 菜单栏 / launchd 标注 D6+,状态行翻到 D5.1-fix 已完成；D5 业务调度器 SMTP 真实发送链路启动中）
+**状态**：D1-D4.8 + D5.1 + D5.1-fix 已完成（D5.2 启动就绪）
 **维护者**：Mr-PRY
