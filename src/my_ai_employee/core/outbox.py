@@ -125,7 +125,13 @@ ALLOWED_TRANSITIONS: dict[OutboxStatus, frozenset[OutboxStatus]] = {
     OutboxStatus.APPROVED: frozenset(
         {OutboxStatus.SENDING, OutboxStatus.FAILED, OutboxStatus.CANCELLED}
     ),
-    OutboxStatus.SENDING: frozenset({OutboxStatus.SENT, OutboxStatus.FAILED}),
+    OutboxStatus.SENDING: frozenset(
+        {OutboxStatus.SENT, OutboxStatus.FAILED, OutboxStatus.CANCELLED}
+    ),
+    # 业务阻断链路: SMTPRecipientsRefused / SMTPSenderRefused / SMTPDataError /
+    # SMTPAuthenticationError 在 SENDING 中间态触发永久退信 → SENDING → CANCELLED
+    # (D5.3 P1 硬收口: D5.4 Dispatcher 必须能捕获业务阻断异常, 就地推 SENDING → CANCELLED,
+    #  避免 dangling SENDING 状态; 否则 ALLOWED_TRANSITIONS 会挡死)
     OutboxStatus.SENT: frozenset(),  # 终态
     OutboxStatus.FAILED: frozenset({OutboxStatus.PENDING_SEND, OutboxStatus.CANCELLED}),
     OutboxStatus.CANCELLED: frozenset(),  # 终态

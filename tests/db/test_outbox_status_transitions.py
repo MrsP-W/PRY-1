@@ -171,10 +171,18 @@ def test_allowed_transitions_terminal_states_have_empty_frozenset() -> None:
     assert ALLOWED_TRANSITIONS[OutboxStatus.CANCELLED] == frozenset()
 
 
-def test_allowed_transitions_sending_to_sent_or_failed() -> None:
-    """SENDING 状态仅可转 SENT / FAILED(D5.2 状态机核心约束)。"""
+def test_allowed_transitions_sending_to_sent_failed_cancelled() -> None:
+    """SENDING 状态可转 SENT / FAILED / CANCELLED(D5.3 业务阻断链路硬收口)。
+
+    D5.2 锁定版仅 {SENT, FAILED} 2 目标; D5.3 P1 收口加 CANCELLED:
+    SMTPRecipientsRefused / SMTPSenderRefused / SMTPDataError / SMTPAuthenticationError
+    在 SENDING 中间态触发永久退信 → 业务阻断入口 record_send_business_blocked_and_emit
+    必须能推 SENDING → CANCELLED, 否则 ALLOWED_TRANSITIONS 会挡死业务阻断链路。
+    """
     sending_targets = ALLOWED_TRANSITIONS[OutboxStatus.SENDING]
-    assert sending_targets == frozenset({OutboxStatus.SENT, OutboxStatus.FAILED})
+    assert sending_targets == frozenset(
+        {OutboxStatus.SENT, OutboxStatus.FAILED, OutboxStatus.CANCELLED}
+    )
 
 
 def test_allowed_transitions_pending_send_includes_approved() -> None:
@@ -276,6 +284,31 @@ def test_sending_to_sent_allowed(store: OutboxStore) -> None:
     store.update_status(entry.id, "sending", from_status="pending_send")
     updated = store.update_status(entry.id, "sent", from_status="sending")
     assert updated.status == "sent"
+
+
+def test_sending_to_cancelled_allowed(store: OutboxStore) -> None:
+    """状态机:SENDING → CANCELLED(D5.3 业务阻断链路硬收口)。
+
+    真实路径: SMTPRecipientsRefused / SMTPSenderRefused / SMTPDataError /
+    SMTPAuthenticationError 在 SENDING 中间态触发永久退信, D5.4 Dispatcher
+    捕获后调 record_send_business_blocked_and_emit, 此时 entry.status=SENDING,
+    必须能转 CANCELLED(否则白名单挡死业务阻断链路, dangling SENDING 状态)。
+
+    D5.2 锁定版 SENDING 目标集 {SENT, FAILED} 不含 CANCELLED 是 P1 硬阻塞,
+    D5.3 P1 收口必须把 CANCELLED 加进 SENDING 目标集。
+    """
+    entry = store.insert(
+        email_id=1104,
+        subject="状态机 - sending→cancelled 业务阻断",
+        body="测试 SENDING → CANCELLED 业务阻断链路的邮件正文,超过十个字符。",
+        tone="FORMAL",
+        recipient_email="sc@example.com",
+    )
+    # 模拟 SENDING 中间态
+    store.update_status(entry.id, "sending", from_status="pending_send")
+    # 永久退信后,业务阻断入口推 CANCELLED
+    updated = store.update_status(entry.id, "cancelled", from_status="sending")
+    assert updated.status == "cancelled"
 
 
 def test_failed_to_pending_send_allowed(store: OutboxStore) -> None:

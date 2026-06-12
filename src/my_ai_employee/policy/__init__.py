@@ -46,6 +46,10 @@ from my_ai_employee.policy.exceptions import (
     PolicyError,
     PolicyHeartbeatError,
     PolicyLaneError,
+    SMTPSendIllegalTransitionError,
+    SMTPSendRecipientsRefusedError,
+    SMTPSendSenderRefusedError,
+    SMTPSendTransportError,
 )
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.integration import (
@@ -107,6 +111,17 @@ from my_ai_employee.policy.policy_engine import (
     PolicyEngine,
     PolicyEvaluation,
     get_engine,
+)
+from my_ai_employee.policy.send_adapter import (
+    EmailSendAdapter,
+    SendBlockedDecisionReport,
+    SendDecisionReport,
+    SendFailureDecisionReport,
+    build_send_blocked_packet,
+    build_send_failure_packet,
+    build_send_packet,
+    build_send_policy_context,
+    compute_send_acceptance,
 )
 from my_ai_employee.policy.task_packet import (
     PermissionProfile,
@@ -192,4 +207,20 @@ __all__ = [
     "build_outbox_failure_packet",
     "build_outbox_policy_context",
     "compute_outbox_acceptance",
+    # D5.3 业务层接入(SMTP 真实发送, 6/12 启动)
+    # 沿用 D4.7.3 三入口架构(成功 / 业务阻断 / 技术失败)
+    # 4 类 SMTP 异常(异常窄化 D3.3.3 范本)
+    "SMTPSendRecipientsRefusedError",
+    "SMTPSendSenderRefusedError",
+    "SMTPSendTransportError",
+    "SMTPSendIllegalTransitionError",
+    "EmailSendAdapter",
+    "SendDecisionReport",
+    "SendBlockedDecisionReport",
+    "SendFailureDecisionReport",
+    "build_send_packet",
+    "build_send_blocked_packet",
+    "build_send_failure_packet",
+    "build_send_policy_context",
+    "compute_send_acceptance",
 ]

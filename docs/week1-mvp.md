@@ -924,7 +924,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.1-fix 修 2 代码风险 + D5.2 migration 0005**。D4.8 v1.0.1 代码+测试+文档+报告+spike 已 5 件全固化(2026-06-11 晚间,commit `e3f0d80` + 本 docs commit + `reports/D4.8-草稿入库.md` + `output/spike/spike_outbox_100_20260611_221105.md`),剩 D5 业务调度器 7 子阶段(已启动 D5.1)+ 8 质量门终验(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表)。
+**下一棒 → D5.4 OutboxDispatcher 主循环**。D5.3 业务层接入已完成(EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿),D5.4-D5.7 4 子阶段待启动(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
 
 ---
 
@@ -962,8 +962,8 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 |--------|------|---------|----------|--------|
 | **D5.1** ✅ | Keychain SMTP service + transport 抽象 | `core/keychain.py` + `connectors/smtp.py` + `tests/connectors/test_smtp.py` + `scripts/spike_set_smtp_password.py` | 32 | `cce567a` |
 | **D5.1-fix** ✅ | 默认 transport 边界(避免假成功) + CLI provider 严判(只 qq) | `connectors/smtp.py` + `scripts/spike_set_smtp_password.py` + 2 new files(`tests/scripts/`)+ 7 transport boundary + 3 CLI cases | +10 | `18284fa` |
-| **D5.2** | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | (待) |
-| **D5.3** | EmailSendAdapter 三入口 + 4 异常窄化 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` | +36 | (待) |
+| **D5.2** ✅ | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | `604f937` |
+| **D5.3** ✅ | EmailSendAdapter 三入口 + 4 异常窄化 + SENDING→CANCELLED 业务阻断链路硬收口 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` + `tests/policy/test_exceptions.py` + `tests/db/test_outbox_status_transitions.py` | +40(36 send_adapter + 4 收口新增:1 状态机 SENDING→CANCELLED + 3 send_adapter SMTPDataError/AuthError/从 SENDING 推 CANCELLED) | (D5.3 commit 待,本节写于代码锁定后) |
 | **D5.4** | OutboxDispatcher 主循环 + 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +45 | (待) |
 | **D5.5** | SLA 评估 + 退避公式 + Heartbeat 联动 | `scheduler/sla.py` + `scheduler/backoff.py` + `tests/scheduler/test_sla.py` + `tests/scheduler/test_retry_backoff.py` | +28 | (待) |
 | **D5.6** | spike 100 真实发送 + 验收报告 | `scripts/spike_send_100.py` + `reports/D5-spike-100.md` + `reports/d5-acceptance.md` | (无新 cases,跑 8 质量门) | (待) |
@@ -971,30 +971,42 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **预计累计**:1498 cases(1385 D5.1-fix 锁定 → +113 D5.2-D5.5)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
 
-### D5.4 状态机白名单(B5 解封项)
+### D5.2 状态机白名单(B5 解封项 + D5.3 P1 业务阻断链路硬收口)
 
 ```
-PENDING_SEND → {SENDING, FAILED, CANCELLED}
+PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}  # D5.2 vs 启动计划文档偏差:含 APPROVED
 APPROVED     → {SENDING, FAILED, CANCELLED}
-SENDING      → {SENT, FAILED}
+SENDING      → {SENT, FAILED, CANCELLED}  # D5.3 P1 加 CANCELLED(业务阻断链路硬收口)
 SENT         → {}    (终态)
 FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
 CANCELLED    → {}    (终态)
 ```
 
-### D5.5 异常窄化映射(D3.3.3 教训应用)
+**D5.3 P1 业务阻断链路硬收口说明**:SMTP 永久退信可能在 SENDING 中间态触发(收件人拒收 / SMTPDataError 4xx),
+此时 entry.status=SENDING,业务阻断入口 record_send_business_blocked_and_emit 必须能推
+SENDING → CANCELLED,否则 ALLOWED_TRANSITIONS 挡死业务阻断链路,entry 永远卡在 SENDING。
 
-| smtplib 异常 | Adapter 业务异常 | 业务语义 | recovery_policy | consecutive_send_failures |
-|--------------|-----------------|----------|-----------------|--------------------------|
-| `SMTPRecipientsRefused` | `SMTPSendRecipientsRefusedError` | **业务阻断** | `none` | **不递增** |
-| `SMTPSenderRefused` | `SMTPSendSenderRefusedError` | **业务阻断** | `none` | **不递增** |
-| `SMTPServerDisconnected` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
-| `SMTPConnectError` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
-| `socket.timeout` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 |
+D5.2 锁定版 SENDING 目标集仅 {SENT, FAILED} 2 元素 — P1 硬阻塞, D5.3 收口加 CANCELLED。
+
+### D5.3 异常窄化映射(D3.3.3 教训应用 + D5.3 P2-P3 收口)
+
+| smtplib 异常 | Adapter 业务异常 | 业务语义 | recovery_policy | consecutive_send_failures | 收口版本 |
+|--------------|-----------------|----------|-----------------|--------------------------|----------|
+| `SMTPRecipientsRefused` | `SMTPSendRecipientsRefusedError` | **业务阻断** | `none` | **不递增** | D5.2 |
+| `SMTPSenderRefused` | `SMTPSendSenderRefusedError` | **业务阻断** | `none` | **不递增** | D5.2 |
+| `SMTPDataError`(4xx DATA 阶段数据错误) | `SMTPSendRecipientsRefusedError`(reason=data_error) | **业务阻断** | `none` | **不递增** | **D5.3 P2 收口** |
+| `SMTPAuthenticationError`(认证失败) | `SMTPSendSenderRefusedError`(reason=sender_refused) | **业务阻断** | `none` | **不递增** | **D5.3 P3 收口** |
+| `SMTPServerDisconnected` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 | D5.2 |
+| `SMTPConnectError` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 | D5.2 |
+| `socket.timeout` / `TimeoutError` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 | D5.2 |
+| `OSError` / `socket.gaierror` | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 | D5.3 P2 |
+| `ssl.SSLError`(SSL 握手失败) | `SMTPSendTransportError` | 技术失败 | `retry_on_transient` | +1 | **D5.3 P2 收口** |
 
 **关键约束**:**不**接 `SMTPException` / `Exception` 基类,只接具体子类(D3.3.3 教训 — 防 OperationalError / 编程错误被误吞)。
 
-### D5.6 SLA 阈值表 + 退避公式
+**D5.3 收口修正**:`smtplib.SSLError` 不是 smtplib 公开 API(mypy 报 `attr-defined`),改用标准库 `ssl.SSLError`(SMTPConnector `connectors/smtp.py:151-152` 同款修正)。
+
+### D5.5 SLA 阈值表 + 退避公式
 
 **SLA**:
 ```
@@ -1102,6 +1114,6 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 ---
 
-**最后更新**：2026-06-11（D5.0-redirect docs 收口:D5 重新定义为业务调度器,CalDAV/菜单栏/launchd 顺延 D6+）
-**状态**：D1-D4.8 + D5.1 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a`),D5 业务调度器 7 子阶段启动中(D5.1-fix 修 2 代码风险 → D5.2 migration 0005 → ... → D5.7 docs 收口)
-**维护者**：Mr-PRY
+**最后更新**：2026-06-12(D5.3 业务层接入完成:EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿)
+**状态**:D1-D5.3 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 docs 收口 commit 待),剩 D5 业务调度器 4 子阶段(D5.4 OutboxDispatcher → D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)
+**维护者**:Mr-PRY
