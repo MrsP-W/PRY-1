@@ -924,7 +924,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.4 OutboxDispatcher 主循环**（✅ 已完成,commit `e9f3126`）。D5.3 业务层接入已完成(EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿),D5.5-D5.7 3 子阶段待启动(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
+**下一棒 → D5.6 真实发送 spike**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 本轮补齐 FAILED 重试闭环与 `skip_breach` 统计语义(1514 passed / 8 质量门全绿)。剩 D5.6-D5.7 两步(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
 
 ---
 
@@ -965,11 +965,11 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | **D5.2** ✅ | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | `604f937` |
 | **D5.3** ✅ | EmailSendAdapter 三入口 + 4 异常窄化 + SENDING→CANCELLED 业务阻断链路硬收口 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` + `tests/policy/test_exceptions.py` + `tests/db/test_outbox_status_transitions.py` | +40(36 send_adapter + 4 收口新增:1 状态机 SENDING→CANCELLED + 3 send_adapter SMTPDataError/AuthError/从 SENDING 推 CANCELLED) | `192c215` |
 | **D5.4** ✅ | OutboxDispatcher 主循环(6 步范本 + 异常分流 + Heartbeat 联动)+ 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +37(D段+ E段合并后减为 37,vs 计划 45) | `e9f3126` |
-| **D5.5** | SLA 评估 + 退避公式 + Heartbeat 联动 | `scheduler/sla.py` + `scheduler/backoff.py` + `tests/scheduler/test_sla.py` + `tests/scheduler/test_retry_backoff.py` | +28 | (待) |
+| **D5.5** ✅ | SLA 评估 + 退避公式 + Heartbeat 联动 + D5.5.1 FAILED 重试闭环/skip_breach 语义修正 | `scheduler/sla.py` + `scheduler/backoff.py` + `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_sla.py` + `tests/scheduler/test_retry_backoff.py` + `tests/scheduler/test_outbox_dispatcher.py` | +34 | `3f449d9` + 本轮小修 |
 | **D5.6** | spike 100 真实发送 + 验收报告 | `scripts/spike_send_100.py` + `reports/D5-spike-100.md` + `reports/d5-acceptance.md` | (无新 cases,跑 8 质量门) | (待) |
 | **D5.7** | docs 收口 8 件套(week1-mvp §D5 末棒 + README + mapping §11 + D5 报告 + 跨项目 memory) | 5 docs 文件 | (无新 cases) | (待) |
 
-**预计累计**:1498 cases(1385 D5.1-fix 锁定 → +113 D5.2-D5.5)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
+**当前累计**:1514 cases(D5.5.1 8 质量门全绿;1385 D5.1-fix 锁定 → +129 D5.2-D5.5.1)+ 9 commits(7 我的AI员工 + 1 docs 收口跨项目 + 1 Agent Assistant memory)
 
 ### D5.2 状态机白名单(B5 解封项 + D5.3 P1 业务阻断链路硬收口)
 
@@ -1015,15 +1015,15 @@ HIGH:    threshold=30min,   warning=15min
 NORMAL:  threshold=4hour,   warning=2hour
 ```
 
-**退避**:`retry_after_ms = min(2^consecutive_send_failures * 60_000, 3_600_000)`(60s 起,封顶 1h)
+**退避**:`retry_after_ms = min(2^(consecutive_send_failures - 1) * 60_000, 3_600_000)`(cf=1 从 60s 起,封顶 1h)
 
-**应用层过滤**:`consecutive_send_failures >= 1` 且 `last_failed_at + retry_after > now` 跳过,计入 `DispatcherResult.skipped`
+**应用层过滤**:`consecutive_send_failures >= 1` 且 `last_failed_at + retry_after > now` 跳过,计入 `DispatcherResult.skipped`；退避结束后 `FAILED → PENDING_SEND → SENDING → SENT/FAILED` 闭环重试。`DispatcherResult.skip_breach` 是 SLA 额外维度,可与 `sent` / `skipped` 同时成立,不参与互斥 outcome 求和。
 
 ### D5.7 验收标准(8 质量门)
 
 | # | 质量门 | 首次过 | 累计 tests |
 |---|--------|--------|----------|
-| 1 | `uv run pytest` | D5.1(1375)/D5.2(1393)/D5.3(1429)/D5.4(1474)/D5.5(1502)/D5.6(1502) | **+127 cases** |
+| 1 | `uv run pytest` | D5.1(1375)/D5.2(1393)/D5.3(1429)/D5.4(1474)/D5.5(1508)/D5.5.1(1514) | **+129 cases** |
 | 2 | `uv run ruff check` | D5.1 | 0 errors |
 | 3 | `uv run ruff format --check` | D5.1 | 全绿 |
 | 4 | `uv run mypy src` | D5.3 | 0 errors |
@@ -1065,7 +1065,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 - **默认 transport 边界** — `SMTPConnector(transport=None)` 不允许忘记显式注入,`connect()` 时才 fallback 到 `InMemorySmtpTransport` 并 loguru WARNING
 - **CLI provider 严判** — `spike_set_smtp_password.py --provider {qq,outlook,gmail}`,outlook/gmail 显式 `NotImplementedError` 提示"D5.1 只实现 qq"
 
-**下一棒 → D5.5 SLA 告警 + 退避公式 + Heartbeat 3 态联动**。D5.1-D5.4 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126`),剩 3 子阶段(D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)+ 8 质量门终验。
+**下一棒 → D5.6 真实发送 spike + 验收报告**。D5.1-D5.5 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9`,D5.5.1 本轮小修),剩 2 子阶段(D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)+ 8 质量门终验。
 
 ---
 
@@ -1114,6 +1114,6 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 ---
 
-**最后更新**：2026-06-12(D5.4 OutboxDispatcher 主循环锁定:6 步范本 + 异常分流 + Heartbeat 联动 + 优先级排序,1480 passed / 8 质量门全绿 / 90.3% 覆盖)
-**状态**:D1-D5.4 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126`),剩 D5 业务调度器 3 子阶段(D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)
+**最后更新**：2026-06-12(D5.5 SLA + 指数退避 + Heartbeat 联动完成,D5.5.1 修正 FAILED 重试闭环与 skip_breach 统计语义,1514 passed / 8 质量门全绿 / 90.1% 覆盖)
+**状态**:D1-D5.5 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9`),剩 D5 业务调度器 2 子阶段(D5.6 真实发送 spike → D5.7 docs 收口 8 件套)
 **维护者**:Mr-PRY

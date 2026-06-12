@@ -17,21 +17,22 @@ D5.5 主循环 6 步(沿 core/sync.py:IMAPSync.run_once 范本 + D5.5 新增 SLA
     1. heartbeat.update() 刷新 last_seen_ms,evaluate() 得 Liveness:
        - HEALTHY / STALLED → 正常处理
        - TRANSPORT_DEAD → 早 return,全部 skipped
-    2. by_status(PENDING_SEND) + by_status(APPROVED) 拉批(限 batch_size, 优先级排序)
+    2. by_status(PENDING_SEND) + by_status(APPROVED) + by_status(FAILED) 拉批(限 batch_size, 优先级排序)
        + 退避过滤(self._failure_state: cf>=1 && now_ms < last_failed_at + retry_after → skipped)
-       + SLA 评估(BREACH → logger.warning + 计入 skip_breach 计数,D5.5 仍发送,D5.6+ ESCALATE_REQUIRED)
+       + SLA 评估(BREACH → logger.warning + 计入 skip_breach 额外计数,D5.5 仍发送,D5.6+ ESCALATE_REQUIRED)
     3. 逐条调 send_adapter.send_and_emit()(异常按 D5.3 映射捕获)
     4. 失败时调 compute_retry_after_ms(cf) → record_send_failure_and_emit(retry_after_ms=...)
        + 更新内存 self._failure_state[outbox_id] = {cf, last_failed_at}
        + 成功时清内存 self._failure_state.pop(outbox_id, None)
-    5. 累加 DispatcherResult 7 字段(原 6 字段 + skip_breach)
+    5. 累加 DispatcherResult 7 字段(4 outcome + skip_breach 额外维度)
     6. 落日志 + 返回 DispatcherResult
 
 7 字段 DispatcherResult 范本(D5.5 新增 skip_breach):
     - total_picked / sent / business_blocked / technical_failed / skipped / skip_breach / duration_seconds
 
 跨字段强一致(D5.5):
-    total_picked = sent + business_blocked + technical_failed + skipped + skip_breach
+    total_picked = sent + business_blocked + technical_failed + skipped
+    skip_breach <= total_picked
 
 优先级排序(D4.8 范本):
     批内按 (priority DESC, created_at ASC) 排序
@@ -50,16 +51,17 @@ D5.5 范围边界:
   - ✅ 退避公式(compute_retry_after_ms)— 2^cf * 60s 封顶 1h
   - ✅ Heartbeat 3 态分支 — HEALTHY/STALLED 正常处理,TRANSPORT_DEAD 早 return
   - ✅ 内存退避状态(per-outbox_id 追踪 cf + last_failed_at)— 不写库
-  - ✅ DispatcherResult 加 skip_breach 字段(原 6 → 7 字段)
+  - ✅ DispatcherResult 加 skip_breach 字段(原 6 → 7 字段,额外 SLA 维度)
   - ❌ SLA BREACH 真实 ESCALATE_REQUIRED 决策延后到 D5.6+(D5.5 仅 logger.warning)
   - ❌ 内存退避状态持久化(进程崩溃后丢失)— B 类决策延后
   - ❌ batch_size 限速(throttle)/并发控制延后到 D5.5+
 
 25 教训应用:
   1. 工厂层 + __post_init__ 双层防御(DispatcherResult + SLAEvaluation)
-  2. 跨字段校验(total_picked = sent + business_blocked + technical_failed + skipped + skip_breach)
+  2. 跨字段校验(total_picked = sent + business_blocked + technical_failed + skipped,skip_breach <= total_picked)
   3. 字段名硬区分(business_blocked vs technical_failed vs skip_breach)
-  4. 异常统一 ValueError/TypeError(编程错误透传,D3.3.3 范本)
+  4. 异常统一 ValueError/TypeError(编程错误透传,D3.3.3 范本 — A1:build_message 路径
+     `except Exception` → `except (TypeError, ValueError, KeyError, UnicodeEncodeError)`)
   5. 契约 helper 复用(沿用 D4.8 _validate_outbox_* 公共入口 + SLA 严判)
   6. 固化哲学(代码+注释+测试+导出同 commit)
   7. 依赖注入 is None 不用 or(D4.7.3 v1.0.3 P2-2)
@@ -79,7 +81,7 @@ from email.message import EmailMessage
 from loguru import logger
 
 from my_ai_employee.core.outbox import OutboxEntry, OutboxPriority, OutboxStatus
-from my_ai_employee.db.outbox import OutboxStore
+from my_ai_employee.db.outbox import OutboxIllegalTransitionError, OutboxStore
 from my_ai_employee.policy.exceptions import (
     SMTPSendIllegalTransitionError,
     SMTPSendRecipientsRefusedError,
@@ -104,7 +106,7 @@ _PRIORITY_SORT_KEY: dict[str, int] = {
 }
 
 
-# ===== DispatcherResult dataclass(6 字段 — 沿 core/sync.py:SyncResult 7 字段范本)=====
+# ===== DispatcherResult dataclass(7 字段 — 沿 core/sync.py:SyncResult 7 字段范本)=====
 
 
 @dataclass(frozen=True)
@@ -112,7 +114,8 @@ class DispatcherResult:
     """D5.5 单次调度结果统计(7 字段 — 业务数据双维度 + SLA breach).
 
     跨字段强一致(D4.7.3 v1.0.2 P1-2 范本):
-        total_picked = sent + business_blocked + technical_failed + skipped + skip_breach
+        total_picked = sent + business_blocked + technical_failed + skipped
+        skip_breach <= total_picked
 
     Attributes:
         total_picked:  本次拉批的 outbox 条目总数(>= 0)
@@ -120,7 +123,7 @@ class DispatcherResult:
         business_blocked: 业务阻断数(>= 0, SENDING → CANCELLED)
         technical_failed: 技术失败数(>= 0, SENDING → FAILED, 可重试)
         skipped:       跳过数(>= 0, 退避中/Heartbeat 死亡/状态机漂移等)
-        skip_breach:   SLA 硬超条目数(>= 0, D5.5 仅记日志,D5.6+ ESCALATE_REQUIRED)
+        skip_breach:   SLA 硬超条目数(>= 0,额外维度;可与 sent/skipped 等 outcome 同时成立)
         duration_seconds: 端到端耗时(>= 0.0)
     """
 
@@ -154,20 +157,20 @@ class DispatcherResult:
                 f"DispatcherResult.duration_seconds 必须是 int/float >= 0.0, 实际 "
                 f"{type(self.duration_seconds).__name__}={self.duration_seconds!r}"
             )
-        # 2. 跨字段强一致(D4.7.3 v1.0.2 P1-2 范本 + D5.5 新增 skip_breach)
-        sum_outcomes = (
-            self.sent
-            + self.business_blocked
-            + self.technical_failed
-            + self.skipped
-            + self.skip_breach
-        )
+        # 2. 跨字段强一致(D4.7.3 v1.0.2 P1-2 范本)
+        # skip_breach 是额外 SLA 维度,不是互斥 outcome。
+        sum_outcomes = self.sent + self.business_blocked + self.technical_failed + self.skipped
         if self.total_picked != sum_outcomes:
             raise ValueError(
                 f"DispatcherResult 跨字段强一致违反: total_picked({self.total_picked}) != "
                 f"sent({self.sent}) + business_blocked({self.business_blocked}) + "
-                f"technical_failed({self.technical_failed}) + skipped({self.skipped}) + "
-                f"skip_breach({self.skip_breach}) (sum={sum_outcomes})"
+                f"technical_failed({self.technical_failed}) + skipped({self.skipped}) "
+                f"(sum={sum_outcomes})"
+            )
+        if self.skip_breach > self.total_picked:
+            raise ValueError(
+                f"DispatcherResult 跨字段强一致违反: skip_breach({self.skip_breach}) "
+                f"不能大于 total_picked({self.total_picked})"
             )
 
 
@@ -282,9 +285,9 @@ class OutboxDispatcher:
             1. heartbeat.update() + evaluate() 得 Liveness:
                - HEALTHY / STALLED → 正常处理
                - TRANSPORT_DEAD → 早 return(全 skipped)
-            2. by_status(PENDING_SEND) + by_status(APPROVED) 拉批
+            2. by_status(PENDING_SEND) + by_status(APPROVED) + by_status(FAILED) 拉批
                + 退避过滤(cf>=1 && now < last_failed_at + retry_after → skipped)
-               + SLA 评估(BREACH → logger.warning + 计入 skip_breach,D5.5 仍尝试发送)
+               + SLA 评估(BREACH → logger.warning + 计入 skip_breach 额外维度,D5.5 仍尝试发送)
             3. 逐条调 send_adapter.send_and_emit()(异常按 D5.3 映射捕获)
             4. 失败时调 compute_retry_after_ms(cf) → 更新 _failure_state
                + 成功时清 _failure_state[outbox_id]
@@ -328,11 +331,12 @@ class OutboxDispatcher:
         # HEALTHY / STALLED 正常处理(Stalled 仅性能降级,仍可发送)
         logger.debug(f"OutboxDispatcher heartbeat={liveness.value}, 正常处理")
 
-        # 2. 拉批 — PENDING_SEND + APPROVED 两种状态(沿 D4.8 范本)
+        # 2. 拉批 — PENDING_SEND + APPROVED + FAILED 三种状态(FAILED 由退避窗口控制)
         pending_entries = store.by_status(OutboxStatus.PENDING_SEND.value, limit=self._batch_size)
         approved_entries = store.by_status(OutboxStatus.APPROVED.value, limit=self._batch_size)
+        failed_entries = store.by_status(OutboxStatus.FAILED.value, limit=self._batch_size)
         # 合并 + 优先级排序
-        all_entries = pending_entries + approved_entries
+        all_entries = pending_entries + approved_entries + failed_entries
         all_entries.sort(
             key=lambda e: (
                 -_PRIORITY_SORT_KEY.get(e.priority, 0),  # priority DESC
@@ -344,7 +348,8 @@ class OutboxDispatcher:
         total_picked = len(entries)
         logger.info(
             f"OutboxDispatcher 拉批: PENDING_SEND={len(pending_entries)} "
-            f"APPROVED={len(approved_entries)} 批内={total_picked}/{self._batch_size}"
+            f"APPROVED={len(approved_entries)} FAILED={len(failed_entries)} "
+            f"批内={total_picked}/{self._batch_size}"
         )
 
         # 3-4. 逐条处理 + 累加(D5.5:含退避过滤 + SLA 评估)
@@ -354,17 +359,18 @@ class OutboxDispatcher:
         skipped = 0
         skip_breach = 0
         for entry in entries:
-            outcome, extra = self._process_one_entry(adapter, entry, now_ms=start_ms)
+            outcome, extra, breached = self._process_one_entry(
+                store, adapter, entry, now_ms=start_ms
+            )
+            if breached:
+                # SLA breach 是额外维度,不是互斥 outcome。成功发送也应同时 sent + skip_breach。
+                skip_breach += 1
             if outcome == "sent":
                 sent += 1
             elif outcome == "business_blocked":
                 business_blocked += 1
             elif outcome == "technical_failed":
                 technical_failed += 1
-            elif outcome == "skip_breach":
-                # D5.5 SLA BREACH:仍尝试发送(避免邮件被遗忘),但计入 skip_breach
-                # D5.6+ 会同时发 ESCALATE_REQUIRED 决策到 PolicyEngine
-                skip_breach += 1
             else:
                 # outcome == "skipped" — 退避中/状态机漂移/编程错误等
                 skipped += 1
@@ -395,47 +401,70 @@ class OutboxDispatcher:
 
     def _process_one_entry(
         self,
+        store: OutboxStore,
         adapter: EmailSendAdapter,
         entry: OutboxEntry,
         *,
         now_ms: int,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, bool]:
         """D5.5 单条 outbox 条目处理 — 退避过滤 + SLA 评估 + 调 send_and_emit + 异常分流.
 
         流程:
           1. 严判 entry 状态(防御性兜底)
-          2. **退避过滤**(D5.5 新增):_failure_state[entry_id] 存在且
+          2. **SLA 评估**(D5.5 新增):SLAEvaluator.evaluate(priority, age_ms)
+             BREACH → 仍尝试发送 + 计入 skip_breach 额外计数
+          3. **退避过滤**(D5.5 新增):_failure_state[entry_id] 存在且
              now_ms < last_failed_at + retry_after → skipped(计入 skipped)
-          3. **SLA 评估**(D5.5 新增):SLAEvaluator.evaluate(priority, age_ms)
-             BREACH → 仍尝试发送 + 计入 skip_breach 计数
-          4. 构造 EmailMessage
-          5. 调 send_and_emit + 异常按 D5.3 映射捕获
-          6. **失败时**调 compute_retry_after_ms(cf) → 传 record_send_failure_and_emit
+          4. FAILED 重试回路:退避结束后 FAILED → PENDING_SEND,再复用 send_and_emit
+          5. 构造 EmailMessage
+          6. 调 send_and_emit + 异常按 D5.3 映射捕获
+          7. **失败时**调 compute_retry_after_ms(cf) → 传 record_send_failure_and_emit
              + 更新 _failure_state[entry_id]
              **成功时**清 _failure_state.pop(entry_id, None)
 
         Returns:
-            (outcome, extra) 元组:
+            (outcome, extra, breached) 元组:
               - outcome: "sent" / "business_blocked" / "technical_failed" /
-                         "skipped" / "skip_breach"
+                         "skipped"
               - extra:  调试上下文(空字符串 / "retry_after=N" / "sla=breach age_ms=N" 等)
+              - breached: 该条是否 SLA BREACH(额外维度,不参与 outcome 互斥)
         """
         # 1. 严判 entry 状态(防御性兜底:理论已通过 by_status 过滤,但防 concurrent 写)
         if entry.id is None:
             logger.warning(f"OutboxDispatcher 跳过: outbox.id=None entry={entry!r}")
-            return ("skipped", "")
+            return ("skipped", "", False)
         if entry.status not in (
             OutboxStatus.PENDING_SEND.value,
             OutboxStatus.APPROVED.value,
+            OutboxStatus.FAILED.value,
         ):
             # 状态已变(并发写,或被其他 process 推到别的状态)→ skipped
             logger.warning(
                 f"OutboxDispatcher 跳过: outbox_id={entry.id} 状态={entry.status!r} "
-                f"不在 PENDING_SEND/APPROVED"
+                f"不在 PENDING_SEND/APPROVED/FAILED"
             )
-            return ("skipped", "")
+            return ("skipped", "", False)
 
-        # 2. 退避过滤(D5.5 新增)
+        # 2. SLA 评估(D5.5 新增):先于退避过滤,确保退避中的超时条目也能被发现。
+        age_ms = max(0, now_ms - entry.created_at)
+        sla_eval = SLAEvaluator.evaluate(priority=entry.priority, age_ms=age_ms)
+        extra_parts: list[str] = []
+        is_breach = False
+        if sla_eval.status == SLAStatus.BREACH:
+            is_breach = True
+            logger.warning(
+                f"OutboxDispatcher SLA BREACH: outbox_id={entry.id} priority={entry.priority} "
+                f"age_ms={age_ms} (threshold 已超,仍尝试发送 + skip_breach++)"
+            )
+            extra_parts.append(f"sla=breach age_ms={age_ms}")
+        elif sla_eval.status == SLAStatus.WARNING:
+            logger.info(
+                f"OutboxDispatcher SLA WARNING: outbox_id={entry.id} "
+                f"priority={entry.priority} age_ms={age_ms}"
+            )
+            extra_parts.append(f"sla=warning age_ms={age_ms}")
+
+        # 3. 退避过滤(D5.5.1 修复:FAILED 也会被拉批,这里负责真正限流)
         fs = self._failure_state.get(entry.id)
         if fs is not None:
             cf = fs["consecutive_send_failures"]
@@ -447,39 +476,43 @@ class OutboxDispatcher:
                     f"OutboxDispatcher 退避中: outbox_id={entry.id} cf={cf} "
                     f"retry_after={retry_after}ms"
                 )
-                return ("skipped", f"retry_after={retry_after} cf={cf}")
+                extra_parts.append(f"retry_after={retry_after} cf={cf}")
+                return ("skipped", " ".join(extra_parts), is_breach)
 
-        # 3. SLA 评估(D5.5 新增)
-        age_ms = max(0, now_ms - entry.created_at)
-        sla_eval = SLAEvaluator.evaluate(priority=entry.priority, age_ms=age_ms)
-        sla_extra = ""
-        is_breach = False
-        if sla_eval.status == SLAStatus.BREACH:
-            is_breach = True
-            logger.warning(
-                f"OutboxDispatcher SLA BREACH: outbox_id={entry.id} priority={entry.priority} "
-                f"age_ms={age_ms} (threshold 已超,仍尝试发送 + skip_breach++)"
-            )
-            sla_extra = f"sla=breach age_ms={age_ms}"
-        elif sla_eval.status == SLAStatus.WARNING:
-            logger.info(
-                f"OutboxDispatcher SLA WARNING: outbox_id={entry.id} "
-                f"priority={entry.priority} age_ms={age_ms}"
-            )
-            sla_extra = f"sla=warning age_ms={age_ms}"
+        # 4. FAILED 重试回路:退避结束后先回 PENDING_SEND,再复用 EmailSendAdapter.send_and_emit。
+        if entry.status == OutboxStatus.FAILED.value:
+            try:
+                entry = store.update_status(
+                    entry.id,
+                    OutboxStatus.PENDING_SEND.value,
+                    from_status=OutboxStatus.FAILED.value,
+                )
+            except (OutboxIllegalTransitionError, ValueError) as e:
+                logger.warning(f"OutboxDispatcher FAILED 重试解锁失败: outbox_id={entry.id} {e!r}")
+                extra_parts.append("retry_unlock_failed")
+                return ("skipped", " ".join(extra_parts), is_breach)
+            logger.info(f"OutboxDispatcher FAILED 重试解锁: outbox_id={entry.id} → pending_send")
+            extra_parts.append("retry_unlocked")
 
-        # 4. 构造 EmailMessage
+        # 5. 构造 EmailMessage(异常窄化 4 类,沿 D3.3.3 范本不接基类 Exception)
         try:
             msg = EmailMessage()
             msg["From"] = f"{self._source}@test.local"
             msg["To"] = entry.recipient_email
             msg["Subject"] = entry.subject
             msg.set_content(entry.body)
-        except Exception as e:
+        except (TypeError, ValueError, KeyError, UnicodeEncodeError) as e:
+            # EmailMessage 构造/set_content 在 4 类场景下抛错:
+            #   TypeError   — subject/recipient 非 str
+            #   ValueError  — header 校验失败(空字符串 / 含换行)
+            #   KeyError    — msg[...] 取不存在的 header
+            #   UnicodeEncodeError — body/header 含不可编码字符
+            # 编程错误(其他基类 Exception)透传,运维排错不被静默吞掉(D3.3.3 范本)
             logger.error(f"OutboxDispatcher build_message 失败: outbox_id={entry.id} {e!r}")
-            return ("skipped", "build_message_failed")
+            extra_parts.append("build_message_failed")
+            return ("skipped", " ".join(extra_parts), is_breach)
 
-        # 5. 调 send_and_emit — 异常按 D5.3 映射分流
+        # 6. 调 send_and_emit — 异常按 D5.3 映射分流
         try:
             report: SendDecisionReport = adapter.send_and_emit(
                 outbox_id=entry.id,  # type: ignore[arg-type]
@@ -498,7 +531,7 @@ class OutboxDispatcher:
             )
             # 6a. 成功 → 清内存退避状态
             self._failure_state.pop(entry.id, None)
-            return ("sent" if not is_breach else "skip_breach", sla_extra)
+            return ("sent", " ".join(extra_parts), is_breach)
         except SMTPSendRecipientsRefusedError as e:
             logger.warning(
                 f"OutboxDispatcher 业务阻断(recipients_refused): outbox_id={entry.id} {e}"
@@ -516,10 +549,11 @@ class OutboxDispatcher:
                 logger.error(
                     f"OutboxDispatcher record_blocked 失败: outbox_id={entry.id} {inner_e!r}"
                 )
-                return ("skipped", "record_blocked_failed")
+                extra_parts.append("record_blocked_failed")
+                return ("skipped", " ".join(extra_parts), is_breach)
             # 业务阻断 → 清内存退避状态(永不 retry)
             self._failure_state.pop(entry.id, None)
-            return ("business_blocked", "")
+            return ("business_blocked", " ".join(extra_parts), is_breach)
         except SMTPSendSenderRefusedError as e:
             logger.warning(f"OutboxDispatcher 业务阻断(sender_refused): outbox_id={entry.id} {e}")
             try:
@@ -535,9 +569,10 @@ class OutboxDispatcher:
                 logger.error(
                     f"OutboxDispatcher record_blocked 失败: outbox_id={entry.id} {inner_e!r}"
                 )
-                return ("skipped", "record_blocked_failed")
+                extra_parts.append("record_blocked_failed")
+                return ("skipped", " ".join(extra_parts), is_breach)
             self._failure_state.pop(entry.id, None)
-            return ("business_blocked", "")
+            return ("business_blocked", " ".join(extra_parts), is_breach)
         except SMTPSendTransportError as e:
             logger.warning(f"OutboxDispatcher 技术失败(transport_error): outbox_id={entry.id} {e}")
             # 6b. 失败 → 更新内存退避状态 + 调退避公式
@@ -563,8 +598,10 @@ class OutboxDispatcher:
                 logger.error(
                     f"OutboxDispatcher record_failure 失败: outbox_id={entry.id} {inner_e!r}"
                 )
-                return ("skipped", "record_failure_failed")
-            return ("technical_failed", f"cf={new_cf} retry_after={retry_after_ms}")
+                extra_parts.append("record_failure_failed")
+                return ("skipped", " ".join(extra_parts), is_breach)
+            extra_parts.append(f"cf={new_cf} retry_after={retry_after_ms}")
+            return ("technical_failed", " ".join(extra_parts), is_breach)
         except SMTPSendIllegalTransitionError as e:
             logger.warning(
                 f"OutboxDispatcher 状态机漂移(illegal_transition): outbox_id={entry.id} {e}"
@@ -591,11 +628,14 @@ class OutboxDispatcher:
                 logger.error(
                     f"OutboxDispatcher record_failure 失败: outbox_id={entry.id} {inner_e!r}"
                 )
-                return ("skipped", "record_failure_failed")
-            return ("technical_failed", f"cf={new_cf} retry_after={retry_after_ms}")
+                extra_parts.append("record_failure_failed")
+                return ("skipped", " ".join(extra_parts), is_breach)
+            extra_parts.append(f"cf={new_cf} retry_after={retry_after_ms}")
+            return ("technical_failed", " ".join(extra_parts), is_breach)
         except ValueError as e:
             logger.error(f"OutboxDispatcher 编程错误(ValueError): outbox_id={entry.id} {e!r}")
-            return ("skipped", "value_error")
+            extra_parts.append("value_error")
+            return ("skipped", " ".join(extra_parts), is_breach)
 
     # ===== 资源清理(沿 core/sync.py:IMAPSync.close 范本)=====
 

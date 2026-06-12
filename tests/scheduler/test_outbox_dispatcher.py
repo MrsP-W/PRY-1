@@ -155,6 +155,7 @@ def _insert_entry(
     email_id: int,
     priority: str = "normal",
     status: str = OutboxStatus.PENDING_SEND.value,
+    created_at: int | None = None,
 ) -> int:
     entry = store.insert(
         email_id=email_id,
@@ -164,6 +165,7 @@ def _insert_entry(
         recipient_email=f"customer{email_id}@example.com",
         priority=priority,
         status=status,
+        created_at=created_at,
     )
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
     return entry.id
@@ -199,6 +201,35 @@ def test_dispatcher_result_balanced_counts() -> None:
         duration_seconds=1.5,
     )
     assert 6 + 2 + 1 + 1 + 0 == 10  # sanity check
+
+
+def test_dispatcher_result_allows_sla_breach_as_extra_dimension() -> None:
+    """DispatcherResult skip_breach 是 SLA 额外维度,不与 sent/skipped 互斥。"""
+    r = DispatcherResult(
+        total_picked=1,
+        sent=1,
+        business_blocked=0,
+        technical_failed=0,
+        skipped=0,
+        skip_breach=1,
+        duration_seconds=0.1,
+    )
+    assert r.sent == 1
+    assert r.skip_breach == 1
+
+
+def test_dispatcher_result_rejects_more_breaches_than_picked() -> None:
+    """DispatcherResult skip_breach 不得大于 total_picked。"""
+    with pytest.raises(ValueError, match="skip_breach"):
+        DispatcherResult(
+            total_picked=1,
+            sent=1,
+            business_blocked=0,
+            technical_failed=0,
+            skipped=0,
+            skip_breach=2,
+            duration_seconds=0.1,
+        )
 
 
 def test_dispatcher_result_unbalanced_raises() -> None:
@@ -537,6 +568,123 @@ def test_run_once_technical_failed_transport_error(
     assert result.technical_failed == 1
 
 
+def test_run_once_failed_entry_skips_inside_retry_backoff(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    smtp_transport: InMemorySmtpTransport,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1:技术失败后进入 FAILED,退避窗口内再次 run_once 只跳过不发送。"""
+    from smtplib import SMTPServerDisconnected
+
+    outbox_id = _insert_entry(store, email_id=1)
+    smtp_transport.inject_exception = SMTPServerDisconnected("server gone")
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    first = dispatcher.run_once(now_ms=1_000_000)
+    assert first.total_picked == 1
+    assert first.technical_failed == 1
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
+
+    smtp_transport.inject_exception = None
+    second = dispatcher.run_once(now_ms=1_030_000)
+    assert second.total_picked == 1
+    assert second.sent == 0
+    assert second.skipped == 1
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
+    assert smtp_transport.sent_log == []
+
+
+def test_run_once_failed_entry_retries_after_backoff(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    smtp_transport: InMemorySmtpTransport,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1:退避结束后 FAILED → PENDING_SEND → SENDING → SENT,并清理内存失败状态。"""
+    from smtplib import SMTPServerDisconnected
+
+    outbox_id = _insert_entry(store, email_id=1)
+    smtp_transport.inject_exception = SMTPServerDisconnected("server gone")
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    first = dispatcher.run_once(now_ms=1_000_000)
+    assert first.technical_failed == 1
+    assert dispatcher._failure_state[outbox_id]["consecutive_send_failures"] == 1  # noqa: SLF001
+
+    smtp_transport.inject_exception = None
+    second = dispatcher.run_once(now_ms=1_061_000)
+    assert second.total_picked == 1
+    assert second.sent == 1
+    assert second.skipped == 0
+    assert store.by_id(outbox_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
+    assert outbox_id not in dispatcher._failure_state  # noqa: SLF001
+    assert len(smtp_transport.sent_log) == 1
+
+
+def test_run_once_sla_breach_success_counts_sent_and_breach(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1:SLA BREACH 是额外维度,成功发送应同时 sent=1 且 skip_breach=1。"""
+    _insert_entry(store, email_id=1, priority="urgent", created_at=1_000_000)
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    result = dispatcher.run_once(now_ms=1_400_000)
+    assert result.total_picked == 1
+    assert result.sent == 1
+    assert result.skip_breach == 1
+
+
+def test_run_once_sla_breach_still_counted_when_retry_backoff_skips(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    smtp_transport: InMemorySmtpTransport,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1:SLA 评估先于退避过滤,退避跳过也要暴露 breach。"""
+    from smtplib import SMTPServerDisconnected
+
+    _insert_entry(store, email_id=1, priority="urgent", created_at=0)
+    smtp_transport.inject_exception = SMTPServerDisconnected("server gone")
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+
+    first = dispatcher.run_once(now_ms=400_000)
+    assert first.technical_failed == 1
+    assert first.skip_breach == 1
+
+    smtp_transport.inject_exception = None
+    second = dispatcher.run_once(now_ms=430_000)
+    assert second.total_picked == 1
+    assert second.skipped == 1
+    assert second.skip_breach == 1
+
+
 def test_run_once_value_error_treated_as_skipped(
     store: OutboxStore,
     adapter: EmailSendAdapter,
@@ -810,3 +958,102 @@ def test_dispatcher_close_idempotent() -> None:
 def smtp_transport_for(adapter: EmailSendAdapter) -> InMemorySmtpTransport | None:
     """从 EmailSendAdapter 拿 smtp_transport(测试替身)。"""
     return adapter._smtp_transport  # type: ignore[return-value]  # noqa: SLF001
+
+
+# ===== H. D5.5.1 异常收窄专项(2 tests)=====
+
+
+def test_run_once_a1_build_message_does_not_swallow_base_exception(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1 A1:build_message 路径异常收窄 — RuntimeError 不在 4 类白名单内,必透传不吞。
+
+    沿 D3.3.3 范本:不接 `Exception` 基类,只收 `(TypeError, ValueError, KeyError, UnicodeEncodeError)`。
+    修复前: `except Exception` 会吞 RuntimeError → 返回 skipped,运维排错失败。
+    修复后: RuntimeError 透传,run_once 抛错,监控/告警系统能感知。
+    """
+    _insert_entry(store, email_id=1)
+
+    # monkeypatch email.message.EmailMessage.set_content 让其抛 RuntimeError
+    from email.message import EmailMessage as _EmailMessage
+
+    original_set_content = _EmailMessage.set_content
+
+    def raise_runtime_error(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+        raise RuntimeError("simulated base exception not in narrowed set")
+
+    _EmailMessage.set_content = raise_runtime_error  # type: ignore[method-assign]
+    try:
+        dispatcher = OutboxDispatcher(
+            source="test-dispatcher",
+            send_adapter=adapter,
+            outbox_store=store,
+            heartbeat=heartbeat,
+            batch_size=10,
+        )
+        with pytest.raises(RuntimeError, match="simulated base exception"):
+            dispatcher.run_once()
+    finally:
+        _EmailMessage.set_content = original_set_content  # type: ignore[method-assign]
+
+
+def test_run_once_failed_unlock_illegal_transition_returns_skipped(
+    store: OutboxStore,
+    adapter: EmailSendAdapter,
+    smtp_transport: InMemorySmtpTransport,
+    heartbeat: Heartbeat,
+) -> None:
+    """D5.5.1:FAILED → PENDING_SEND 解锁遇 OutboxIllegalTransitionError → skipped(异常窄化收口)。
+
+    异常窄化范本(D3.3.3):接 OutboxIllegalTransitionError + ValueError,不走基类 Exception。
+    验证 retry_unlock_failed extra_parts 被记录,状态机漂移被正确检测。
+    """
+    from smtplib import SMTPServerDisconnected
+
+    outbox_id = _insert_entry(store, email_id=1)
+    smtp_transport.inject_exception = SMTPServerDisconnected("server gone")
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=10,
+    )
+    first = dispatcher.run_once(now_ms=1_000_000)
+    assert first.technical_failed == 1
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
+
+    # 模拟 FAILED → PENDING_SEND 时 store 状态机抛 IllegalTransition(并发写等场景)
+    original_update_status = store.update_status
+
+    def fake_update_status(row_id, new_status, *, from_status):  # type: ignore[no-untyped-def]
+        if (
+            new_status == OutboxStatus.PENDING_SEND.value
+            and from_status == OutboxStatus.FAILED.value
+        ):
+            from my_ai_employee.db.outbox import OutboxIllegalTransitionError
+
+            # 签名:(outbox_id, from_status, to_status, *, actual_status, allowed)
+            raise OutboxIllegalTransitionError(
+                outbox_id=row_id,
+                from_status=from_status,
+                to_status=new_status,
+                actual_status="sending",  # 模拟并发写导致 row.status 已变
+                allowed=None,
+            )
+        return original_update_status(row_id, new_status, from_status=from_status)
+
+    store.update_status = fake_update_status  # type: ignore[method-assign]
+    try:
+        # 退避窗口已过(1_000_000 + 60_000 + 1 = 1_060_001)
+        second = dispatcher.run_once(now_ms=1_060_001)
+    finally:
+        store.update_status = original_update_status  # type: ignore[method-assign]
+
+    # 异常被正确收口:skipped + retry_unlock_failed 标记,无崩溃
+    assert second.total_picked == 1
+    assert second.sent == 0
+    assert second.skipped == 1
+    assert second.technical_failed == 0

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.4 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 SLA 告警 + 退避 + Heartbeat 联动 待）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ SLA 告警 + 退避重试闭环 + Heartbeat 联动；下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 软链）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（1385 个，覆盖率 91.1%）
+├── tests/                    # pytest 单元测试（D5.5.1:1514 个，覆盖率约 90%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（1385 个，覆盖率 91.1%）
+make test    # pytest 单元测试（D5.5.1:1514 个，覆盖率约 90%）
 ```
 
 ### 4. 文档 lint
@@ -165,7 +165,7 @@ make help
 | **D2 IMAP 适配器**（QQ 授权码 + Keychain + 熔断）| ✅ 完成 | 2026-06-07 |
 | **D3 数据层 + 同步**（D3.1 加密 SQLite + D3.2 ORM/alembic + D3.3 IMAP 同步 1万封 0.35s）| ✅ 完成 | 2026-06-08 |
 | **D4 智能层**（D4.1 LLM 路由 + D4.6 分类器 + D4.7 草稿生成 + D4.8 草稿入库 v1.0.1）| ✅ 完成 | 2026-06-11 |
-| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5-D5.7 待 |
+| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5 ✅ / D5.6-D5.7 待 |
 | D6+ CalDAV + 菜单栏 + launchd | ⏸️ 顺延 | Week 2 决策点 |
 | **Week 1 末决策点** | ⏳ | - |
 | D7-D11 Week 2 | ⏳ | - |
@@ -184,7 +184,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5 目标 90%+ |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.1 1514 passed / 90%+ |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本),launchd D6+ 顺延 |
 
 ---
@@ -237,6 +237,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-12（D5.3 业务层接入完成:EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿）
+**最后更新**：2026-06-12（D5.5.1:FAILED 重试闭环 + SLA breach 统计语义修正,1514 passed / 8 质量门全绿 / 90.1% 覆盖）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
