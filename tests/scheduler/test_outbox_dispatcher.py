@@ -180,6 +180,7 @@ def test_dispatcher_result_minimal_creation() -> None:
         business_blocked=0,
         technical_failed=0,
         skipped=0,
+        skip_breach=0,
         duration_seconds=0.0,
     )
     assert r.total_picked == 0
@@ -187,27 +188,29 @@ def test_dispatcher_result_minimal_creation() -> None:
 
 
 def test_dispatcher_result_balanced_counts() -> None:
-    """DispatcherResult 跨字段强一致 — total_picked = sum of 4 outcomes。"""
+    """DispatcherResult 跨字段强一致 — total_picked = sum of 5 outcomes。"""
     DispatcherResult(
         total_picked=10,
         sent=6,
         business_blocked=2,
         technical_failed=1,
         skipped=1,
+        skip_breach=0,
         duration_seconds=1.5,
     )
-    assert 6 + 2 + 1 + 1 == 10  # sanity check
+    assert 6 + 2 + 1 + 1 + 0 == 10  # sanity check
 
 
 def test_dispatcher_result_unbalanced_raises() -> None:
-    """DispatcherResult 跨字段强一致违反 → ValueError(4 outcomes 之和不等于 total_picked)。"""
+    """DispatcherResult 跨字段强一致违反 → ValueError(5 outcomes 之和不等于 total_picked)。"""
     with pytest.raises(ValueError, match="跨字段强一致违反"):
         DispatcherResult(
             total_picked=10,
-            sent=5,  # sum = 5+1+1+1 = 8 ≠ 10
+            sent=5,  # sum = 5+1+1+1+0 = 8 ≠ 10
             business_blocked=1,
             technical_failed=1,
             skipped=1,
+            skip_breach=0,
             duration_seconds=1.0,
         )
 
@@ -221,6 +224,7 @@ def test_dispatcher_result_negative_count_raises() -> None:
             business_blocked=0,
             technical_failed=0,
             skipped=0,
+            skip_breach=0,
             duration_seconds=0.0,
         )
 
@@ -234,6 +238,7 @@ def test_dispatcher_result_bool_count_rejected() -> None:
             business_blocked=0,
             technical_failed=0,
             skipped=0,
+            skip_breach=0,
             duration_seconds=0.0,
         )
 
@@ -247,6 +252,7 @@ def test_dispatcher_result_negative_duration_raises() -> None:
             business_blocked=0,
             technical_failed=0,
             skipped=0,
+            skip_breach=0,
             duration_seconds=-0.1,
         )
 
@@ -259,6 +265,7 @@ def test_dispatcher_result_frozen() -> None:
         business_blocked=0,
         technical_failed=0,
         skipped=0,
+        skip_breach=0,
         duration_seconds=0.0,
     )
     with pytest.raises(dataclasses.FrozenInstanceError):
@@ -273,6 +280,7 @@ def test_dispatcher_result_zero_total_balanced() -> None:
         business_blocked=0,
         technical_failed=0,
         skipped=0,
+        skip_breach=0,
         duration_seconds=0.0,
     )
     assert r.total_picked == 0
