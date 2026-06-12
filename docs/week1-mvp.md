@@ -924,7 +924,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.4 OutboxDispatcher 主循环**。D5.3 业务层接入已完成(EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿),D5.4-D5.7 4 子阶段待启动(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
+**下一棒 → D5.4 OutboxDispatcher 主循环**（✅ 已完成,commit `e9f3126`）。D5.3 业务层接入已完成(EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿),D5.5-D5.7 3 子阶段待启动(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
 
 ---
 
@@ -963,8 +963,8 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | **D5.1** ✅ | Keychain SMTP service + transport 抽象 | `core/keychain.py` + `connectors/smtp.py` + `tests/connectors/test_smtp.py` + `scripts/spike_set_smtp_password.py` | 32 | `cce567a` |
 | **D5.1-fix** ✅ | 默认 transport 边界(避免假成功) + CLI provider 严判(只 qq) | `connectors/smtp.py` + `scripts/spike_set_smtp_password.py` + 2 new files(`tests/scripts/`)+ 7 transport boundary + 3 CLI cases | +10 | `18284fa` |
 | **D5.2** ✅ | migration 0005 + `sending` + 状态机白名单 | `core/migrations/versions/0005_outbox_sending_state.py` + `db/outbox.py` + `tests/db/test_outbox_status_transitions.py` | +18 | `604f937` |
-| **D5.3** ✅ | EmailSendAdapter 三入口 + 4 异常窄化 + SENDING→CANCELLED 业务阻断链路硬收口 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` + `tests/policy/test_exceptions.py` + `tests/db/test_outbox_status_transitions.py` | +40(36 send_adapter + 4 收口新增:1 状态机 SENDING→CANCELLED + 3 send_adapter SMTPDataError/AuthError/从 SENDING 推 CANCELLED) | (D5.3 commit 待,本节写于代码锁定后) |
-| **D5.4** | OutboxDispatcher 主循环 + 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +45 | (待) |
+| **D5.3** ✅ | EmailSendAdapter 三入口 + 4 异常窄化 + SENDING→CANCELLED 业务阻断链路硬收口 | `policy/send_adapter.py` + `policy/exceptions.py` + `tests/policy/test_send_adapter.py` + `tests/policy/test_exceptions.py` + `tests/db/test_outbox_status_transitions.py` | +40(36 send_adapter + 4 收口新增:1 状态机 SENDING→CANCELLED + 3 send_adapter SMTPDataError/AuthError/从 SENDING 推 CANCELLED) | `192c215` |
+| **D5.4** ✅ | OutboxDispatcher 主循环(6 步范本 + 异常分流 + Heartbeat 联动)+ 优先级排序 | `scheduler/outbox_dispatcher.py` + `tests/scheduler/test_outbox_dispatcher.py` | +37(D段+ E段合并后减为 37,vs 计划 45) | `e9f3126` |
 | **D5.5** | SLA 评估 + 退避公式 + Heartbeat 联动 | `scheduler/sla.py` + `scheduler/backoff.py` + `tests/scheduler/test_sla.py` + `tests/scheduler/test_retry_backoff.py` | +28 | (待) |
 | **D5.6** | spike 100 真实发送 + 验收报告 | `scripts/spike_send_100.py` + `reports/D5-spike-100.md` + `reports/d5-acceptance.md` | (无新 cases,跑 8 质量门) | (待) |
 | **D5.7** | docs 收口 8 件套(week1-mvp §D5 末棒 + README + mapping §11 + D5 报告 + 跨项目 memory) | 5 docs 文件 | (无新 cases) | (待) |
@@ -1065,7 +1065,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 - **默认 transport 边界** — `SMTPConnector(transport=None)` 不允许忘记显式注入,`connect()` 时才 fallback 到 `InMemorySmtpTransport` 并 loguru WARNING
 - **CLI provider 严判** — `spike_set_smtp_password.py --provider {qq,outlook,gmail}`,outlook/gmail 显式 `NotImplementedError` 提示"D5.1 只实现 qq"
 
-**下一棒 → D5.1-fix 修 2 代码风险 + D5.2 migration 0005**。D5.1 代码+测试+文档+CLI 4 件已固化(2026-06-11 晚间,commit `cce567a`),剩 2 代码风险 + 6 子阶段 + 8 质量门终验。
+**下一棒 → D5.5 SLA 告警 + 退避公式 + Heartbeat 3 态联动**。D5.1-D5.4 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126`),剩 3 子阶段(D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)+ 8 质量门终验。
 
 ---
 
@@ -1114,6 +1114,6 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 ---
 
-**最后更新**：2026-06-12(D5.3 业务层接入完成:EmailSendAdapter 三入口 + 业务阻断 vs 技术失败异常窄化 + SENDING→CANCELLED 状态机硬收口,1443 passed / 8 质量门全绿)
-**状态**:D1-D5.3 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 docs 收口 commit 待),剩 D5 业务调度器 4 子阶段(D5.4 OutboxDispatcher → D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)
+**最后更新**：2026-06-12(D5.4 OutboxDispatcher 主循环锁定:6 步范本 + 异常分流 + Heartbeat 联动 + 优先级排序,1480 passed / 8 质量门全绿 / 90.3% 覆盖)
+**状态**:D1-D5.4 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 commit `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126`),剩 D5 业务调度器 3 子阶段(D5.5 SLA + 退避 + Heartbeat → D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)
 **维护者**:Mr-PRY

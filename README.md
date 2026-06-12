@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.3 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 OutboxDispatcher 待）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.4 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 SLA 告警 + 退避 + Heartbeat 联动 待）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -165,7 +165,7 @@ make help
 | **D2 IMAP 适配器**（QQ 授权码 + Keychain + 熔断）| ✅ 完成 | 2026-06-07 |
 | **D3 数据层 + 同步**（D3.1 加密 SQLite + D3.2 ORM/alembic + D3.3 IMAP 同步 1万封 0.35s）| ✅ 完成 | 2026-06-08 |
 | **D4 智能层**（D4.1 LLM 路由 + D4.6 分类器 + D4.7 草稿生成 + D4.8 草稿入库 v1.0.1）| ✅ 完成 | 2026-06-11 |
-| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4-D5.7 待 |
+| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5-D5.7 待 |
 | D6+ CalDAV + 菜单栏 + launchd | ⏸️ 顺延 | Week 2 决策点 |
 | **Week 1 末决策点** | ⏳ | - |
 | D7-D11 Week 2 | ⏳ | - |
