@@ -210,22 +210,36 @@ class OutboxDispatcher:
         self,
         *,
         source: str,
+        smtp_host: str = "smtp.test.local",
+        smtp_port: int = 465,
+        smtp_username: str = "spike@test.local",
+        smtp_password: str = "<test-placeholder>",
         send_adapter: EmailSendAdapter | None = None,
         outbox_store: OutboxStore | None = None,
         heartbeat: Heartbeat | None = None,
         batch_size: int = 10,
     ) -> None:
-        """D5.5 Dispatcher 构造(4 依赖可注入 + 严判 source/batch_size).
+        """D5.6.1 Dispatcher 构造(8 依赖可注入 + 严判 source/SMTP/batch_size).
+
+        D5.6.1 P0 修复:smtp_* 4 参数显式化(默认值仅供 InMemorySmtpTransport 单元测试用,
+        Spike CLI --real 模式必须显式覆盖)。不再把 SMTP 配置硬编码在 run_once 内。
+        — spike 端(spike_send_100.py)负责安全策略:REAL 模式禁止占位 host(防误发到 smtp.test.local)。
 
         Args:
             source: 数据源头(必填非空白,如 "qq" / "outlook" / "gmail")
+            smtp_host: SMTP 服务器地址(D5.6.1 显式,默认 "smtp.test.local" 仅供单元测试)
+                      生产(spike --real)必须显式传 "smtp.qq.com" 等真实地址。
+            smtp_port: SMTP 端口(1-65535,默认 465 沿 D5.1 SMTP_SSL)
+            smtp_username: SMTP 用户名(默认 "spike@test.local" 仅供单元测试)
+            smtp_password: SMTP 授权码(默认 "<test-placeholder>" 仅供单元测试)
+                          **严禁**把占位密码传给真实 SmtpLibTransport。
             send_adapter: EmailSendAdapter 实例(必传,None 触发硬报错)
             outbox_store: OutboxStore 实例(必传,None 触发硬报错)
             heartbeat: Heartbeat 实例(可选,默认 30s 阈值)
             batch_size: 单次拉批上限(>= 1, 默认 10)
 
         Raises:
-            ValueError: source 非法 / batch_size 非法
+            ValueError: source 非法 / SMTP 配置非法 / batch_size 非法
         """
         # 1. source 严判(D4.7.3 v1.0.5 P2-2 范本:strip() 语义非空)
         if not isinstance(source, str) or not source.strip():
@@ -233,14 +247,37 @@ class OutboxDispatcher:
                 f"source 必填非空白 str(strip() 非空), 实际 {type(source).__name__}={source!r}"
             )
         self._source = source
-        # 2. batch_size 严判
+        # 2. SMTP 配置严判(D5.6.1 P0 修复 — 防止 TypeError / 漏传 / None)
+        if not isinstance(smtp_host, str) or not smtp_host.strip():
+            raise ValueError(
+                f"smtp_host 必填非空白 str, 实际 {type(smtp_host).__name__}={smtp_host!r}"
+            )
+        if type(smtp_port) is bool or not isinstance(smtp_port, int) or not 1 <= smtp_port <= 65535:
+            raise ValueError(
+                f"smtp_port 必须是原生 int(非 bool) 1-65535, 实际 "
+                f"{type(smtp_port).__name__}={smtp_port!r}"
+            )
+        if not isinstance(smtp_username, str) or not smtp_username.strip():
+            raise ValueError(
+                f"smtp_username 必填非空白 str, 实际 {type(smtp_username).__name__}={smtp_username!r}"
+            )
+        if not isinstance(smtp_password, str) or not smtp_password:
+            raise ValueError(
+                f"smtp_password 必填非空 str(严禁空), 实际 "
+                f"{type(smtp_password).__name__}=<redacted>"
+            )
+        self._smtp_host = smtp_host
+        self._smtp_port = smtp_port
+        self._smtp_username = smtp_username
+        self._smtp_password = smtp_password
+        # 3. batch_size 严判
         if type(batch_size) is bool or not isinstance(batch_size, int) or batch_size < 1:
             raise ValueError(
                 f"batch_size 必须是原生 int(非 bool) >= 1, 实际 "
                 f"{type(batch_size).__name__}={batch_size!r}"
             )
         self._batch_size = batch_size
-        # 3. 依赖注入 is None 不用 or(D4.7.3 v1.0.3 P2-2 范本,保留 falsey 替身)
+        # 4. 依赖注入 is None 不用 or(D4.7.3 v1.0.3 P2-2 范本,保留 falsey 替身)
         self._send_adapter = send_adapter
         self._outbox_store = outbox_store
         self._heartbeat = (
@@ -621,13 +658,14 @@ class OutboxDispatcher:
             return ("skipped", " ".join(extra_parts), is_breach)
 
         # 6. 调 send_and_emit — 异常按 D5.3 映射分流
+        # D5.6.1 P0 修复:从 self._smtp_* 读,不再硬编码 smtp.test.local / @test.local / 占位密码
         try:
             report: SendDecisionReport = adapter.send_and_emit(
                 outbox_id=entry.id,  # type: ignore[arg-type]
-                smtp_host="smtp.test.local",
-                smtp_port=465,
-                smtp_username=f"{self._source}@test.local",
-                smtp_password="<test-placeholder>",
+                smtp_host=self._smtp_host,
+                smtp_port=self._smtp_port,
+                smtp_username=self._smtp_username,
+                smtp_password=self._smtp_password,
                 email_message=msg,
                 run_id=f"dispatcher-{start_ms_str(now_ms)}",
                 transport_alive=True,

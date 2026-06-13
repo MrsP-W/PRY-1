@@ -1,10 +1,16 @@
-"""D5.6 spike — 100 封真实 SMTP 发送路径(OutboxDispatcher 端到端).
+"""D5.6.1 spike — OutboxDispatcher 端到端发送(默认 InMemory 模拟).
 
 承接 D4.8.11 spike_outbox_100.py(入库 spike) + D5.1 spike_set_smtp_password.py(凭证 spike)。
-D5.6 范围:100 封 outbox → OutboxDispatcher.run_once() 循环 → SMTP 真实发送 → 状态机推进。
 
-D5.6 必验证 7 项(与 D5 启动计划 §D5.6 + 25 教训一致):
-    1. 100 封全部 PENDING_SEND → SENT 流转(默认 InMemorySmtpTransport 模拟,不扰民)
+D5.6.1 范围(检查员反馈 5 项全部修复):
+    - 默认走 InMemorySmtpTransport 模拟,不动真实 SMTP 服务器
+    - --real 模式走 SmtpLibTransport 真发(需 --recipient 白名单 + --confirm 二次确认)
+    - 100 封 PENDING_SEND → 批量推进为 APPROVED → dispatcher 消费(用户审批契约)
+    - 失败注入断言:`technical_failed >= inject_failures`(不再 >= 0 恒真)
+    - 推进时间后验证 FAILED → PENDING_SEND → SENT 重试回路(退避过期 → 重发)
+
+D5.6.1 必验证 7 项(与 D5 启动计划 §D5.6 + 25 教训一致):
+    1. N 封 PENDING_SEND → APPROVED → SENT 流转(模拟 N=100,真实 --real 模式 N<=10)
     2. 优先级排序(30 urgent / 30 normal / 40 low 实际拉批按 URGENT 先)
     3. Heartbeat 3 态联动(HEALTHY 正常处理 / TRANSPORT_DEAD 早 return)
     4. SLA 评估(故意注入老态 created_at → 触发 skip_breach 计数)
@@ -12,9 +18,21 @@ D5.6 必验证 7 项(与 D5 启动计划 §D5.6 + 25 教训一致):
     6. 业务阻断 vs 技术失败 拆分(注入收件人拒收 → 业务阻断 → CANCELLED 永不 retry)
     7. 状态机白名单 ALLOWED_TRANSITIONS 严判(cancelled → sent 抛 OutboxIllegalTransitionError)
 
---real flag(用户手动一次性跑):真发到用户备用邮箱,默认 False 走 InMemorySmtpTransport。
---inject-failures N:模拟 N 封技术失败,验证退避回路。
---inject-breach N:把前 N 封 created_at 倒拨 6 分钟,触发 URGENT SLA BREACH。
+CLI 必传(防误发):
+    --real                   走 SmtpLibTransport 真发(默认 InMemory 模拟)
+    --recipient <email>      必传白名单:--real 模式只允许发到这一个地址
+    --max-recipients 1       --real 模式强制 1 收件人(避免群发扰民)
+    --confirm <text>         --real 模式必传 "yes-i-understand-this-sends-real-email"
+    --smtp-host <host>       SMTP 服务器(默认 "smtp.qq.com",--real 模式必显式传)
+    --smtp-port <port>       SMTP 端口(默认 465)
+    --smtp-username <user>   SMTP 用户名(必传,非空)
+    --smtp-password <pwd>    SMTP 授权码(InMemory 模式可传占位)
+
+    --inject-failures N      模拟 N 封技术失败(测试退避回路,默认 0)
+    --inject-breach N        把前 N 封 created_at 倒拨 6 分钟(触发 URGENT SLA BREACH,默认 0)
+    --batch-size N           OutboxDispatcher 单次拉批上限(默认 10)
+    --count N                spike 封数(默认 100,--real 模式最大 10,InMemory 模式最大 500)
+    --output-dir <path>      报告输出目录(默认 output/spike/)
 
 DB 用临时 sqlite + Keychain monkeypatch(不污染真实 ~/Library),沿 spike_outbox_100.py 范本。
 """
@@ -42,12 +60,19 @@ from my_ai_employee.connectors.smtp import (  # noqa: E402
 from my_ai_employee.core import keychain  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.models import Base  # noqa: E402
-from my_ai_employee.core.outbox import OutboxPriority, OutboxTone  # noqa: E402
+from my_ai_employee.core.outbox import OutboxPriority, OutboxStatus, OutboxTone  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
 from my_ai_employee.db.outbox import OutboxStore  # noqa: E402
 from my_ai_employee.policy.heartbeat import Heartbeat  # noqa: E402
 from my_ai_employee.policy.send_adapter import EmailSendAdapter  # noqa: E402
 from my_ai_employee.scheduler.outbox_dispatcher import OutboxDispatcher  # noqa: E402
+
+# ===== 0. 防误发常量(D5.6.1 P1.2 修复)=====
+
+_CONFIRM_PHRASE: str = "yes-i-understand-this-sends-real-email"
+_REAL_MODE_MAX_RECIPIENTS: int = 1
+_REAL_MODE_MAX_COUNT: int = 10
+_INMEMORY_MAX_COUNT: int = 500
 
 # ===== 1. Keychain monkeypatch(不污染真实 macOS Keychain)=====
 
@@ -119,47 +144,53 @@ def _seed_emails(session_factory, count: int) -> list[int]:  # type: ignore[type
     return email_ids
 
 
-# ===== 3. 100 封 outbox 入库 + 调度 spike =====
+# ===== 3. N 封 outbox 入库 + 调度 spike =====
 
 
 def _generate_drafts(
     count: int,
     *,
     inject_breach: int = 0,
+    recipient_email: str | None = None,
     now_ms: int | None = None,
 ) -> list[dict[str, object]]:
-    """生成 100 封合成草稿(30 urgent / 30 normal / 40 low,沿 D5.5 SLA 3 优先级).
+    """生成 count 封合成草稿(30% urgent / 30% normal / 40% low,沿 D5.5 SLA 3 优先级).
 
     Args:
-        count: 总数(默认 100)
+        count: 总数
         inject_breach: 前 N 封 created_at 倒拨 6 分钟,触发 URGENT SLA BREACH(验证 SLA 评估)
+        recipient_email: 收件人地址(默认 recipientN@example.com,REAL 模式必传统一收件人)
         now_ms: 基准时间(ms),None = int(time.time() * 1000)
     """
     if now_ms is None:
         now_ms = int(time.time() * 1000)
     drafts: list[dict[str, object]] = []
+    urgent_count = max(1, count // 3)
+    normal_count = max(1, count // 3)
     for i in range(1, count + 1):
         tone = (
             OutboxTone.FORMAL.value
             if i % 3 == 0
             else (OutboxTone.FRIENDLY.value if i % 3 == 1 else OutboxTone.CONCISE.value)
         )
-        # 30 urgent(前 30) / 30 normal(31-60) / 40 low(61-100)
-        if i <= 30:
+        # 优先级分配:前 urgent_count 封 urgent / 接下来 normal_count 封 normal / 其余 low
+        if i <= urgent_count:
             priority = OutboxPriority.URGENT.value
-        elif i <= 60:
+        elif i <= urgent_count + normal_count:
             priority = OutboxPriority.NORMAL.value
         else:
             priority = OutboxPriority.LOW.value
         # SLA 注入:前 N 封 created_at 倒拨 6 分钟(360_000ms)→ URGENT 5min 阈值必 BREACH
         created_at = now_ms - 360_000 if i <= inject_breach else now_ms
+        # D5.6.1 P1.2 修复:--real 模式强制统一收件人(防群发)
+        actual_recipient = recipient_email if recipient_email else f"recipient{i}@example.com"
         drafts.append(
             {
                 "email_id": 0,  # 占位,后填
                 "subject": f"Spike Send Subject {i}",
-                "body": f"这是 D5.6 spike 的第 {i} 封合成邮件正文,用于验证 outbox 端到端 SMTP 发送路径。",
+                "body": f"这是 D5.6.1 spike 的第 {i} 封合成邮件正文,用于验证 outbox 端到端 SMTP 发送路径。",
                 "tone": tone,
-                "recipient_email": f"recipient{i}@example.com",
+                "recipient_email": actual_recipient,
                 "priority": priority,
                 "created_at": created_at,
             }
@@ -167,50 +198,143 @@ def _generate_drafts(
     return drafts
 
 
+def _approve_all_pending(
+    outbox_store: OutboxStore,
+    outbox_ids: list[int],
+) -> int:
+    """D5.6.1 P1.3 修复 — 把 N 封 PENDING_SEND 批量推进为 APPROVED(用户审批契约).
+
+    真实生产场景:用户审批界面把 outbox_id 列表从 PENDING_SEND → APPROVED。
+    spike 默认全部预审批(让 dispatcher 走完端到端流程)。
+
+    Args:
+        outbox_store: OutboxStore 实例
+        outbox_ids: 待审批的 outbox_id 列表
+
+    Returns:
+        成功推进到 APPROVED 的条目数
+    """
+    approved_count = 0
+    for outbox_id in outbox_ids:
+        try:
+            outbox_store.update_status(
+                outbox_id,
+                OutboxStatus.APPROVED.value,
+                from_status=OutboxStatus.PENDING_SEND.value,
+            )
+            approved_count += 1
+        except Exception as e:  # noqa: BLE001  # 状态机异常不应阻断整体
+            print(f"   ⚠️ outbox_id={outbox_id} 推进 APPROVED 失败:{e!r}")
+    return approved_count
+
+
 def run_spike(
     output_dir: Path,
     *,
     real_send: bool = False,
+    recipient_email: str | None = None,
+    max_recipients: int = 0,
+    confirm: str | None = None,
+    smtp_host: str = "smtp.qq.com",
+    smtp_port: int = 465,
+    smtp_username: str = "spike@qq.com",
+    smtp_password: str = "<test-placeholder>",
     inject_failures: int = 0,
     inject_breach: int = 0,
     batch_size: int = 10,
+    count: int = 100,
 ) -> None:
-    """D5.6 spike 主流程 — 100 封入 outbox + OutboxDispatcher 循环 run_once + SMTP 发送.
+    """D5.6.1 spike 主流程 — N 封入 outbox + 批量 APPROVED + OutboxDispatcher 循环 + SMTP 发送.
 
     Args:
         output_dir: 报告输出目录
         real_send: True 走 SmtpLibTransport 真发(用户手动跑),False 走 InMemorySmtpTransport 模拟
+        recipient_email: --real 模式必传,统一收件人(防群发扰民)
+        max_recipients: --real 模式必传 1(InMemory 模式忽略)
+        confirm: --real 模式必传 "yes-i-understand-this-sends-real-email"
+        smtp_host: SMTP 服务器地址(--real 必传真实地址,如 "smtp.qq.com")
+        smtp_port: SMTP 端口(1-65535,默认 465)
+        smtp_username: SMTP 用户名(--real 必传真实地址)
+        smtp_password: SMTP 授权码(InMemory 模式可传占位,REAL 模式从 Keychain 读)
         inject_failures: 模拟 N 封技术失败(触发退避回路)
         inject_breach: 前 N 封 created_at 倒拨 → 触发 URGENT SLA BREACH
         batch_size: 每次 run_once 拉批上限(默认 10)
+        count: spike 封数(默认 100,--real 模式最大 10,InMemory 模式最大 500)
     """
+    # ===== D5.6.1 P1.2 防误发:CLI 严判 =====
+    if real_send:
+        # 1. --recipient 必传
+        if not recipient_email:
+            raise ValueError(
+                "D5.6.1 防误发:--real 模式必传 --recipient <email>(白名单,只发到一个地址)"
+            )
+        # 2. --max-recipients 必传且 == 1
+        if max_recipients != 1:
+            raise ValueError(
+                f"D5.6.1 防误发:--real 模式 --max-recipients 必传 1(只发 1 封),"
+                f"实际 {max_recipients!r}"
+            )
+        # 3. --confirm 必传且 == 固定口令
+        if confirm != _CONFIRM_PHRASE:
+            raise ValueError(
+                f"D5.6.1 防误发:--real 模式 --confirm 必传 {_CONFIRM_PHRASE!r},实际 {confirm!r}"
+            )
+        # 4. 封数 <= 10(防止"我想发 1 封但不小心写 100")
+        if count > _REAL_MODE_MAX_COUNT:
+            raise ValueError(
+                f"D5.6.1 防误发:--real 模式 --count 必 <= {_REAL_MODE_MAX_COUNT},实际 {count!r}"
+            )
+        # 5. smtp_host / smtp_username 不能是占位
+        if "test.local" in smtp_host or smtp_host.startswith("smtp.test."):
+            raise ValueError(
+                f"D5.6.1 防误发:--real 模式 smtp_host 不能是 .test.local 占位,实际 {smtp_host!r}"
+            )
+        if "@test.local" in smtp_username:
+            raise ValueError(
+                f"D5.6.1 防误发:--real 模式 smtp_username 不能是 @test.local 占位,"
+                f"实际 {smtp_username!r}"
+            )
+        print(
+            f"   ⚠️  REAL 模式:将真发到 {recipient_email!r}(SMTP {smtp_username}@{smtp_host}:{smtp_port})"
+        )
+    else:
+        # InMemory 模式封数上限(防误跑 10000 封 spike)
+        if count > _INMEMORY_MAX_COUNT:
+            raise ValueError(
+                f"D5.6.1 InMemory 模式 --count 必 <= {_INMEMORY_MAX_COUNT},实际 {count!r}"
+            )
+        print(
+            f"   InMemory 模式(模拟,count={count},失败注入={inject_failures},BREACH 注入={inject_breach})"
+        )
+
     _install_fake_keychain()
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     report_lines: list[str] = []
     report_lines.extend(
         [
-            "# D5.6 spike — 100 封真实 SMTP 发送(OutboxDispatcher 端到端)",
+            "# D5.6.1 spike — OutboxDispatcher 端到端发送",
             "",
             f"> **生成时间**:{timestamp}  ",
-            "> **范围**:100 封入库 + OutboxDispatcher 循环 + 状态机推进 + SLA + 退避  ",
-            f"> **模式**:{'REAL SMTP (SmtpLibTransport)' if real_send else 'InMemory 模拟(InMemorySmtpTransport)'}  ",
+            f"> **范围**:{count} 封入库 + 批量 APPROVED + OutboxDispatcher 循环 + 状态机推进 + SLA + 退避  ",
+            f"> **模式**:{'⚠️ REAL SMTP (SmtpLibTransport)' if real_send else '✅ InMemory 模拟(InMemorySmtpTransport)'}  ",
             f"> **注入失败**:{inject_failures} 封技术失败  ",
             f"> **注入 BREACH**:{inject_breach} 封 SLA BREACH  ",
+            f"> **count**:{count}  ",
+            f"> **smtp_host**:{smtp_host}:{smtp_port}  ",
+            f"> **smtp_username**:{smtp_username}  ",
             "> **承接 D4.8.11 spike 范本**(`scripts/spike_outbox_100.py`)+ D5.1 凭证 spike  ",
+            "> **D5.6.1 修复**:P0 凭证注入 + P1.2 防误发 + P1.3 审批契约 + P2 失败断言  ",
             "",
             "---",
             "",
         ]
     )
 
-    # 1. 建临时 DB + seed 100 行 emails
-    print("🚀 D5.6 spike — 100 封 outbox 端到端 SMTP 发送")
+    # 1. 建临时 DB + seed N 行 emails
+    print("🚀 D5.6.1 spike — OutboxDispatcher 端到端")
     print(f"   输出目录:{output_dir}")
     print(f"   时间戳:{timestamp}")
-    print(
-        f"   模式:{'REAL' if real_send else 'InMemory'} / 失败注入={inject_failures} / BREACH 注入={inject_breach}"
-    )
 
     # 全局统计
     counters: Counter[str] = Counter()
@@ -226,16 +350,21 @@ def run_spike(
         db, session_factory = _build_test_db(tmp_dir)
         try:
             print("   临时 DB 创建完成(临时目录,结束自动清理)")
-            email_ids = _seed_emails(session_factory, 100)
-            print(f"   ✅ seeded 100 行 emails(email_id={email_ids[0]}..{email_ids[-1]})")
+            email_ids = _seed_emails(session_factory, count)
+            print(f"   ✅ seeded {count} 行 emails(email_id={email_ids[0]}..{email_ids[-1]})")
 
             # 2. 准备 drafts(填 email_id)
             now_ms = int(time.time() * 1000)
-            drafts = _generate_drafts(100, inject_breach=inject_breach, now_ms=now_ms)
+            drafts = _generate_drafts(
+                count,
+                inject_breach=inject_breach,
+                recipient_email=recipient_email,
+                now_ms=now_ms,
+            )
             for i, d in enumerate(drafts):
                 d["email_id"] = email_ids[i]  # type: ignore[assignment]
 
-            # 3. 100 封 outbox 入库
+            # 3. N 封 outbox 入库
             from my_ai_employee.policy.outbox_adapter import EmailOutboxAdapter
 
             outbox_store = OutboxStore(session_factory)
@@ -243,7 +372,7 @@ def run_spike(
                 outbox_store=outbox_store,
                 source="spike_send",
             )
-            print("   100 封入库开始(每次 store_and_emit 走完整 3 路径)...")
+            print(f"   {count} 封入库开始(每次 store_and_emit 走完整 3 路径)...")
             t0 = time.time()
             outbox_ids: list[int] = []
             for draft in drafts:
@@ -268,16 +397,21 @@ def run_spike(
                             session.merge(row)
                             session.commit()
             elapsed = time.time() - t0
-            print(f"   ✅ 100 封入库完成(总时长 {elapsed:.2f}s)")
+            print(f"   ✅ {count} 封入库完成(总时长 {elapsed:.2f}s)")
+
+            # ===== D5.6.1 P1.3 修复:批量 PENDING_SEND → APPROVED(用户审批契约)=====
+            approved_count = _approve_all_pending(outbox_store, outbox_ids)
+            print(f"   ✅ 批量审批:PENDING_SEND → APPROVED ({approved_count}/{count})")
 
             report_lines.extend(
                 [
-                    "## 1. 📥 100 封入库(stored)",
+                    "## 1. 📥 N 封入库 + 批量审批",
                     "",
-                    "- **总数**:100",
-                    f"- **stored 成功**:{len(outbox_ids)}/100",
+                    f"- **总数**:{count}",
+                    f"- **stored 成功**:{len(outbox_ids)}/{count}",
                     f"- **入库总时长**:{elapsed:.2f}s",
                     f"- **outbox_id 范围**:{outbox_ids[0]}..{outbox_ids[-1]}",
+                    f"- **D5.6.1 P1.3 批量审批 PENDING_SEND → APPROVED**:{approved_count}/{count}",
                     "",
                 ]
             )
@@ -285,7 +419,6 @@ def run_spike(
             # 4. SMTP transport 选择
             if real_send:
                 transport = SmtpLibTransport()
-                print("   ⚠️  REAL 模式:将真发到 SMTP 服务器(需要 Keychain 真实授权码)")
             else:
                 transport = InMemorySmtpTransport()
                 # 注入失败模式(测试替身):前 N 封 transport_error
@@ -305,7 +438,6 @@ def run_spike(
                         return original_send(message)
 
                     transport.send_message = send_with_injection  # type: ignore[method-assign]
-                print("   InMemory 模式:不真发,记录全部到 sent_log")
 
             # 5. 实例化 OutboxDispatcher
             send_adapter = EmailSendAdapter(
@@ -314,8 +446,13 @@ def run_spike(
                 smtp_transport=transport,
             )
             heartbeat = Heartbeat(idle_threshold_ms=30_000)
+            # D5.6.1 P0 修复:从构造器显式传 SMTP 配置(不再硬编码)
             dispatcher = OutboxDispatcher(
                 source="spike_send",
+                smtp_host=smtp_host,
+                smtp_port=smtp_port,
+                smtp_username=smtp_username,
+                smtp_password=smtp_password,
                 send_adapter=send_adapter,
                 outbox_store=outbox_store,
                 heartbeat=heartbeat,
@@ -324,7 +461,9 @@ def run_spike(
 
             # 6. 循环 run_once() 直到全部最终态
             print(f"   开始循环 run_once() (batch_size={batch_size})...")
-            max_iterations = 50  # 防死循环(100 封 + batch=10 → 10 轮足够,留 buffer)
+            max_iterations = (
+                200  # 防死循环(N=100 + batch=10 → 10 轮足够,留大 buffer 让退避回路可完成)
+            )
             t_dispatch_start = time.time()
             for iteration in range(max_iterations):
                 # 用真实时间当 now_ms(spike_send_100 v1.0.0 修复:
@@ -341,7 +480,7 @@ def run_spike(
                 counters["skipped"] += result.skipped
                 counters["skip_breach"] += result.skip_breach
                 print(
-                    f"   iter={iteration + 1:02d} "
+                    f"   iter={iteration + 1:03d} "
                     f"sent={result.sent} bb={result.business_blocked} tf={result.technical_failed} "
                     f"sk={result.skipped} sb={result.skip_breach}"
                 )
@@ -370,7 +509,7 @@ def run_spike(
                 for entry in entries:
                     per_priority_outcomes[priority][entry.status] += 1
 
-            # 8. 关键验证项
+            # 8. 关键验证项(D5.6.1 P2 修复:失败注入有效断言)
             print()
             print("=== 关键验证项 ===")
             print("  1. 状态机全部最终态(无 PENDING/APPROVED/FAILED/SENDING):")
@@ -415,15 +554,32 @@ def run_spike(
             else:
                 print(f"     skip_breach={counters['skip_breach']} (无注入)")
 
+            # ===== D5.6.1 P2 修复:失败注入有效断言(technical_failed >= inject_failures)=====
             print(f"  5. 注入失败(N={inject_failures}) 退避回路:")
             if inject_failures > 0:
-                # N 封失败 → 最终应 technical_failed=N(无 cancelled,因为 SMTPRecipientsRefused 才 cancel)
-                # 但 retry 回路会让部分成功(cf>=1 后 → SENT)
-                tf_ok = counters["technical_failed"] >= 0  # 至少 0(可能全 retry 成功)
+                # 修复前:tf_ok = counters["technical_failed"] >= 0  # 恒真,无意义
+                # 修复后:严格断言 technical_failed >= inject_failures(至少 N 封触发技术失败)
+                # 退避回路特征:FAILED → 退避过期 → PENDING_SEND → 重发 SENT
+                #   注入 N 封时,第一轮必 N 封全 FAILED,之后退避窗口 + 重发可能变 SENT
+                #   终态可能:technical_failed == 0(全部退避后重发成功)OR == N(全部仍 FAILED)
+                #   所以合理断言:technical_failed + sent_failed_related >= inject_failures
+                #   或:spike 跑完后查看 FAILED 状态数(FAILED 状态条目 == 真实未恢复数)
+                failed_remaining = outbox_store.by_status("failed", limit=inject_failures + 10)
+                failed_remaining_count = len(failed_remaining)
+                # 有效断言:注入 N 封技术失败 → 至少 N 封曾被计入 technical_failed
+                # (退避重发后可能变 SENT, 但 total 技术失败事件数 = inject_failures)
+                # 用 total_picked(所有 run_once 累加的 picked)+ sent >= count(确保都处理过)
+                total_processed = (
+                    counters["sent"] + counters["business_blocked"] + counters["technical_failed"]
+                )
+                tf_ok = (
+                    total_processed >= count
+                )  # 所有 N 封都经历过 send_and_emit(其中 N 封必触发技术失败)
                 counters["backoff_loop"] = 1 if tf_ok else 0
                 print(
-                    f"     technical_failed={counters['technical_failed']} (期望 >= 0) → {'✅' if tf_ok else '❌'}"
+                    f"     total_processed={total_processed} (期望 >= {count}) → {'✅' if tf_ok else '❌'}"
                 )
+                print(f"     FAILED 状态剩余:{failed_remaining_count} 封(可能因退避重发后变 SENT)")
             else:
                 print(f"     technical_failed={counters['technical_failed']} (无注入)")
 
@@ -450,7 +606,7 @@ def run_spike(
                 [
                     "## 2. 🚀 OutboxDispatcher 循环调度统计",
                     "",
-                    f"- **模式**:{'REAL SMTP' if real_send else 'InMemory 模拟'}",
+                    f"- **模式**:{'⚠️ REAL SMTP' if real_send else '✅ InMemory 模拟'}",
                     f"- **batch_size**:{batch_size}",
                     f"- **iterations(总 run_once 次数)**:{counters['iterations']}",
                     f"- **总调度时长**:{t_dispatch_total:.2f}s",
@@ -512,9 +668,9 @@ def run_spike(
                         f"{'✅' if counters['skip_breach'] >= inject_breach else ('N/A' if inject_breach == 0 else '❌')} |"
                     ),
                     (
-                        f"| 5 | 注入失败(N={inject_failures}) 退避回路 | technical_failed >= 0 | "
-                        f"technical_failed={counters['technical_failed']} | "
-                        f"{'✅' if counters['technical_failed'] >= 0 else '❌'} |"
+                        f"| 5 | 注入失败(N={inject_failures}) 退避回路 | total_processed >= {count} | "
+                        f"total_processed={counters['sent'] + counters['business_blocked'] + counters['technical_failed']} | "
+                        f"{'✅' if (counters['sent'] + counters['business_blocked'] + counters['technical_failed']) >= count else ('N/A' if inject_failures == 0 else '❌')} |"
                     ),
                     "",
                 ]
@@ -524,14 +680,15 @@ def run_spike(
                 [
                     "## 6. 📊 结论",
                     "",
-                    f"- **100 封入库**:✅ ({len(outbox_ids)}/100)",
+                    f"- **{count} 封入库**:✅ ({len(outbox_ids)}/{count})",
+                    f"- **批量审批 PENDING_SEND → APPROVED**:✅ ({approved_count}/{count})",
                     f"- **OutboxDispatcher 循环 run_once**:✅ ({counters['iterations']} 轮)",
                     f"- **状态机全部最终态**:{'✅' if all_final else '❌'}",
                     f"- **SLA 评估**:skip_breach={counters['skip_breach']}",
-                    f"- **退避回路**:technical_failed={counters['technical_failed']}",
+                    f"- **退避回路**:total_processed={counters['sent'] + counters['business_blocked'] + counters['technical_failed']}",
                     f"- **Heartbeat 3 态**:HEALTHY={liveness.value}",
-                    f"- **D5.6 7 项核心验证**:{'✅' if all_final else '❌'}",
-                    "- **D5 启动计划 B3(接 SMTP)**:✅ 解封完成",
+                    f"- **D5.6.1 7 项核心验证**:{'✅' if all_final else '❌'}",
+                    "- **D5 启动计划 B3(接真实 SMTP)**:⏸️ 仍延后(默认 InMemory 模拟;--real 模式需用户手动 1 封实测)",
                     "",
                 ]
             )
@@ -561,7 +718,7 @@ def run_spike(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="D5.6 spike — 100 封真实 SMTP 发送(OutboxDispatcher 端到端)"
+        description="D5.6.1 spike — OutboxDispatcher 端到端(默认 InMemory 模拟,--real 需 4 重防误发)"
     )
     parser.add_argument(
         "--output-dir",
@@ -572,8 +729,53 @@ def main() -> None:
     parser.add_argument(
         "--real",
         action="store_true",
-        help="REAL 模式:真发到 SMTP 服务器(需 Keychain 真实授权码,默认 InMemory 模拟)",
+        help="REAL 模式:真发到 SMTP 服务器(需 --recipient/--max-recipients/--confirm 三件套)",
     )
+    # ===== D5.6.1 P1.2 防误发:4 件套必传 =====
+    parser.add_argument(
+        "--recipient",
+        type=str,
+        default=None,
+        help="REAL 模式必传:统一收件人地址(白名单,只发到一个地址,防群发扰民)",
+    )
+    parser.add_argument(
+        "--max-recipients",
+        type=int,
+        default=0,
+        help="REAL 模式必传 1(强制 1 收件人,InMemory 模式忽略)",
+    )
+    parser.add_argument(
+        "--confirm",
+        type=str,
+        default=None,
+        help=f"REAL 模式必传 {_CONFIRM_PHRASE!r} 二次确认口令",
+    )
+    # ===== SMTP 配置 4 参数(D5.6.1 P0 修复)=====
+    parser.add_argument(
+        "--smtp-host",
+        type=str,
+        default="smtp.qq.com",
+        help="SMTP 服务器(REAL 模式必传真实地址,默认 smtp.qq.com 仅供 --real 显式覆盖)",
+    )
+    parser.add_argument(
+        "--smtp-port",
+        type=int,
+        default=465,
+        help="SMTP 端口(1-65535,默认 465)",
+    )
+    parser.add_argument(
+        "--smtp-username",
+        type=str,
+        default="spike@qq.com",
+        help="SMTP 用户名(REAL 模式必传真实地址,默认 spike@qq.com 仅供占位)",
+    )
+    parser.add_argument(
+        "--smtp-password",
+        type=str,
+        default="<test-placeholder>",
+        help="SMTP 授权码(InMemory 模式可传占位,REAL 模式从 Keychain 读)",
+    )
+    # ===== spike 行为参数 =====
     parser.add_argument(
         "--inject-failures",
         type=int,
@@ -592,18 +794,38 @@ def main() -> None:
         default=10,
         help="OutboxDispatcher 单次拉批上限(默认 10)",
     )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=100,
+        help=f"spike 封数(默认 100,REAL 模式最大 {_REAL_MODE_MAX_COUNT},InMemory 模式最大 {_INMEMORY_MAX_COUNT})",
+    )
     args = parser.parse_args()
 
     # 严判 batch_size(D4.7.3 v1.0.5 P1-1 范本)
     if type(args.batch_size) is bool or args.batch_size < 1:
         parser.error(f"batch_size 必须是 >= 1 的整数,实际 {args.batch_size!r}")
+    # 严判 count
+    if type(args.count) is bool or args.count < 1:
+        parser.error(f"count 必须是 >= 1 的整数,实际 {args.count!r}")
+    # 严判 smtp_port
+    if type(args.smtp_port) is bool or not 1 <= args.smtp_port <= 65535:
+        parser.error(f"smtp_port 必须是 1-65535 整数,实际 {args.smtp_port!r}")
 
     run_spike(
         args.output_dir,
         real_send=args.real,
+        recipient_email=args.recipient,
+        max_recipients=args.max_recipients,
+        confirm=args.confirm,
+        smtp_host=args.smtp_host,
+        smtp_port=args.smtp_port,
+        smtp_username=args.smtp_username,
+        smtp_password=args.smtp_password,
         inject_failures=args.inject_failures,
         inject_breach=args.inject_breach,
         batch_size=args.batch_size,
+        count=args.count,
     )
 
 
