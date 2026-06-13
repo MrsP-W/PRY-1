@@ -192,7 +192,7 @@ def test_run_spike_reads_password_from_keychain() -> None:
                 smtp_provider="qq",
                 count=1,
             )
-        except Exception as e:  # noqa: BLE001  # 后续可能抛错,与本测试无关
+        except Exception:  # noqa: BLE001  # 后续可能抛错,与本测试无关
             # D5.6.3 P2-4:不再用 contextlib.suppress(Exception) 静默吞,
             # 改为显式 re-raise 触发 pytest.raises,确保 Keychain 调用链可观测
             raise
