@@ -228,6 +228,32 @@ def get_smtp_password(email: str) -> KeychainResult:
     return get_password(SERVICE_SMTP_QQ, email)
 
 
+# D5.6.2 修复:provider-aware SMTP 凭证读取(REAL 模式必备)
+# 拒绝 CLI 传密码,直接从系统 Keychain 真读(防 shell history 泄露)
+# P0 修复:之前 spike 脚本 --smtp-password 占位也能过严判,现在 REAL 模式必须先
+#  spike_set_smtp_password.py --set-password 写入,spike 才允许跑
+
+
+def _resolve_smtp_service(provider: str) -> str:
+    """provider 名 → Keychain service 常量(严判白名单)."""
+    if provider == "qq":
+        return SERVICE_SMTP_QQ
+    if provider == "outlook":
+        return SERVICE_SMTP_OUTLOOK
+    if provider == "gmail":
+        return SERVICE_SMTP_GMAIL
+    raise ValueError(f"D5.6.2 凭证链路:smtp_provider 必传 'qq'/'outlook'/'gmail',实际 {provider!r}")
+
+
+def get_smtp_password_for_provider(provider: str, email: str) -> KeychainResult:
+    """按 provider 读 SMTP 授权码(REAL 模式 spike 用,严判非空防占位).
+
+    Raises:
+        ValueError: provider 不在白名单(qq/outlook/gmail)
+    """
+    return get_password(_resolve_smtp_service(provider), email)
+
+
 __all__ = [
     "KeychainResult",
     "is_available",
@@ -240,6 +266,7 @@ __all__ = [
     "get_imap_password",
     "set_smtp_password",
     "get_smtp_password",
+    "get_smtp_password_for_provider",
     "SERVICE_PREFIX",
     "SERVICE_DB",
     "SERVICE_IMAP_QQ",

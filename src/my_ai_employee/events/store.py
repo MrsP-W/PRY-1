@@ -178,7 +178,10 @@ class EventStore:
         session_id 存在 event_metadata["session_id"] 字段内.
         """
         with self._session_factory() as session:
-            stmt = select(Event).order_by(Event.created_at.desc())
+            # D5.6.2 修复:加 Event.id DESC 作为 secondary sort,保证 created_at 相同时
+            # 仍按插入顺序倒序(避免 SQLite 优化器选择的不稳定顺序导致 by_session
+            # LIMIT 1 取到 TestDedupe 残留事件)
+            stmt = select(Event).order_by(Event.created_at.desc(), Event.id.desc())
             rows = list(session.execute(stmt).scalars().all())
         # Python 端 filter + 截断 (limit 在 Python 端生效)
         matched = [r for r in rows if r.event_metadata.get("session_id") == session_id]

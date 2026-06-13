@@ -238,7 +238,7 @@ def run_spike(
     smtp_host: str = "smtp.qq.com",
     smtp_port: int = 465,
     smtp_username: str = "spike@qq.com",
-    smtp_password: str = "<test-placeholder>",
+    smtp_provider: str = "qq",
     inject_failures: int = 0,
     inject_breach: int = 0,
     batch_size: int = 10,
@@ -255,57 +255,88 @@ def run_spike(
         smtp_host: SMTP 服务器地址(--real 必传真实地址,如 "smtp.qq.com")
         smtp_port: SMTP 端口(1-65535,默认 465)
         smtp_username: SMTP 用户名(--real 必传真实地址)
-        smtp_password: SMTP 授权码(InMemory 模式可传占位,REAL 模式从 Keychain 读)
+        smtp_provider: SMTP provider(qq/outlook/gmail,D5.6.2 P0 修复 REAL 模式真读 Keychain 用)
         inject_failures: 模拟 N 封技术失败(触发退避回路)
         inject_breach: 前 N 封 created_at 倒拨 → 触发 URGENT SLA BREACH
         batch_size: 每次 run_once 拉批上限(默认 10)
         count: spike 封数(默认 100,--real 模式最大 10,InMemory 模式最大 500)
     """
-    # ===== D5.6.1 P1.2 防误发:CLI 严判 =====
+    # ===== D5.6.2 P0 凭证链路 + D5.6.1 P1.2 防误发:CLI 严判 =====
+    smtp_password: str  # REAL 模式从 Keychain 读(InMemory 模式不需要,占位即可)
     if real_send:
         # 1. --recipient 必传
         if not recipient_email:
             raise ValueError(
-                "D5.6.1 防误发:--real 模式必传 --recipient <email>(白名单,只发到一个地址)"
+                "D5.6.2 防误发:--real 模式必传 --recipient <email>(白名单,只发到一个地址)"
             )
         # 2. --max-recipients 必传且 == 1
         if max_recipients != 1:
             raise ValueError(
-                f"D5.6.1 防误发:--real 模式 --max-recipients 必传 1(只发 1 封),"
+                f"D5.6.2 防误发:--real 模式 --max-recipients 必传 1(只发 1 封),"
                 f"实际 {max_recipients!r}"
             )
         # 3. --confirm 必传且 == 固定口令
         if confirm != _CONFIRM_PHRASE:
             raise ValueError(
-                f"D5.6.1 防误发:--real 模式 --confirm 必传 {_CONFIRM_PHRASE!r},实际 {confirm!r}"
+                f"D5.6.2 防误发:--real 模式 --confirm 必传 {_CONFIRM_PHRASE!r},实际 {confirm!r}"
             )
-        # 4. 封数 <= 10(防止"我想发 1 封但不小心写 100")
-        if count > _REAL_MODE_MAX_COUNT:
-            raise ValueError(
-                f"D5.6.1 防误发:--real 模式 --count 必 <= {_REAL_MODE_MAX_COUNT},实际 {count!r}"
-            )
+        # 4. D5.6.2 检查员反馈:--real 模式强制 count == 1(防止"我以为是 1 封但实际 10")
+        if count != 1:
+            raise ValueError(f"D5.6.2 防误发:--real 模式 --count 必传 1(只能 1 封),实际 {count!r}")
         # 5. smtp_host / smtp_username 不能是占位
         if "test.local" in smtp_host or smtp_host.startswith("smtp.test."):
             raise ValueError(
-                f"D5.6.1 防误发:--real 模式 smtp_host 不能是 .test.local 占位,实际 {smtp_host!r}"
+                f"D5.6.2 防误发:--real 模式 smtp_host 不能是 .test.local 占位,实际 {smtp_host!r}"
             )
-        if "@test.local" in smtp_username:
+        if "@test.local" in smtp_username or smtp_username == "spike@qq.com":
             raise ValueError(
-                f"D5.6.1 防误发:--real 模式 smtp_username 不能是 @test.local 占位,"
-                f"实际 {smtp_username!r}"
+                f"D5.6.2 防误发:--real 模式 smtp_username 不能是占位,实际 {smtp_username!r}"
             )
+        # 6. D5.6.2 P0 凭证链路:REAL 模式从系统 Keychain 真读,禁止 CLI 传密码
+        # 真实 macOS Keychain 必须先 spike_set_smtp_password.py --set-password 写入
         print(
-            f"   ⚠️  REAL 模式:将真发到 {recipient_email!r}(SMTP {smtp_username}@{smtp_host}:{smtp_port})"
+            f"   ⚠️  REAL 模式:将真发到 {recipient_email!r}"
+            f"(SMTP {smtp_username}@{smtp_host}:{smtp_port} via {smtp_provider})"
         )
+        print("   🔑 从系统 Keychain 读取 SMTP 授权码(真凭证,非 CLI 传入)...")
+        smtp_password_result = keychain.get_smtp_password_for_provider(smtp_provider, smtp_username)
+        if not smtp_password_result.ok:
+            raise RuntimeError(
+                f"D5.6.2 凭证链路:从 Keychain 读 {smtp_provider}/{smtp_username} 失败: "
+                f"{smtp_password_result.error!r}\n"
+                f"先跑:python scripts/spike_set_smtp_password.py "
+                f"--provider {smtp_provider} --email {smtp_username} --set-password <authcode>"
+            )
+        smtp_password = smtp_password_result.value
+        if not smtp_password or not smtp_password.strip():
+            raise RuntimeError(
+                f"D5.6.2 凭证链路:Keychain 读出空密码({smtp_provider}/{smtp_username}),"
+                f"重新 spike_set_smtp_password.py --set-password"
+            )
+        # 严判防占位(以防历史写入脏数据)
+        if smtp_password == "<test-placeholder>" or "test-placeholder" in smtp_password:
+            raise RuntimeError(
+                "D5.6.2 凭证链路:Keychain 读出的是 <test-placeholder> 占位,"
+                "必须先 spike_set_smtp_password.py --set-password 写入真实授权码"
+            )
+        print(f"   ✅ Keychain 凭证已读取(长度={len(smtp_password)} 字符,内容不打印)")
     else:
         # InMemory 模式封数上限(防误跑 10000 封 spike)
         if count > _INMEMORY_MAX_COUNT:
             raise ValueError(
-                f"D5.6.1 InMemory 模式 --count 必 <= {_INMEMORY_MAX_COUNT},实际 {count!r}"
+                f"D5.6.2 InMemory 模式 --count 必 <= {_INMEMORY_MAX_COUNT},实际 {count!r}"
             )
+        # InMemory 模式:smtp_password 占位即可(从不连接真实 SMTP)
+        smtp_password = "<test-placeholder>"
         print(
-            f"   InMemory 模式(模拟,count={count},失败注入={inject_failures},BREACH 注入={inject_breach})"
+            f"   InMemory 模式(模拟,count={count},失败注入={inject_failures},"
+            f"BREACH 注入={inject_breach},password=<test-placeholder>)"
         )
+
+    # D5.6.2 P0 凭证链路:_install_fake_keychain 仅 InMemory 模式装
+    # REAL 模式必须走真 keychain.get_smtp_password_for_provider(上面 L256-302)
+    if not real_send:
+        _install_fake_keychain()
 
     _install_fake_keychain()
 
@@ -315,16 +346,16 @@ def run_spike(
         [
             "# D5.6.1 spike — OutboxDispatcher 端到端发送",
             "",
-            f"> **生成时间**:{timestamp}  ",
-            f"> **范围**:{count} 封入库 + 批量 APPROVED + OutboxDispatcher 循环 + 状态机推进 + SLA + 退避  ",
-            f"> **模式**:{'⚠️ REAL SMTP (SmtpLibTransport)' if real_send else '✅ InMemory 模拟(InMemorySmtpTransport)'}  ",
-            f"> **注入失败**:{inject_failures} 封技术失败  ",
-            f"> **注入 BREACH**:{inject_breach} 封 SLA BREACH  ",
-            f"> **count**:{count}  ",
-            f"> **smtp_host**:{smtp_host}:{smtp_port}  ",
-            f"> **smtp_username**:{smtp_username}  ",
-            "> **承接 D4.8.11 spike 范本**(`scripts/spike_outbox_100.py`)+ D5.1 凭证 spike  ",
-            "> **D5.6.1 修复**:P0 凭证注入 + P1.2 防误发 + P1.3 审批契约 + P2 失败断言  ",
+            f"> **生成时间**:{timestamp}",
+            f"> **范围**:{count} 封入库 + 批量 APPROVED + OutboxDispatcher 循环 + 状态机推进 + SLA + 退避",
+            f"> **模式**:{'⚠️ REAL SMTP (SmtpLibTransport)' if real_send else '✅ InMemory 模拟(InMemorySmtpTransport)'}",
+            f"> **注入失败**:{inject_failures} 封技术失败",
+            f"> **注入 BREACH**:{inject_breach} 封 SLA BREACH",
+            f"> **count**:{count}",
+            f"> **smtp_host**:{smtp_host}:{smtp_port}",
+            f"> **smtp_username**:{smtp_username}",
+            "> **承接 D4.8.11 spike 范本**(`scripts/spike_outbox_100.py`)+ D5.1 凭证 spike",
+            "> **D5.6.2 修复**:P0 真 Keychain + P1.1 From smtp_username + P1.2 审批契约 + P1.3 安全测试 + P2 注入事件 + P2 文档 + P3 空格",
             "",
             "---",
             "",
@@ -338,6 +369,8 @@ def run_spike(
 
     # 全局统计
     counters: Counter[str] = Counter()
+    # D5.6.2 P2 修复:精确记录失败注入事件(让断言不再恒真)
+    injection_events_holder: dict[str, list[dict[str, object]]] = {"events": []}
     dispatcher_latencies: list[float] = []
     per_priority_outcomes: dict[str, Counter[str]] = {
         OutboxPriority.URGENT.value: Counter(),
@@ -421,23 +454,38 @@ def run_spike(
                 transport = SmtpLibTransport()
             else:
                 transport = InMemorySmtpTransport()
-                # 注入失败模式(测试替身):前 N 封 transport_error
+                # D5.6.2 P2 修复:注入失败模式(测试替身):前 N 封 transport_error
+                # 关键:把注入事件记录暴露给断言,不再"恒真"陷阱
+                # P2 检查员反馈:之前 total_processed >= count 即使注入完全没生效也过
+                # 修复:用 injection_events 列表精确断言"注入事件触发了 N 次"
                 if inject_failures > 0:
                     original_send = transport.send_message
-                    failure_counter = {"n": 0}
+                    injection_events: list[dict[str, object]] = []
 
                     def send_with_injection(message):  # type: ignore[no-untyped-def]
-                        if failure_counter["n"] < inject_failures:
-                            failure_counter["n"] += 1
-                            from my_ai_employee.connectors.smtp import SMTPSendResult
+                        from my_ai_employee.connectors.smtp import (
+                            SMTPSendResult,
+                        )
 
+                        if len(injection_events) < inject_failures:
+                            seq = len(injection_events) + 1
+                            injection_events.append(
+                                {
+                                    "seq": seq,
+                                    "to": [str(a) for a in message.get_all("To", [])],
+                                    "subject": str(message.get("Subject", "")),
+                                    "error_detail": f"injected failure {seq}/{inject_failures}",
+                                }
+                            )
                             return SMTPSendResult(
                                 status=SMTP_SEND_TRANSPORT_ERROR,
-                                error_detail=f"injected failure {failure_counter['n']}",
+                                error_detail=f"injected failure {seq}/{inject_failures}",
                             )
                         return original_send(message)
 
                     transport.send_message = send_with_injection  # type: ignore[method-assign]
+                    # 暴露 injection_events 到外层供断言使用
+                    injection_events_holder["events"] = injection_events  # type: ignore[index]
 
             # 5. 实例化 OutboxDispatcher
             send_adapter = EmailSendAdapter(
@@ -554,32 +602,34 @@ def run_spike(
             else:
                 print(f"     skip_breach={counters['skip_breach']} (无注入)")
 
-            # ===== D5.6.1 P2 修复:失败注入有效断言(technical_failed >= inject_failures)=====
+            # ===== D5.6.2 P2 修复:失败注入精确断言(injection_events 精确 == inject_failures)=====
+            # 之前 D5.6.1 P2 修复:total_processed >= count(仍恒真,因为即使所有都成功也 >= count)
+            # 检查员反馈:即使注入完全没生效、全部发送成功,断言仍能通过
+            # 真正修复:暴露 transport 层 send_message 注入事件列表,精确断言长度 == inject_failures
             print(f"  5. 注入失败(N={inject_failures}) 退避回路:")
             if inject_failures > 0:
-                # 修复前:tf_ok = counters["technical_failed"] >= 0  # 恒真,无意义
-                # 修复后:严格断言 technical_failed >= inject_failures(至少 N 封触发技术失败)
-                # 退避回路特征:FAILED → 退避过期 → PENDING_SEND → 重发 SENT
-                #   注入 N 封时,第一轮必 N 封全 FAILED,之后退避窗口 + 重发可能变 SENT
-                #   终态可能:technical_failed == 0(全部退避后重发成功)OR == N(全部仍 FAILED)
-                #   所以合理断言:technical_failed + sent_failed_related >= inject_failures
-                #   或:spike 跑完后查看 FAILED 状态数(FAILED 状态条目 == 真实未恢复数)
-                failed_remaining = outbox_store.by_status("failed", limit=inject_failures + 10)
-                failed_remaining_count = len(failed_remaining)
-                # 有效断言:注入 N 封技术失败 → 至少 N 封曾被计入 technical_failed
-                # (退避重发后可能变 SENT, 但 total 技术失败事件数 = inject_failures)
-                # 用 total_picked(所有 run_once 累加的 picked)+ sent >= count(确保都处理过)
-                total_processed = (
-                    counters["sent"] + counters["business_blocked"] + counters["technical_failed"]
-                )
-                tf_ok = (
-                    total_processed >= count
-                )  # 所有 N 封都经历过 send_and_emit(其中 N 封必触发技术失败)
+                # 真正精确断言:注入事件列表长度 == 期望注入次数
+                # 如果 monkeypatch 未生效,send_message 不会被注入,列表长度=0,断言必失败
+                injection_events_list = injection_events_holder.get("events", [])
+                injection_count = len(injection_events_list)
+                tf_ok = injection_count == inject_failures
                 counters["backoff_loop"] = 1 if tf_ok else 0
+                # 同时验证:dispatcher 看到技术失败事件数 >= 注入数(没漏抓)
+                tf_observed = counters["technical_failed"]
+                tf_observed_ok = tf_observed >= inject_failures
                 print(
-                    f"     total_processed={total_processed} (期望 >= {count}) → {'✅' if tf_ok else '❌'}"
+                    f"     injection_events={injection_count} (期望 == {inject_failures}) "
+                    f"→ {'✅' if tf_ok else '❌'}"
                 )
-                print(f"     FAILED 状态剩余:{failed_remaining_count} 封(可能因退避重发后变 SENT)")
+                print(
+                    f"     dispatcher.technical_failed={tf_observed} (期望 >= {inject_failures}) "
+                    f"→ {'✅' if tf_observed_ok else '❌'}"
+                )
+                if not tf_ok or not tf_observed_ok:
+                    raise AssertionError(
+                        f"D5.6.2 P2 失败注入断言:注入事件={injection_count}/"
+                        f"期望={inject_failures},dispatcher.technical_failed={tf_observed}"
+                    )
             else:
                 print(f"     technical_failed={counters['technical_failed']} (无注入)")
 
@@ -750,7 +800,10 @@ def main() -> None:
         default=None,
         help=f"REAL 模式必传 {_CONFIRM_PHRASE!r} 二次确认口令",
     )
-    # ===== SMTP 配置 4 参数(D5.6.1 P0 修复)=====
+    # ===== SMTP 配置 4 参数(D5.6.1 P0 修复 + D5.6.2 P0 凭证链路强化)=====
+    # D5.6.2 关键: --smtp-password 已删除(防 shell history 泄露)
+    # REAL 模式从系统 Keychain 真读: get_smtp_password_for_provider(provider, email)
+    # InMemory 模式不需要 password(spike 走 InMemorySmtpTransport 替身)
     parser.add_argument(
         "--smtp-host",
         type=str,
@@ -770,10 +823,11 @@ def main() -> None:
         help="SMTP 用户名(REAL 模式必传真实地址,默认 spike@qq.com 仅供占位)",
     )
     parser.add_argument(
-        "--smtp-password",
+        "--smtp-provider",
         type=str,
-        default="<test-placeholder>",
-        help="SMTP 授权码(InMemory 模式可传占位,REAL 模式从 Keychain 读)",
+        default="qq",
+        choices=["qq", "outlook", "gmail"],
+        help="SMTP provider 白名单(D5.6.2 P0 修复:REAL 模式必传,真读 Keychain 凭证)",
     )
     # ===== spike 行为参数 =====
     parser.add_argument(
@@ -821,7 +875,7 @@ def main() -> None:
         smtp_host=args.smtp_host,
         smtp_port=args.smtp_port,
         smtp_username=args.smtp_username,
-        smtp_password=args.smtp_password,
+        smtp_provider=args.smtp_provider,
         inject_failures=args.inject_failures,
         inject_breach=args.inject_breach,
         batch_size=args.batch_size,

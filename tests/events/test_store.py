@@ -241,6 +241,22 @@ class TestDedupe:
 
 
 class TestQueries:
+    @pytest.fixture(autouse=True)
+    def _isolate_store(self, store: EventStore) -> None:  # noqa: D401
+        """D5.6.2 修复:每次查询测试前清空 store,避免 TestDedupe 留下的 session_id 污染。
+
+        pytest collection 顺序变化(加 dispatcher_approval test 后)导致 TestDedupe
+        先于 TestQueries 跑,留下 sess-A seq=1 事件,by_session DESC 排序 LIMIT 1
+        取到 TestDedupe 的旧事件(因为 Event.created_at 默认 0,所有 DESC 顺序不定)。
+        """
+        from sqlalchemy import delete  # noqa: PLC0415
+
+        from my_ai_employee.events.models import Event  # noqa: PLC0415
+
+        with store._session_factory() as session:  # noqa: SLF001
+            session.execute(delete(Event))
+            session.commit()
+
     def _seed(self, store: EventStore) -> None:
         """测试数据: 3 events 跨 2 sessions + 2 subjects + 4 statuses."""
         store.insert(

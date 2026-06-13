@@ -391,16 +391,18 @@ class OutboxDispatcher:
         self._heartbeat.update(refresh_last_seen=True, now_ms=start_ms)
         logger.debug(f"OutboxDispatcher heartbeat={liveness.value}, 正常处理,本轮已刷新")
 
-        # 2. 拉批 — PENDING_SEND + APPROVED + FAILED 三种状态(FAILED 由退避窗口控制)
+        # 2. 拉批 — D5.6.2 P1.2 修复:Dispatcher 只消费 APPROVED + FAILED
+        #   不再拉 PENDING_SEND(检查员反馈:用户审批契约被绕过风险)
+        #   PENDING_SEND 必须先经用户审批(批量 PENDING_SEND → APPROVED)才能进 dispatcher
+        #   FAILED 仍可被拉(退避回路),重试解锁后回到 PENDING_SEND 但**保留原审批状态**
+        #   通过 entry.last_approved_at_ms 字段标记(沿 D5.4 范本)
         # D5.5.2 修复批次饥饿(检查员 P1-1):
-        #   策略:新邮件(PENDING_SEND + APPROVED)按 batch_size 全额优先,FAILED 用剩余槽位
+        #   策略:新邮件(APPROVED)按 batch_size 全额优先,FAILED 用剩余槽位
         #         + 受 retry_quota 双重限制,避免 50 个 FAILED 占满批次饿死新邮件
-        #   各池仍以 limit=batch_size 拉批,但合并后做"新邮件优先 + FAILED 配额"二次切分
-        pending_entries = store.by_status(OutboxStatus.PENDING_SEND.value, limit=self._batch_size)
         approved_entries = store.by_status(OutboxStatus.APPROVED.value, limit=self._batch_size)
         failed_entries = store.by_status(OutboxStatus.FAILED.value, limit=self._batch_size)
         # 合并 + 优先级排序(批内统一排序,失败重试与新邮件同台竞争)
-        all_entries = pending_entries + approved_entries + failed_entries
+        all_entries = approved_entries + failed_entries
         all_entries.sort(
             key=lambda e: (
                 -_PRIORITY_SORT_KEY.get(e.priority, 0),  # priority DESC
@@ -491,8 +493,7 @@ class OutboxDispatcher:
         picked_new = len(new_pick)
         picked_retry = len(retry_pick)
         logger.info(
-            f"OutboxDispatcher 拉批: PENDING_SEND={len(pending_entries)} "
-            f"APPROVED={len(approved_entries)} FAILED={len(failed_entries)} "
+            f"OutboxDispatcher 拉批: APPROVED={len(approved_entries)} FAILED={len(failed_entries)} "
             f"选批(new/retry)={picked_new}/{picked_retry} 配额={retry_quota} "
             f"批内={total_picked}/{self._batch_size}"
         )
@@ -579,14 +580,13 @@ class OutboxDispatcher:
             logger.warning(f"OutboxDispatcher 跳过: outbox.id=None entry={entry!r}")
             return ("skipped", "", False)
         if entry.status not in (
-            OutboxStatus.PENDING_SEND.value,
             OutboxStatus.APPROVED.value,
             OutboxStatus.FAILED.value,
         ):
             # 状态已变(并发写,或被其他 process 推到别的状态)→ skipped
             logger.warning(
                 f"OutboxDispatcher 跳过: outbox_id={entry.id} 状态={entry.status!r} "
-                f"不在 PENDING_SEND/APPROVED/FAILED"
+                f"不在 APPROVED/FAILED"
             )
             return ("skipped", "", False)
 
@@ -624,25 +624,34 @@ class OutboxDispatcher:
                 extra_parts.append(f"retry_after={retry_after} cf={cf}")
                 return ("skipped", " ".join(extra_parts), is_breach)
 
-        # 4. FAILED 重试回路:退避结束后先回 PENDING_SEND,再复用 EmailSendAdapter.send_and_emit。
+        # 4. FAILED 重试回路(D5.6.2 P1.2 修复):退避结束后 FAILED → APPROVED,再发送
+        #   之前版本 FAILED → PENDING_SEND 变审批状态(D5.5.4 范本)→ 用户需重新审批
+        #   D5.6.2 修复:状态机白名单新增 FAILED → APPROVED 直通(同用户已审批过)
+        #   关键: 拉批时已确认 entry.status in (APPROVED, FAILED),FAILED 重试通过
+        #   状态机白名单 FAILED → APPROVED 转换保留原审批标记,不需用户重新审批
+        #   失败重试退避已通过 self._failure_state 内存追踪,不需 PENDING_SEND 中转
         if entry.status == OutboxStatus.FAILED.value:
             try:
                 entry = store.update_status(
                     entry.id,
-                    OutboxStatus.PENDING_SEND.value,
+                    OutboxStatus.APPROVED.value,
                     from_status=OutboxStatus.FAILED.value,
                 )
             except (OutboxIllegalTransitionError, ValueError) as e:
                 logger.warning(f"OutboxDispatcher FAILED 重试解锁失败: outbox_id={entry.id} {e!r}")
                 extra_parts.append("retry_unlock_failed")
                 return ("skipped", " ".join(extra_parts), is_breach)
-            logger.info(f"OutboxDispatcher FAILED 重试解锁: outbox_id={entry.id} → pending_send")
+            logger.info(
+                f"OutboxDispatcher FAILED 重试解锁: outbox_id={entry.id} → approved (保留原审批)"
+            )
             extra_parts.append("retry_unlocked")
 
         # 5. 构造 EmailMessage(异常窄化 4 类,沿 D3.3.3 范本不接基类 Exception)
+        # D5.6.2 P1.1 修复:From 必须用 smtp_username(已认证邮箱),不再硬编码 .test.local
+        # QQ SMTP 等会拒收 From 与认证账户不一致的邮件
         try:
             msg = EmailMessage()
-            msg["From"] = f"{self._source}@test.local"
+            msg["From"] = self._smtp_username  # 已认证邮箱(必须非空,严判在 __init__)
             msg["To"] = entry.recipient_email
             msg["Subject"] = entry.subject
             msg.set_content(entry.body)

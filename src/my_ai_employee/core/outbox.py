@@ -133,7 +133,14 @@ ALLOWED_TRANSITIONS: dict[OutboxStatus, frozenset[OutboxStatus]] = {
     # (D5.3 P1 硬收口: D5.4 Dispatcher 必须能捕获业务阻断异常, 就地推 SENDING → CANCELLED,
     #  避免 dangling SENDING 状态; 否则 ALLOWED_TRANSITIONS 会挡死)
     OutboxStatus.SENT: frozenset(),  # 终态
-    OutboxStatus.FAILED: frozenset({OutboxStatus.PENDING_SEND, OutboxStatus.CANCELLED}),
+    # D5.6.2 P1.2 修复:FAILED 退避重试新增 → APPROVED 直通转换
+    # 之前 FAILED 只能 → PENDING_SEND,然后 dispatcher 又被 P1.2 修复禁拉批 PENDING_SEND
+    # (用户审批契约),陷入"必须先批 PENDING_SEND → APPROVED 才能发,但 FAILED 重试
+    # 又必须先 PENDING_SEND"死锁。新增 FAILED → APPROVED 直通,让退避后重试保留
+    # 原审批标记(同用户已审批过),无需用户重新审批。
+    OutboxStatus.FAILED: frozenset(
+        {OutboxStatus.PENDING_SEND, OutboxStatus.APPROVED, OutboxStatus.CANCELLED}
+    ),
     OutboxStatus.CANCELLED: frozenset(),  # 终态
 }
 

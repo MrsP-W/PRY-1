@@ -168,7 +168,7 @@ def _insert_entry(
     *,
     email_id: int,
     priority: str = "normal",
-    status: str = OutboxStatus.PENDING_SEND.value,
+    status: str = OutboxStatus.APPROVED.value,  # D5.6.2:Dispatcher 只消费 APPROVED+FAILED
     created_at: int | None = None,
 ) -> int:
     entry = store.insert(
@@ -507,7 +507,7 @@ def test_run_once_skips_already_sent(
     outbox_id = _insert_entry(store, email_id=1)
     # 手动推到 SENT(模拟已成功)— 走 PENDING_SEND → SENDING → SENT 两步
     # (ALLOWED_TRANSITIONS 不允许 PENDING_SEND → SENT 跳级)
-    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="pending_send")
+    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="approved")
     store.update_status(outbox_id, OutboxStatus.SENT.value, from_status="sending")
     result = dispatcher.run_once()
     assert result.total_picked == 0
@@ -520,7 +520,7 @@ def test_run_once_skips_cancelled(
 ) -> None:
     """run_once 跳过已 CANCELLED 状态。"""
     outbox_id = _insert_entry(store, email_id=1)
-    store.update_status(outbox_id, OutboxStatus.CANCELLED.value, from_status="pending_send")
+    store.update_status(outbox_id, OutboxStatus.CANCELLED.value, from_status="approved")
     result = dispatcher.run_once()
     assert result.total_picked == 0
 
@@ -863,7 +863,7 @@ def test_run_once_concurrent_state_change_to_sending(
     # 因此需要构造一个场景:by_status 拉到了但 entry.status 在 _process_one_entry 时已变
     # 这里用直接改 store 内部 session 状态的方式比较复杂,简化为:
     # 用 monkeypatch 让 _process_one_entry 第二次读到时 status 变化
-    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="pending_send")
+    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="approved")
 
     # 临时 monkeypatch by_status 返回已 SENDING 的 entry
     original_by_status = store.by_status
@@ -1019,8 +1019,10 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     smtp_transport: InMemorySmtpTransport,
     heartbeat: Heartbeat,
 ) -> None:
-    """D5.5.1:FAILED → PENDING_SEND 解锁遇 OutboxIllegalTransitionError → skipped(异常窄化收口)。
+    """D5.5.1 + D5.6.2:FAILED → APPROVED 解锁遇 OutboxIllegalTransitionError → skipped(异常窄化收口)。
 
+    D5.6.2 修复后,FAILED 重试解锁目标状态从 PENDING_SEND 改为 APPROVED
+    (保留原审批标记,通过状态机白名单 FAILED → APPROVED 直通)。
     异常窄化范本(D3.3.3):接 OutboxIllegalTransitionError + ValueError,不走基类 Exception。
     验证 retry_unlock_failed extra_parts 被记录,状态机漂移被正确检测。
     """
@@ -1039,14 +1041,12 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     assert first.technical_failed == 1
     assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
 
-    # 模拟 FAILED → PENDING_SEND 时 store 状态机抛 IllegalTransition(并发写等场景)
+    # 模拟 FAILED → APPROVED 时 store 状态机抛 IllegalTransition(并发写等场景)
+    # D5.6.2 修复:目标状态 PENDING_SEND → APPROVED(白名单 FAILED → APPROVED 直通)
     original_update_status = store.update_status
 
     def fake_update_status(row_id, new_status, *, from_status):  # type: ignore[no-untyped-def]
-        if (
-            new_status == OutboxStatus.PENDING_SEND.value
-            and from_status == OutboxStatus.FAILED.value
-        ):
+        if new_status == OutboxStatus.APPROVED.value and from_status == OutboxStatus.FAILED.value:
             from my_ai_employee.db.outbox import OutboxIllegalTransitionError
 
             # 签名:(outbox_id, from_status, to_status, *, actual_status, allowed)
@@ -1084,16 +1084,17 @@ def test_run_once_failed_retry_quota_does_not_starve_new_entries(
 ) -> None:
     """D5.5.2 P1-1:批次饥饿防护 — new_quota + retry_quota 配额分割(2026-06-12 升级 D5.5.4 双向回填)。
 
-    场景:
-      - 50 个 FAILED 条目(老,退避已过) + 1 个 PENDING_SEND 条目(新)
+    D5.6.2 升级场景:
+      - 50 个 FAILED 条目(老,退避已过) + 1 个 APPROVED 条目(新,D5.6.2 拉批改 APPROVED)
       - batch_size=10
-      - 修复前:全部 FAILED 填满批次,1 个新 PENDING_SEND 可能被挤掉
+      - 修复前:全部 FAILED 填满批次,1 个新 APPROVED 可能被挤掉
       - D5.5.3 修复:retry_quota=5 / new_quota=5 配额分割,
-                FAILED 最多 retry_quota=5 个,新 PENDING_SEND 必被拉到
+                FAILED 最多 retry_quota=5 个,新 APPROVED 必被拉到
       - D5.5.4 演进(本测试升级断言):双向回填把 4 个剩余槽位补到 retry
                 → retry_pick=9, new_pick=1, total=10(无浪费)
     """
-    # 1) 注入 50 个 FAILED(老 created_at=0) + 1 个 PENDING_SEND(新 created_at=1_000_000)
+    # 1) 注入 50 个 FAILED(老 created_at=0) + 1 个 APPROVED(新 created_at=1_000_000)
+    # D5.6.2:D5.6.2 修复后 dispatcher 拉批只消费 APPROVED+FAILED
     old_failed_ids: list[int] = []
     for i in range(50):
         fid = _insert_entry(
@@ -1103,10 +1104,10 @@ def test_run_once_failed_retry_quota_does_not_starve_new_entries(
             created_at=0,
         )
         old_failed_ids.append(fid)
-    new_pending_id = _insert_entry(
+    new_approved_id = _insert_entry(
         store,
         email_id=999,
-        status=OutboxStatus.PENDING_SEND.value,
+        status=OutboxStatus.APPROVED.value,
         created_at=1_000_000,
     )
 
@@ -1127,7 +1128,7 @@ def test_run_once_failed_retry_quota_does_not_starve_new_entries(
     #    - 总 picked=10
     assert result.total_picked == 10
     # 3) 新 PENDING_SEND 必被处理(不应被 50 个 FAILED 挤掉)→ 状态变 SENT
-    assert store.by_id(new_pending_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
+    assert store.by_id(new_approved_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
     # 4) 9 个 FAILED 被处理(配额 5 + 回填 4),剩余 41 个仍 FAILED
     sent_failed = len(
         [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.SENT.value]  # type: ignore[union-attr]
@@ -1403,9 +1404,10 @@ def test_run_once_batch_size_1_cross_turn_rotation_when_both_pools_have_data(
       期望:round 0 = retry(FAILED), round 1 = new(PENDING),
             round 2 = retry, round 3 = new
 
-    D5.5.5 P2 测试设计修正:不能用 by_email_id 检查 just-inserted PENDING
-      → 因为 dispatcher 按 FIFO 选池中第一个 PENDING,可能不是本轮新插入的
-      → 改用 by_status 池大小变化:PENDING 池减少 = 选 new,FAILED 池减少 = 选 retry
+    D5.5.5 P2 测试设计修正:不能用 by_email_id 检查 just-inserted APPROVED
+      → 因为 dispatcher 按 FIFO 选池中第一个 APPROVED,可能不是本轮新插入的
+      → 改用 by_status 池大小变化:APPROVED 池减少 = 选 new,FAILED 池减少 = 选 retry
+    D5.6.2 升级:"PENDING" 池名 → "APPROVED" 池(因为 dispatcher 拉批只 APPROVED+FAILED)
     """
     # 50 FAILED 持续在(初始)
     for i in range(50):
@@ -1422,11 +1424,11 @@ def test_run_once_batch_size_1_cross_turn_rotation_when_both_pools_have_data(
     sent_sources: list[str] = []  # 记录每轮选的是 "retry" 还是 "new"
 
     for round_i in range(4):
-        # Insert 1 个 PENDING(本轮新)
+        # Insert 1 个 APPROVED(本轮新)
         _insert_entry(store, email_id=70_001 + round_i)
 
-        # Snapshot 池大小 BEFORE run_once
-        pending_before = len(store.by_status("pending_send"))
+        # Snapshot 池大小 BEFORE run_once(D5.6.2:APPROVED 池替代 PENDING 池)
+        approved_before = len(store.by_status("approved"))
         failed_before = len(store.by_status("failed"))
 
         result = dispatcher.run_once()
@@ -1434,21 +1436,21 @@ def test_run_once_batch_size_1_cross_turn_rotation_when_both_pools_have_data(
         assert result.sent == 1, f"round {round_i} 期望 sent 1,实际 {result.sent}"
 
         # Snapshot 池大小 AFTER run_once
-        pending_after = len(store.by_status("pending_send"))
+        approved_after = len(store.by_status("approved"))
         failed_after = len(store.by_status("failed"))
 
         # D5.5.5 P2 关键修复:用池大小变化判定本轮选哪一池
-        # - pending_after < pending_before: PENDING 减少 → 选 new
+        # - approved_after < approved_before: APPROVED 减少 → 选 new
         # - failed_after < failed_before: FAILED 减少 → 选 retry
         # (互斥,因为 batch_size=1 每轮只选 1 个)
-        if pending_after < pending_before:
+        if approved_after < approved_before:
             sent_sources.append("new")
         elif failed_after < failed_before:
             sent_sources.append("retry")
         else:
             pytest.fail(
                 f"round {round_i} 两池都没减少! "
-                f"pending_before={pending_before} pending_after={pending_after} "
+                f"approved_before={approved_before} approved_after={approved_after} "
                 f"failed_before={failed_before} failed_after={failed_after}"
             )
 
