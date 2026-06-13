@@ -1,4 +1,4 @@
-# D5.6 spike — 100 封真实 SMTP 发送(OutboxDispatcher 端到端)
+# D5.6 spike — 100 封 InMemory 模拟发送(OutboxDispatcher 端到端)
 
 > **生成时间**:20260613_091456  
 > **范围**:100 封入库 + OutboxDispatcher 循环 + 状态机推进 + SLA + 退避  
@@ -65,4 +65,4 @@
 - **退避回路**:technical_failed=0
 - **Heartbeat 3 态**:HEALTHY=healthy
 - **D5.6 7 项核心验证**:✅
-- **D5 启动计划 B3(接 SMTP)**:✅ 解封完成
+- **D5 启动计划 B3(接真实 SMTP)**:⏸️ 撤回解封(D5.6 v1 报告标题"100 封真实 SMTP"措辞失实,实际是 InMemory 模拟)— B3 等 D5.6.2 真实 1 封实测后解封
