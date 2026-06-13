@@ -26,7 +26,10 @@ D5.5.3 扩展 I 段(检查员第三轮 P1/P2 修复专项,+3 tests):
 D5.5.4 扩展 J 段(检查员第四轮 P1 修复专项,+4 tests):
     J. D5.5.4 双向回填(无浪费)+ 单槽跨轮次轮换(无永久饥饿)(4 tests)
 
-合计 54 cases。
+D5.5.5 扩展 K 段(检查员第五轮 P3 修复专项,+2 tests):
+    K. D5.5.5 单池边界(仅 new / 仅 retry,batch_size=1)(2 tests)
+
+合计 56 cases。
 
 25 教训应用(沿 D4.7.3 v1.0.6):
   1. 工厂层 + __post_init__ 双层防御(DispatcherResult 6 字段)
@@ -1385,17 +1388,24 @@ def test_run_once_dual_backfill_remaining_to_new_when_retry_insufficient(
 def test_run_once_batch_size_1_cross_turn_rotation_when_both_pools_have_data(
     store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
 ) -> None:
-    """D5.5.4:batch_size=1 + 两池都有数据时,跨 run_once 轮换选哪一池(无永久饥饿)。
+    """D5.5.5 P1 修复后:用 by_status 池大小变化验证每轮选 retry vs new,断言轮换分布。
 
-    修复 P1 单槽饥饿(检查员第四轮):
-      修复前(D5.5.3):retry_quota=max(1, 0)=1 → retry_pick=FAILED[:1]=1
-        → new_pick=PENDING[:0]=[]
+    修复 P1 单槽公平性(检查员第五轮):
+      修复前(D5.5.4):条件 `retry_pick and new_pick` 在 batch_size=1 时
+        new_pick 永远 [] (new_quota=0) → 轮换代码 423-431 死代码
+        → 覆盖率为证 423-431 行从未执行
         → 永远选 FAILED,新邮件永久饿死
-      修复后(D5.5.4 单槽跨轮次):self._last_was_retry toggle
-        → 第 1 次 retry=1, 第 2 次 new=1, 第 3 次 retry=1, 第 4 次 new=1
+      修复后(D5.5.5):用 `retry_pool and new_pool` 原始池判定 +
+        `elif new_pool / elif retry_pool` 单池空边界
+        → 跨 run_once 真正轮换
 
-    场景:每轮都补 PENDING + 持续 FAILED,batch_size=1,4 次 run_once
-      期望:每轮都 picked=1 sent=1,跨轮次 retry/new 轮换
+    场景:50 FAILED 持续 + 每轮 1 PENDING,batch_size=1,4 次 run_once
+      期望:round 0 = retry(FAILED), round 1 = new(PENDING),
+            round 2 = retry, round 3 = new
+
+    D5.5.5 P2 测试设计修正:不能用 by_email_id 检查 just-inserted PENDING
+      → 因为 dispatcher 按 FIFO 选池中第一个 PENDING,可能不是本轮新插入的
+      → 改用 by_status 池大小变化:PENDING 池减少 = 选 new,FAILED 池减少 = 选 retry
     """
     # 50 FAILED 持续在(初始)
     for i in range(50):
@@ -1409,52 +1419,61 @@ def test_run_once_batch_size_1_cross_turn_rotation_when_both_pools_have_data(
         batch_size=1,
     )
 
-    # 第 1 次:初始 _last_was_retry=False → 选 retry
-    _insert_entry(store, email_id=70_001)  # 补充 1 个 PENDING
-    result1 = dispatcher.run_once()
-    assert result1.total_picked == 1
-    assert result1.sent == 1
-    # 第 1 次后 _last_was_retry=True(toggled)
+    sent_sources: list[str] = []  # 记录每轮选的是 "retry" 还是 "new"
 
-    # 第 2 次:_last_was_retry=True → 选 new
-    _insert_entry(store, email_id=70_002)  # 再补 1 个 PENDING(已被 retry 处理 1 个,new 还在)
-    result2 = dispatcher.run_once()
-    assert result2.total_picked == 1
-    assert result2.sent == 1
-    # 第 2 次后 _last_was_retry=False
+    for round_i in range(4):
+        # Insert 1 个 PENDING(本轮新)
+        _insert_entry(store, email_id=70_001 + round_i)
 
-    # 第 3 次:_last_was_retry=False → 选 retry
-    _insert_entry(store, email_id=70_003)
-    result3 = dispatcher.run_once()
-    assert result3.total_picked == 1
-    assert result3.sent == 1
+        # Snapshot 池大小 BEFORE run_once
+        pending_before = len(store.by_status("pending_send"))
+        failed_before = len(store.by_status("failed"))
 
-    # 第 4 次:_last_was_retry=True → 选 new
-    _insert_entry(store, email_id=70_004)
-    result4 = dispatcher.run_once()
-    assert result4.total_picked == 1
-    assert result4.sent == 1
-    # 关键证明:跨 4 次 run_once 既有 retry_pick 也有 new_pick(不是 4 次都是 retry)
-    # 通过 entry.status 验证:成功 SENDING→SENT 状态推进
-    # 这里 4 次都是 1 picked + 1 sent,无法直接区分 retry/new
-    # 但本测试已通过 4 次 run_once 不 panic + _last_was_retry toggle 验证
+        result = dispatcher.run_once()
+        assert result.total_picked == 1, f"round {round_i} 期望 pick 1,实际 {result.total_picked}"
+        assert result.sent == 1, f"round {round_i} 期望 sent 1,实际 {result.sent}"
+
+        # Snapshot 池大小 AFTER run_once
+        pending_after = len(store.by_status("pending_send"))
+        failed_after = len(store.by_status("failed"))
+
+        # D5.5.5 P2 关键修复:用池大小变化判定本轮选哪一池
+        # - pending_after < pending_before: PENDING 减少 → 选 new
+        # - failed_after < failed_before: FAILED 减少 → 选 retry
+        # (互斥,因为 batch_size=1 每轮只选 1 个)
+        if pending_after < pending_before:
+            sent_sources.append("new")
+        elif failed_after < failed_before:
+            sent_sources.append("retry")
+        else:
+            pytest.fail(
+                f"round {round_i} 两池都没减少! "
+                f"pending_before={pending_before} pending_after={pending_after} "
+                f"failed_before={failed_before} failed_after={failed_after}"
+            )
+
+    # D5.5.5 P1 关键断言:跨 4 轮必须 retry/new 交替
+    # 初始 _last_was_retry=False → round 0 选 retry,
+    #                              round 1 选 new,
+    #                              round 2 选 retry,
+    #                              round 3 选 new
+    assert sent_sources == ["retry", "new", "retry", "new"], (
+        f"D5.5.5 P1 轮换修复未生效!实际分布: {sent_sources},期望 ['retry', 'new', 'retry', 'new']"
+    )
 
 
 def test_run_once_batch_size_1_no_starvation_after_repeated_runs(
     store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
 ) -> None:
-    """D5.5.4:batch_size=1 + 持续补充 PENDING,验证 new_pool 不被永久饿死。
+    """D5.5.5 P1 修复后:10 轮中 PENDING 和 FAILED 都至少被处理 ≥ 4 次,无永久饥饿。
 
-    场景:每次 run_once 之前插入 1 个 PENDING,50 FAILED 持续存在,batch=1
-      修复前(D5.5.3):前 50 次都是 retry(50 FAILED 先发完)
-                     第 51 次才有 new 机会 — 但每次 run_once 后 PENDING 没被处理就堆积
-                     → 实际上前 50 次把 50 FAILED 发完后,新 PENDING 才有机会
-                     → 但如果 FAILED 持续补充(本测试场景),new 永远不发
-      修复后(D5.5.4):轮换机制确保 new 也被处理
-                     → 第 1 次 retry, 第 2 次 new, 第 3 次 retry, 第 4 次 new ...
-                     → 跨 10 次 run_once 后,retry_pick=5, new_pick=5(均衡)
+    场景:50 FAILED 持续 + 每轮 1 PENDING,batch=1,10 次 run_once
+      修复前(D5.5.4 假绿测试):只断 total_picked/sent,无法暴露"永远选 FAILED" bug
+      修复后(D5.5.5 P1 + P2):用 by_email_id 验证 10 个 PENDING(100_000-100_009)中
+        至少 4 个 SENT,50 个 FAILED(90_000-90_049)中至少 4 个 SENT
+        期望 5 retry + 5 new(均匀)
 
-    关键:本测试证明 new_pool 不被永久饿死(D5.5.4 修复点)
+    关键:本测试证明 new_pool 不被永久饿死(D5.5.5 P1 修复点)
     """
     # 初始化 50 FAILED 持续在(模拟"持续有 FAILED")
     for i in range(50):
@@ -1474,15 +1493,115 @@ def test_run_once_batch_size_1_no_starvation_after_repeated_runs(
         result = dispatcher.run_once()
         assert result.total_picked == 1
         assert result.sent == 1
-        # 通过 entry_id 区分:new 是 100_000+round_i,retry 是 90_000+...
-        # 但已 SENT 后无法直接拿到 id — 改为间接验证:
-        # 跨 10 次,新 PENDING 至少被处理 >= 4 次(D5.5.4 轮换)
-        # 100_000 ~ 100_009 共 10 个 PENDING 都应被处理(SENT)
 
-    # 实际:新 PENDING 都 SENT 是 dispatcher.run_once 内部行为,
-    #      本测试已通过 10 次 sent=1 + 不 panic 间接证明轮换机制工作
-    #      D5.5.4 修复 2 的关键:不再永久 retry_pick
-    # 注:此处不直接验证"new 一定被处理 N 次",因为入口数据在每次 run_once 后被
-    #     send_and_emit 推到 SENDING/SENT 状态,业务断言已通过 sent=1 验证
-    # 关键断言:跨 10 次 run_once,新邮件处理累计 10 次(因为每次都 1 sent,
-    #          而轮换机制保证 10 次中至少 4 次是 new_pick,实际应该是 5/5)
+    # D5.5.5 P2 关键断言:10 个 PENDING(100_000-100_009)中至少 4 个被处理(SENT)
+    sent_pending_count = 0
+    for i in range(10):
+        entry = store.by_email_id(100_000 + i)
+        assert entry is not None
+        if entry.status == "sent":
+            sent_pending_count += 1
+
+    assert sent_pending_count >= 4, (
+        f"D5.5.5 P1 修复未生效!10 轮中 PENDING 处理数 = {sent_pending_count},"
+        f"期望 >= 4(均匀 5/5)。如果 = 0,说明轮换代码仍未执行"
+    )
+
+    # 进一步:50 个 FAILED(90_000-90_049)中至少 4 个被处理
+    sent_failed_count = 0
+    for i in range(50):
+        entry = store.by_email_id(90_000 + i)
+        assert entry is not None
+        if entry.status == "sent":
+            sent_failed_count += 1
+
+    assert sent_failed_count >= 4, (
+        f"D5.5.5 P1 修复未生效!10 轮中 FAILED 处理数 = {sent_failed_count},期望 >= 4(均匀 5/5)"
+    )
+
+
+def test_run_once_batch_size_1_only_new_pool_picks_pending(
+    store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
+) -> None:
+    """D5.5.5 P3 补:batch_size=1 + 仅 new_pool 有数据(无 FAILED)→ 强制选 new。
+
+    场景:3 PENDING + 0 FAILED,batch_size=1
+      期望:第 1 轮 run_once 必选 PENDING 中一个(走 elif new_pool 分支,line 436-439)
+      这是 D5.5.5 P1 边界补的关键回归测试 — 防止 D5.5.4 假绿 bug 副作用
+      (retry_pick=[] + new_pick=[] 卡死 total_picked=0)
+
+    与 J 段区别:J 段两池都有数据测试轮换,K 段只测单池空分支
+    """
+    # 3 PENDING_SEND(无 FAILED → retry_pool 空)
+    inserted_ids: list[int] = []
+    for i in range(3):
+        _insert_entry(store, email_id=110_000 + i)
+        inserted_ids.append(110_000 + i)
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=1,
+    )
+    result = dispatcher.run_once()
+
+    # D5.5.5 P3 关键断言:即使 retry_pool 空,也要选 new
+    # 修复前(D5.5.4):retry_pick and new_pick 条件 + new_quota=0 → new_pick=[] → total_picked=0
+    # 修复后(D5.5.5):elif new_pool: → new_pick = new_pool[:1] → total_picked=1
+    assert result.total_picked == 1, (
+        f"D5.5.5 P3 单池边界(仅 new)未生效!total_picked={result.total_picked},期望 1"
+    )
+    assert result.sent == 1
+    assert result.skipped == 0
+
+    # 进一步断言:被选中的 PENDING 现在是 SENT
+    sent_ids = [
+        eid
+        for eid in inserted_ids
+        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"  # type: ignore[union-attr]
+    ]
+    assert len(sent_ids) == 1, f"期望 1 个 SENT,实际 {len(sent_ids)}"
+
+
+def test_run_once_batch_size_1_only_retry_pool_picks_failed(
+    store: OutboxStore, adapter: EmailSendAdapter, heartbeat: Heartbeat
+) -> None:
+    """D5.5.5 P3 补:batch_size=1 + 仅 retry_pool 有数据(无 PENDING)→ 选 retry。
+
+    场景:0 PENDING + 3 FAILED,batch_size=1
+      期望:第 1 轮 run_once 必选 FAILED 中一个(走 elif retry_pool 分支,line 440-442)
+      防止"两池都空"误判,这是 elif 边界处理的另一半
+
+    与 K-1 区别:K-1 仅 new_pool,K-2 仅 retry_pool — 互不可替代
+    """
+    # 3 FAILED(无 PENDING → new_pool 空)
+    inserted_ids: list[int] = []
+    for i in range(3):
+        _insert_entry(store, email_id=120_000 + i, status="failed")
+        inserted_ids.append(120_000 + i)
+
+    dispatcher = OutboxDispatcher(
+        source="test-dispatcher",
+        send_adapter=adapter,
+        outbox_store=store,
+        heartbeat=heartbeat,
+        batch_size=1,
+    )
+    result = dispatcher.run_once()
+
+    # D5.5.5 P3 关键断言:即使 new_pool 空,也要选 retry
+    assert result.total_picked == 1, (
+        f"D5.5.5 P3 单池边界(仅 retry)未生效!total_picked={result.total_picked},期望 1"
+    )
+    assert result.sent == 1
+    assert result.skipped == 0
+
+    # 进一步断言:被选中的 FAILED 现在是 SENT
+    sent_ids = [
+        eid
+        for eid in inserted_ids
+        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"  # type: ignore[union-attr]
+    ]
+    assert len(sent_ids) == 1, f"期望 1 个 SENT,实际 {len(sent_ids)}"

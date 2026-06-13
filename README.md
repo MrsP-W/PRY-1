@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.5.4 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判；下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.5.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `57fcc26` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步;下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -24,7 +24,7 @@
 | 存储 | Markdown 文档 | SQLite 加密 + 向量索引 |
 | 接口 | 文档产出 | 菜单栏 + Web Dashboard + 移动伴侣 |
 | 隐私 | 公开 | 本地优先（**sqlcipher3**，D1.1 替代 pysqlcipher3）|
-| 复用 | 提供 10 角色 | 软链接 + 委派 |
+| 复用 | 提供 10 角色 | 5 复制 + 委派 |
 
 ---
 
@@ -66,9 +66,9 @@
 │       ├── connectors/       # L1 适配器层（IMAP/CalDAV/账单/Notes）
 │       ├── core/             # L2 数据层（SQLite/schema/models）
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
-│       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 软链）
+│       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D5.5.4:1526 个，覆盖率约 90.2%）
+├── tests/                    # pytest 单元测试（D5.5.5:1534 个，覆盖率约 90.3%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D5.5.4:1526 个，覆盖率约 90.2%）
+make test    # pytest 单元测试（D5.5.5:1534 个，覆盖率约 90.3%）
 ```
 
 ### 4. 文档 lint
@@ -184,7 +184,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1526 passed / 90.2% |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3%(K 段 +2 单池边界测试) |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本),launchd D6+ 顺延 |
 
 ---
@@ -237,6 +237,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-12（D5.5.4:P1 配额浪费(双向回填)+ 单槽饥饿(跨轮次轮换) + P3 refresh_last_seen bool 严判,1526 passed / 8 质量门全绿 / 90.2% 覆盖）
+**最后更新**：2026-06-13（D5.5.4 commit `a7560c1` 落锁 + D5.5.5 收口:P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步,1534 passed / 8 质量门全绿 / 90.3% 覆盖）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY

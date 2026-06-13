@@ -414,21 +414,33 @@ class OutboxDispatcher:
                 take = min(len(more_new), leftover)
                 new_pick = new_pick + more_new[:take]
                 leftover -= take
-        # 步骤 3:D5.5.4 单槽跨轮次轮换(batch_size=1 时防新邮件永久饿死)
-        #   仅在 batch_size=1 + 两池都有数据时启用,其他场景无影响
-        #   设计:本次如果 retry_pick 有 1 条,记 _last_was_retry=True;下次强制 new_pick
-        #        (覆盖本次 retry_pick + new_pick 清空 + 重选)
-        if self._batch_size == 1 and retry_pick and new_pick:
-            # 两池都有 → 跨轮次轮换
-            if self._last_was_retry:
-                # 这次选 new,清掉 retry
-                retry_pick = []
+        # 步骤 3:D5.5.4 单槽跨轮次轮换 + D5.5.5 P1 修复
+        #   D5.5.4 bug:条件 retry_pick and new_pick 在 batch_size=1 时 new_pick 永远 []
+        #     (new_quota=0,new_pick = new_pool[:0] = []),导致轮换代码 (423-431) 死代码,
+        #     覆盖率为证 423-431 行从未执行,新邮件仍可永久饿死
+        #   D5.5.5 修复:用 retry_pool / new_pool 原始池(不是切片)判定,
+        #     只要两池都有数据就触发轮换;并补"单池空"边界 — 避免只有 new_pool
+        #     时 new_pick=[] 卡死(原 D5.5.4 bug 副作用)
+        if self._batch_size == 1:
+            if retry_pool and new_pool:
+                # 两池都有数据 → 跨轮次轮换(D5.5.4 toggle 范本)
+                if self._last_was_retry:
+                    # 这次选 new,清掉 retry
+                    retry_pick = []
+                    new_pick = new_pool[:1]
+                else:
+                    # 这次选 retry,清掉 new
+                    new_pick = []
+                    retry_pick = retry_pool[:1]
+                self._last_was_retry = not self._last_was_retry
+            elif new_pool:
+                # 只有 new_pool 有数据 → 强制选 new(D5.5.5 P1 边界补)
+                #   避免 retry_pick=[] 时 new_pick 也 = [](new_quota=0) 卡死
                 new_pick = new_pool[:1]
-            else:
-                # 这次选 retry,清掉 new
-                new_pick = []
+            elif retry_pool:
+                # 只有 retry_pool 有数据 → 选 retry
                 retry_pick = retry_pool[:1]
-            self._last_was_retry = not self._last_was_retry
+            # else: 两池都空 → 不选任何,total_picked=0
         # 步骤 4:合并 + 全局重排(各池已 sorted;批内统一按 priority+created_at 排序)
         selected: list[OutboxEntry] = list(new_pick) + list(retry_pick)
         selected.sort(
