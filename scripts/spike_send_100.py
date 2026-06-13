@@ -207,6 +207,10 @@ def _approve_all_pending(
     真实生产场景:用户审批界面把 outbox_id 列表从 PENDING_SEND → APPROVED。
     spike 默认全部预审批(让 dispatcher 走完端到端流程)。
 
+    D5.6.3 P1-1 强化:update_status(new_status=APPROVED) 必传 last_approved_at_ms
+    (Unix epoch ms),不传会抛 ValueError。本函数计算一次 now_ms 复用(同一时间
+    戳批次内一致)。
+
     Args:
         outbox_store: OutboxStore 实例
         outbox_ids: 待审批的 outbox_id 列表
@@ -215,12 +219,14 @@ def _approve_all_pending(
         成功推进到 APPROVED 的条目数
     """
     approved_count = 0
+    now_ms = int(time.time() * 1000)  # 批次内共享同一审批时间戳
     for outbox_id in outbox_ids:
         try:
             outbox_store.update_status(
                 outbox_id,
                 OutboxStatus.APPROVED.value,
                 from_status=OutboxStatus.PENDING_SEND.value,
+                last_approved_at_ms=now_ms,
             )
             approved_count += 1
         except Exception as e:  # noqa: BLE001  # 状态机异常不应阻断整体
