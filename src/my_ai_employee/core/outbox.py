@@ -26,7 +26,7 @@
     FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
     CANCELLED    → {}    (终态)
 
-OutboxEntry 11 字段(完全 mirror 0004_outbox_table migration):
+OutboxEntry 12 字段(0004 11 字段 + 0006 加 last_approved_at_ms,D5.6.3 P1-1 审批凭据):
     - id                  INTEGER PK AUTOINCREMENT
     - email_id            INTEGER NOT NULL UNIQUE — 入库幂等性键
     - subject             TEXT NOT NULL — 1-200 字符(应用层 _validate_outbox_subject 严判)
@@ -38,6 +38,8 @@ OutboxEntry 11 字段(完全 mirror 0004_outbox_table migration):
     - created_at          INTEGER NOT NULL — Unix epoch ms
     - recipient_email     TEXT NOT NULL — 含 @ 即可
     - priority            TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+    - last_approved_at_ms INTEGER NULL — D5.6.3 P1-1 审批凭据(显式审批时间戳,Unix epoch ms)
+                          应用层 OutboxDispatcher 拉批严判 is not None,防 FAILED 绕过审批契约
 
 约束 + 索引(与 0004 migration 一致):
     - UNIQUE(email_id)
@@ -198,8 +200,10 @@ class OutboxEntry(Base):
         - email_id 唯一索引 → 入库幂等性(同 email_id 二次入库走业务阻断入口)
         - status DEFAULT 'pending_send' → D4.8 仅入库到此状态
         - priority DEFAULT 'normal' → 大多数邮件 normal,urgent 需 D4.7.4 联动触发
+        - last_approved_at_ms NULL 默认(D5.6.3 P1-1 审批凭据)→ 调度器拉批严判 is not None
+          防 PENDING_SEND → FAILED → APPROVED → SENT 绕过用户审批契约
 
-    字段注解(完全 mirror 0004_outbox_table migration):
+    字段注解(完全 mirror 0004_outbox_table migration + 0006 字段):
         - id:                     INTEGER PK AUTOINCREMENT
         - email_id:               INTEGER NOT NULL UNIQUE — 关联 emails.id
         - subject:                TEXT NOT NULL — 1-200 字符,strip() 后非空
@@ -211,6 +215,8 @@ class OutboxEntry(Base):
         - created_at:             INTEGER NOT NULL — Unix epoch ms
         - recipient_email:        TEXT NOT NULL — 含 @ 即可
         - priority:               TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+        - last_approved_at_ms:    INTEGER NULL — D5.6.3 P1-1 审批凭据,Unix epoch ms,
+                                   OutboxDispatcher 拉批严判 is not None
 
     约束:
         - UNIQUE(email_id) — 入库幂等性(D4.8 契约 4)
@@ -237,6 +243,13 @@ class OutboxEntry(Base):
     priority: Mapped[str] = mapped_column(
         Text, nullable=False, default="normal", server_default="normal"
     )
+    # D5.6.3 P1-1 审批凭据:显式审批时间戳(Unix epoch ms)
+    # - nullable=True:默认无审批(PENDING_SEND 入库时 NULL)
+    # - 写入时机:OutboxStore.update_status(new_status=APPROVED, last_approved_at_ms=now_ms)
+    # - 保留时机:SENDING → SENT / SENDING → FAILED 时不动(避免重试时丢审批标记)
+    # - 严判:OutboxDispatcher 拉批时 is not None,否则 skipped(防 PENDING_SEND → FAILED
+    #   → APPROVED → SENT 绕过用户审批契约)
+    last_approved_at_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 约束 + 索引(与 0004_outbox_table migration 一致,D3.2.3 DESC 索引用 text() 表达)
     __table_args__ = (

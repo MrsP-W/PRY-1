@@ -159,6 +159,7 @@ class OutboxStore:
         priority: str = "normal",
         status: str = "pending_send",
         created_at: int | None = None,
+        last_approved_at_ms: int | None = None,
     ) -> OutboxEntry:
         """插入一条 outbox 条目(D4.8 入库入口)。
 
@@ -173,6 +174,8 @@ class OutboxStore:
             priority: OutboxPriority 3 选 1,默认 "normal"
             status: OutboxStatus 4 选 1,默认 "pending_send"
             created_at: Unix epoch ms(默认 = 当前时间)
+            last_approved_at_ms: D5.6.3 P1-1 审批凭据(Unix epoch ms,默认 None =
+                              "未审批",应用层 _approve_all_pending 写入 APPROVED 时传值)
 
         Returns:
             新插入的 OutboxEntry(已 refresh,id/status/created_at 都可读)
@@ -205,6 +208,7 @@ class OutboxStore:
                     created_at=created_at,
                     recipient_email=recipient_email,
                     priority=priority,
+                    last_approved_at_ms=last_approved_at_ms,
                 )
                 session.add(row)
                 session.commit()
@@ -312,6 +316,7 @@ class OutboxStore:
         new_status: str | OutboxStatus,
         *,
         from_status: str | OutboxStatus,
+        last_approved_at_ms: int | None = None,
     ) -> OutboxEntry:
         """更新 outbox 条目 status(D5.2 状态机更新入口 — 6 状态 × 白名单严判)。
 
@@ -320,6 +325,19 @@ class OutboxStore:
             new_status: 目标 status(OutboxStatus 6 选 1)
             from_status: 调用方预期的当前 status(必传关键字,D5.2 严判一致性)
                          防止 concurrent 写导致状态机漂移(行已被其他调用方推到其他状态)
+            last_approved_at_ms: D5.6.3 P1-1 审批凭据(Unix epoch ms)。
+                必传规则:
+                - new_status == APPROVED:必传,严判 type() is int(非 bool) + >= 0,
+                  表示"此时刻被显式审批过"
+                - new_status != APPROVED:必传 None(显式传 None,避免误传覆盖原审批时间戳),
+                  row.last_approved_at_ms 保留原值(不动)
+                写入 / 保留范本:
+                - 写入: new_status == APPROVED 时 row.last_approved_at_ms = last_approved_at_ms
+                - 保留: SENDING → SENT / SENDING → FAILED 时不动(避免重试时丢审批标记)
+                - 用户取消 PENDING_SEND → CANCELLED:不动(从未审批过,保留 NULL)
+                - 业务阻断 SENDING → CANCELLED:不动(已审批过,保留)
+                - FAILED → APPROVED(D5.6.2 重试回路):必传(回填原审批时间戳或新的 now_ms,
+                  调用方决策)
 
         Returns:
             更新后的 OutboxEntry(已 refresh)
@@ -328,14 +346,15 @@ class OutboxStore:
             OutboxIllegalTransitionError: 状态机漂移(from_status != row.status)
                                           或 白名单外转换(ALLOWED_TRANSITIONS 不含 to_status)
             ValueError: new_status / from_status 非法枚举值 / outbox_id 不存在
-            TypeError: new_status / from_status 类型非法
+                       或 last_approved_at_ms 必传规则违反(APPROVED 未传 / 非 APPROVED 误传)
+            TypeError: new_status / from_status 类型非法 / last_approved_at_ms 非 int
 
-        状态机白名单(ALLOWED_TRANSITIONS,D5.2 B5 解封):
+        状态机白名单(ALLOWED_TRANSITIONS,D5.2 B5 解封 + D5.6.2 P1.2 扩 FAILED → APPROVED):
             PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}
             APPROVED     → {SENDING, FAILED, CANCELLED}
             SENDING      → {SENT, FAILED}
             SENT         → {}    (终态)
-            FAILED       → {PENDING_SEND, CANCELLED}  # 重试回 PENDING_SEND
+            FAILED       → {PENDING_SEND, APPROVED, CANCELLED}  # D5.6.2 加 APPROVED 直通
             CANCELLED    → {}    (终态)
 
         D5.2 决策(双层防御 — 工厂层 + 严判):
@@ -343,6 +362,11 @@ class OutboxStore:
             2. ALLOWED_TRANSITIONS[from_status] ⊇ {to_status} 严判 → 白名单外转换
             3. 异常 OutboxIllegalTransitionError 含 actual_status / allowed 字段,
                调用方(D5.3 Adapter)按业务语义区分 concurrent write vs bug
+
+        D5.6.3 P1-1 决策(审批凭据双层防御):
+            1. last_approved_at_ms 必传规则(新_status == APPROVED 必传 / 其他必传 None)
+            2. 严判 type() is int(非 bool) + >= 0
+            3. 写入 / 保留逻辑:仅在 APPROVED 时写入,其他状态保留
         """
         new_status_value = self._normalize_status(new_status)
         from_status_value = self._normalize_status(from_status)
@@ -352,6 +376,32 @@ class OutboxStore:
                 raise ValueError(
                     f"outbox_id={outbox_id} 不存在,无法 update_status 为 {new_status_value!r}"
                 )
+            # D5.6.3 P1-1 严判:last_approved_at_ms 必传规则(必须在 row 存在后做,
+            # 否则 nonexistent_id 测试期望"row 不存在"ValueError 而不是 last_approved_at_ms 错)
+            # - new_status == APPROVED:必传 int(非 None) — 写入审批凭据
+            # - new_status != APPROVED:必传 None(显式 None) — 不动 row.last_approved_at_ms
+            if new_status_value == OutboxStatus.APPROVED.value:
+                if last_approved_at_ms is None:
+                    raise ValueError(
+                        f"D5.6.3 P1-1 审批凭据:update_status(new_status=APPROVED) 必传 "
+                        f"last_approved_at_ms(Unix epoch ms),实际 {last_approved_at_ms!r}"
+                    )
+                if (
+                    type(last_approved_at_ms) is bool
+                    or not isinstance(last_approved_at_ms, int)
+                    or last_approved_at_ms < 0
+                ):
+                    raise ValueError(
+                        f"D5.6.3 P1-1 审批凭据:last_approved_at_ms 必须是原生 int(非 bool) >= 0,"
+                        f"实际 {type(last_approved_at_ms).__name__}={last_approved_at_ms!r}"
+                    )
+            else:
+                if last_approved_at_ms is not None:
+                    raise ValueError(
+                        f"D5.6.3 P1-1 审批凭据:update_status(new_status={new_status_value!r}) "
+                        f"时 last_approved_at_ms 必传 None(保留原审批时间戳),"
+                        f"实际 {last_approved_at_ms!r}"
+                    )
             # D5.2 严判 #1: 状态漂移检测(concurrent write 防护)
             if row.status != from_status_value:
                 raise OutboxIllegalTransitionError(
@@ -372,6 +422,12 @@ class OutboxStore:
                     allowed=allowed,
                 )
             row.status = new_status_value
+            # D5.6.3 P1-1 写入审批凭据:仅在 APPROVED 时写入,其他状态保留
+            if new_status_value == OutboxStatus.APPROVED.value:
+                # 严判已确保 last_approved_at_ms is not None
+                assert last_approved_at_ms is not None  # noqa: S101
+                row.last_approved_at_ms = last_approved_at_ms
+            # else:不动 row.last_approved_at_ms(SENDING → SENT/FAILED/CANCELLED 等保留)
             session.commit()
             session.refresh(row)
             return row

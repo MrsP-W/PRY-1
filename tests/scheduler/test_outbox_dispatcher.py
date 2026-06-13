@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import dataclasses
 import sys
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -170,7 +171,15 @@ def _insert_entry(
     priority: str = "normal",
     status: str = OutboxStatus.APPROVED.value,  # D5.6.2:Dispatcher 只消费 APPROVED+FAILED
     created_at: int | None = None,
+    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:APPROVED/FAILED 必有审批凭据
 ) -> int:
+    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态,显式传 now_ms
+    # PENDING_SEND/其他 状态不需要 last_approved_at_ms
+    if last_approved_at_ms is None and status in (
+        OutboxStatus.APPROVED.value,
+        OutboxStatus.FAILED.value,
+    ):
+        last_approved_at_ms = int(time.time() * 1000)
     entry = store.insert(
         email_id=email_id,
         subject="测试邮件主题",
@@ -180,6 +189,7 @@ def _insert_entry(
         priority=priority,
         status=status,
         created_at=created_at,
+        last_approved_at_ms=last_approved_at_ms,
     )
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
     return entry.id
@@ -507,8 +517,12 @@ def test_run_once_skips_already_sent(
     outbox_id = _insert_entry(store, email_id=1)
     # 手动推到 SENT(模拟已成功)— 走 PENDING_SEND → SENDING → SENT 两步
     # (ALLOWED_TRANSITIONS 不允许 PENDING_SEND → SENT 跳级)
-    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="approved")
-    store.update_status(outbox_id, OutboxStatus.SENT.value, from_status="sending")
+    store.update_status(
+        outbox_id, OutboxStatus.SENDING.value, from_status="approved", last_approved_at_ms=None
+    )
+    store.update_status(
+        outbox_id, OutboxStatus.SENT.value, from_status="sending", last_approved_at_ms=None
+    )
     result = dispatcher.run_once()
     assert result.total_picked == 0
     assert result.sent == 0
@@ -520,7 +534,9 @@ def test_run_once_skips_cancelled(
 ) -> None:
     """run_once 跳过已 CANCELLED 状态。"""
     outbox_id = _insert_entry(store, email_id=1)
-    store.update_status(outbox_id, OutboxStatus.CANCELLED.value, from_status="approved")
+    store.update_status(
+        outbox_id, OutboxStatus.CANCELLED.value, from_status="approved", last_approved_at_ms=None
+    )
     result = dispatcher.run_once()
     assert result.total_picked == 0
 
@@ -863,7 +879,9 @@ def test_run_once_concurrent_state_change_to_sending(
     # 因此需要构造一个场景:by_status 拉到了但 entry.status 在 _process_one_entry 时已变
     # 这里用直接改 store 内部 session 状态的方式比较复杂,简化为:
     # 用 monkeypatch 让 _process_one_entry 第二次读到时 status 变化
-    store.update_status(outbox_id, OutboxStatus.SENDING.value, from_status="approved")
+    store.update_status(
+        outbox_id, OutboxStatus.SENDING.value, from_status="approved", last_approved_at_ms=None
+    )
 
     # 临时 monkeypatch by_status 返回已 SENDING 的 entry
     original_by_status = store.by_status
@@ -1045,7 +1063,7 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     # D5.6.2 修复:目标状态 PENDING_SEND → APPROVED(白名单 FAILED → APPROVED 直通)
     original_update_status = store.update_status
 
-    def fake_update_status(row_id, new_status, *, from_status):  # type: ignore[no-untyped-def]
+    def fake_update_status(row_id, new_status, *, from_status, last_approved_at_ms=None):  # type: ignore[no-untyped-def]
         if new_status == OutboxStatus.APPROVED.value and from_status == OutboxStatus.FAILED.value:
             from my_ai_employee.db.outbox import OutboxIllegalTransitionError
 
@@ -1057,7 +1075,9 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
                 actual_status="sending",  # 模拟并发写导致 row.status 已变
                 allowed=None,
             )
-        return original_update_status(row_id, new_status, from_status=from_status)
+        return original_update_status(
+            row_id, new_status, from_status=from_status, last_approved_at_ms=last_approved_at_ms
+        )
 
     store.update_status = fake_update_status  # type: ignore[method-assign]
     try:

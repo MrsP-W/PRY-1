@@ -193,6 +193,7 @@ def test_outbox_entry_has_11_columns() -> None:
         "created_at",
         "recipient_email",
         "priority",
+        "last_approved_at_ms",  # D5.6.3 P1-1 审批凭据(0006 migration 加)
     }
     actual_columns = {c.name for c in OutboxEntry.__table__.columns}
     assert actual_columns == expected_columns
@@ -549,7 +550,9 @@ def test_update_status_pending_to_approved(store: OutboxStore) -> None:
         recipient_email="approve@example.com",
     )
     assert entry.status == "pending_send"
-    updated = store.update_status(entry.id, "approved", from_status="pending_send")
+    updated = store.update_status(
+        entry.id, "approved", from_status="pending_send", last_approved_at_ms=1781356098319
+    )
     assert updated.status == "approved"
 
 
@@ -562,7 +565,9 @@ def test_update_status_pending_to_cancelled(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="cancel@example.com",
     )
-    updated = store.update_status(entry.id, "cancelled", from_status="pending_send")
+    updated = store.update_status(
+        entry.id, "cancelled", from_status="pending_send", last_approved_at_ms=None
+    )
     assert updated.status == "cancelled"
 
 
@@ -580,8 +585,12 @@ def test_update_status_approved_to_sending(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="approve-send@example.com",
     )
-    store.update_status(entry.id, "approved", from_status="pending_send")
-    updated = store.update_status(entry.id, "sending", from_status="approved")
+    store.update_status(
+        entry.id, "approved", from_status="pending_send", last_approved_at_ms=1781356098319
+    )
+    updated = store.update_status(
+        entry.id, "sending", from_status="approved", last_approved_at_ms=None
+    )
     assert updated.status == "sending"
 
 

@@ -222,7 +222,9 @@ def test_update_status_matching_from_status_succeeds(store: OutboxStore) -> None
         recipient_email="match@example.com",
     )
     # 入库后 row.status = "pending_send"
-    updated = store.update_status(entry.id, "approved", from_status="pending_send")
+    updated = store.update_status(
+        entry.id, "approved", from_status="pending_send", last_approved_at_ms=1781355844417
+    )
     assert updated.status == "approved"
 
 
@@ -239,7 +241,9 @@ def test_update_status_mismatched_from_status_raises_illegal_transition(
     )
     # 故意传错的 from_status(实际 row.status="pending_send",传 "approved")
     with pytest.raises(OutboxIllegalTransitionError, match="状态机漂移"):
-        store.update_status(entry.id, "cancelled", from_status="approved")  # 实际是 pending_send
+        store.update_status(
+            entry.id, "cancelled", from_status="approved", last_approved_at_ms=None
+        )  # 实际是 pending_send
 
 
 # ===== D. 合法转换矩阵(4 tests)=====
@@ -254,7 +258,9 @@ def test_pending_send_to_sending_allowed(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="ps@example.com",
     )
-    updated = store.update_status(entry.id, "sending", from_status="pending_send")
+    updated = store.update_status(
+        entry.id, "sending", from_status="pending_send", last_approved_at_ms=None
+    )
     assert updated.status == "sending"
 
 
@@ -267,8 +273,12 @@ def test_approved_to_sending_allowed(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="as@example.com",
     )
-    store.update_status(entry.id, "approved", from_status="pending_send")
-    updated = store.update_status(entry.id, "sending", from_status="approved")
+    store.update_status(
+        entry.id, "approved", from_status="pending_send", last_approved_at_ms=1781355844417
+    )
+    updated = store.update_status(
+        entry.id, "sending", from_status="approved", last_approved_at_ms=None
+    )
     assert updated.status == "sending"
 
 
@@ -281,8 +291,8 @@ def test_sending_to_sent_allowed(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="ss@example.com",
     )
-    store.update_status(entry.id, "sending", from_status="pending_send")
-    updated = store.update_status(entry.id, "sent", from_status="sending")
+    store.update_status(entry.id, "sending", from_status="pending_send", last_approved_at_ms=None)
+    updated = store.update_status(entry.id, "sent", from_status="sending", last_approved_at_ms=None)
     assert updated.status == "sent"
 
 
@@ -305,9 +315,11 @@ def test_sending_to_cancelled_allowed(store: OutboxStore) -> None:
         recipient_email="sc@example.com",
     )
     # 模拟 SENDING 中间态
-    store.update_status(entry.id, "sending", from_status="pending_send")
+    store.update_status(entry.id, "sending", from_status="pending_send", last_approved_at_ms=None)
     # 永久退信后,业务阻断入口推 CANCELLED
-    updated = store.update_status(entry.id, "cancelled", from_status="sending")
+    updated = store.update_status(
+        entry.id, "cancelled", from_status="sending", last_approved_at_ms=None
+    )
     assert updated.status == "cancelled"
 
 
@@ -321,9 +333,11 @@ def test_failed_to_pending_send_allowed(store: OutboxStore) -> None:
         recipient_email="fp@example.com",
     )
     # 模拟发送失败:PENDING_SEND → SENDING → FAILED → PENDING_SEND
-    store.update_status(entry.id, "sending", from_status="pending_send")
-    store.update_status(entry.id, "failed", from_status="sending")
-    updated = store.update_status(entry.id, "pending_send", from_status="failed")
+    store.update_status(entry.id, "sending", from_status="pending_send", last_approved_at_ms=None)
+    store.update_status(entry.id, "failed", from_status="sending", last_approved_at_ms=None)
+    updated = store.update_status(
+        entry.id, "pending_send", from_status="failed", last_approved_at_ms=None
+    )
     assert updated.status == "pending_send"
 
 
@@ -340,7 +354,7 @@ def test_pending_send_to_sent_raises_illegal_transition(store: OutboxStore) -> N
         recipient_email="js@example.com",
     )
     with pytest.raises(OutboxIllegalTransitionError, match="状态机非法转换"):
-        store.update_status(entry.id, "sent", from_status="pending_send")
+        store.update_status(entry.id, "sent", from_status="pending_send", last_approved_at_ms=None)
 
 
 def test_sending_to_approved_raises_illegal_transition(store: OutboxStore) -> None:
@@ -352,9 +366,11 @@ def test_sending_to_approved_raises_illegal_transition(store: OutboxStore) -> No
         tone="FORMAL",
         recipient_email="sa@example.com",
     )
-    store.update_status(entry.id, "sending", from_status="pending_send")
+    store.update_status(entry.id, "sending", from_status="pending_send", last_approved_at_ms=None)
     with pytest.raises(OutboxIllegalTransitionError, match="状态机非法转换"):
-        store.update_status(entry.id, "approved", from_status="sending")  # 逆向非法
+        store.update_status(
+            entry.id, "approved", from_status="sending", last_approved_at_ms=1781355844417
+        )  # 逆向非法
 
 
 def test_cancelled_to_anything_raises_illegal_transition(store: OutboxStore) -> None:
@@ -366,10 +382,12 @@ def test_cancelled_to_anything_raises_illegal_transition(store: OutboxStore) -> 
         tone="FORMAL",
         recipient_email="ct@example.com",
     )
-    store.update_status(entry.id, "cancelled", from_status="pending_send")
+    store.update_status(entry.id, "cancelled", from_status="pending_send", last_approved_at_ms=None)
     # 终态不能转出
     with pytest.raises(OutboxIllegalTransitionError, match="状态机非法转换"):
-        store.update_status(entry.id, "pending_send", from_status="cancelled")  # 复活非法
+        store.update_status(
+            entry.id, "pending_send", from_status="cancelled", last_approved_at_ms=None
+        )  # 复活非法
 
 
 # ===== F. OutboxIllegalTransitionError 数据类(1 test)=====
@@ -391,7 +409,7 @@ def test_outbox_illegal_transition_error_contains_outbox_id(
         recipient_email="err@example.com",
     )
     with pytest.raises(OutboxIllegalTransitionError) as exc_info:
-        store.update_status(entry.id, "sent", from_status="pending_send")
+        store.update_status(entry.id, "sent", from_status="pending_send", last_approved_at_ms=None)
     err = exc_info.value
     # 异常属性完整(D5.3 Adapter audit 用)
     assert err.outbox_id == entry.id  # entry.id 是 OutboxEntry.id 自增主键

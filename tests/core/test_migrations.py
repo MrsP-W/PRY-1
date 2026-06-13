@@ -132,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0005_outbox_sending_state(D5.2 启动 head 推到 0005)。
+    """alembic_version 表记录当前 head revision = 0006_outbox_approval_provenance(D5.2 启动 head 推到 0005)。
 
     D5.2 修订: D4.8 锁定时 head=0004_outbox,D5.2 加 migration 0005_outbox_sending_state
     后 head 推到 0005(B5 解封项,业务层 StrEnum 4→6 + 状态机白名单,无 DDL 改动)。
@@ -147,7 +147,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0005_outbox_sending_state"
+        assert version[0] == "0006_outbox_approval_provenance"
     finally:
         db.close()
 
@@ -320,7 +320,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
         4. 验证:
            a. events 表的 UNIQUE 约束是单字段 fingerprint
            b. subject_id=NULL + 同 fingerprint 再次插入 → IntegrityError (dedupe 生效)
-           c. alembic_version = 0005_outbox_sending_state(D5.2 head)
+           c. alembic_version = 0006_outbox_approval_provenance(D5.2 head)
     """
     from alembic import command
 
@@ -375,7 +375,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录 0005(D5.2 head)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0005_outbox_sending_state"
+            assert version[0] == "0006_outbox_approval_provenance"
     finally:
         db.close()
 
@@ -391,7 +391,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
     模拟场景:
         1. 跑 alembic upgrade head(D5.2 后 = 0002 + 0003 + 0004 + 0005, 走 D4.3.1 改后 0002 路径)
         2. 验证 events 表存在 + UNIQUE(fingerprint) 生效
-        3. 验证 alembic_version = 0005_outbox_sending_state(当前 head)
+        3. 验证 alembic_version = 0006_outbox_approval_provenance(当前 head)
     """
     from alembic import command
 
@@ -409,7 +409,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0005_outbox_sending_state"
+            assert version[0] == "0006_outbox_approval_provenance"
     finally:
         db.close()
 

@@ -400,9 +400,16 @@ def test_send_and_emit_success_approved_to_sent(
     store: OutboxStore, smtp_transport: InMemorySmtpTransport
 ) -> None:
     """send_and_emit 成功路径: APPROVED → SENDING → SENT(D4.8 显式批准路径)."""
+    import time as _t
+
     outbox_id = _insert_pending_entry(store, email_id=1001)
-    # 先推到 APPROVED
-    store.update_status(outbox_id, "approved", from_status="pending_send")
+    # 先推到 APPROVED(D5.6.3 P1-1:update_status(new_status=APPROVED) 必传 last_approved_at_ms)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(_t.time() * 1000),
+    )
 
     smtp_transport.inject_status = SMTP_SEND_OK
     adapter = EmailSendAdapter(

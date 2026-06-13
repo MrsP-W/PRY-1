@@ -130,7 +130,16 @@ def _insert_entry(
     email_id: int,
     status: str,
     priority: str = "normal",
+    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:APPROVED/FAILED 必有审批凭据
 ) -> int:
+    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态
+    if last_approved_at_ms is None and status in (
+        OutboxStatus.APPROVED.value,
+        OutboxStatus.FAILED.value,
+    ):
+        import time as _time
+
+        last_approved_at_ms = int(_time.time() * 1000)
     entry = store.insert(
         email_id=email_id,
         subject="测试邮件主题",
@@ -139,6 +148,7 @@ def _insert_entry(
         recipient_email=f"customer{email_id}@example.com",
         priority=priority,
         status=status,
+        last_approved_at_ms=last_approved_at_ms,
     )
     assert entry.id is not None  # noqa: S101
     return entry.id

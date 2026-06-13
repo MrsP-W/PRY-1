@@ -589,6 +589,21 @@ class OutboxDispatcher:
                 f"不在 APPROVED/FAILED"
             )
             return ("skipped", "", False)
+        # 1b. D5.6.3 P1-1 审批凭据严判:entry.last_approved_at_ms is not None
+        #     业务背景:状态机白名单允许 PENDING_SEND → FAILED → APPROVED → SENT
+        #     (D5.6.2 P1.2 新加),但 PENDING_SEND → FAILED 仍可由业务层直接
+        #     推进(用户取消等场景),如果此条目从未被显式审批过(last_approved_at_ms
+        #     == NULL),就**不应**被 dispatcher 消费,否则用户审批契约被绕过。
+        #     严判:任何 entry(APPROVED 或 FAILED)拉批前必先校验
+        #     last_approved_at_ms is not None;否则 skipped(且 warning,防审计盲点)。
+        #     写入 last_approved_at_ms 时机:update_status(APPROVED) 时必传(严判段)
+        #     保留时机:SENDING → SENT / FAILED / CANCELLED 都不动
+        if entry.last_approved_at_ms is None:
+            logger.warning(
+                f"D5.6.3 P1-1 跳过: outbox_id={entry.id} status={entry.status!r} "
+                f"last_approved_at_ms=None(从未被显式审批,绕过尝试)"
+            )
+            return ("skipped", "no_approval_provenance", False)
 
         # 2. SLA 评估(D5.5 新增):先于退避过滤,确保退避中的超时条目也能被发现。
         age_ms = max(0, now_ms - entry.created_at)
@@ -624,18 +639,25 @@ class OutboxDispatcher:
                 extra_parts.append(f"retry_after={retry_after} cf={cf}")
                 return ("skipped", " ".join(extra_parts), is_breach)
 
-        # 4. FAILED 重试回路(D5.6.2 P1.2 修复):退避结束后 FAILED → APPROVED,再发送
+        # 4. FAILED 重试回路(D5.6.2 P1.2 修复 + D5.6.3 P1-1):退避结束后
+        #   FAILED → APPROVED,再发送
         #   之前版本 FAILED → PENDING_SEND 变审批状态(D5.5.4 范本)→ 用户需重新审批
         #   D5.6.2 修复:状态机白名单新增 FAILED → APPROVED 直通(同用户已审批过)
-        #   关键: 拉批时已确认 entry.status in (APPROVED, FAILED),FAILED 重试通过
-        #   状态机白名单 FAILED → APPROVED 转换保留原审批标记,不需用户重新审批
+        #   D5.6.3 P1-1 修复:update_status(new_status=APPROVED) 必传
+        #     last_approved_at_ms(否则 ValueError),重试用 entry.last_approved_at_ms
+        #     (即当初审批时写的时间戳,确保不丢审批标记)
+        #   关键: 拉批时已确认 entry.last_approved_at_ms is not None(严判段在 L597+),
+        #     状态机白名单 FAILED → APPROVED 转换保留原审批标记,不需用户重新审批
         #   失败重试退避已通过 self._failure_state 内存追踪,不需 PENDING_SEND 中转
         if entry.status == OutboxStatus.FAILED.value:
+            # 严判段已保证 last_approved_at_ms is not None,这里再 assert 收窄类型
+            assert entry.last_approved_at_ms is not None  # noqa: S101
             try:
                 entry = store.update_status(
                     entry.id,
                     OutboxStatus.APPROVED.value,
                     from_status=OutboxStatus.FAILED.value,
+                    last_approved_at_ms=entry.last_approved_at_ms,
                 )
             except (OutboxIllegalTransitionError, ValueError) as e:
                 logger.warning(f"OutboxDispatcher FAILED 重试解锁失败: outbox_id={entry.id} {e!r}")
