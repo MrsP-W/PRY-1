@@ -924,7 +924,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.6 真实发送 spike**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,**D5.5.5 commit `57fcc26` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步**(1534 passed / 8 质量门全绿 / 90.3% 覆盖)。剩 D5.6-D5.7 两步(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
+**下一棒 → D5.6 真实发送 spike**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,**D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步**(1534 passed / 8 质量门全绿 / 90.3% 覆盖)。剩 D5.6-D5.7 两步(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / 接真实 SMTP 终验 spike)。
 
 ---
 
@@ -1065,7 +1065,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 - **默认 transport 边界** — `SMTPConnector(transport=None)` 不允许忘记显式注入,`connect()` 时才 fallback 到 `InMemorySmtpTransport` 并 loguru WARNING
 - **CLI provider 严判** — `spike_set_smtp_password.py --provider {qq,outlook,gmail}`,outlook/gmail 显式 `NotImplementedError` 提示"D5.1 只实现 qq"
 
-**下一棒 → D5.6 真实发送 spike + 验收报告**。D5.1-D5.5.5 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `57fcc26`),剩 2 子阶段(D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)+ 8 质量门终验。
+**下一棒 → D5.6 真实发送 spike + 验收报告**。D5.1-D5.5.5 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810`),剩 2 子阶段(D5.6 spike 100 真实发送 → D5.7 docs 收口 8 件套)+ 8 质量门终验。
 
 ---
 
@@ -1114,6 +1114,6 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 ---
 
-**最后更新**：2026-06-13(D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判 + D5.5.5 commit `57fcc26` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步完成,1534 passed / 8 质量门全绿 / 90.3% 覆盖)
-**状态**:D1-D5.5.5 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `57fcc26`),剩 D5 业务调度器 2 子阶段(D5.6 真实发送 spike → D5.7 docs 收口 8 件套)
+**最后更新**：2026-06-13(D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判 + D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步完成,1534 passed / 8 质量门全绿 / 90.3% 覆盖)
+**状态**:D1-D5.5.5 已完成(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810`),剩 D5 业务调度器 2 子阶段(D5.6 真实发送 spike → D5.7 docs 收口 8 件套)
 **维护者**:Mr-PRY

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.5.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `57fcc26` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步;下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.5.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步;下一步 D5.6 真实发送 spike）。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
