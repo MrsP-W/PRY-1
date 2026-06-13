@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**D5 业务调度器推进中**（D5.1-D5.5 ✅，下一步 D5.6 真实发送 spike）。
+**当前阶段**：**D5 业务调度器推进中**（D5.1-D5.6.3 ✅，下一步 D5.6.4 真实 1 封实测 + D5.7 docs 收口）。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 5 软链 + 2 专属）
 
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📌 D-step 标准落地流（5 步）
 
-每个 D-step 落地按此流程（D5.6 真实发送 spike 锁定时按此跑）：
+每个 D-step 落地按此流程（D5.6.3 修复 + D5.6.4 真实 1 封实测锁定时按此跑）：
 
 ```
 Step 1: @调试专家（如有阻塞）
