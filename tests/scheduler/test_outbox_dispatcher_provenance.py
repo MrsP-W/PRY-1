@@ -209,9 +209,7 @@ def test_pending_send_without_approval_provenance_skipped(
     )
 
     result = dispatcher.run_once()
-    assert result.sent == 0, (
-        f"D5.6.2 P1.2:PENDING_SEND 永不被拉批,实际 sent={result.sent}"
-    )
+    assert result.sent == 0, f"D5.6.2 P1.2:PENDING_SEND 永不被拉批,实际 sent={result.sent}"
     assert result.total_picked == 0, (
         f"D5.6.2 P1.2:PENDING_SEND 不入批,实际 total_picked={result.total_picked}"
     )
@@ -242,9 +240,7 @@ def test_approved_with_approval_provenance_processed(
     )
 
     result = dispatcher.run_once()
-    assert result.sent == 1, (
-        f"D5.6.3 P1-1:APPROVED + 有审批凭据必被发送,实际 sent={result.sent}"
-    )
+    assert result.sent == 1, f"D5.6.3 P1-1:APPROVED + 有审批凭据必被发送,实际 sent={result.sent}"
 
     # 验证 APPROVED → SENT
     entry = store.by_id(approved_id)

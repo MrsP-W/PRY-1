@@ -199,8 +199,7 @@ def test_run_spike_reads_password_from_keychain() -> None:
 
     # 验证 Keychain 函数被调用(provider 透传 + email 透传)
     assert mock_call.called, (
-        "D5.6.2 P0 凭证链路:REAL 模式必须调 keychain.get_smtp_password_for_provider,"
-        "但实际未被调用!"
+        "D5.6.2 P0 凭证链路:REAL 模式必须调 keychain.get_smtp_password_for_provider,但实际未被调用!"
     )
     assert called_with == [("qq", "real_user@qq.com")], (
         f"D5.6.3 P2-4:Keychain 调用入参必为 (qq, real_user@qq.com),实际 {called_with!r}"

@@ -339,12 +339,13 @@ def run_spike(
             f"BREACH 注入={inject_breach},password=<test-placeholder>)"
         )
 
-    # D5.6.2 P0 凭证链路:_install_fake_keychain 仅 InMemory 模式装
+    # D5.6.2 P0 凭证链路 + D5.6.3 P2-2 修复:_install_fake_keychain 仅 InMemory 模式装
     # REAL 模式必须走真 keychain.get_smtp_password_for_provider(上面 L256-302)
+    # D5.6.3 P2-2 修复:之前还有一次无条件 _install_fake_keychain() 调用,会污染
+    # REAL 模式全局 Keychain 函数(虽然局部 smtp_password 已读取,但仍会污染
+    # 后续 Keychain 调用链)。删无条件调用,只剩条件 if not real_send 分支。
     if not real_send:
         _install_fake_keychain()
-
-    _install_fake_keychain()
 
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     report_lines: list[str] = []
@@ -518,14 +519,22 @@ def run_spike(
             max_iterations = (
                 200  # 防死循环(N=100 + batch=10 → 10 轮足够,留大 buffer 让退避回路可完成)
             )
+            # D5.6.3 P1-2 修复:虚拟时钟推进(让退避回路可在 spike 时长内完成)
+            # 之前用真实时间(int(time.time()*1000))作 now_ms,2^cf * 60_000ms
+            # 退避公式下,cf=1 退避 120s,200 轮内真实时间根本走不完 1 个退避窗口。
+            # 修复:每次循环 now_ms 推进 --inject-time-step-ms(默认 70_000ms,
+            # 覆盖 2^1*60s + 10s buffer),让 cf=1 退避 120s 可在 2 轮内过期。
+            # D5.6.3 P1-2 边角:同时调 heartbeat.update(refresh_last_seen=True,
+            # now_ms=now_ms),防 spike 跑完后"时间倒流"严判。
+            time_step_ms = 70_000
             t_dispatch_start = time.time()
+            current_now_ms = int(time.time() * 1000)
             for iteration in range(max_iterations):
-                # 用真实时间当 now_ms(spike_send_100 v1.0.0 修复:
-                # send_and_emit L900 直接用 int(time.time()*1000) 算 end_ms,
-                # 若注入 now_ms > 真实时间 → latency_ms = end_ms - start_ms 负值 → 严判失败
-                # 见 send_adapter.py:900 范本)
-                current_now_ms = int(time.time() * 1000)
+                # D5.6.3 P1-2 修复:now_ms 推进 time_step_ms(可控时钟)
+                current_now_ms += time_step_ms
                 result = dispatcher.run_once(now_ms=current_now_ms)
+                # 同步刷新 heartbeat last_seen_ms(避免时间漂移触发"时间倒流"严判)
+                heartbeat.update(refresh_last_seen=True, now_ms=current_now_ms)
                 dispatcher_latencies.append(result.duration_seconds)
                 counters["total_picked"] += result.total_picked
                 counters["sent"] += result.sent
@@ -548,8 +557,30 @@ def run_spike(
                     counters["iterations"] = iteration + 1
                     break
             else:
-                print(f"   ⚠️ 达到 max_iterations={max_iterations} 仍未结束(可能存在死循环)")
+                # D5.6.3 P1-2 修复:达到 max_iterations 仍有非最终态条目
+                # → 报告标记 ❌ + raise SystemExit(1)(进程返回非零,防"假成功"陷阱)
+                # 之前:仅打印警告 + 继续生成报告 + 进程退出 0,被检查员 P1-2 驳回
+                pending = outbox_store.by_status("pending_send", limit=100)
+                approved = outbox_store.by_status("approved", limit=100)
+                failed = outbox_store.by_status("failed", limit=100)
+                sending = outbox_store.by_status("sending", limit=100)
+                leftover = {
+                    "pending_send": len(pending),
+                    "approved": len(approved),
+                    "failed": len(failed),
+                    "sending": len(sending),
+                }
                 counters["iterations"] = max_iterations
+                counters["state_machine_final"] = 0  # 显式标记 ❌
+                # 先关 DB(避免 finally 段找不到 db 引用)
+                # 注:实际 finally 段在 db.close() 上,这里直接 raise 跳过 finally 是预期行为
+                raise SystemExit(
+                    f"D5.6.3 P1-2:spike 失败 — 达到 max_iterations={max_iterations} 仍未全部最终态,"
+                    f"非最终态条目={leftover}。请检查:\n"
+                    f"  1. 失败注入是否让退避公式无法完成(cf 太大)\n"
+                    f"  2. time_step_ms={time_step_ms} 是否够大覆盖最长退避窗口\n"
+                    f"  3. 是否存在死循环/状态机漂移 bug"
+                )
             t_dispatch_total = time.time() - t_dispatch_start
 
             # 7. 统计(按优先级拆分 outcome)
@@ -724,9 +755,18 @@ def run_spike(
                         f"{'✅' if counters['skip_breach'] >= inject_breach else ('N/A' if inject_breach == 0 else '❌')} |"
                     ),
                     (
-                        f"| 5 | 注入失败(N={inject_failures}) 退避回路 | total_processed >= {count} | "
-                        f"total_processed={counters['sent'] + counters['business_blocked'] + counters['technical_failed']} | "
-                        f"{'✅' if (counters['sent'] + counters['business_blocked'] + counters['technical_failed']) >= count else ('N/A' if inject_failures == 0 else '❌')} |"
+                        # D5.6.3 P2-1 修复:报告用 injection_events 精确断言
+                        # 之前 total_processed >= count 即使注入完全没生效也过(恒真陷阱)
+                        # 真正精确:transport 层 send_message 注入事件列表 == inject_failures
+                        f"| 5 | 注入失败(N={inject_failures}) 退避回路 | injection_events == {inject_failures} | "
+                        f"injection_events={len(injection_events_holder.get('events', []))} | "
+                        f"{'✅' if inject_failures == 0 else ('❌' if len(injection_events_holder.get('events', [])) != inject_failures else '✅')} |"
+                    ),
+                    (
+                        # D5.6.3 P2-1 补充:dispatcher.technical_failed 实际触发数
+                        f"| 5b | dispatcher.technical_failed 实际触发 | >= {inject_failures} | "
+                        f"technical_failed={counters['technical_failed']} | "
+                        f"{'✅' if counters['technical_failed'] >= inject_failures else ('N/A' if inject_failures == 0 else '❌')} |"
                     ),
                     "",
                 ]
@@ -832,8 +872,17 @@ def main() -> None:
         "--smtp-provider",
         type=str,
         default="qq",
-        choices=["qq", "outlook", "gmail"],
-        help="SMTP provider 白名单(D5.6.2 P0 修复:REAL 模式必传,真读 Keychain 凭证)",
+        # D5.6.3 P2-3 修复:Provider 能力对齐
+        # 之前 choices=["qq", "outlook", "gmail"] 是"能力虚报"——outlook/gmail
+        # 对应的 SERVICE_SMTP_OUTLOOK / SERVICE_SMTP_GMAIL 在 core/keychain.py
+        # 已定义,但 scripts/spike_set_smtp_password.py 只支持 qq(provider 写入
+        # / 检查 / 删除 能力不对齐)。当前 D5 阶段只验证 QQ SMTP 真实链路,
+        # outlook/gmail 仍为 B 类延后(B1 类),D5 跑通后再扩。
+        choices=["qq"],
+        help=(
+            "SMTP provider 白名单(D5.6.2 P0 修复:REAL 模式必传,真读 Keychain 凭证)。"
+            "D5.6.3 P2-3 收口: 当前仅 'qq'(outlook/gmail 凭证写入脚本未实现,B 类延后)"
+        ),
     )
     # ===== spike 行为参数 =====
     parser.add_argument(

@@ -133,12 +133,18 @@ def test_approved_rejects_non_int_type(store: OutboxStore) -> None:
     # bool 子类是 int 子类陷阱:D4.7.3 v1.0.5 P2-2 范本, type() is int 不用 isinstance
     with pytest.raises(ValueError, match="原生 int"):
         store.update_status(
-            outbox_id, "approved", from_status="pending_send", last_approved_at_ms=True  # type: ignore[arg-type]
+            outbox_id,
+            "approved",
+            from_status="pending_send",
+            last_approved_at_ms=True,  # type: ignore[arg-type]
         )
     # str 拒收
     with pytest.raises(ValueError, match="原生 int"):
         store.update_status(
-            outbox_id, "approved", from_status="pending_send", last_approved_at_ms="1234567890"  # type: ignore[arg-type]
+            outbox_id,
+            "approved",
+            from_status="pending_send",
+            last_approved_at_ms="1234567890",  # type: ignore[arg-type]
         )
     # 负数拒收
     with pytest.raises(ValueError, match="原生 int"):
@@ -213,9 +219,7 @@ def test_sending_to_sent_preserves_last_approved_at_ms(store: OutboxStore) -> No
         outbox_id, "approved", from_status="pending_send", last_approved_at_ms=now_ms
     )
     # APPROVED → SENDING 保留(传 None,不动 row)
-    store.update_status(
-        outbox_id, "sending", from_status="approved", last_approved_at_ms=None
-    )
+    store.update_status(outbox_id, "sending", from_status="approved", last_approved_at_ms=None)
     # SENDING → SENT 保留(传 None,不动 row)
     updated = store.update_status(
         outbox_id, "sent", from_status="sending", last_approved_at_ms=None
@@ -234,9 +238,7 @@ def test_sending_to_failed_preserves_last_approved_at_ms(store: OutboxStore) -> 
         outbox_id, "approved", from_status="pending_send", last_approved_at_ms=now_ms
     )
     # APPROVED → SENDING 保留
-    store.update_status(
-        outbox_id, "sending", from_status="approved", last_approved_at_ms=None
-    )
+    store.update_status(outbox_id, "sending", from_status="approved", last_approved_at_ms=None)
     # SENDING → FAILED 保留(退避重试凭据保留)
     updated = store.update_status(
         outbox_id, "failed", from_status="sending", last_approved_at_ms=None
