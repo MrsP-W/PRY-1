@@ -151,11 +151,11 @@ def test_orm_unique_constraint_and_indexes() -> None:
 
     # UNIQUE 约束(沿 test_outbox.py 范本:Table.constraints 是 SA 内部属性,mypy 需 # type: ignore[attr-defined])
     unique_constraints = [
-        c for c in table.constraints if isinstance(c, UniqueConstraint)  # type: ignore[attr-defined]
+        c
+        for c in table.constraints  # type: ignore[attr-defined]
+        if isinstance(c, UniqueConstraint)
     ]
-    uq = next(
-        (c for c in unique_constraints if c.name == "uq_transactions_source_ext_id"), None
-    )
+    uq = next((c for c in unique_constraints if c.name == "uq_transactions_source_ext_id"), None)
     assert uq is not None, "UNIQUE(source, external_transaction_id) 约束缺失"
     assert set(uq.columns.keys()) == {"source", "external_transaction_id"}
 
