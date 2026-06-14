@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新：2026-06-12（**L4 Agent 层软链 5 角色 + 2 专属 + D-step 收官标准动作**）
+> 最后更新：2026-06-14（**D5.6.5.1 收口 + D5.7 docs 收口 8 件套** — L4 Agent 层软链 5 角色 + 2 专属 + D-step 收官标准动作）
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**D5 业务调度器推进中**（D5.1-D5.6.5 ✅，B3 真正解封，真实 1 封 SMTP 端到端实测通过，sent=1/1.27s；下一步 D5.7 docs 收口 8 件套剩余 + v0.1 发布规划）。
+**当前阶段**：**D5.7 docs 收口中**（D5.1-D5.6.5.1 ✅，B3 真正解封，真实 1 封 SMTP 端到端实测通过，sent=1/1.27s；当前 D5.7 docs 收口 8 件套 commit = week1-mvp §D5 末棒 + §D4.8 已知限制清理 + README L7/L42/L168 + CLAUDE.md + mapping §11 + D5 业务调度器报告 + 跨项目 memory；下一步 v0.1 发布规划）。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 5 软链 + 2 专属）
 
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📌 D-step 标准落地流（5 步）
 
-每个 D-step 落地按此流程（D5.6.4 修复 + D5.6.5 真实 1 封实测锁定时按此跑）：
+每个 D-step 落地按此流程（D5.6.4 修复 + D5.6.5 真实 1 封实测 + D5.6.5.1 检查员驳回 5 缺陷修复 + D5.7 docs 收口 8 件套锁定时按此跑）：
 
 ```
 Step 1: @调试专家（如有阻塞）

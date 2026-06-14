@@ -914,17 +914,17 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 | D4.8.11 | **Spike**：100 封入库幂等性 + 状态机正确性 + 紧急邮件优先排序 | 60 min | spike 报告 | ✅ output/spike/spike_outbox_100_20260611_221105.md |
 | D4.8.12 | 8 质量门 + commit + 验收 | 30 min | 锁定 | 🎯 当前 |
 
-**已知限制**（D4.8 v1.0.1 已固化,2026-06-11 D5 启动后 B3 / B5 自然解封）：
+**已知限制**（D4.8 v1.0.1 已固化,2026-06-14 D5.6.5.1 收口后 B3 / B5 真正解封）：
 
-- ~~outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界）~~ → **B5 已解封**:D5.2 migration 0005 加 `sending` 状态 + `ALLOWED_TRANSITIONS` 白名单
-- ~~真实 SMTP 发送不在 D4.8 范围~~ → **B3 已解封**:D5 业务调度器接管(2026-06-11 D5.1 commit `cce567a` 启动)
+- ~~outbox 表无 `sent_at` / `sent_status` 字段（避免 D4.8 越界）~~ → **B5 已解封**:D5.2 migration 0005 加 `sending` 状态 + `ALLOWED_TRANSITIONS` 白名单(D5.3 P1 收口加 SENDING → CANCELLED 业务阻断链路)
+- ~~真实 SMTP 发送不在 D4.8 范围~~ → **B3 已解封**:D5 业务调度器接管(D5.6.5 commit `6ac8d9b` 真实 1 封 smtp.qq.com:465 SSL 端到端实测通过,sent=1/1.27s)
 - 紧急邮件优先排序仅 `priority + created_at` 二维索引,真实调度可能涉及更多维度(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段)
 - 黑名单收件人库空白 → 初始 2 类白名单(`duplicate_email_id` / `blacklisted_recipient`),D4.8.1+ 接入 `blacklist_recipients` 配置表(**B 类决策延后**)
-- ~~状态机转换规则不完整（D4.8 仅入库到 `pending_send`）~~ → **B5 已解封**:D5.2 加 `pending_send → approved / cancelled` 状态转换白名单
+- ~~状态机转换规则不完整（D4.8 仅入库到 `pending_send`）~~ → **B5 已解封**:D5.2 加 `pending_send → approved / cancelled` 状态转换白名单,D5.6.4 收窄 `send_and_emit` 仅接受 APPROVED 状态
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.6.5 真实 1 封实测 + D5.7 docs 收口**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步,D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实),D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回,D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回,D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷:虚拟时钟时间倒流 + send_and_emit 收窄 PENDING_SEND + OutboxStore.insert 防审批伪造 + 真实网络门 + 报告命名),**D5.6.4 commit `a75894c`+`e07feee` ✅ 第四轮 5 缺陷全部修复收口**(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass,278 passed / ruff 0 errors / mypy 0 errors)。剩 D5.6.5(用户手动跑 `SMTP_REAL_NETWORK=1 ... --real --count 1` 真实 1 封实测)+ D5.7(docs 收口 8 件套,本轮部分落地)两步(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / outlook/gmail SMTP provider)。
+**下一棒 → D5.7 docs 收口 8 件套剩余**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步,D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实),D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回,D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回,D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷:虚拟时钟时间倒流 + send_and_emit 收窄 PENDING_SEND + OutboxStore.insert 防审批伪造 + 真实网络门 + 报告命名),**D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` ✅ 第四轮 5 缺陷全部修复收口**(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass),**D5.6.5 commit `6ac8d9b` ✅ 真实 1 封 SMTP 端到端实测通过**(smtp.qq.com:465 SSL,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok,Keychain round-trip 范本,真实 vs InMemory 性能 ≈ 160x,**B3 真正解封**),**D5.6.5.1 commit `2396def`+`b037334` ✅ 检查员驳回 5 缺陷全部修复**(P1-1 测试隔离双层防御 + P1-2 邮箱脱敏 5 文件 + P2-1 SpikeResult 11 字段落地 + P2-2 文档一致 5 处翻 D5.6.5 + P2-3 措辞 smtp 250 OK ≠ 真实送达)。剩 D5.7 docs 收口 8 件套剩余(本轮 = week1-mvp §D5 末棒 + §D4.8 已知限制清理 + README L7/L42/L168 + CLAUDE.md + mapping §11 + D5 业务调度器报告 + 跨项目 memory)(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / outlook/gmail SMTP provider)。
 
 ---
 
@@ -1065,7 +1065,18 @@ NORMAL:  threshold=4hour,   warning=2hour
 - **默认 transport 边界** — `SMTPConnector(transport=None)` 不允许忘记显式注入,`connect()` 时才 fallback 到 `InMemorySmtpTransport` 并 loguru WARNING
 - **CLI provider 严判** — `spike_set_smtp_password.py --provider {qq,outlook,gmail}`,outlook/gmail 显式 `NotImplementedError` 提示"D5.1 只实现 qq"
 
-**下一棒 → D5.6.5 真实网络 spike + D5.7 docs 收口 8 件套**。D5.1-D5.6.4 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1-D5.6.3 ⏸️ 被检查员驳回 + **D5.6.4 `a75894c`+`e07feee` ✅** 5 缺陷全部修复),剩 2 子阶段(D5.6.5 用户手动跑真实 1 封 → D5.7 docs 收口剩余 5 件套)+ 8 质量门终验。
+**下一棒 → D5.7 docs 收口 8 件套剩余**。D5.1-D5.6.5.1 已固化(D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1-D5.6.3 ⏸️ 被检查员驳回 + **D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` ✅** 5 缺陷全部修复 + **D5.6.5 `6ac8d9b` ✅ 真实 1 封 SMTP 端到端实测通过** + **D5.6.5.1 `2396def`+`b037334` ✅ 检查员驳回 5 缺陷全部修复**),剩 1 子阶段(D5.7 docs 收口 8 件套剩余)+ 8 质量门终验。
+
+**D5.7 docs 收口 8 件套清单**(本轮 = 当前 D5.7 commit):
+
+1. `docs/week1-mvp.md` §D5 末棒翻到 D5.6.5.1 锁定态(本段上方)
+2. `docs/week1-mvp.md` §D4.8 已知限制 B3/B5 解封项翻到 D5.6.5.1
+3. `docs/week1-mvp.md` 末棒"下一棒 → D5.7 docs 收口 8 件套剩余"(L927 段)
+4. `README.md` L7 状态行 + L42 铁律 + L168 D5 推进中行翻到 D5.6.5.1
+5. `CLAUDE.md` L7 当前阶段翻到 D5.6.5.1
+6. `docs/d4-claw-code-mapping.md` §11 D5 业务调度器 mapping 段(7 段结构范本)
+7. `reports/D5-业务调度器.md` 8 段结构报告
+8. 跨项目 memory:`Agent Assistant/memory/d5-business-scheduler-launch.md` + `MEMORY.md` 索引 + 全局 memory
 
 ### D5.6.4 范围(4th round 修复 — 2026-06-14)
 
@@ -1092,8 +1103,57 @@ NORMAL:  threshold=4hour,   warning=2hour
 **2 commits**:
 - `a75894c`: send_and_emit 收窄 APPROVED only + OutboxStore.insert 防审批伪造(P0 + 3 × P1)
 - `e07feee`: SMTP 真实网络门 + transport factory 注入 + SpikeResult(P1-3 + 真实网络门)
+- `9d78900`: docs(d5.6.4) 状态行 + B3 解封 + 措辞 + 文档一致 4 修复(检查员反馈,2026-06-14)
+- `fa7aff5`: 命名重整 D5.6.3 → D5.6.4 沿 D5.5.5 amend 衍生 hash 范本(2026-06-14)
 
 **详细**:[reports/d5.6.4-acceptance.md](../reports/d5.6.4-acceptance.md) + [reports/D5.6.4-spike-100.md](../reports/D5.6.4-spike-100.md)
+
+---
+
+### D5.6.5 范围(真实 1 封 SMTP 端到端实测 — 2026-06-14)
+
+**承接**:D5.6.4 第四轮 5 缺陷全部修复收口后,用户授权做 1 封真实 SMTP 端到端实测,B3 真正解封。
+
+**实测环境**:
+- SMTP 服务器:`smtp.qq.com:465` SSL
+- from=to 邮箱:脱敏 `477***009@qq.com`(D5.6.5.1 P1-2 修复,详见下)
+- 16 chars 授权码:写入 Keychain(沿 D2 IMAP 范本,`unset HISTFILE` + 变量传递 + round-trip 自检)
+- 4 重防误发:`--recipient` + `--max-recipients 1` + `--confirm "yes-i-understand-this-sends-real-email"` + `--count 1`
+- env 门控:`SMTP_REAL_NETWORK=1` 显式解锁(默认安全 deny-by-default)
+
+**实测结果**:
+- 1 封 SMTP 端到端通过(sent=1, 总调度时长 1.27s)
+- 状态机 4 步全过:`PENDING_SEND → APPROVED → SENDING → SENT`
+- 7 字段 DispatcherResult 全 ok:`sent=1, total_picked=1, business_blocked=0, technical_failed=0, skipped=0, skip_breach=0, iterations=1`
+- 性能基线:真实 1.27s vs InMemory p50=7.91ms ≈ 160x(SSL 握手 + SMTP 协议栈占大头)
+- B3 真正解封(已通过 8 质量门 8/8 全绿,1563 passed / 90.4%)
+
+**1 commit**:`6ac8d9b` 真实 1 封 SMTP 端到端实测
+
+**详细**:[reports/D5.6.5-real-send-1.md](../reports/D5.6.5-real-send-1.md) + [memory/d5.6.5-real-send.md](../Agent%20Assistant/memory/d5.6.5-real-send.md)
+
+---
+
+### D5.6.5.1 范围(检查员驳回 5 缺陷修复 — 2026-06-14)
+
+**承接**:D5.6.5 真实 1 封实测通过后,检查员统一检查驳回 5 缺陷,D5.6.5.1 修复落地。
+
+**5 修复**:
+1. **P1-1 测试隔离加固** — `pytest.raises(Exception)` 宽泛放行是 P1 漏洞(异常前可能已连 smtp.qq.com)。改注入 `InMemorySmtpTransport` factory + `SmtpLibTransport.__init__` 构造计数 + factory 调用计数 + 状态断言 3 层防御
+2. **P1-2 邮箱脱敏** — `477753009@qq.com` 完整邮箱在 5 处文档泄露(README/architecture/spike/REPORT/Agent Assistant memory)。全量替换 `477***009@qq.com` + grep 验证 0 处残留
+3. **P2-1 SpikeResult 真正落地** — `run_spike()` 注释 `-> None` + 末尾无 return,形同虚设。改 `-> SpikeResult` + 末尾构造并返回 11 字段(mode/sent/business_blocked/technical_failed/skipped/p50/p95/sla_breach_count/injection_*/extra)
+4. **P2-2 文档一致** — 5 处文档停留在 D5.6.3 / "待重跑" / B3 延后 / 假 commit `6e9f0e3`。翻到 D5.6.5 / 8 门全绿 / B3 真正解封 / 移除假 commit
+5. **P2-3 措辞澄清** — "真实送达" 措辞过强,smtp 250 OK ≠ 真实送达。改 "SMTP 服务器接受 (smtp 250 OK)"(3 文件 + 1 docstring)
+
+**2 commits**:
+- `2396def`: spike 测试隔离加固 + run_spike 真正返回 SpikeResult(P1-1 + P2-1,5→6 tests)
+- `b037334`: 邮箱脱敏 + 文档一致 + 措辞澄清(P1-2 + P2-2 + P2-3,5 files)
+
+**8 质量门 8/8 全绿**:1565 passed in 15.59s(从 1563 → 1565,+2 R2/R6) / ruff 0 / format 0 / mypy src 0 / mypy src+tests 0 / alembic exit 0 / uv build OK / make lint 0
+
+**5 教训**:测试绝不允许连真实外部世界 / 真实凭据脱敏固化动作 / dataclass 必配套 return / 文档状态行必随实测翻 / SMTP 服务器接受 ≠ 真实送达
+
+**详细**:[memory/d5.6.5.1-fixes.md](../Agent%20Assistant/memory/d5.6.5.1-fixes.md)(跨项目 memory)
 
 ---
 
