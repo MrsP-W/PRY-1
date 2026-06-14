@@ -69,13 +69,17 @@ def session_factory(temp_db_path: Path, fake_keychain):
     D6.0 e2e 决策:用明文 sqlite + SQLAlchemy create_engine(不调 SQLCipher),
     理由:e2e 测业务流程,不需要测加密层。Base.metadata.create_all 应用 ORM schema。
 
-    注意:OutboxEntry 在 core/outbox.py 注册到 Base.metadata,需要显式 import
-    才能让 create_all 知道建 outbox 表(沿 outbox.py L73 `from core.models import Base`)。
+    注意:Event / OutboxEntry 分别在 events.models / core.outbox 注册到 Base.metadata,
+    需要显式 import 才能让 create_all 稳定建 events/outbox 表。
     """
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
     from my_ai_employee.core.models import Base
+
+    # 显式注册跨模块 ORM 表,避免依赖其他测试的 import 顺序。
+    import my_ai_employee.core.outbox  # noqa: F401
+    import my_ai_employee.events.models  # noqa: F401
 
     # 明文 sqlite(测试不加密,e2e 不测 SQLCipher 加密层)
     engine = create_engine(

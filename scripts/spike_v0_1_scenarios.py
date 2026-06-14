@@ -9,9 +9,9 @@ D6.0 范围(2026-06-14 启动):
     - W2 (S6-S9) 需 D6/D7/D9/D10 落地后 spike
 
 跑法:
-    python scripts/spike_v0.1_scenarios.py --help
-    python scripts/spike_v0.1_scenarios.py --enable-s1-s4    # Week 1 4 场景 InMemory
-    python scripts/spike_v0.1_scenarios.py --enable-s5 --real # 真实 SMTP(沿 D5.6.5)
+    python scripts/spike_v0_1_scenarios.py --help
+    python scripts/spike_v0_1_scenarios.py --enable-s1-s4    # Week 1 4 场景 InMemory
+    python scripts/spike_v0_1_scenarios.py --enable-s5 --real # 真实 SMTP(沿 D5.6.5)
 """
 
 from __future__ import annotations
