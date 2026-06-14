@@ -912,10 +912,10 @@ claw-code 仓库无"邮件 SMTP 发送"模块,但与 D5 业务调度器高度相
 - [memory/d5.6.4-4th-round-fixes.md](../../Agent%20Assistant/memory/d5.6.4-4th-round-fixes.md) — D5.6.4 4th round 5 缺陷修复
 - `memory/d5.5.5-p1-p2-p3-fixes.md` — D5.5.5 2 commits 收口(实际位于全局 memory,本项目级未同步副本)
 - `memory/d5.5.4-p1-p3-fixes.md` — D5.5.4 P1/P3 修复(实际位于全局 memory,本项目级未同步副本)
-- [memory/d5.5.3-p0-p1-p2-fixes.md](../../Agent%20Assistant/memory/d5.5.3-p0-p1-p2-fixes.md) — D5.5.3 P0/P1/P2 修复
-- [memory/d5.5.2-p1-fixes.md](../../Agent%20Assistant/memory/d5.5.2-p1-fixes.md) — D5.5.2 P1 修复
-- [memory/d5.5.1-fix-locked.md](../../Agent%20Assistant/memory/d5.5.1-fix-locked.md) — D5.5.1 落锁
-- [memory/d5.5-audit-findings.md](../../Agent%20Assistant/memory/d5.5-audit-findings.md) — D5.5 审计发现 7 处
+- `memory/d5.5.3-p0-p1-p2-fixes.md` — D5.5.3 P0/P1/P2 修复(实际位于全局 memory,本项目级未同步副本)
+- `memory/d5.5.2-p1-fixes.md` — D5.5.2 P1 修复(实际位于全局 memory,本项目级未同步副本)
+- `memory/d5.5.1-fix-locked.md` — D5.5.1 落锁(实际位于全局 memory,本项目级未同步副本)
+- `memory/d5.5-audit-findings.md` — D5.5 审计发现 7 处(实际位于全局 memory,本项目级未同步副本)
 - [week1-mvp.md §D5 L931-1108](week1-mvp.md) — D5 详细计划(6 契约 + 16 子任务 + 6 契约 + 8 风险 + 8 质量门)
 - [week1-mvp.md §D4.8 L841-925](week1-mvp.md) — D4.8 详细计划(5 契约 + 12 子任务,B3/B5 解封项已清理)
 **维护者**:Mr-PRY
@@ -924,8 +924,8 @@ claw-code 仓库无"邮件 SMTP 发送"模块,但与 D5 业务调度器高度相
 - [reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md) — D4.8 v1.0.1 报告(8 质量门 + 5 契约 + 25 教训 + B 类延后)
 - [output/spike/spike_outbox_100_20260611_221105.md](../output/spike/spike_outbox_100_20260611_221105.md) — D4.8.11 spike 100 封入库报告
 - [memory/tools_status.md](../../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
-- [memory/d4.7.4-v1.0.3-deferred.md](../../Agent%20Assistant/memory/d4.7.4-v1.0.3-deferred.md) — D4.7.4 spike 3 FALSE_PASS 列入 v1.0.3 改进项(B 类延后)
-- [memory/d4.7.3-drafter-adapter-v1.0.6.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 25 教训沉淀源头(D4.8 7 项核心契约复用)
-- [memory/d4.7.4-docs-closure.md](../../Agent%20Assistant/memory/d4.7.4-docs-closure.md) — D4.7.4 v1.0.2 docs-only 收口 commit `b1497b3`
+- `memory/d4.7.4-v1.0.3-deferred.md` — D4.7.4 spike 3 FALSE_PASS 列入 v1.0.3 改进项(B 类延后,实际位于全局 memory,本项目级未同步副本)
+- `memory/d4.7.3-drafter-adapter-v1.0.6.md` — D4.7.3 25 教训沉淀源头(D4.8 7 项核心契约复用,实际位于全局 memory,本项目级未同步副本)
+- `memory/d4.7.4-docs-closure.md` — D4.7.4 v1.0.2 docs-only 收口 commit `b1497b3`(实际位于全局 memory,本项目级未同步副本)
 - [reports/D4.7.4.10-spike.md](../reports/D4.7.4.10-spike.md) — D4.7.4.10 spike 100/100 跑通 + 阻断率/原因/延迟全分析
 - [week1-mvp.md §D4.8 L841-909](week1-mvp.md) — D4.8 详细计划(5 契约 + 12 子任务)
