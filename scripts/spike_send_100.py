@@ -40,12 +40,16 @@ DB 用临时 sqlite + Keychain monkeypatch(不污染真实 ~/Library),沿 spike_
 from __future__ import annotations
 
 import argparse
+import os
 import statistics
 import sys
 import tempfile
 import time
 from collections import Counter
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -73,6 +77,55 @@ _CONFIRM_PHRASE: str = "yes-i-understand-this-sends-real-email"
 _REAL_MODE_MAX_RECIPIENTS: int = 1
 _REAL_MODE_MAX_COUNT: int = 10
 _INMEMORY_MAX_COUNT: int = 500
+# D5.6.4 P1-3 修复(4th round 检查员反馈):真实网络门
+# 显式 SMTP_REAL_NETWORK=1 才允许 --real 模式真连 SMTP 服务器
+# 默认空 → 任何 real_send=True 调用方会抛 ValueError(防误连 smtp.qq.com)
+_SMTP_REAL_NETWORK_ENV: str = "SMTP_REAL_NETWORK"
+_SMTP_REAL_NETWORK_VALUE: str = "1"
+
+
+@dataclass
+class SpikeResult:
+    """D5.6.4 spike 报告结构化骨架(8th round 落地)。
+
+    之前 spike 报告用 list[str] 拼 Markdown,不便下游消费(memory 同步 / CI 校验)。
+    本 dataclass 提供结构化结果,Markdown 渲染层仍用 report_lines,但关键数据可序列化。
+
+    字段说明(11 字段):
+        mode: "real" / "inmemory" — 实际跑的模式
+        smtp_real_network_unlocked: bool — SMTP_REAL_NETWORK env 是否为 "1"
+        total: int — spike 总封数(count)
+        sent: int — 实际 SENT 计数
+        business_blocked: int — 业务阻断计数
+        technical_failed: int — 技术失败计数
+        skipped: int — 跳过计数(退避未过期 / SLA BREACH 等)
+        total_duration_seconds: float — spike 主循环总耗时
+        p50_send_ms / p95_send_ms: float — 发送耗时分位数
+        sla_breach_count: int — URGENT SLA BREACH 触发计数
+        injection_failures_requested / actual: int — 失败注入请求 vs 实际触发
+        injection_breach_requested / actual: int — BREACH 注入请求 vs 实际触发
+
+    业务背景:SpikeResult 让 spike 结果可被 memory 同步脚本 / CI 校验脚本直接消费
+    (D5.7 docs 收口会用上),不再只写 Markdown 让人肉读。
+    """
+
+    mode: str = "inmemory"
+    smtp_real_network_unlocked: bool = False
+    total: int = 0
+    sent: int = 0
+    business_blocked: int = 0
+    technical_failed: int = 0
+    skipped: int = 0
+    total_duration_seconds: float = 0.0
+    p50_send_ms: float = 0.0
+    p95_send_ms: float = 0.0
+    sla_breach_count: int = 0
+    injection_failures_requested: int = 0
+    injection_failures_actual: int = 0
+    injection_breach_requested: int = 0
+    injection_breach_actual: int = 0
+    extra: dict[str, object] = field(default_factory=dict)
+
 
 # ===== 1. Keychain monkeypatch(不污染真实 macOS Keychain)=====
 
@@ -249,6 +302,7 @@ def run_spike(
     inject_breach: int = 0,
     batch_size: int = 10,
     count: int = 100,
+    smtp_transport_factory: Callable[[], Any] | None = None,
 ) -> None:
     """D5.6.1 spike 主流程 — N 封入 outbox + 批量 APPROVED + OutboxDispatcher 循环 + SMTP 发送.
 
@@ -266,10 +320,30 @@ def run_spike(
         inject_breach: 前 N 封 created_at 倒拨 → 触发 URGENT SLA BREACH
         batch_size: 每次 run_once 拉批上限(默认 10)
         count: spike 封数(默认 100,--real 模式最大 10,InMemory 模式最大 500)
+        smtp_transport_factory: D5.6.4 P1-3 修复 — SMTP transport 工厂注入(默认 None)
+            None: real_send 走 SmtpLibTransport(真发,需 SMTP_REAL_NETWORK=1),
+                  否则走 InMemorySmtpTransport(模拟)
+            非 None(可调用):用调用结果代替默认 transport(测试替身,monkeypatch 入口)
+            集成测试场景:即使 SMTP_REAL_NETWORK=1 显式解锁,也可注入
+            InMemorySmtpTransport 替代真发(双层防御:env 门 + factory 注入)
     """
     # ===== D5.6.2 P0 凭证链路 + D5.6.1 P1.2 防误发:CLI 严判 =====
     smtp_password: str  # REAL 模式从 Keychain 读(InMemory 模式不需要,占位即可)
     if real_send:
+        # 0. D5.6.4 P1-3 修复(4th round 检查员反馈):真实网络门
+        # 默认 os.environ.get("SMTP_REAL_NETWORK") != "1" → 抛错,绝不真连
+        # 真实跑法:SMTP_REAL_NETWORK=1 python scripts/spike_send_100.py --real ...
+        # 集成测试 / CI 严禁 SMTP_REAL_NETWORK=1(默认安全)
+        if os.environ.get(_SMTP_REAL_NETWORK_ENV) != _SMTP_REAL_NETWORK_VALUE:
+            raise ValueError(
+                f"D5.6.4 P1-3 修复(4th round 检查员反馈 P1):"
+                f"--real 模式严禁真连 SMTP 服务器(防 smtp.qq.com 误连)! "
+                f"必须显式设置环境变量 {_SMTP_REAL_NETWORK_ENV}={_SMTP_REAL_NETWORK_VALUE} 才允许真发。"
+                f"实际 env[{_SMTP_REAL_NETWORK_ENV}]={os.environ.get(_SMTP_REAL_NETWORK_ENV)!r}。"
+                f"真发命令范本:"
+                f"SMTP_REAL_NETWORK={_SMTP_REAL_NETWORK_VALUE} python scripts/spike_send_100.py "
+                f"--real --recipient <your-email> --confirm {_CONFIRM_PHRASE!r} --count 1"
+            )
         # 1. --recipient 必传
         if not recipient_email:
             raise ValueError(
@@ -313,7 +387,8 @@ def run_spike(
                 f"先跑:python scripts/spike_set_smtp_password.py "
                 f"--provider {smtp_provider} --email {smtp_username} --set-password <authcode>"
             )
-        smtp_password = smtp_password_result.value
+        smtp_password = smtp_password_result.value  # type: ignore[assignment]  # mypy: ok=True 时 .value 必非 None
+        assert smtp_password is not None  # 防 mypy 漏判,运行时兜底
         if not smtp_password or not smtp_password.strip():
             raise RuntimeError(
                 f"D5.6.2 凭证链路:Keychain 读出空密码({smtp_provider}/{smtp_username}),"
@@ -417,22 +492,22 @@ def run_spike(
             outbox_ids: list[int] = []
             for draft in drafts:
                 report = adapter.store_and_emit(
-                    email_id=int(draft["email_id"]),
-                    subject=str(draft["subject"]),
-                    body=str(draft["body"]),
-                    tone=str(draft["tone"]),
-                    recipient_email=str(draft["recipient_email"]),
-                    priority=str(draft["priority"]),
+                    email_id=int(draft["email_id"]),  # type: ignore[call-overload]
+                    subject=str(draft["subject"]),  # type: ignore[call-overload]
+                    body=str(draft["body"]),  # type: ignore[call-overload]
+                    tone=str(draft["tone"]),  # type: ignore[call-overload]
+                    recipient_email=str(draft["recipient_email"]),  # type: ignore[call-overload]
+                    priority=str(draft["priority"]),  # type: ignore[call-overload]
                 )
                 assert report.outbox_stored is True
                 assert report.outbox_id is not None
                 outbox_ids.append(report.outbox_id)
                 # 注入 SLA BREACH:update created_at 到老态(因为 store_and_emit 自动用 now)
-                if draft.get("created_at") and int(draft["created_at"]) < now_ms:
+                if draft.get("created_at") and int(draft["created_at"]) < now_ms:  # type: ignore[call-overload]
                     row = outbox_store.by_id(report.outbox_id)
                     if row is not None:
                         # 直接改 ORM created_at(D5 阶段无 status 转换要求,状态仍 PENDING_SEND)
-                        row.created_at = int(draft["created_at"])
+                        row.created_at = int(draft["created_at"])  # type: ignore[call-overload]
                         with session_factory() as session:  # type: ignore[call-arg]
                             session.merge(row)
                             session.commit()
@@ -457,7 +532,11 @@ def run_spike(
             )
 
             # 4. SMTP transport 选择
-            if real_send:
+            # D5.6.4 P1-3 修复:smtp_transport_factory 注入(双层防御:env 门 + factory)
+            if smtp_transport_factory is not None:
+                # 测试替身优先(monkeypatch 入口,即使 env 解锁也不真发)
+                transport = smtp_transport_factory()
+            elif real_send:
                 transport = SmtpLibTransport()
             else:
                 transport = InMemorySmtpTransport()
@@ -621,8 +700,9 @@ def run_spike(
                 print("     (REAL 模式,无 sent_log)")
 
             print("  3. Heartbeat 3 态验证(默认 HEALTHY):")
-            # 用最新真实时间(避免 spike 跑完后时间漂移导致"时间倒流"严判)
-            verify_now_ms = int(time.time() * 1000)
+            # D5.6.4 P0 修复:用虚拟时钟 current_now_ms(沿 D5.6.3 P1-2 范本)
+            # 旧代码用 int(time.time()*1000) 真实时间 → 虚拟时钟比真实快 70s,触发"时间倒流"严判
+            verify_now_ms = current_now_ms
             liveness = heartbeat.evaluate(now_ms=verify_now_ms)
             counters["liveness_healthy"] = 1 if liveness.value == "healthy" else 0
             print(

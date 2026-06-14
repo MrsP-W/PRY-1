@@ -96,10 +96,12 @@ def test_run_spike_rejects_placeholder_password() -> None:
     )
 
 
-def test_run_spike_rejects_test_local_host() -> None:
+def test_run_spike_rejects_test_local_host(monkeypatch: pytest.MonkeyPatch) -> None:
     """D5.6.2 防误发:REAL 模式拒 .test.local host(防占位 SMTP 服务器连真实网络)。"""
     from scripts import spike_send_100  # noqa: PLC0415
 
+    # D5.6.4 P1-3 修复:env 门解锁(让 .test.local 严判先于 env 门被测到)
+    monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
     with pytest.raises(ValueError, match="smtp_host 不能是 .test.local"):
         spike_send_100.run_spike(
             output_dir=Path("/tmp/dummy"),
@@ -115,7 +117,7 @@ def test_run_spike_rejects_test_local_host() -> None:
         )
 
 
-def test_run_spike_count_must_be_one() -> None:
+def test_run_spike_count_must_be_one(monkeypatch: pytest.MonkeyPatch) -> None:
     """D5.6.2 检查员反馈:--real 模式强制 count == 1(防止"我以为是 1 封但实际 10")。
 
     通过 mock Keychain 避免真实读取,只触发 count 严判段。
@@ -123,6 +125,8 @@ def test_run_spike_count_must_be_one() -> None:
     from my_ai_employee.core import keychain  # noqa: PLC0415
     from scripts import spike_send_100  # noqa: PLC0415
 
+    # D5.6.4 P1-3 修复:env 门解锁
+    monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
     # mock Keychain 让 count 严判前不报错
     fake_result = keychain.KeychainResult(ok=True, value="real-auth-code-16chars")
     with (
@@ -146,7 +150,7 @@ def test_run_spike_count_must_be_one() -> None:
 # ===== C. 凭证链路 =====
 
 
-def test_run_spike_reads_password_from_keychain() -> None:
+def test_run_spike_reads_password_from_keychain(monkeypatch: pytest.MonkeyPatch) -> None:
     """D5.6.2 P0 凭证链路 + D5.6.3 P2-4 加固:REAL 模式必须从 Keychain 真读。
 
     修复前(D5.6.2 P2-4 检查员反馈):
@@ -158,6 +162,9 @@ def test_run_spike_reads_password_from_keychain() -> None:
     """
     from my_ai_employee.core import keychain  # noqa: PLC0415
     from scripts import spike_send_100  # noqa: PLC0415
+
+    # D5.6.4 P1-3 修复:env 门解锁
+    monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
 
     real_password = "real-keychain-password-16chars"
     called_with: list[tuple[str, str]] = []
@@ -210,10 +217,13 @@ def test_run_spike_reads_password_from_keychain() -> None:
     assert "Keychain" not in str(exc_info.value) or "失败" in str(exc_info.value)
 
 
-def test_run_spike_rejects_empty_keychain_password() -> None:
+def test_run_spike_rejects_empty_keychain_password(monkeypatch: pytest.MonkeyPatch) -> None:
     """D5.6.2 P0 凭证链路:Keychain 读出空密码/占位时必须拒收(防脏数据蒙混)。"""
     from my_ai_employee.core import keychain  # noqa: PLC0415
     from scripts import spike_send_100  # noqa: PLC0415
+
+    # D5.6.4 P1-3 修复:env 门解锁
+    monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
 
     # 测试 1: Keychain 失败(ok=False)
     fail_result = keychain.KeychainResult(ok=False, error="not found")
