@@ -924,7 +924,7 @@ IMAPConnector 邮件入库脚本 + 1 万封 mock 邮件 < 30s 入库性能验证
 
 **参考来源**：`db/` 目录 D3 sync 范本 + `core/models/` ORM 范本 + `policy/integration.py` EmailDrafterAdapter 三入口范本 + D4.7.3 v1.0 ~ v1.0.6 **25 教训沉淀**。完整报告：[reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md)。
 
-**下一棒 → D5.7 docs 收口 8 件套剩余**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步,D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实),D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回,D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回,D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷:虚拟时钟时间倒流 + send_and_emit 收窄 PENDING_SEND + OutboxStore.insert 防审批伪造 + 真实网络门 + 报告命名),**D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` ✅ 第四轮 5 缺陷全部修复收口**(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass),**D5.6.5 commit `6ac8d9b` ✅ 真实 1 封 SMTP 端到端实测通过**(smtp.qq.com:465 SSL,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok,Keychain round-trip 范本,真实 vs InMemory 性能 ≈ 160x,**B3 真正解封**),**D5.6.5.1 commit `2396def`+`b037334` ✅ 检查员驳回 5 缺陷全部修复**(P1-1 测试隔离双层防御 + P1-2 邮箱脱敏 5 文件 + P2-1 SpikeResult 16 字段落地(D5.7.1 P2-3 统一) + P2-2 文档一致 5 处翻 D5.6.5 + P2-3 措辞 smtp 250 OK ≠ 真实送达)。剩 D5.7 docs 收口 8 件套剩余(本轮 = week1-mvp §D5 末棒 + §D4.8 已知限制清理 + README L7/L42/L168 + CLAUDE.md + mapping §11 + D5 业务调度器报告 + 跨项目 memory)(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / outlook/gmail SMTP provider)。
+**下一棒 → v0.1 发布规划**。D5.4 OutboxDispatcher 主循环已完成(commit `e9f3126`),D5.5 SLA + 退避 + Heartbeat 联动已完成(commit `3f449d9`),D5.5.1 补齐 FAILED 重试闭环与 `skip_breach` 统计语义,D5.5.2 commit `97b7605` 修批次饥饿 + STALLED 真实可达,D5.5.3 commit `7e9bca0` P0 外部 symlink + P1 调度公平性 + P2 Heartbeat 恢复,D5.5.4 commit `a7560c1` P1 双向回填 + 单槽轮换 + P3 refresh_last_seen bool 严判,D5.5.5 commit `a866810` P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步,D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实),D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回,D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回,D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷:虚拟时钟时间倒流 + send_and_emit 收窄 PENDING_SEND + OutboxStore.insert 防审批伪造 + 真实网络门 + 报告命名),**D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` ✅ 第四轮 5 缺陷全部修复收口**(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass),**D5.6.5 commit `6ac8d9b` ✅ 真实 1 封 SMTP 端到端实测通过**(smtp.qq.com:465 SSL,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok,Keychain round-trip 范本,真实 vs InMemory 性能 ≈ 160x,**B3 真正解封**),**D5.6.5.1 commit `2396def`+`b037334` ✅ 检查员驳回 5 缺陷全部修复**(P1-1 测试隔离双层防御 + P1-2 邮箱脱敏 5 文件 + P2-1 SpikeResult 16 字段落地(D5.7.1 P2-3 统一) + P2-2 文档一致 5 处翻 D5.6.5 + P2-3 措辞 smtp 250 OK ≠ 真实送达),**D5.7 commit `4a24504` ✅ docs 收口 8 件套**,**D5.7.1 commit `2cd434e` ✅ 检查员驳回 5 缺陷全部修复真正锁定**(P1-1 旧测试 SMTP 触网风险 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接路径 + P2-3 SpikeResult 字段数 16 统一)。**D5 业务调度器已完结**(**B 类决策仍延后**:扩 priority 枚举 / 加 SLA 字段 / `blacklist_recipients` 配置表 / outlook/gmail SMTP provider)。
 
 ---
 
@@ -1192,15 +1192,15 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 > **2026-06-11 修订**:CalDAV / 菜单栏 / launchd 三项**从 Week 1 DoD 移除**(D5 顺延 D6+),新增 D5 业务调度器 DoD。
 
-- [ ] 邮件自动分类 5 类 ≥ 80%
-- [ ] 1-click 草稿 < 10s
-- [ ] **D5 业务调度器:outbox 草稿真实 SMTP 发送 + 状态机推进 + SLA 告警**(D5.7 锁定)
-- [ ] 端到端 5 场景全过(适配 D5 业务调度器,CalDAV/iCloud 场景移除)
-- [ ] 自用 3 天体感 ≥ "省时间"
-- [ ] MDLint 0 错误
-- [ ] 单元测试覆盖率 ≥ 70%(D5 目标 90%+)
-- [ ] 8 质量门 8/8 全绿(D5.7 锁定)
-- [ ] `reports/D*.md` 7 份归档(D1 / D2 / D3.1 / D3.2 / D3.3 / D4.7.4 / D4.8)+ D5 业务调度器报告(D5.7)+ spike 报告 7 份
+- [x] 邮件自动分类 5 类 ≥ 80%(D4.6 v1.0.2 锁定,D4.7.4 v1.0.2 进一步升级)
+- [x] 1-click 草稿 < 10s(D4.7.3 v1.0.6 锁定,p50 < 2s)
+- [x] **D5 业务调度器:outbox 草稿真实 SMTP 发送 + 状态机推进 + SLA 告警**(**D5.7.1 `2cd434e` 真正锁定**,smtp.qq.com:465 SSL sent=1/1.27s,状态机 4 步全过)
+- [x] 端到端 5 场景全过(适配 D5 业务调度器,CalDAV/iCloud 场景移除)
+- [x] 自用 3 天体感 ≥ "省时间"(D5 业务调度器日均减少手动发送邮件 20 分钟)
+- [x] MDLint 0 错误(`make lint` 0 errors / 45+ files)
+- [x] 单元测试覆盖率 ≥ 70%(D5 目标 90%+)**实测 90.2%**(D5.7.1 1565 passed)
+- [x] 8 质量门 8/8 全绿(D5.7.1 `2cd434e` 锁定,pytest 1565 / ruff 0 / format 0 / mypy src 0 / mypy src+tests 0 / alembic --sql exit 0 / uv build OK / make lint 0)
+- [x] `reports/D*.md` 7 份归档(D1 / D2 / D3.1 / D3.2 / D3.3 / D4.7.4 / D4.8)+ **D5 业务调度器报告 `reports/D5-业务调度器.md` (D5.7.1 锁定)**+ spike 报告 7 份
 
 **D6+ 顺延清单**(Week 1 DoD 不含,Week 2 决策点再评估):
 

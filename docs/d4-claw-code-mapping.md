@@ -569,10 +569,9 @@ claw-code 仓库无"邮件草稿审阅"或"草稿质量评分"模块。**D4.7.4 
 **最后更新**:2026-06-11 早晨(**D4.7.4 v1.0.2 业务层三入口真正锁定**:v1.0 → v1.0.1 → **v1.0.2** / D4.7.4 业务层 213 / 全量 1240 tests / 8 质量门 8/8 全绿 / `policy/integration.py` 91.1% 覆盖 / D4.7.3 25 教训全应用)
 **维护者**:Mr-PRY
 **关联**:
-- [memory/D4-claw-code-auto-reference.md](../../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则
-- [memory/claw-code-reference.md](../../Agent%20Assistant/memory/claw-code-reference.md) — 仓库快照 + 6 个高价值文件
+- [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射(D4.7.3+D4.7.4+D4.8 关联规则)
 - [memory/tools_status.md](../../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
-- [reports/D4.7.4-草稿审阅.md](../我的AI员工/reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段
+- [reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段(同项目内,无需跨目录)
 - [memory/d4.7.3-drafter-adapter-v1.0.6.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 v1.0 ~ v1.0.6 25 教训沉淀
 - [memory/d4.7.3-drafter-adapter.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter.md) — D4.7.3 起始范本
 
