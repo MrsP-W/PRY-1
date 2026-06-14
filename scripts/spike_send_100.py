@@ -107,6 +107,10 @@ class SpikeResult:
 
     业务背景:SpikeResult 让 spike 结果可被 memory 同步脚本 / CI 校验脚本直接消费
     (D5.7 docs 收口会用上),不再只写 Markdown 让人肉读。
+
+    D5.6.5.1 P2-3 措辞澄清:本结果只证明"SMTP 服务器接受" (smtp 250 OK),不证明
+    "真实送达" (delivery confirmed by recipient inbox)。后者需收件人手动确认,
+    或接 IMAP 投递回执,不在 D5 业务调度器职责范围。
     """
 
     mode: str = "inmemory"
@@ -303,8 +307,12 @@ def run_spike(
     batch_size: int = 10,
     count: int = 100,
     smtp_transport_factory: Callable[[], Any] | None = None,
-) -> None:
+) -> SpikeResult:
     """D5.6.1 spike 主流程 — N 封入 outbox + 批量 APPROVED + OutboxDispatcher 循环 + SMTP 发送.
+
+    D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(11 字段结构化),
+    之前返回 None 浪费了 dataclass 定义。下游 memory 同步 / CI 校验脚本可直接消费
+    SpikeResult 字段,不再只写 Markdown 让人肉读。
 
     Args:
         output_dir: 报告输出目录
@@ -326,6 +334,9 @@ def run_spike(
             非 None(可调用):用调用结果代替默认 transport(测试替身,monkeypatch 入口)
             集成测试场景:即使 SMTP_REAL_NETWORK=1 显式解锁,也可注入
             InMemorySmtpTransport 替代真发(双层防御:env 门 + factory 注入)
+
+    Returns:
+        SpikeResult — 11 字段结构化结果(memory 同步 / CI 校验 / markdown 渲染统一来源)
     """
     # ===== D5.6.2 P0 凭证链路 + D5.6.1 P1.2 防误发:CLI 严判 =====
     smtp_password: str  # REAL 模式从 Keychain 读(InMemory 模式不需要,占位即可)
@@ -890,6 +901,36 @@ def run_spike(
             f"avg={avg * 1000:.2f}ms / p50={p50 * 1000:.2f}ms / "
             f"p95={p95 * 1000:.2f}ms / max={max(dispatcher_latencies_sorted) * 1000:.2f}ms"
         )
+
+    # ===== D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(11 字段)=====
+    # 之前返回 None,浪费了 dataclass 定义。下游 memory 同步 / CI 校验脚本可
+    # 直接消费 SpikeResult 字段,不再只写 Markdown 让人肉读。
+    # 注意:本结果只证明"SMTP 服务器接受" (smtp 250 OK),不证明"真实送达"
+    # (后者需收件人手动确认或 IMAP 投递回执,不在 D5 业务调度器职责范围)。
+    return SpikeResult(
+        mode="real" if real_send else "inmemory",
+        smtp_real_network_unlocked=os.environ.get(_SMTP_REAL_NETWORK_ENV)
+        == _SMTP_REAL_NETWORK_VALUE,
+        total=count,
+        sent=int(counters["sent"]),
+        business_blocked=int(counters["business_blocked"]),
+        technical_failed=int(counters["technical_failed"]),
+        skipped=int(counters["skipped"]),
+        total_duration_seconds=float(t_dispatch_total),
+        p50_send_ms=float(p50) * 1000.0,
+        p95_send_ms=float(p95) * 1000.0,
+        sla_breach_count=int(counters["skip_breach"]),
+        injection_failures_requested=inject_failures,
+        injection_failures_actual=len(injection_events_holder.get("events", [])),
+        injection_breach_requested=inject_breach,
+        injection_breach_actual=int(counters["skip_breach"]) if inject_breach > 0 else 0,
+        extra={
+            "total_picked": int(counters["total_picked"]),
+            "iterations": int(counters["iterations"]),
+            "state_machine_final": int(counters.get("state_machine_final", 0)),
+            "report_path": str(report_path),
+        },
+    )
 
 
 def main() -> None:
