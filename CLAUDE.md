@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**D5 业务调度器推进中**（D5.1-D5.6.4 ✅，下一步 D5.6.5 真实 1 封实测 + D5.7 docs 收口 8 件套剩余）。
+**当前阶段**：**D5 业务调度器推进中**（D5.1-D5.6.5 ✅，B3 真正解封，真实 1 封 SMTP 端到端实测通过，sent=1/1.27s；下一步 D5.7 docs 收口 8 件套剩余 + v0.1 发布规划）。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 5 软链 + 2 专属）
 
