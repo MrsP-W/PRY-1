@@ -2,7 +2,7 @@
 
 > **目的**：把 5 层架构、关键决策理由、适配器契约、数据流、安全模型、失败模式讲清楚，作为 D1+ 所有编码的参考。
 >
-> **状态**：D1-D5.7.2 真正锁定(2026-06-14:smtp.qq.com:465 SSL 真实 1 封 SMTP 端到端实测通过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / B3 真正解封 / 1565 passed / 8 质量门 8/8 全绿 / 90.2% 覆盖,D5.6.5 commit `6ac8d9b` + D5.6.5.1 commit `2396def`+`b037334` 检查员驳回 5 缺陷全部修复 + D5.7 docs 收口 8 件套 commit `4a24504` + D5.7.1 检查员驳回 5 缺陷全部修复真正锁定 commit `2cd434e` + D5.7.2 docs 收口最后一致性修正 真正锁定 commit `f670c74`)。**D5 业务调度器完全锁定,直接进入 v0.1 发布规划(commit TBD)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) — 4 子阶段 D6+D7+D9+D10 + 收口,D8 智能财务延后 v0.2,B1/B2/B4/outlook-gmail 仍延后,2026-07 中下旬发布。CalDAV / 菜单栏 / launchd 顺延 D6+。
+> **状态**：D1-D5.7.2 真正锁定(2026-06-14:smtp.qq.com:465 SSL 真实 1 封 SMTP 端到端实测通过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / B3 真正解封 / 1565 passed / 8 质量门 8/8 全绿 / 90.2% 覆盖,D5.6.5 commit `6ac8d9b` + D5.6.5.1 commit `2396def`+`b037334` 检查员驳回 5 缺陷全部修复 + D5.7 docs 收口 8 件套 commit `4a24504` + D5.7.1 检查员驳回 5 缺陷全部修复真正锁定 commit `2cd434e` + D5.7.2 docs 收口最后一致性修正 真正锁定 commit `ef83c63`)。**D5 业务调度器完全锁定,直接进入 v0.1 发布规划(commit `effef5a`,2026-06-14)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) — 4 子阶段 D6+D7+D9+D10 + 收口,D8 智能财务延后 v0.2,B1/B2/B4/outlook-gmail 仍延后,2026-07 中下旬发布。CalDAV / 菜单栏 / launchd 顺延 D6+。
 
 ---
 
@@ -413,6 +413,6 @@ CREATE TABLE health_log (
 
 ---
 
-**最后更新**:2026-06-13(D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` 第三轮 7 项反馈全部修复收口,P1-1 审批凭据迁移 0006 + dispatcher 拉批严判 + 10 新 tests + spike 5 项收口,D5.6.3:1554 passed / 8 质量门全绿 / 90.3% 覆盖)
-**状态**:D1-D5.7.2 真正锁定(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1 `c4a7d01` + D5.6.1 `fdf44c6` + D5.6.2 `819affb`+`8fdc088` + D5.6.3 `007a6be`+`2bc5b3b`+`3de03ed` + D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` + D5.6.5 `6ac8d9b` + D5.6.5.1 `2396def`+`b037334` + D5.7 `4a24504` + D5.7.1 `2cd434e` + D5.7.2 `f670c74` docs 收口最后一致性修正 + **v0.1 启动规划落地 commit TBD**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) 4 子阶段 D6+D7+D9+D10 + 收口,2026-07 中下旬发布),**D5 业务调度器完全锁定,直接进入 v0.1 发布规划**
+**最后更新**:2026-06-14(D5.7.2 commit `ef83c63` docs 收口最后一致性修正 + v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `TBD`)
+**状态**:D1-D5.7.2 真正锁定(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1 `c4a7d01` + D5.6.1 `fdf44c6` + D5.6.2 `819affb`+`8fdc088` + D5.6.3 `007a6be`+`2bc5b3b`+`3de03ed` + D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` + D5.6.5 `6ac8d9b` + D5.6.5.1 `2396def`+`b037334` + D5.7 `4a24504` + D5.7.1 `2cd434e` + D5.7.2 `ef83c63` docs 收口最后一致性修正 + **v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `TBD`**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) 4 子阶段 D6+D7+D9+D10 + 收口,2026-07 中下旬发布),**D5 业务调度器完全锁定,直接进入 v0.1 发布规划**
 **维护者**:Mr-PRY

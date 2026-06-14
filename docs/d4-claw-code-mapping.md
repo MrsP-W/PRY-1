@@ -572,8 +572,8 @@ claw-code 仓库无"邮件草稿审阅"或"草稿质量评分"模块。**D4.7.4 
 - [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射(D4.7.3+D4.7.4+D4.8 关联规则)
 - [memory/tools_status.md](../../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
 - [reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段(同项目内,无需跨目录)
-- [memory/d4.7.3-drafter-adapter-v1.0.6.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 v1.0 ~ v1.0.6 25 教训沉淀
-- [memory/d4.7.3-drafter-adapter.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter.md) — D4.7.3 起始范本
+- [memory/d4.6-v1.0.2-fixes.md](../../Agent%20Assistant/memory/d4.6-v1.0.2-fixes.md) — D4.6 v1.0.2 业务语义修复 4 教训
+- [memory/d4.7.1-v1.0.2-second-pass.md](../../Agent%20Assistant/memory/d4.7.1-v1.0.2-second-pass.md) — D4.7.1 v1.0.2 第二次复检 4 收口
 
 ---
 
