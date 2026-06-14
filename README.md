@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.6.3 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步 → D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实) → D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回 → D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回 → **D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ✅ 第三轮 7 项反馈全部修复(migration 0006 加 last_approved_at_ms 审批凭据 + dispatcher 拉批严判 + 10 新 tests + spike 5 项收口)**,1554 passed / 8 质量门 8/8 全绿;**下一步 D5.6.4 真实 1 封实测(需用户手动跑 --real --count 1)**。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.6.4 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步 → D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实) → D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回 → D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回 → D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷:虚拟时钟时间倒流 + send_and_emit 收窄 PENDING_SEND + OutboxStore.insert 防审批伪造 + 真实网络门 + 报告命名) → **D5.6.4 commit `a75894c`+`e07feee` ✅ 第四轮 5 缺陷全部修复(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass)**,278 passed / ruff 0 errors / mypy 0 errors;**下一步 D5.6.5 真实 1 封实测(需用户手动跑 `SMTP_REAL_NETWORK=1 ... --real --count 1`)**。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -165,7 +165,7 @@ make help
 | **D2 IMAP 适配器**（QQ 授权码 + Keychain + 熔断）| ✅ 完成 | 2026-06-07 |
 | **D3 数据层 + 同步**（D3.1 加密 SQLite + D3.2 ORM/alembic + D3.3 IMAP 同步 1万封 0.35s）| ✅ 完成 | 2026-06-08 |
 | **D4 智能层**（D4.1 LLM 路由 + D4.6 分类器 + D4.7 草稿生成 + D4.8 草稿入库 v1.0.1）| ✅ 完成 | 2026-06-11 |
-| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5 ✅ / **D5.6.3 ✅** (7 项第三轮修复 100% 落地) / D5.6.4 真实实测(等用户) / D5.7 docs 收口(等 D5.6.4) |
+| **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| 🚧 推进中 | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5 ✅ / D5.6.3 ⏸️(4th round 驳回) / **D5.6.4 ✅** (5 项第四轮修复 100% 落地) / D5.6.5 真实实测(等用户) / D5.7 docs 收口(部分落地) |
 | D6+ CalDAV + 菜单栏 + launchd | ⏸️ 顺延 | Week 2 决策点 |
 | **Week 1 末决策点** | ⏳ | - |
 | D7-D11 Week 2 | ⏳ | - |
@@ -237,6 +237,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-13（D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` 第三轮 7 项反馈全部修复收口:P1-1 审批凭据迁移 0006 + dispatcher 拉批严判 + 10 新 tests + spike 5 项收口,1554 passed / 8 质量门全绿 / 90.3% 覆盖。下一步 D5.6.4 真实 1 封实测 + D5.7 docs 收口 8 件套）
+**最后更新**：2026-06-14（D5.6.4 commit `a75894c`+`e07feee` 第四轮 5 缺陷全部修复收口:P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass,278 passed / ruff 0 errors / mypy 0 errors。下一步 D5.6.5 真实 1 封实测 + D5.7 docs 收口 8 件套剩余）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
