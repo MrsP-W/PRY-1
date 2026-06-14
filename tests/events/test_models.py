@@ -29,11 +29,11 @@ from my_ai_employee.events import (  # noqa: E402
 
 class TestMetadataRegistration:
     def test_events_table_registered(self) -> None:
-        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox)."""
+        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions)."""
         tables = sorted(Base.metadata.tables.keys())
         assert "events" in tables
-        # 8 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox
-        assert len(tables) == 8
+        # 9 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions
+        assert len(tables) == 9
 
     def test_events_table_has_7_columns(self) -> None:
         """events 表 7 字段 (id + event + status + source + subject_id + fingerprint + event_metadata + created_at)."""

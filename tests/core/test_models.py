@@ -99,8 +99,8 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 # ===== Metadata / 6 个 Model 注册 =====
 
 
-def test_eight_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 8 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox, mirror schema.sql)。"""
+def test_nine_models_registered_in_metadata() -> None:
+    """Base.metadata 注册了 9 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions, mirror schema.sql)。"""
     tables = list_tables()
     assert tables == sorted(
         [
@@ -112,6 +112,7 @@ def test_eight_models_registered_in_metadata() -> None:
             "audit_log",
             "events",
             "outbox",
+            "transactions",
         ]
     )
 

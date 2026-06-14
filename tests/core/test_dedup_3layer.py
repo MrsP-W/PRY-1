@@ -38,12 +38,19 @@ def _insert_test_tx(
     amount: str = "13.14",
     counterparty: str = "星巴克",
     fingerprint: str = "fp-test-001",
+    transaction_date: str = "2026-06-14",
+    imported_at_ms: int = 1718390400000,
 ) -> int:
-    """插入一条测试 transactions 行,返回 id."""
+    """插入一条测试 transactions 行,返回 id.
+
+    D6.4 升级:加 transaction_date + imported_at_ms + status + raw_row_json 列
+    (D6.4 transactions 16 列 schema 必含,4 列 NOT NULL 必填)。
+    """
     sql = text(
         "INSERT INTO transactions "
-        "(source, external_transaction_id, amount, counterparty, normalized_fingerprint) "
-        "VALUES (:source, :ext_id, :amount, :cp, :fp)"
+        "(source, external_transaction_id, amount, counterparty, normalized_fingerprint, "
+        "transaction_date, imported_at_ms, status, raw_row_json) "
+        "VALUES (:source, :ext_id, :amount, :cp, :fp, :date, :ts, :status, :raw)"
     )
     result = session.execute(
         sql,
@@ -53,6 +60,10 @@ def _insert_test_tx(
             "amount": amount,
             "cp": counterparty,
             "fp": fingerprint,
+            "date": transaction_date,
+            "ts": imported_at_ms,
+            "status": "imported",
+            "raw": "{}",
         },
     )
     session.commit()

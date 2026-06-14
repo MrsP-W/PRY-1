@@ -10,6 +10,13 @@
     - OutboxStore.insert IntegrityError 窄化: db/outbox.py:230-244
     - OutboxEmailDuplicateError 业务阻断入口: db/outbox.py:55-72
     - compute_fingerprint 派生稳定键: events/contract.py:179-220
+    - Transaction ORM 16 列: db/transactions.py:114-194(D6.4)
+    - TransactionStore 严判入参: db/transactions.py:230-260
+
+D6.4 更新(沿 plan §3 D6.4 任务):
+    - 替换 text() 原生 SQL 为 ORM 查询(Transaction model,沿 db/transactions.py)
+    - 函数签名不动:D7 启动时直接复用
+    - mark_l3_needs_confirm 改用 session.execute(update()) ORM 操作
 
 D3.3.3 教训应用:
     - except 范围窄化: 只接 IntegrityError(UNIQUE 冲突 → 业务阻断)
@@ -20,7 +27,7 @@ D7 兼容 5 扩展点(沿 plan §7):
     - `source: str` 通用参数(无硬编码 'wechat')
     - 函数签名全 `session: Session` 注入,无模块级 DB 单例
     - check_l1_duplicate / find_l2_candidates / mark_l3_needs_confirm 全部不接 ORM 字段名
-      (本阶段 ORM 字段未建,用 select + text() 原生 SQL 锁定契约,D6.4 替换为 ORM 即可)
+    - mark_l3_needs_confirm 调 ORM update,无需 ORM 字段名(沿 D6.4 范本)
 """
 
 from __future__ import annotations
@@ -29,9 +36,12 @@ import re
 from typing import Any
 
 import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # D3.3.2 教训: 双层 except 防 SQLCipher dialect 不包装 dbapi 异常
-from sqlalchemy import text
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
+# 延迟导入 Transaction(D6.4):避免 dedup.py 直接依赖 db.transactions 模块(D6.2 阶段 db.transactions 还未建)
+# 实际查询时再 import,让函数签名保持纯净
 
 # ===== 异常类型层级(沿 db/outbox.py:55-72 范本)=====
 
@@ -132,7 +142,7 @@ def check_l1_duplicate(
     这是**轻量级**预检(不依赖 UNIQUE 约束,只读查 source + external_tx_id 索引)。
 
     Args:
-        session: SQLAlchemy Session(D6.4 完整 ORM 就位后)
+        session: SQLAlchemy Session(D6.4 完整 ORM 就位)
         source: 业务源标识('wechat' / 'alipay' 等)
         external_transaction_id: 业务侧交易流水号
 
@@ -144,6 +154,9 @@ def check_l1_duplicate(
         ValueError: 入参格式非法
         sqlalchemy.exc.OperationalError: DB 锁/连接失败 — 透传给 Adapter 走技术失败入口
 
+    D6.4 更新:用 `select(Transaction)` ORM 替换 `text()` 原生 SQL
+    (沿 db/transactions.py:294-302 by_external_id 范本)
+
     Note:
         实际 INSERT 时仍需依赖 `UNIQUE(source, external_transaction_id)` 约束兜底
         (D6.4 transactions 表 0007 migration 必加),本函数只做**预检优化**。
@@ -153,16 +166,18 @@ def check_l1_duplicate(
     _validate_source(source)
     _validate_external_tx_id(external_transaction_id)
 
-    # 严判严判 SELECT:仅查 UNIQUE(source, external_transaction_id) 索引列
-    sql = text(
-        "SELECT 1 FROM transactions "
-        "WHERE source = :source AND external_transaction_id = :external_tx_id "
-        "LIMIT 1"
+    # D6.4:ORM 替换 text() 原生 SQL(沿 db/transactions.py:294-302 by_external_id 范本)
+    from my_ai_employee.db.transactions import Transaction
+
+    stmt = (
+        select(Transaction.id)
+        .where(
+            Transaction.source == source,
+            Transaction.external_transaction_id == external_transaction_id,
+        )
+        .limit(1)
     )
-    row = session.execute(
-        sql,
-        {"source": source, "external_tx_id": external_transaction_id},
-    ).first()
+    row = session.execute(stmt).first()
     return row is not None
 
 
@@ -218,6 +233,9 @@ def find_l2_candidates(
     Raises:
         ValueError: fingerprint 长度非法 / 入参格式非法
         sqlalchemy.exc.OperationalError: DB 锁/连接失败 — 透传给 Adapter 走技术失败入口
+
+    D6.4 更新:用 `select(Transaction)` ORM 替换 `text()` 原生 SQL
+    (沿 db/transactions.py:339-365 find_candidates_by_fingerprint 范本)
     """
     if not isinstance(fingerprint, str) or len(fingerprint) != 32:
         raise ValueError(f"fingerprint 必须是 32 chars hex,实际 len={len(fingerprint)!r}")
@@ -226,39 +244,90 @@ def find_l2_candidates(
     if not isinstance(limit, int) or limit < 1 or limit > 100:
         raise ValueError(f"limit 必须是 [1, 100] 的 int,实际 {limit!r}")
 
-    # 严判严判 SELECT:查 normalized_fingerprint INDEX
-    # 排除自身(写入时 D6.5 Adapter 传 exclude_tx_id 防自命中)
-    # 按 id ASC 排序(选最小 ID,确定性)
+    # D6.4:ORM 替换 text() 原生 SQL
+    from my_ai_employee.db.transactions import Transaction
+
     if source_filter is not None:
         _validate_source(source_filter)
-        sql = text(
-            "SELECT id, source, external_transaction_id, amount, counterparty "
-            "FROM transactions "
-            "WHERE normalized_fingerprint = :fingerprint AND source = :source "
-            "AND (:exclude_id IS NULL OR id != :exclude_id) "
-            "ORDER BY id ASC LIMIT :limit"
+        stmt = (
+            select(
+                Transaction.id,
+                Transaction.source,
+                Transaction.external_transaction_id,
+                Transaction.amount,
+                Transaction.counterparty,
+            )
+            .where(
+                Transaction.normalized_fingerprint == fingerprint,
+                Transaction.source == source_filter,
+            )
+            .order_by(Transaction.id.asc())
+            .limit(limit)
         )
-        params: dict[str, Any] = {
-            "fingerprint": fingerprint,
-            "source": source_filter,
-            "exclude_id": exclude_tx_id,
-            "limit": limit,
-        }
     else:
-        sql = text(
-            "SELECT id, source, external_transaction_id, amount, counterparty "
-            "FROM transactions "
-            "WHERE normalized_fingerprint = :fingerprint "
-            "AND (:exclude_id IS NULL OR id != :exclude_id) "
-            "ORDER BY id ASC LIMIT :limit"
+        stmt = (
+            select(
+                Transaction.id,
+                Transaction.source,
+                Transaction.external_transaction_id,
+                Transaction.amount,
+                Transaction.counterparty,
+            )
+            .where(Transaction.normalized_fingerprint == fingerprint)
+            .order_by(Transaction.id.asc())
+            .limit(limit)
         )
-        params = {
-            "fingerprint": fingerprint,
-            "exclude_id": exclude_tx_id,
-            "limit": limit,
-        }
 
-    rows = session.execute(sql, params).fetchall()
+    if exclude_tx_id is not None:
+        if (
+            not isinstance(exclude_tx_id, int)
+            or isinstance(exclude_tx_id, bool)
+            or exclude_tx_id < 1
+        ):
+            raise ValueError(f"exclude_tx_id 必须是正 int(非 bool),实际 {exclude_tx_id!r}")
+        # 排除自身条件,SQLAlchemy 2.0 写法:where(id != exclude_id) 当 exclude_id is not None
+        # 这里用条件构造:为兼容两个分支,在外面追加 where
+        from sqlalchemy import and_
+
+        if source_filter is not None:
+            stmt = (
+                select(
+                    Transaction.id,
+                    Transaction.source,
+                    Transaction.external_transaction_id,
+                    Transaction.amount,
+                    Transaction.counterparty,
+                )
+                .where(
+                    and_(
+                        Transaction.normalized_fingerprint == fingerprint,
+                        Transaction.source == source_filter,
+                        Transaction.id != exclude_tx_id,
+                    )
+                )
+                .order_by(Transaction.id.asc())
+                .limit(limit)
+            )
+        else:
+            stmt = (
+                select(
+                    Transaction.id,
+                    Transaction.source,
+                    Transaction.external_transaction_id,
+                    Transaction.amount,
+                    Transaction.counterparty,
+                )
+                .where(
+                    and_(
+                        Transaction.normalized_fingerprint == fingerprint,
+                        Transaction.id != exclude_tx_id,
+                    )
+                )
+                .order_by(Transaction.id.asc())
+                .limit(limit)
+            )
+
+    rows = session.execute(stmt).fetchall()
     return [
         {
             "id": int(row[0]),
@@ -291,7 +360,7 @@ def mark_l3_needs_confirm(
     """L3 模糊匹配 — 只标记 needs_confirm=True + candidate_match_id,绝不 delete/update 候选.
 
     D6.2 阶段:用 `text()` 原生 SQL 直接 UPDATE。
-    D6.4 阶段:可替换为 `Transaction` ORM + 状态机严判。
+    D6.4 阶段:替换为 `update(Transaction)` ORM 操作 + 严判 needs_confirm=0 条件(防覆盖)。
 
     设计要点(v0.1-launch-plan.md 防误合并 5 重点):
         1. **绝不**自动 delete/update 候选行(防"同金额不同交易"误合并)
@@ -308,6 +377,9 @@ def mark_l3_needs_confirm(
     Raises:
         ValueError: 入参格式非法
         sqlalchemy.exc.OperationalError: DB 锁/连接失败 — 透传给 Adapter 走技术失败入口
+
+    D6.4 更新:用 `update(Transaction)` ORM 替换 `text()` 原生 SQL
+    (沿 db/transactions.py:373-380 update_status 范本,严判 needs_confirm=0 条件)
     """
     _validate_tx_id(new_tx_id, "new_tx_id")
     _validate_tx_id(candidate_match_id, "candidate_match_id")
@@ -317,15 +389,15 @@ def mark_l3_needs_confirm(
             f"candidate_match_id={candidate_match_id} (防自命中)"
         )
 
-    sql = text(
-        "UPDATE transactions "
-        "SET needs_confirm = 1, candidate_match_id = :candidate_id "
-        "WHERE id = :new_id AND needs_confirm = 0"
+    # D6.4:ORM update 替换 text() 原生 SQL
+    from my_ai_employee.db.transactions import Transaction
+
+    stmt = (
+        update(Transaction)
+        .where(Transaction.id == new_tx_id, Transaction.needs_confirm == 0)
+        .values(needs_confirm=1, candidate_match_id=candidate_match_id)
     )
-    session.execute(
-        sql,
-        {"candidate_id": candidate_match_id, "new_id": new_tx_id},
-    )
+    session.execute(stmt)
     # 注意:不 commit — 调用方(D6.5 TransactionAdapter)统一 commit(沿 D4.8.4 范本)
 
 

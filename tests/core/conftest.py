@@ -1,16 +1,15 @@
-"""D6.2 — core 测试共享 fixture(transactions 表临时建表,InMemory SQLite).
+"""D6.2 + D6.4 — core 测试共享 fixture(transactions 表 16 列,InMemory SQLite).
 
-承接 D6.2 dedup.py 3 层去重模型测试基础设施:
+承接 D6.2 dedup.py 3 层去重模型测试基础设施 + D6.4 transactions ORM 16 列升级:
 
-    - InMemory SQLite + 临时建 transactions 表(只含 dedup 需要的 6 列,简化版)
+    - InMemory SQLite + 临时建 transactions 表(D6.4 完整 16 列)
+    - D6.4 dedup.py ORM 替换 text() 后,需要完整 16 列 schema 才能查得
     - 复用 tests/policy/conftest.py 范本(Base.metadata.create_all)
-    - D6.4 替换为完整 ORM 即可(本 conftest 仅 D6.2 阶段使用)
 
-设计决策:
-    - transactions 表简化版(只含 dedup 必需的 6 列):
-        id / source / external_transaction_id / amount / counterparty / normalized_fingerprint
-    - 不含 needs_confirm / candidate_match_id / status / etc.(D6.4 才完整)
-    - D6.4 migrations 0007 落地后,本 conftest 可删除,统一走 test_transactions.py
+D6.4 升级:
+    - 从 6 列简化版 → 16 列完整版(沿 db/transactions.py Transaction ORM)
+    - D6.2 三个 dedup 测试(check_l1_duplicate + find_l2_candidates + mark_l3_needs_confirm)
+      仍用此 fixture(完整 16 列 schema 兼容 6 列查询)
 """
 
 from __future__ import annotations
@@ -18,40 +17,23 @@ from __future__ import annotations
 from collections.abc import Iterator
 
 import pytest
-from sqlalchemy import (
-    create_engine,
-    text,
-)
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture
 def engine() -> Iterator:
-    """InMemory SQLite + 临时建 transactions 简化表(D6.2 阶段)."""
-    eng = create_engine("sqlite:///:memory:")
+    """InMemory SQLite + 临时建 transactions 完整 16 列表(D6.4 升级).
 
-    # 用 DDL 临时建表(简化版,只含 dedup 必需 6 列)
-    ddl = text(
-        """
-        CREATE TABLE transactions (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            source TEXT NOT NULL,
-            external_transaction_id TEXT NOT NULL,
-            amount NUMERIC(10, 2) NOT NULL,
-            counterparty TEXT NOT NULL,
-            normalized_fingerprint TEXT NOT NULL,
-            UNIQUE(source, external_transaction_id)
-        )
-        """
-    )
-    with eng.begin() as conn:
-        conn.execute(ddl)
-        # L2 软标记用 INDEX(非 UNIQUE)
-        conn.execute(
-            text(
-                "CREATE INDEX idx_transactions_fingerprint ON transactions(normalized_fingerprint)"
-            )
-        )
+    用 SQLAlchemy create_all + Transaction model(沿 db/transactions.py)创建,
+    无需手写 DDL,Base.metadata 自动同步 ORM → DDL。
+    """
+    eng = create_engine("sqlite:///:memory:")
+    # 显式 import 触发 SQLAlchemy 注册到 Base.metadata
+    from my_ai_employee.core.models import Base
+    from my_ai_employee.db.transactions import Transaction  # noqa: F401  # noqa: F401
+
+    Base.metadata.create_all(eng)
     yield eng
     eng.dispose()
 
