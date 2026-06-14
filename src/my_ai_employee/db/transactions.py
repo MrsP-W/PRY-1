@@ -383,6 +383,205 @@ class TransactionStore:
                 # 其他 IntegrityError(FK 约束 / CHECK 约束) 走技术失败
                 raise
 
+    # ===== D6.6 P2 修复:原子化 insert + update_status =====
+
+    def insert_and_advance_status(
+        self,
+        *,
+        source: str,
+        external_transaction_id: str,
+        transaction_date: date,
+        amount: Decimal,
+        counterparty: str,
+        normalized_fingerprint: str,
+        raw_row_json: str,
+        new_status: str | TransactionStatus,
+        from_status: str | TransactionStatus = TransactionStatus.IMPORTED,
+        category: str | None = None,
+        payment_method: str | None = None,
+        needs_confirm: bool = False,
+        candidate_match_id: int | None = None,
+        notes: str | None = None,
+        imported_at_ms: int | None = None,
+        confirmed_at_ms: int | None = None,
+    ) -> Transaction:
+        """原子化 insert + update_status(D6.6 P2 修复 — 单事务,任一失败全回滚).
+
+        沿 D6.4 严判链 + D6.4 v1.0.2 P1-2 漂移检测:
+            - 业务层严判在 session 之外(失败更快,无副作用)
+            - INSERT 后 flush(触发 UNIQUE 约束 + 拿到 id)
+            - 同一 session 内 update_status(状态机漂移检测 + 白名单严判)
+            - 任何一步失败 → session.rollback() → 整事务回滚
+
+        Args:
+            source: 业务源标识('wechat' / 'alipay' 等,D6.4 严判 ^[a-z0-9_-]{1,32}$)
+            external_transaction_id: 业务侧交易流水号(1-128 字符)
+            transaction_date: 交易日期(必传 date,非 datetime)
+            amount: 交易金额(Decimal 严判 2 位小数)
+            counterparty: 商家名(非空 strip() 后非空)
+            normalized_fingerprint: 32 chars SHA-256 hex
+            raw_row_json: 原始行 JSON 字符串(必传,合法 JSON)
+            new_status: 目标 status(TransactionStatus 5 选 1)
+            from_status: 调用方预期的当前 status(默认 IMPORTED,沿 D6.5 范本)
+            category: TransactionCategory 5 选 1(None 表示待分类)
+            payment_method: 支付方式(可空)
+            needs_confirm: L3 软标记(默认 False)
+            candidate_match_id: L3 候选 ID(可空)
+            notes: 备注(可空)
+            imported_at_ms: Unix epoch ms(默认 = 当前时间)
+            confirmed_at_ms: 用户确认时间戳(CONFIRMED 必传,其他必传 None)
+
+        Returns:
+            更新后的 Transaction(已 refresh,id/status 都可读)
+
+        Raises:
+            TransactionDuplicateError: UNIQUE(source, external_transaction_id) 冲突
+                (L1 业务阻断入口)
+            TransactionIllegalTransitionError: 状态漂移 / 白名单外转换
+            ValueError: 业务层严判失败(类型 / 范围 / 枚举值)
+            sqlalchemy.exc.OperationalError / DataError / InterfaceError: 技术失败
+                (透传给 Adapter 走 record_transaction_failure_and_emit)
+        """
+        # 1. 业务层严判(沿 D4.7.3 v1.0.5/v1.0.6 范本: type 严判在 hash 前)
+        source = self._validate_source(source)
+        external_transaction_id = self._validate_external_tx_id(external_transaction_id)
+        counterparty = self._validate_counterparty(counterparty)
+        normalized_fingerprint = self._validate_fingerprint(normalized_fingerprint)
+        raw_row_json = self._validate_raw_row_json(raw_row_json)
+        if category is not None:
+            category = self._validate_category(category)
+        if payment_method is not None:
+            payment_method = self._validate_payment_method(payment_method)
+        new_status_value = self._normalize_status(new_status)
+        from_status_value = self._normalize_status(from_status)
+        if type(needs_confirm) is not bool:
+            raise TypeError(
+                f"needs_confirm 必须是 bool(非 int),实际 type={type(needs_confirm).__name__}, "
+                f"value={needs_confirm!r}"
+            )
+        needs_confirm_int = 1 if needs_confirm else 0
+        if candidate_match_id is not None and (
+            type(candidate_match_id) is bool
+            or not isinstance(candidate_match_id, int)
+            or candidate_match_id < 1
+        ):
+            raise ValueError(
+                f"candidate_match_id 必须是正 int(非 bool),"
+                f"实际 type={type(candidate_match_id).__name__}, value={candidate_match_id!r}"
+            )
+        if amount is None or not isinstance(amount, Decimal):
+            raise TypeError(
+                f"amount 必须是 Decimal,实际 type={type(amount).__name__}, value={amount!r}"
+            )
+        if isinstance(transaction_date, str) or not hasattr(transaction_date, "isoformat"):
+            raise TypeError(
+                f"transaction_date 必须是 date(非 str/datetime),"
+                f"实际 type={type(transaction_date).__name__}, value={transaction_date!r}"
+            )
+        if imported_at_ms is None:
+            imported_at_ms = int(time.time() * 1000)
+        else:
+            if (
+                type(imported_at_ms) is bool
+                or not isinstance(imported_at_ms, int)
+                or imported_at_ms < 0
+            ):
+                raise ValueError(
+                    f"imported_at_ms 必须是原生 int(非 bool)>= 0,"
+                    f"实际 type={type(imported_at_ms).__name__}, value={imported_at_ms!r}"
+                )
+        if confirmed_at_ms is not None and (
+            type(confirmed_at_ms) is bool
+            or not isinstance(confirmed_at_ms, int)
+            or confirmed_at_ms < 0
+        ):
+            raise ValueError(
+                f"confirmed_at_ms 必须是原生 int(非 bool)>= 0(允许 None),"
+                f"实际 type={type(confirmed_at_ms).__name__}, value={confirmed_at_ms!r}"
+            )
+        # confirmed_at_ms 必传规则(在 row 存在前做,失败更快)
+        if new_status_value == TransactionStatus.CONFIRMED.value:
+            if confirmed_at_ms is None:
+                raise ValueError(
+                    f"D6.4 状态机:insert_and_advance_status(new_status=CONFIRMED) 必传 "
+                    f"confirmed_at_ms(Unix epoch ms),实际 {confirmed_at_ms!r}"
+                )
+        else:
+            if confirmed_at_ms is not None:
+                raise ValueError(
+                    f"D6.4 状态机:insert_and_advance_status(new_status={new_status_value!r}) "
+                    f"时 confirmed_at_ms 必传 None(保留原确认时间戳),"
+                    f"实际 {confirmed_at_ms!r}"
+                )
+
+        # 2. 单事务 insert + update_status
+        with self._session_factory() as session:
+            try:
+                row = Transaction(
+                    source=source,
+                    external_transaction_id=external_transaction_id,
+                    transaction_date=transaction_date,
+                    amount=amount,
+                    counterparty=counterparty,
+                    category=category,
+                    payment_method=payment_method,
+                    normalized_fingerprint=normalized_fingerprint,
+                    needs_confirm=needs_confirm_int,
+                    candidate_match_id=candidate_match_id,
+                    status=from_status_value,  # 起点,后续 update_status
+                    imported_at_ms=imported_at_ms,
+                    confirmed_at_ms=None,  # 仅 CONFIRMED 时设置
+                    raw_row_json=raw_row_json,
+                    notes=notes,
+                )
+                session.add(row)
+                session.flush()  # 触发 id 生成 + UNIQUE 约束检查(不 commit)
+                # 3. 状态机更新(同一 session 内)
+                # 漂移检测 — 刚 INSERT 完,row.status 必 == from_status_value
+                # (如果 UNIQUE 冲突,flush 阶段已抛 IntegrityError 走到 except)
+                if row.status != from_status_value:
+                    raise TransactionIllegalTransitionError(
+                        tx_id=row.id if row.id is not None else 0,
+                        from_status=from_status_value,
+                        to_status=new_status_value,
+                        actual_status=row.status,
+                    )
+                # 白名单外转换严判(调 D6.3 assert_transition 公共 API)
+                try:
+                    assert_transition(from_status_value, new_status_value)
+                except TransactionIllegalTransitionError:
+                    from_enum = TransactionStatus(from_status_value)
+                    allowed = ALLOWED_TRANSITIONS[from_enum]
+                    raise TransactionIllegalTransitionError(
+                        tx_id=row.id if row.id is not None else 0,
+                        from_status=from_status_value,
+                        to_status=new_status_value,
+                        allowed=allowed,
+                    ) from None
+                row.status = new_status_value
+                if new_status_value == TransactionStatus.CONFIRMED.value:
+                    assert confirmed_at_ms is not None  # noqa: S101
+                    row.confirmed_at_ms = confirmed_at_ms
+                session.commit()
+                session.refresh(row)
+                return row
+            except (IntegrityError, _sqlcipher_dbapi.IntegrityError) as err:
+                session.rollback()
+                # 业务阻断: UNIQUE(source, external_transaction_id) 冲突
+                err_str = str(getattr(err, "orig", err))
+                if (
+                    "UNIQUE constraint failed: transactions.source" in err_str
+                    or "UNIQUE constraint failed: transactions.source, transactions.external_transaction_id"
+                    in err_str
+                ):
+                    raise TransactionDuplicateError(
+                        source=source,
+                        external_transaction_id=external_transaction_id,
+                        original_error=err,
+                    ) from err
+                # 其他 IntegrityError(FK 约束 / CHECK 约束) 走技术失败
+                raise
+
     # ===== 查询方法(热路径) =====
 
     def get_by_id(self, tx_id: int) -> Transaction | None:
@@ -681,7 +880,13 @@ class TransactionStore:
 
     @staticmethod
     def _normalize_status(value: Any) -> str:
-        """严判 status 字符串(防 list/dict/set 触发 TypeError,沿 D4.7.3 v1.0.5 P2-1 范本)。"""
+        """严判 status 字符串(防 list/dict/set 触发 TypeError,沿 D4.7.3 v1.0.5 P2-1 范本)。
+
+        接受 str 或 TransactionStatus 枚举(沿 D6.6 调用方可用 enum 表达意图)。
+        """
+        # D6.6 修复:isinstance 接受 enum,转 value 后再严判
+        if isinstance(value, TransactionStatus):
+            value = value.value
         if type(value) is not str:
             raise TypeError(
                 f"status 必须是 str 或 TransactionStatus 枚举,实际 {type(value).__name__}={value!r}"
