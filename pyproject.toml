@@ -121,6 +121,8 @@ markers = [
     "slow: 标记为慢测试（默认跳过，跑时加 --runslow）",
     "integration: 集成测试（需要真实服务）",
     "spike: spike 验证（Week 1 末决策点用）",
+    "e2e: 端到端 9 场景 S1-S9 唯一编号表测试(D6.0 引入)",
+    "requires_real: 需真实网络/凭证的 e2e 测试(SMTP_REAL_NETWORK=1 等 env 门控)",
 ]
 asyncio_mode = "auto"
 
