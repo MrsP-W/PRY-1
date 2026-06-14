@@ -68,7 +68,7 @@
 | 6.1 | 写 `connectors/wechat_csv.py`（多版本格式解析）| 90 min | 微信适配器 |
 | 6.2 | 写 `core/categorizer.py`（关键词分类 + 商家映射）| 60 min | 分类规则 |
 | 6.3 | 写 `scripts/import_wechat.py`（拖拽 CSV 一键导入）| 30 min | 用户入口 |
-| 6.4 | 写 `core/dedup.py`（按 raw_hash 去重）| 30 min | 去重逻辑 |
+| 6.4 | 写 `core/dedup.py`(**3 层去重模型**,沿 docs/v0.1-launch-plan.md § 跨源去重决策 L234-308:L1 源内 `(source, external_transaction_id)` UNIQUE / L2 跨源 `normalized_fingerprint` INDEX / L3 `needs_confirm` flag 只标记不自动合并) | 30 min | 去重逻辑 |
 | 6.5 | **Spike**：微信 2024 / 2025 / 2026 三版本 CSV 解析 | 60 min | 兼容性报告 |
 | 6.6 | 写 `tests/connectors/test_wechat.py`（3 版本 × 100 条样本）| 30 min | 单元测试 |
 | 6.7 | 写 `docs/微信账单导出教程.md`（图文步骤）| 30 min | 用户文档 |
@@ -107,7 +107,7 @@
 | # | 任务 | 预计耗时 | 产出 |
 |---|------|----------|------|
 | 7.1 | 写 `connectors/alipay_csv.py`（独立解析但共用接口）| 60 min | 支付宝适配器 |
-| 7.2 | 重构 `core/categorizer.py`（支持多源）| 30 min | 多源分类 |
+| 7.2 | 重构 `core/categorizer.py`(支持多源,沿 3 层去重模型与 D6 共用 `dedup.py`)| 30 min | 多源分类 |
 | 7.3 | 写 `scripts/import_alipay.py` | 30 min | 用户入口 |
 | 7.4 | **Spike**：支付宝 2024 / 2025 / 2026 三版本 | 60 min | 兼容性报告 |
 | 7.5 | 写 `tests/connectors/test_alipay.py` | 30 min | 单元测试 |

@@ -150,7 +150,15 @@ CREATE TABLE transactions (
     category TEXT,
     merchant TEXT,
     note_encrypted BLOB,
-    raw_hash TEXT UNIQUE            -- 去重
+    -- 3 层去重模型(2026-06-14 第四轮复检 P1 修正,详见 docs/v0.1-launch-plan.md § 跨源去重决策):
+    -- L1 源内幂等: UNIQUE(source, external_transaction_id) — 防同源重复导入
+    -- L2 跨源候选: normalized_fingerprint TEXT INDEX(非 UNIQUE) — 跨源识别同一笔交易
+    -- L3 模糊匹配: needs_confirm BOOLEAN + candidate_match_id INTEGER — 只标记,不自动合并
+    external_transaction_id TEXT,    -- 源内幂等键(微信流水号 / 支付宝交易号)
+    normalized_fingerprint TEXT,      -- 跨源候选指纹(SHA256 截前 16 字节 hex)
+    needs_confirm BOOLEAN DEFAULT 0, -- L3 模糊匹配标记位(永不自动 merge)
+    candidate_match_id INTEGER,       -- 指向另一条 transactions.id,等用户 1-click 确认后写 confirmed_match_id
+    UNIQUE(source, external_transaction_id)  -- L1 硬约束
 );
 
 -- 笔记
@@ -413,6 +421,6 @@ CREATE TABLE health_log (
 
 ---
 
-**最后更新**:2026-06-14(D5.7.2 commit `ef83c63` docs 收口最后一致性修正 + v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab` + 第四轮 4 缺陷修正 commit 即将落)
-**状态**:D1-D5.7.2 真正锁定(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1 `c4a7d01` + D5.6.1 `fdf44c6` + D5.6.2 `819affb`+`8fdc088` + D5.6.3 `007a6be`+`2bc5b3b`+`3de03ed` + D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` + D5.6.5 `6ac8d9b` + D5.6.5.1 `2396def`+`b037334` + D5.7 `4a24504` + D5.7.1 `2cd434e` + D5.7.2 `ef83c63` docs 收口最后一致性修正 + **v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab`(P1 × 3 + P2 × 3 修正 docs) + 第四轮 4 缺陷修正 commit 即将落(P1 × 1 + P2 × 2 + P3 × 1 修正 docs + 3 层去重模型 + 11 项 DoD 统一 + 7 失效链接清理 + commit 落盘)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) 4 子阶段 D6+D7+D9+D10 + 收口,2026-07 中下旬发布),**D5 业务调度器完全锁定,直接进入 v0.1 发布规划**
+**最后更新**:2026-06-14(D5.7.2 commit `ef83c63` docs 收口最后一致性修正 + v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab` + 第四轮 4 缺陷修正 commit `c9bea39` + 第五轮 4 缺陷修正 commit 即将落)
+**状态**:D1-D5.7.2 真正锁定(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1 `c4a7d01` + D5.6.1 `fdf44c6` + D5.6.2 `819affb`+`8fdc088` + D5.6.3 `007a6be`+`2bc5b3b`+`3de03ed` + D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` + D5.6.5 `6ac8d9b` + D5.6.5.1 `2396def`+`b037334` + D5.7 `4a24504` + D5.7.1 `2cd434e` + D5.7.2 `ef83c63` docs 收口最后一致性修正 + **v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab`(P1 × 3 + P2 × 3 修正 docs) + 第四轮 4 缺陷修正 commit `c9bea39`(P1 × 1 + P2 × 2 + P3 × 1 修正 docs + 3 层去重模型 + 11 项 DoD 统一 + 7 失效链接清理 + commit 落盘) + 第五轮 4 缺陷修正 commit 即将落(P1 × 2 + P2 × 1 + P3 × 1 修正 docs + architecture.md 3 层去重模型 + week2-mvp.md 6.4 任务 3 层化 + 11 项粒度统一 9 DoD + 2 延后 + commit 落盘)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) 4 子阶段 D6+D7+D9+D10 + 收口,2026-07 中下旬发布),**D5 业务调度器完全锁定,直接进入 v0.1 发布规划**
 **维护者**:Mr-PRY
