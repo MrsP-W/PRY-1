@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新：2026-06-14（**D5.7.1 docs 收口真正锁定** — D5.7 检查员驳回 5 缺陷全部修复:P1-1 旧测试 SMTP 触网风险 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接 + P2-3 SpikeResult 字段数 16 统一 + L4 Agent 层软链 5 角色 + 2 专属 + D-step 收官标准动作）
+> 最后更新：2026-06-14（**D5.7.2 docs 收口最后一致性修正 真正锁定** — D5.7.1 修复 + **D5.7.2 检查员驳回 5 缺陷(docs 最后一次一致性修正)全部修复**:P1 D5 验收报告覆盖率表实测重生成(总覆盖 90.4%→90.2% / send_adapter 92.3%→84.8% / smtp 88.1%→69.6% / keychain 86.5%→45.7%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径修复 + P2-5 DoD 证据补全 + L4 Agent 层软链 5 角色 + 2 专属 + D-step 收官标准动作）
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**D5.7.1 docs 收口真正锁定**（D5.1-D5.7 ✅ 全部完成,B3 真正解封,真实 1 封 SMTP 端到端实测通过,sent=1/1.27s；D5.7.1 检查员驳回 5 缺陷全部修复:P1-1 旧测试 SMTP 触网风险 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接 + P2-3 SpikeResult 字段数 16 统一；**下一步 v0.1 发布规划**）。
+**当前阶段**：**D5.7.2 docs 收口最后一致性修正 真正锁定**（D5.1-D5.7.2 ✅ 全部完成,B3 真正解封,真实 1 封 SMTP 端到端实测通过,sent=1/1.27s；D5.7.1 + **D5.7.2** 检查员驳回 5 缺陷(docs 最后一次一致性修正)全部修复:P1 D5 验收报告覆盖率表实测重生成(90.4%→90.2%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径 + P2-5 DoD 证据补全；**D5 业务调度器完全锁定,不再开 D5.7.3,直接进入 v0.1 发布规划**）。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 5 软链 + 2 专属）
 
@@ -43,7 +43,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 📌 D-step 标准落地流（5 步）
 
-每个 D-step 落地按此流程（D5.6.4 修复 + D5.6.5 真实 1 封实测 + D5.6.5.1 检查员驳回 5 缺陷修复 + D5.7 docs 收口 8 件套 + D5.7.1 检查员驳回 5 缺陷修复真正锁定时按此跑）：
+每个 D-step 落地按此流程（D5.6.4 修复 + D5.6.5 真实 1 封实测 + D5.6.5.1 检查员驳回 5 缺陷修复 + D5.7 docs 收口 8 件套 + D5.7.1 检查员驳回 5 缺陷修复真正锁定 + **D5.7.2 docs 收口最后一致性修正 真正锁定**时按此跑）：
 
 ```
 Step 1: @调试专家（如有阻塞）
