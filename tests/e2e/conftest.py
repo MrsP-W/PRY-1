@@ -75,11 +75,10 @@ def session_factory(temp_db_path: Path, fake_keychain):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
 
-    from my_ai_employee.core.models import Base
-
     # 显式注册跨模块 ORM 表,避免依赖其他测试的 import 顺序。
     import my_ai_employee.core.outbox  # noqa: F401
     import my_ai_employee.events.models  # noqa: F401
+    from my_ai_employee.core.models import Base
 
     # 明文 sqlite(测试不加密,e2e 不测 SQLCipher 加密层)
     engine = create_engine(

@@ -33,7 +33,6 @@ def test_s5_real_smtp_1_email_sent(session_factory):
     if os.environ.get("SMTP_REAL_NETWORK") != "1":
         pytest.skip("SMTP_REAL_NETWORK != 1(默认 deny,4 重防误发范本)")
 
-
     # TODO(D6.0 docs-only): 写实际 1 封 SENT 链路,沿 D5.6.5 spike_send_100.py:21-35
     # 此处仅占位,真实链路留给 W2 6/14 复检周验证。
     pytest.skip("D6.0 阶段:S5 真实 SMTP 1 封 spike 在 D5.6.5 已跑过,e2e 占位待 W2 复检周")
