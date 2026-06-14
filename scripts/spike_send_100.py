@@ -91,19 +91,14 @@ class SpikeResult:
     之前 spike 报告用 list[str] 拼 Markdown,不便下游消费(memory 同步 / CI 校验)。
     本 dataclass 提供结构化结果,Markdown 渲染层仍用 report_lines,但关键数据可序列化。
 
-    字段说明(11 字段):
-        mode: "real" / "inmemory" — 实际跑的模式
-        smtp_real_network_unlocked: bool — SMTP_REAL_NETWORK env 是否为 "1"
-        total: int — spike 总封数(count)
-        sent: int — 实际 SENT 计数
-        business_blocked: int — 业务阻断计数
-        technical_failed: int — 技术失败计数
-        skipped: int — 跳过计数(退避未过期 / SLA BREACH 等)
-        total_duration_seconds: float — spike 主循环总耗时
-        p50_send_ms / p95_send_ms: float — 发送耗时分位数
-        sla_breach_count: int — URGENT SLA BREACH 触发计数
-        injection_failures_requested / actual: int — 失败注入请求 vs 实际触发
-        injection_breach_requested / actual: int — BREACH 注入请求 vs 实际触发
+    字段说明(D5.7.1 P2-3 统一 16 字段,按逻辑分组):
+        - 模式/解锁(2):mode / smtp_real_network_unlocked
+        - 计数(6):total / sent / business_blocked / technical_failed / skipped / sla_breach_count
+        - 时延(3):total_duration_seconds / p50_send_ms / p95_send_ms
+        - 失败/BREACH 注入(4):injection_failures_requested / injection_failures_actual /
+          injection_breach_requested / injection_breach_actual
+        - 扩展(1):extra(dict,装载 total_picked/iterations/state_machine_final/report_path 等)
+        合计:2+6+3+4+1 = 16 字段
 
     业务背景:SpikeResult 让 spike 结果可被 memory 同步脚本 / CI 校验脚本直接消费
     (D5.7 docs 收口会用上),不再只写 Markdown 让人肉读。
@@ -310,7 +305,7 @@ def run_spike(
 ) -> SpikeResult:
     """D5.6.1 spike 主流程 — N 封入 outbox + 批量 APPROVED + OutboxDispatcher 循环 + SMTP 发送.
 
-    D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(11 字段结构化),
+    D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(16 字段结构化),
     之前返回 None 浪费了 dataclass 定义。下游 memory 同步 / CI 校验脚本可直接消费
     SpikeResult 字段,不再只写 Markdown 让人肉读。
 
@@ -336,7 +331,7 @@ def run_spike(
             InMemorySmtpTransport 替代真发(双层防御:env 门 + factory 注入)
 
     Returns:
-        SpikeResult — 11 字段结构化结果(memory 同步 / CI 校验 / markdown 渲染统一来源)
+        SpikeResult — 16 字段结构化结果(D5.7.1 P2-3 统一,memory 同步 / CI 校验 / markdown 渲染统一来源)
     """
     # ===== D5.6.2 P0 凭证链路 + D5.6.1 P1.2 防误发:CLI 严判 =====
     smtp_password: str  # REAL 模式从 Keychain 读(InMemory 模式不需要,占位即可)
@@ -902,7 +897,7 @@ def run_spike(
             f"p95={p95 * 1000:.2f}ms / max={max(dispatcher_latencies_sorted) * 1000:.2f}ms"
         )
 
-    # ===== D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(11 字段)=====
+    # ===== D5.6.5.1 P2-1 修复(检查员驳回):run_spike 必返回 SpikeResult(16 字段,D5.7.1 P2-3 统一)=====
     # 之前返回 None,浪费了 dataclass 定义。下游 memory 同步 / CI 校验脚本可
     # 直接消费 SpikeResult 字段,不再只写 Markdown 让人肉读。
     # 注意:本结果只证明"SMTP 服务器接受" (smtp 250 OK),不证明"真实送达"

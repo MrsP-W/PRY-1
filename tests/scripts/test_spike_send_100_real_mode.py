@@ -150,8 +150,11 @@ def test_run_spike_count_must_be_one(monkeypatch: pytest.MonkeyPatch) -> None:
 # ===== C. 凭证链路 =====
 
 
-def test_run_spike_reads_password_from_keychain(monkeypatch: pytest.MonkeyPatch) -> None:
-    """D5.6.2 P0 凭证链路 + D5.6.3 P2-4 加固:REAL 模式必须从 Keychain 真读。
+def test_run_spike_reads_password_from_keychain(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """D5.6.2 P0 凭证链路 + D5.6.3 P2-4 加固 + D5.7.1 P1-1 双层防御:REAL 模式必须从
+    Keychain 真读 + 必注入 smtp_transport_factory(防测试连真实 smtp.qq.com)。
 
     修复前(D5.6.2 P2-4 检查员反馈):
     - 用 contextlib.suppress(Exception) 吞掉所有异常,无法验证凭证链路
@@ -159,7 +162,19 @@ def test_run_spike_reads_password_from_keychain(monkeypatch: pytest.MonkeyPatch)
     - 直接验证 keychain.get_smtp_password_for_provider 调过的入参 + 返回值
     - 验证返回值(smtp_password)必用于后续 OutboxDispatcher 构造
     - 删 contextlib.suppress(Exception) 路径,异常直接抛(便于真实调试)
+    修复后(D5.7.1 P1-1 — 检查员驳回):
+    - D5.6.5.1 落地时在 test_spike_send_100_real_network.py:R2 已加双层防御,
+      但本测试(test_run_spike_reads_password_from_keychain)仍用
+      `pytest.raises(Exception)` 宽泛放行 + 不注入 InMemory factory + 不跟踪
+      SmtpLibTransport.__init__,跑全套测试时可能连接 smtp.qq.com(异常前已发)
+    - 必注入 smtp_transport_factory=fake_factory(返回 InMemorySmtpTransport)
+    - 必跟踪 SmtpLibTransport.__init__ 构造次数
+    - 必断言:factory 调 1 次 + SmtpLibTransport 未构造 + 状态(不靠异常)
     """
+    from my_ai_employee.connectors.smtp import (  # noqa: PLC0415
+        InMemorySmtpTransport,
+        SmtpLibTransport,
+    )
     from my_ai_employee.core import keychain  # noqa: PLC0415
     from scripts import spike_send_100  # noqa: PLC0415
 
@@ -174,47 +189,69 @@ def test_run_spike_reads_password_from_keychain(monkeypatch: pytest.MonkeyPatch)
         called_with.append((provider, email))
         return keychain.KeychainResult(ok=True, value=real_password)
 
+    # D5.7.1 P1-1 修复:fake factory 注入(必优先于 SmtpLibTransport 路径)
+    factory_calls: list[InMemorySmtpTransport] = []
+    smtp_lib_constructor_calls: list[object] = []
+
+    def fake_factory() -> InMemorySmtpTransport:
+        """D5.7.1 P1-1:fake factory 返回 InMemorySmtpTransport(替代 SmtpLibTransport)。"""
+        inst = InMemorySmtpTransport()
+        factory_calls.append(inst)
+        return inst
+
+    # D5.7.1 P1-1 修复:跟踪 SmtpLibTransport 构造次数 — 绝不能容忍被构造
+    original_smtp_lib_init = SmtpLibTransport.__init__
+
+    def tracked_smtp_lib_init(self: object, *args: object, **kwargs: object) -> None:
+        smtp_lib_constructor_calls.append(self)
+        return original_smtp_lib_init(self, *args, **kwargs)  # type: ignore[arg-type]
+
     with (
         patch.object(
             keychain, "get_smtp_password_for_provider", side_effect=mock_get_smtp_password
         ) as mock_call,
-        pytest.raises(Exception) as exc_info,  # 任何后续异常都可接受,但 Keychain 已被调
+        patch.object(SmtpLibTransport, "__init__", tracked_smtp_lib_init),
+        # D5.7.1 P1-1:不再用 pytest.raises(Exception) 宽泛放行
+        # 用 smtp_transport_factory=fake_factory 必调,断言状态而非异常
     ):
-        # 不全跑 spike 主流程(避免 DB 依赖),只跑到 _install_fake_keychain 之前
-        # 通过 monkeypatch 模拟 REAL 模式的 early stage:
-        # 1. 严判通过
-        # 2. 调 keychain.get_smtp_password_for_provider(必须被 mock 捕获)
-        # 3. 后续 _install_fake_keychain 之类操作可能抛错(因 tmp_dir 路径等)
-        # 我们只关心 Keychain 调用链被验证
-        try:
-            spike_send_100.run_spike(
-                output_dir=Path("/tmp/dummy"),
-                real_send=True,
-                recipient_email="user@example.com",
-                max_recipients=1,
-                confirm=spike_send_100._CONFIRM_PHRASE,
-                smtp_host="smtp.qq.com",
-                smtp_port=465,
-                smtp_username="real_user@qq.com",
-                smtp_provider="qq",
-                count=1,
-            )
-        except Exception:  # noqa: BLE001  # 后续可能抛错,与本测试无关
-            # D5.6.3 P2-4:不再用 contextlib.suppress(Exception) 静默吞,
-            # 改为显式 re-raise 触发 pytest.raises,确保 Keychain 调用链可观测
-            raise
+        # 调用 run_spike — 后续 InMemory 模式跑下去也无害(InMemorySmtpTransport 不连 SMTP)
+        result = spike_send_100.run_spike(
+            output_dir=tmp_path,
+            real_send=True,
+            recipient_email="user@example.com",
+            max_recipients=1,
+            confirm=spike_send_100._CONFIRM_PHRASE,
+            smtp_host="smtp.qq.com",
+            smtp_port=465,
+            smtp_username="real_user@qq.com",
+            smtp_provider="qq",
+            count=1,
+            smtp_transport_factory=fake_factory,
+        )
 
-    # 验证 Keychain 函数被调用(provider 透传 + email 透传)
+    # 断言 1:SpikeResult 必返回(D5.6.5.1 P2-1 修复,顺带验证)
+    assert result is not None, "D5.6.5.1 P2-1:run_spike 必返回 SpikeResult(不再 None)"
+    # 断言 2:Keychain 函数被调用(provider 透传 + email 透传)
     assert mock_call.called, (
         "D5.6.2 P0 凭证链路:REAL 模式必须调 keychain.get_smtp_password_for_provider,但实际未被调用!"
     )
     assert called_with == [("qq", "real_user@qq.com")], (
         f"D5.6.3 P2-4:Keychain 调用入参必为 (qq, real_user@qq.com),实际 {called_with!r}"
     )
-    # 验证返回的密码非空(无占位/空字符串)
+    # 断言 3:返回的密码非空(无占位/空字符串)
     assert real_password, "D5.6.3 P2-4:real_password 必非空(无占位)"
-    # 验证后续异常(非 Keychain 错)
-    assert "Keychain" not in str(exc_info.value) or "失败" in str(exc_info.value)
+    # 断言 4:D5.7.1 P1-1 双层防御 — factory 必被调用 1 次
+    assert len(factory_calls) == 1, (
+        f"D5.7.1 P1-1:smtp_transport_factory 必被调用 1 次,实际 {len(factory_calls)}"
+    )
+    assert isinstance(factory_calls[0], InMemorySmtpTransport), (
+        f"D5.7.1 P1-1:factory 返回值必为 InMemorySmtpTransport,实际 {type(factory_calls[0]).__name__}"
+    )
+    # 断言 5:D5.7.1 P1-1 — SmtpLibTransport 必未构造(测试环境绝不能连 smtp.qq.com)
+    assert len(smtp_lib_constructor_calls) == 0, (
+        f"D5.7.1 P1-1:SmtpLibTransport 必未构造(测试环境绝不能连 smtp.qq.com),"
+        f"实际构造了 {len(smtp_lib_constructor_calls)} 次"
+    )
 
 
 def test_run_spike_rejects_empty_keychain_password(monkeypatch: pytest.MonkeyPatch) -> None:

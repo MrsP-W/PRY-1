@@ -25,7 +25,7 @@ D5.6.5.1 P1-1 修复(检查员驳回):
         新增:即使 real_send=True + SMTP_REAL_NETWORK=1,只要 factory 注入
         就必不构造 SmtpLibTransport(避免真实 smtp.qq.com 连接)
     R6. test_run_spike_returns_spike_result_dataclass
-        新增:run_spike 返回类型契约 必为 SpikeResult(11 字段),不返回 None
+        新增:run_spike 返回类型契约 必为 SpikeResult(16 字段,D5.7.1 P2-3 统一),不返回 None
         检查员 D5.6.5.1 P2-1 驳回:之前 run_spike 必返回 None,SpikeResult dataclass
         形同虚设。本测试固化返回契约。
 
@@ -344,15 +344,15 @@ def test_run_spike_returns_spike_result_dataclass(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """D5.6.5.1 P2-1 修复:run_spike 返回类型契约 — 必返回 SpikeResult(11 字段),不返回 None。
+    """D5.6.5.1 P2-1 修复:run_spike 返回类型契约 — 必返回 SpikeResult(16 字段,D5.7.1 P2-3 统一),不返回 None。
 
     检查员驳回点:
         - 之前 run_spike 注释 `-> None` + 函数末尾无 return → 调用方收到 None
-        - SpikeResult dataclass 定义完整 11 字段,但从未被实例化或返回
+        - SpikeResult dataclass 定义完整 16 字段,但从未被实例化或返回
         - 浪费了结构化能力(memory 同步 / CI 校验脚本无法直接消费)
 
     修复:
-        - run_spike 改 `-> SpikeResult` + 末尾构造并返回 SpikeResult(11 字段)
+        - run_spike 改 `-> SpikeResult` + 末尾构造并返回 SpikeResult(16 字段)
         - 本测试通过 R2 的"成功路径"路径复用,验证返回类型 + 关键字段值
         - 验证 SpikeResult.mode / smtp_real_network_unlocked / total / sent 字段
     """
@@ -374,7 +374,7 @@ def test_run_spike_returns_spike_result_dataclass(
         "D5.6.5.1 P2-1:spike_send_100 模块必暴露 SpikeResult dataclass"
     )
 
-    # 3. 字段契约:SpikeResult 必含 11 字段
+    # 3. 字段契约:SpikeResult 必含 16 字段(D5.7.1 P2-3 统一:模式 2 + 计数 6 + 时延 3 + 注入 4 + 扩展 1)
     from dataclasses import fields  # noqa: PLC0415
 
     spike_result_fields = {f.name for f in fields(spike_send_100.SpikeResult)}
