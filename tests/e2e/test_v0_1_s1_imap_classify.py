@@ -154,11 +154,14 @@ def test_s1_classify_emails(monkeypatch, session_factory):
 
     # Mock LLM router(返回固定 5 类)
     class _MockRouter:
+        def __init__(self) -> None:
+            self._call_count = 0
+
         def route(self, *, task_type, messages, temperature, max_tokens):
-            subject = messages[1]["content"][:30]  # user 消息里包含 subject
             # 5 类循环
             categories = list(EmailCategory)
-            category = categories[hash(subject) % 5]
+            category = categories[self._call_count % len(categories)]
+            self._call_count += 1
             return LLMResponse(
                 content=f'{{"category": "{category.value}", "confidence": 0.9}}',
                 model_full_id="mock-e2e",
