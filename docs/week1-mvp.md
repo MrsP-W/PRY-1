@@ -324,7 +324,7 @@ SQLAlchemy 2.0 DeclarativeBase 6 个 Model 类 + alembic 迁移框架（集成 S
 - ~~**alembic 6 个 DeprecationWarning**：`alembic.ini` 缺 `path_separator`，Alembic 升级后默认会改~~ → **D3.2.4 已解决**：显式 `path_separator = os`
 - **D3.1.2 测试断言需修**：`db.connection` row 从 dict 变 tuple（row_factory 调整）→ 改 `row[0].lower() == "wal"` tuple 解构
 
-**完整踩坑分析**：见 [reports/D3.2-ORM与迁移框架完成.md](../../我的AI员工/reports/D3.2-ORM与迁移框架完成.md) §2 / §4 / §9
+**完整踩坑分析**：见 [reports/D3.2-ORM与迁移框架完成.md](../reports/D3.2-ORM与迁移框架完成.md) §2 / §4 / §9
 
 #### 📌 下一棒 → D3.3
 

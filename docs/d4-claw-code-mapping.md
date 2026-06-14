@@ -902,7 +902,7 @@ claw-code 仓库无"邮件 SMTP 发送"模块,但与 D5 业务调度器高度相
 - [memory/d5-business-scheduler-launch.md](../../Agent%20Assistant/memory/d5-business-scheduler-launch.md) — D5 业务调度器 14 commits 收口链 + 真实 1 封 SMTP 范本
 - [memory/d5.6.5-real-send.md](../../Agent%20Assistant/memory/d5.6.5-real-send.md) — D5.6.5 真实 1 封 SMTP 端到端实测
 - [memory/d5.6.5.1-fixes.md](../../Agent%20Assistant/memory/d5.6.5.1-fixes.md) — D5.6.5.1 检查员驳回 5 缺陷修复
-- [memory/D4-claw-code-auto-reference.md](../../Agent%20Assistant/memory/D4-claw-code-auto-reference.md) — 全局规则(D5 自动参考规则已加)
+- [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射 + 4 路径并行启动 5 步决策法(2026-06-14 第二轮复检修正:原 `D4-claw-code-auto-reference.md` 不存在,改为实际存在文件)
 - [memory/d4.7.3-drafter-adapter-v1.0.6.md](../../Agent%20Assistant/memory/d4.7.3-drafter-adapter-v1.0.6.md) — D4.7.3 25 教训沉淀源头
 - [memory/d4.8-草稿入库.md](../../Agent%20Assistant/memory/d4.8-草稿入库.md) — D4.8 v1.0.1 收口链(契约 5:不真发 SMTP,D5+ 调度器接管)
 - [memory/d4.7.4-docs-closure.md](../../Agent%20Assistant/memory/d4.7.4-docs-closure.md) — D4.7.4 v1.0.2 docs-only 收口范本
