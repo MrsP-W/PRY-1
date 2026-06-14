@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🚧 D1-D5.6.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步 → D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实) → D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回 → D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回 → D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷) → D5.6.4 commit `a75894c`+`e07feee` ✅ 第四轮 5 缺陷全部修复(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass),278 passed / ruff 0 errors / mypy 0 errors → **D5.6.5 ✅ 真实 1 封 SMTP 端到端实测通过**(`smtp.qq.com:465 SSL`,from=to=`477753009@qq.com`,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / 真实 vs InMemory 性能 ≈ 160x),**B3 真正解封**,1563 passed / 8 质量门 8/8 全绿(90.4%)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：🚧 D1-D5.6.5 已完成（D5 业务调度器推进中：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步 → D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实) → D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回 → D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回 → D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷) → D5.6.4 commit `a75894c`+`e07feee` ✅ 第四轮 5 缺陷全部修复(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass),278 passed / ruff 0 errors / mypy 0 errors → **D5.6.5 ✅ 真实 1 封 SMTP 端到端实测通过**(`smtp.qq.com:465 SSL`,from=to=`477***009@qq.com`,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / 真实 vs InMemory 性能 ≈ 160x),**B3 真正解封**,1563 passed / 8 质量门 8/8 全绿(90.4%)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -237,6 +237,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-14（D5.6.4 commit `a75894c`+`e07feee` 第四轮 5 缺陷全部修复收口:P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass,278 passed / ruff 0 errors / mypy 0 errors。下一步 D5.6.5 真实 1 封实测 + D5.7 docs 收口 8 件套剩余）
+**最后更新**：2026-06-14（D5.6.5 commit `6ac8d9b` 真实 1 封 SMTP 端到端实测通过:smtp.qq.com:465 SSL sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / 4 重防误发 + SMTP_REAL_NETWORK=1 门控全过 / B3 真正解封,1563 passed / 90.4% / 8 质量门 8/8 全绿。D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` 第四轮 5 缺陷全部修复收口:P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass。下一步 D5.7 docs 收口 8 件套剩余）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
