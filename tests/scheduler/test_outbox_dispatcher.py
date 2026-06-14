@@ -171,15 +171,15 @@ def _insert_entry(
     priority: str = "normal",
     status: str = OutboxStatus.APPROVED.value,  # D5.6.2:Dispatcher 只消费 APPROVED+FAILED
     created_at: int | None = None,
-    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:APPROVED/FAILED 必有审批凭据
+    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:仅 APPROVED 必传审批凭据
 ) -> int:
-    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态,显式传 now_ms
-    # PENDING_SEND/其他 状态不需要 last_approved_at_ms
+    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态(caller 显式传 None 才走"无审批")
     if last_approved_at_ms is None and status in (
         OutboxStatus.APPROVED.value,
         OutboxStatus.FAILED.value,
     ):
         last_approved_at_ms = int(time.time() * 1000)
+    # D5.6.4 P1:insert 强制 PENDING_SEND + 不接受 last_approved_at_ms,先 insert 再 update_status
     entry = store.insert(
         email_id=email_id,
         subject="测试邮件主题",
@@ -187,11 +187,36 @@ def _insert_entry(
         tone="FORMAL",
         recipient_email=f"customer{email_id}@example.com",
         priority=priority,
-        status=status,
         created_at=created_at,
-        last_approved_at_ms=last_approved_at_ms,
     )
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
+    # D5.6.4 P1:再 update_status 推到目标状态(走状态机白名单 + last_approved_at_ms 严判)
+    if status == OutboxStatus.PENDING_SEND.value:
+        return entry.id
+    # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
+    if status == OutboxStatus.FAILED.value:
+        # 1) 先推 APPROVED(带审批凭据,记录"曾经被审批过")
+        store.update_status(
+            entry.id,
+            OutboxStatus.APPROVED.value,
+            from_status=OutboxStatus.PENDING_SEND.value,
+            last_approved_at_ms=last_approved_at_ms,
+        )
+        # 2) 再推 FAILED(走 APPROVED → FAILED 白名单,last_approved_at_ms=None 保留原审批)
+        store.update_status(
+            entry.id,
+            OutboxStatus.FAILED.value,
+            from_status=OutboxStatus.APPROVED.value,
+            last_approved_at_ms=None,
+        )
+        return entry.id
+    # APPROVED / 其他:走 PENDING_SEND → APPROVED
+    store.update_status(
+        entry.id,
+        status,
+        from_status=OutboxStatus.PENDING_SEND.value,
+        last_approved_at_ms=last_approved_at_ms,
+    )
     return entry.id
 
 

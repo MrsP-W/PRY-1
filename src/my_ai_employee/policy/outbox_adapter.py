@@ -650,6 +650,7 @@ class EmailOutboxAdapter:
             )
 
         # 2. 入库(D3.3.3 异常窄化: IntegrityError → 业务阻断;OperationalError → 技术失败)
+        # D5.6.4 P1: insert 强制 PENDING_SEND(参数移除 status),不再需要 status= 参数
         start_ms = now_ms if now_ms is not None else int(time.time() * 1000)
         row: OutboxEntry = self._outbox_store.insert(
             email_id=email_id,
@@ -660,7 +661,6 @@ class EmailOutboxAdapter:
             reviewer_decision_event_id=reviewer_decision_event_id,
             drafter_decision_event_id=drafter_decision_event_id,
             priority=priority,
-            status=OutboxStatus.PENDING_SEND.value,
             created_at=start_ms,
         )
         outbox_id = row.id
@@ -679,7 +679,7 @@ class EmailOutboxAdapter:
         )
 
         # 4. 构造 context(成功路径强制 last_outbox_failed=False / cf=0)
-        end_ms = int(time.time() * 1000)
+        end_ms = now_ms if now_ms is not None else int(time.time() * 1000)
         context = build_outbox_policy_context(
             email_id=email_id,
             tone=tone,

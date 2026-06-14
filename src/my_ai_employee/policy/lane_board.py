@@ -117,8 +117,12 @@ class LaneBoard:
 
     # ===== CRUD =====
 
-    def add(self, entry: LaneEntry) -> None:
+    def add(self, entry: LaneEntry, *, now_ms: int | None = None) -> None:
         """添加 entry.
+
+        Args:
+            entry: 待添加的 LaneEntry
+            now_ms: 注入"当前时间"(测试用, None = int(time.time() * 1000))
 
         Raises:
             PolicyLaneError: entry_id 重复 / entry 不是 LaneEntry / FINISHED 状态不允许
@@ -137,7 +141,7 @@ class LaneBoard:
             )
         if entry.status == LaneStatus.FINISHED:
             raise PolicyLaneError("新 entry 不能是 FINISHED 状态(终态, 需先走 ACTIVE/BLOCKED 路径)")
-        now = int(time.time() * 1000)
+        now = now_ms if now_ms is not None else int(time.time() * 1000)
         if entry.created_at_ms == 0:
             entry.created_at_ms = now
         if entry.updated_at_ms == 0:

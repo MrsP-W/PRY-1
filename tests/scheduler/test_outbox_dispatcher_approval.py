@@ -130,9 +130,9 @@ def _insert_entry(
     email_id: int,
     status: str,
     priority: str = "normal",
-    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:APPROVED/FAILED 必有审批凭据
+    last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:仅 APPROVED 必传审批凭据
 ) -> int:
-    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态
+    # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态(caller 显式 None 才走"无审批")
     if last_approved_at_ms is None and status in (
         OutboxStatus.APPROVED.value,
         OutboxStatus.FAILED.value,
@@ -140,6 +140,7 @@ def _insert_entry(
         import time as _time
 
         last_approved_at_ms = int(_time.time() * 1000)
+    # D5.6.4 P1:insert 强制 PENDING_SEND + 不接受 last_approved_at_ms,先 insert 再 update_status
     entry = store.insert(
         email_id=email_id,
         subject="测试邮件主题",
@@ -147,10 +148,32 @@ def _insert_entry(
         tone="FORMAL",
         recipient_email=f"customer{email_id}@example.com",
         priority=priority,
-        status=status,
-        last_approved_at_ms=last_approved_at_ms,
     )
     assert entry.id is not None  # noqa: S101
+    if status == OutboxStatus.PENDING_SEND.value:
+        return entry.id
+    # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
+    if status == OutboxStatus.FAILED.value:
+        store.update_status(
+            entry.id,
+            OutboxStatus.APPROVED.value,
+            from_status=OutboxStatus.PENDING_SEND.value,
+            last_approved_at_ms=last_approved_at_ms,
+        )
+        store.update_status(
+            entry.id,
+            OutboxStatus.FAILED.value,
+            from_status=OutboxStatus.APPROVED.value,
+            last_approved_at_ms=None,
+        )
+        return entry.id
+    # APPROVED:走 PENDING_SEND → APPROVED
+    store.update_status(
+        entry.id,
+        status,
+        from_status=OutboxStatus.PENDING_SEND.value,
+        last_approved_at_ms=last_approved_at_ms,
+    )
     return entry.id
 
 

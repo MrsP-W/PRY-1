@@ -157,7 +157,6 @@ class OutboxStore:
         reviewer_decision_event_id: int | None = None,
         drafter_decision_event_id: int | None = None,
         priority: str = "normal",
-        status: str = "pending_send",
         created_at: int | None = None,
         last_approved_at_ms: int | None = None,
     ) -> OutboxEntry:
@@ -172,24 +171,40 @@ class OutboxStore:
             reviewer_decision_event_id: FK → events.id(D4.7.4 审阅通过事件,可空)
             drafter_decision_event_id: FK → events.id(D4.7.3 草稿生成事件,可空)
             priority: OutboxPriority 3 选 1,默认 "normal"
-            status: OutboxStatus 4 选 1,默认 "pending_send"
             created_at: Unix epoch ms(默认 = 当前时间)
-            last_approved_at_ms: D5.6.3 P1-1 审批凭据(Unix epoch ms,默认 None =
-                              "未审批",应用层 _approve_all_pending 写入 APPROVED 时传值)
+            last_approved_at_ms: D5.6.4 P1 严判:必传 None(D5.6.3 P1-1 整改后语义)
+                              强制走 update_status(APPROVED) 才能设审批时间戳,
+                              防 caller 直接 insert 伪造审批
 
         Returns:
-            新插入的 OutboxEntry(已 refresh,id/status/created_at 都可读)
+            新插入的 OutboxEntry(已 refresh,id/status/created_at 都可读,status=pending_send)
 
         Raises:
             OutboxEmailDuplicateError: UNIQUE(email_id) 冲突(D4.8 契约 4 — 业务阻断)
             ValueError: 业务层严判失败(Adapter 已严判,Store 层不再二次严判)
+                       或 D5.6.4 P1: last_approved_at_ms 必传 None
             sqlalchemy.exc.OperationalError / DataError / InterfaceError: 技术失败(透传给 Adapter 走 record_store_failure_and_emit)
 
         D3.3.3 教训应用:
             - except 范围窄化: 只接 IntegrityError(UNIQUE 冲突)
             - OperationalError / DataError / InterfaceError **不**捕获,透传给 Adapter 走技术失败入口
             - 拒绝 D3.3.2 反范本(SQLAlchemyError 基类过宽,会掩盖真实生产问题)
+
+        D5.6.4 P1 决策(防审批伪造):
+            - status 参数移除 — insert 强制 PENDING_SEND(应用层要走 APPROVED 必显式调
+              update_status(APPROVED, last_approved_at_ms=...),走状态机白名单+严判链)
+            - last_approved_at_ms 必传 None(显式 None,不接受 caller 直接设审批时间戳)
+            - 双层防御: Adapter 入口 + 数据类 __post_init__ 严判 row.last_approved_at_ms
         """
+        # D5.6.4 P1: 强制 status=PENDING_SEND,严禁 insert 时直接传 status
+        status: str = OutboxStatus.PENDING_SEND.value
+        # D5.6.4 P1: 严判 last_approved_at_ms 必传 None(防 caller 绕过审批直接伪造)
+        if last_approved_at_ms is not None:
+            raise ValueError(
+                f"D5.6.4 P1 修复:OutboxStore.insert() 严禁传 last_approved_at_ms={last_approved_at_ms!r},"
+                f"必须先走 update_status(APPROVED, last_approved_at_ms=...) 走状态机白名单。"
+                f"防 caller 直接 insert 伪造审批凭据(4th round 检查员反馈 P1 漏洞)。"
+            )
         # 1. created_at 默认 = 当前时间(epoch ms,便于排序)
         if created_at is None:
             created_at = int(time.time() * 1000)

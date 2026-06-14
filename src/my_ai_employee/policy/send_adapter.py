@@ -751,13 +751,18 @@ class EmailSendAdapter:
             raise ValueError(
                 f"outbox_id={outbox_id} 不存在,无法 send_and_emit (D5.3 入口先查后发,避免无主发送)"
             )
-        if entry.status not in (
-            OutboxStatus.PENDING_SEND.value,
-            OutboxStatus.APPROVED.value,
-        ):
+        # D5.6.4 P1: 收窄至 APPROVED only(防 PENDING_SEND 绕过审批)
+        # Adapter 不再接 PENDING_SEND — 审批必须显式走 store.update_status(APPROVED, last_approved_at_ms=...)
+        if entry.status != OutboxStatus.APPROVED.value:
             raise ValueError(
-                f"outbox_id={outbox_id} 状态={entry.status!r} 不在 PENDING_SEND/APPROVED,"
-                f"无法 send_and_emit(D5.3 状态机约束)"
+                f"outbox_id={outbox_id} 状态={entry.status!r} 不在 APPROVED,"
+                f"无法 send_and_emit(D5.6.4 收窄至 APPROVED only,防 PENDING_SEND 绕过审批)"
+            )
+        # D5.6.4 P1: 校验审批凭据(防 APPROVED 但 last_approved_at_ms=None 漏洞)
+        if entry.last_approved_at_ms is None:
+            raise ValueError(
+                f"outbox_id={outbox_id} 状态=APPROVED 但 last_approved_at_ms=None,"
+                f"无法 send_and_emit(D5.6.4 审批凭据必传,APPROVED 必带 last_approved_at_ms)"
             )
 
         # 3. 状态机推进 #1: PENDING_SEND/APPROVED → SENDING
@@ -897,7 +902,7 @@ class EmailSendAdapter:
         )
 
         # 9. 构造 context(成功路径强制 last_send_failed=False / cf=0)
-        end_ms = int(time.time() * 1000)
+        end_ms = now_ms if now_ms is not None else int(time.time() * 1000)
         context = build_send_policy_context(
             outbox_id=outbox_id,
             tone=entry.tone,

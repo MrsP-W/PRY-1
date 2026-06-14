@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import smtplib
 import sys
+import time
 from email.message import EmailMessage
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -368,11 +369,18 @@ def test_send_failure_decision_report_basic() -> None:
 # ===== C.1 EmailSendAdapter.send_and_emit(8 tests)=====
 
 
-def test_send_and_emit_success_pending_send_to_sent(
+def test_send_and_emit_success_approved_to_sent_pending_path(
     store: OutboxStore, smtp_transport: InMemorySmtpTransport
 ) -> None:
-    """send_and_emit 成功路径: PENDING_SEND → SENDING → SENT."""
+    """send_and_emit 成功路径: APPROVED → SENDING → SENT(D5.6.4 P1 — PENDING_SEND 收窄)."""
     outbox_id = _insert_pending_entry(store, email_id=1000)
+    # D5.6.4 P1: send_and_emit 收窄至 APPROVED only,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     smtp_transport.inject_status = SMTP_SEND_OK  # 默认就是 OK, 显式标
 
     adapter = EmailSendAdapter(
@@ -436,6 +444,13 @@ def test_send_and_emit_recipients_refused_raises(
 ) -> None:
     """send_and_emit SMTPRecipientsRefused → 业务阻断入口异常."""
     outbox_id = _insert_pending_entry(store, email_id=1002)
+    # D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     smtp_transport.inject_status = SMTP_SEND_PERMANENT_BOUNCE
 
     adapter = EmailSendAdapter(
@@ -459,6 +474,13 @@ def test_send_and_emit_transport_error_raises(
 ) -> None:
     """send_and_emit transport 返回 transport_error → 技术失败入口异常."""
     outbox_id = _insert_pending_entry(store, email_id=1003)
+    # D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     smtp_transport.inject_status = SMTP_SEND_TRANSPORT_ERROR
 
     adapter = EmailSendAdapter(
@@ -500,7 +522,7 @@ def test_send_and_emit_outbox_not_found_raises(
 def test_send_and_emit_invalid_outbox_status_raises(
     store: OutboxStore, smtp_transport: InMemorySmtpTransport
 ) -> None:
-    """send_and_emit 状态非 PENDING_SEND/APPROVED → ValueError."""
+    """send_and_emit 状态非 APPROVED → ValueError(D5.6.4 P1 收窄)."""
     outbox_id = _insert_pending_entry(store, email_id=1004)
     # 推到 SENT(已发送)
     store.update_status(outbox_id, "sending", from_status="pending_send")
@@ -511,7 +533,7 @@ def test_send_and_emit_invalid_outbox_status_raises(
         outbox_store=store,
         smtp_transport=smtp_transport,
     )
-    with pytest.raises(ValueError, match="PENDING_SEND/APPROVED"):
+    with pytest.raises(ValueError, match="APPROVED"):
         adapter.send_and_emit(
             outbox_id=outbox_id,
             smtp_host="smtp.qq.com",
@@ -525,6 +547,13 @@ def test_send_and_emit_invalid_outbox_status_raises(
 def test_send_and_emit_no_smtp_transport_raises(store: OutboxStore) -> None:
     """send_and_emit smtp_transport 未注入 → ValueError."""
     outbox_id = _insert_pending_entry(store, email_id=1005)
+    # D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     adapter = EmailSendAdapter(source="test-send", outbox_store=store)  # 不传 smtp_transport
     with pytest.raises(ValueError, match="smtp_transport 未注入"):
         adapter.send_and_emit(
@@ -546,18 +575,28 @@ def test_send_and_emit_state_machine_illegal_transition_raises(
 
     模拟: 调用 store.update_status 时 row.status 已被另一 process 改掉(漂移),
     D5.2 OutboxIllegalTransitionError 抛出 → D5.3 包装为 SMTPSendIllegalTransitionError.
+
+    D5.6.4 P1: 入口已收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据),
+    然后模拟 SENDING→SENT 状态机漂移(并发写推到 SENT 后另一 process 推到 FAILED).
     """
     from my_ai_employee.db.outbox import OutboxIllegalTransitionError
 
     outbox_id = _insert_pending_entry(store, email_id=1006)
+    # 先推 APPROVED(D5.6.4 P1 收窄)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
 
     # monkeypatch store.update_status 让它抛漂移异常(模拟并发写)
     def fake_update(*args: object, **kwargs: object) -> object:
         raise OutboxIllegalTransitionError(
             outbox_id=outbox_id,
-            from_status="pending_send",
+            from_status="approved",
             to_status="sending",
-            actual_status="approved",  # 另一 process 已推到 approved
+            actual_status="sent",  # 另一 process 已推到 sent
         )
 
     monkeypatch.setattr(store, "update_status", fake_update)
@@ -658,8 +697,17 @@ def test_send_and_emit_smtp_data_error_raises_business_block(
 
     真实路径:smtplib.SMTPDataError 在 send_message 阶段由 transport 抛,
     send_and_emit 捕获后包装为 SMTPSendRecipientsRefusedError(reason="data_error")。
+
+    D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据).
     """
     outbox_id = _insert_pending_entry(store, email_id=1200)
+    # D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     smtp_transport.inject_exception = smtplib.SMTPDataError(452, b"Insufficient storage")
 
     adapter = EmailSendAdapter(
@@ -689,8 +737,17 @@ def test_send_and_emit_smtp_authentication_error_raises_business_block(
 
     真实路径:smtplib.SMTPAuthenticationError 在 transport.login() 阶段抛,
     send_and_emit 捕获后包装为 SMTPSendSenderRefusedError(reason="sender_refused")。
+
+    D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据).
     """
     outbox_id = _insert_pending_entry(store, email_id=1201)
+    # D5.6.4 P1: 收窄至 APPROVED,先推 APPROVED(带 last_approved_at_ms 凭据)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
     smtp_transport.inject_exception = smtplib.SMTPAuthenticationError(535, b"Authentication failed")
 
     adapter = EmailSendAdapter(
@@ -1079,3 +1136,134 @@ def test_record_failure_state_machine_illegal_transition(
             error_category="transport_error",
             last_error="test",
         )
+
+
+# ===== D5.6.4 P1 收窄新增 3 测试 =====
+
+
+def test_send_and_emit_rejects_pending_send(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """D5.6.4 P1 — send_and_emit 收窄: PENDING_SEND 直接调 → ValueError(防绕过审批).
+
+    4th round 检查员反馈:"Adapter 仍可绕过审批 — EmailSendAdapter.send_and_emit() 仍接受 PENDING_SEND"
+    修复:send_and_emit 入口严判 entry.status 必须 APPROVED,PENDING_SEND 直接 ValueError 拒收.
+    """
+    outbox_id = _insert_pending_entry(store, email_id=1300)  # PENDING_SEND
+    smtp_transport.inject_status = SMTP_SEND_OK
+
+    adapter = EmailSendAdapter(
+        source="test-send",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+    )
+    with pytest.raises(ValueError, match="D5.6.4 收窄至 APPROVED"):
+        adapter.send_and_emit(
+            outbox_id=outbox_id,
+            smtp_host="smtp.qq.com",
+            smtp_port=465,
+            smtp_username="test@qq.com",
+            smtp_password="test_authcode_16",
+            email_message=_make_email_message(),
+        )
+
+
+def test_send_and_emit_requires_approval_provenance(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """D5.6.4 P1 — APPROVED 但 last_approved_at_ms=None → ValueError(防审批凭据漏洞).
+
+    4th round 检查员反馈:"审批凭据可直接伪造 — OutboxStore.insert() 允许调用方直接插入
+    status=approved, last_approved_at_ms=任意整数"
+
+    send_and_emit 入口严判:last_approved_at_ms is None → ValueError 拒收,即使 status=APPROVED.
+    修复防御:即使 caller 绕过 insert 校验直接传 status=APPROVED, send_and_emit 仍会
+    拦截 last_approved_at_ms=None 的非法 APPROVED 状态.
+    """
+    # 手动构造 APPROVED + last_approved_at_ms=None 的非法状态(模拟绕过 commit 2 修复)
+    outbox_id = _insert_pending_entry(store, email_id=1301)
+    # 用 monkeypatch 模拟 "APPROVED 但 last_approved_at_ms=None" 状态
+    from sqlalchemy import update
+
+    from my_ai_employee.core.outbox import OutboxEntry
+
+    smtp_transport.inject_status = SMTP_SEND_OK
+    adapter = EmailSendAdapter(
+        source="test-send",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+    )
+
+    # 直接修改 DB:status=APPROVED, last_approved_at_ms=None(模拟漏洞场景)
+    with store._session_factory() as session:  # type: ignore[attr-defined]
+        session.execute(
+            update(OutboxEntry)
+            .where(OutboxEntry.id == outbox_id)
+            .values(status="approved", last_approved_at_ms=None)
+        )
+        session.commit()
+
+    with pytest.raises(ValueError, match="last_approved_at_ms=None"):
+        adapter.send_and_emit(
+            outbox_id=outbox_id,
+            smtp_host="smtp.qq.com",
+            smtp_port=465,
+            smtp_username="test@qq.com",
+            smtp_password="test_authcode_16",
+            email_message=_make_email_message(),
+        )
+
+
+def test_send_and_emit_latency_ms_non_negative_with_injected_now_ms(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """D5.6.4 P0 — 注入虚拟时钟:now_ms 注入后 latency_ms 必 >= 0(防"时间倒流").
+
+    4th round 检查员反馈:"虚拟 now_ms 比系统时间快 70 秒,send_and_emit() 用真实时间计算结束时间,
+    产生负 latency_ms(实测 -699993ms)."
+
+    修复:send_and_emit:900 改 is None 严判(沿 L1071/L1276 范本),now_ms 注入后,
+    end_ms 也用注入值,latency_ms = end_ms - start_ms 必 >= 0(测试用相等 now_ms).
+
+    校验链路:
+    - start_ms = now_ms(注入)
+    - end_ms = now_ms(注入,不再硬编码 int(time.time() * 1000))
+    - latency_ms = end_ms - start_ms == 0(注入时间无差)
+    """
+    outbox_id = _insert_pending_entry(store, email_id=1302)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=1_700_000_000_000,  # 固定凭据时间
+    )
+    smtp_transport.inject_status = SMTP_SEND_OK
+
+    adapter = EmailSendAdapter(
+        source="test-send",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+    )
+
+    # 注入固定的虚拟 now_ms
+    virtual_now_ms = 1_700_000_001_000  # 比 last_approved_at_ms 晚 1s
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.qq.com",
+        smtp_port=465,
+        smtp_username="test@qq.com",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+        now_ms=virtual_now_ms,
+    )
+
+    # 关键断言:latency_ms 必 >= 0(防"时间倒流")
+    assert report.latency_ms >= 0, (
+        f"D5.6.4 P0 修复失败:latency_ms={report.latency_ms} 负值,"
+        f"说明 end_ms 还在用真实时间(系统时间 < 虚拟 now_ms)"
+    )
+    # 进一步断言:latency_ms 必为 0(注入时间无差)
+    assert report.latency_ms == 0, (
+        f"D5.6.4 P0 修复不完全:latency_ms={report.latency_ms} != 0,"
+        f"说明 start_ms/end_ms 时间源不一致"
+    )

@@ -623,3 +623,72 @@ def test_normalize_priority_rejects_non_str(store: OutboxStore) -> None:
         store._normalize_priority(None)  # type: ignore[arg-type]
     with pytest.raises(TypeError, match="priority 必须是 str"):
         store._normalize_priority({"priority": "normal"})  # type: ignore[arg-type]
+
+
+# ===== 8. D5.6.4 P1:OutboxStore.insert 严判(2 tests)=====
+
+
+def test_insert_rejects_last_approved_at_ms_non_none(store: OutboxStore) -> None:
+    """D5.6.4 P1 修复:OutboxStore.insert() 严禁 caller 传 last_approved_at_ms=非 None。
+
+    业务背景(4th round 检查员反馈 P1 漏洞):
+        D5.6.3 P1-1 修复要求"审批必须经 update_status(APPROVED, last_approved_at_ms=...)",
+        但 Store.insert() 仍接受 last_approved_at_ms=任意整数 → caller 可绕过审批契约
+        直接伪造审批凭据。
+
+    修复:insert() 入口严判 last_approved_at_ms is not None → 抛 ValueError,
+    强制审批走状态机白名单(D5.2 落地)。
+    """
+    with pytest.raises(
+        ValueError, match="D5\\.6\\.4 P1 修复.*OutboxStore\\.insert.*严禁传 last_approved_at_ms"
+    ):
+        store.insert(
+            email_id=1,
+            subject="测试主题",
+            body="测试邮件正文内容,超过十个字符。",
+            tone="FORMAL",
+            recipient_email="customer1@example.com",
+            last_approved_at_ms=1718000000000,  # D5.6.4 P1 漏洞 caller 伪造
+        )
+
+
+def test_insert_forces_status_pending_send(store: OutboxStore) -> None:
+    """D5.6.4 P1 修复:OutboxStore.insert() 强制 status=PENDING_SEND,无 status 参数。
+
+    业务背景(4th round 检查员反馈 P1 漏洞):
+        旧签名 `def insert(*, status="pending_send", ...)` 允许 caller 直接传
+        status="approved" → 绕过 update_status 状态机白名单。
+
+    修复:status 参数已移除(查看 insert 签名),任何状态机推进必须经
+    update_status(*, from_status=...) 走 ALLOWED_TRANSITIONS 白名单。
+
+    本测试正面验证:
+        1. insert() 签名无 status 参数(已通过参数名不存在抛 TypeError 间接验证)
+        2. insert() 返回的 row.status 必为 "pending_send"(硬性契约)
+        3. 真实业务路径必走 update_status(APPROVED, last_approved_at_ms=...)
+    """
+    # 1. status 参数已被移除(严判:尝试传 status= 必 TypeError)
+    with pytest.raises(TypeError, match="unexpected keyword argument"):
+        store.insert(  # type: ignore[call-arg]
+            email_id=2,
+            subject="测试主题",
+            body="测试邮件正文内容,超过十个字符。",
+            tone="FORMAL",
+            recipient_email="customer2@example.com",
+            status="approved",  # D5.6.4 P1:该参数已移除
+        )
+
+    # 2. 正常 insert 必返回 PENDING_SEND
+    row = store.insert(
+        email_id=3,
+        subject="测试主题",
+        body="测试邮件正文内容,超过十个字符。",
+        tone="FORMAL",
+        recipient_email="customer3@example.com",
+    )
+    assert row.status == OutboxStatus.PENDING_SEND.value, (
+        f"D5.6.4 P1:insert 强制 status=PENDING_SEND,实际 {row.status!r}"
+    )
+    assert row.last_approved_at_ms is None, (
+        f"D5.6.4 P1:insert 后 last_approved_at_ms 必 None,实际 {row.last_approved_at_ms!r}"
+    )
