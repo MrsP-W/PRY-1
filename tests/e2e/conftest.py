@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -42,13 +43,13 @@ def _install_fake_keychain() -> None:
         _FAKE_KEYCHAIN[(service, account)] = value
         return keychain.KeychainResult(ok=True, value=value)
 
-    # 透传原 keychain 行为
-    keychain.get = fake_get  # type: ignore[assignment]
-    keychain.set = fake_set  # type: ignore[assignment]
+    # 透传原 keychain 行为(keychain 模块动态添加 .get/.set 属性,需 attr-defined 严判)
+    keychain.get = fake_get  # type: ignore[attr-defined]
+    keychain.set = fake_set  # type: ignore[attr-defined]
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch) -> None:
+def fake_keychain(monkeypatch) -> Iterator[None]:
     """装 fake keychain(逐 test 隔离)."""
     _FAKE_KEYCHAIN.clear()
     _install_fake_keychain()
