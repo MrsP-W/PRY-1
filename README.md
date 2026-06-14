@@ -214,6 +214,7 @@ make help
 | [docs/architecture.md](docs/architecture.md) | 5 层架构 + 关键决策 + 适配器契约 + 数据流示例 |
 | [docs/week1-mvp.md](docs/week1-mvp.md) | Week 1 计划（D1-D5：邮件 + 日程）|
 | [docs/week2-mvp.md](docs/week2-mvp.md) | Week 2 计划（D6-D10：财务 + 笔记）|
+| [docs/v0.1-launch-plan.md](docs/v0.1-launch-plan.md) | **v0.1 发布规划(D6/D7/D9/D10 4 子阶段 + 收口,2026-07 中下旬发布)**|
 
 ---
 
