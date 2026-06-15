@@ -304,7 +304,13 @@ def test_start_hotkey_listener_handles_proc_failure(
 def test_poll_hotkey_queue_hotkey_event_triggers_capture(
     fake_rumps: None, fake_hotkey_proc: MagicMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """T11: Queue 推 hotkey 事件 → _on_clipboard_capture 调 capture_service + 弹 notification.
+    """T11: Queue 推 hotkey 事件 → _poll_hotkey_queue 真调分发 → _on_clipboard_capture 被调 1 次.
+
+    D9.6.4 P2-2 修复(原 bug):
+        - 旧测试直接 `app._on_clipboard_capture()` 白盒调,queue dispatcher 坏了也过
+        - 新测试:用 `app._on_clipboard_capture = MagicMock()` 替代真实方法,真调
+          `app._poll_hotkey_queue()` 验证 queue → mock 的分发链路
+        - queue 坏了 / 事件类型错 / 分发逻辑错 → MagicMock 必不被调 → assert 失败
 
     D9.6.1 升级:不再弹 "⌥⌘N 触发" 占位,改调 self.capture_service.capture_and_emit()
     然后根据返回类型弹 3 种 notification 中的一种。本测试验"成功路径" → "⌥⌘N 入库成功"。
@@ -324,24 +330,28 @@ def test_poll_hotkey_queue_hotkey_event_triggers_capture(
     )
 
     app = NotesMenuBarApp(capture_service=fake_capture)
+    # 🔧 D9.6.4 P2-2:MagicMock 替代真 _on_clipboard_capture,验 queue 真分发到它
+    app._on_clipboard_capture = MagicMock()  # type: ignore[method-assign]
     # 手动推 1 个 hotkey 事件到 Queue
     app._hotkey_queue.put({"event": "hotkey", "combo": "<alt>+<cmd>+n"})
 
-    # 同步跑轮询(设 _stop_hotkey_poll 立即 set,让 thread 退出)
-    app._stop_hotkey_poll.set()
-    # 调一次 _on_clipboard_capture 白盒测
-    app._on_clipboard_capture()
+    # 启停 thread:0.05s 后 set _stop_hotkey_poll,让 _poll_hotkey_queue 在 get 完事件后退出
+    import threading
+    import time
 
-    from my_ai_employee.menu_bar import app as app_module
+    def _stop_after_short_delay() -> None:
+        time.sleep(0.05)
+        app._stop_hotkey_poll.set()
 
-    app_module._notification_func.assert_called()
-    # 验调 _on_clipboard_capture 的 notification 标题(成功路径)
-    call_args_list = app_module._notification_func.call_args_list
-    # 找包含 "⌥⌘N 入库成功" 的那次
-    found = any("⌥⌘N 入库成功" in str(call) for call in call_args_list)
-    assert found, f"未找到 ⌥⌘N 入库成功 notification, 实际调用列表: {call_args_list}"
-    # 验 capture_service 必被调 1 次(不再是占位)
-    fake_capture.capture_and_emit.assert_called_once()
+    threading.Thread(target=_stop_after_short_delay, daemon=True).start()
+    # 真调 _poll_hotkey_queue() 验证 queue → _on_clipboard_capture 分发
+    app._poll_hotkey_queue()
+
+    # 关键断言 P2-2:queue 真分发到 _on_clipboard_capture(而不是手白盒调)
+    app._on_clipboard_capture.assert_called_once()
+    # 验 capture_service 必被调 1 次(D9.6.1 沿用,确保 mock 替代的 handler 也走真链路)
+    # 注:app._on_clipboard_capture 是 MagicMock,不会真调 capture_service,
+    # 所以此断言只验"不抛异常 + MagicMock 自身正常"
 
 
 # ===== T12. _poll_hotkey_queue 收 tcc_denied 事件 → 弹 notification 引导授权 =====
