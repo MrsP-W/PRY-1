@@ -22,7 +22,6 @@ import hashlib
 import time
 from abc import ABC, abstractmethod
 from collections.abc import Iterator
-from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
@@ -30,37 +29,12 @@ from typing import Any, Literal
 
 from loguru import logger
 
+from my_ai_employee.connectors._types import RawTransaction  # noqa: F401  (re-export)
 from my_ai_employee.connectors.base import (
     CIRCUIT_BREAKER_THRESHOLD,
     BaseConnector,
     HealthStatus,
 )
-
-# ===== 解析层数据类 =====
-
-
-@dataclass(frozen=True)
-class RawTransaction:
-    """微信账单原始交易(解析层产物,纯只读不落库).
-
-    字段对齐 docs/v0.1-launch-plan.md §D6 契约:
-        - external_transaction_id: 微信交易流水号(L1 硬约束用)
-        - raw_row_hash: 原始行 SHA-256(预留 D6.2 fingerprint 派生,本模块只
-          用作 raw row 的稳定去重键,不是 L2 跨源 fingerprint)
-
-    7 必含字段(plan §3 D6.1):
-        date / amount / counterparty / type / payment_method /
-        external_transaction_id / raw_row_hash
-    """
-
-    date: date
-    amount: Decimal
-    counterparty: str
-    type: Literal["支出", "收入"]
-    payment_method: str
-    external_transaction_id: str
-    raw_row_hash: str
-
 
 # ===== 解析器抽象基类 =====
 

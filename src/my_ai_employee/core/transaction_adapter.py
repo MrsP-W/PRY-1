@@ -26,6 +26,7 @@ from typing import Any
 from loguru import logger
 from sqlalchemy.orm import Session, sessionmaker
 
+from my_ai_employee.connectors.alipay_csv import AlipayCSVConnector
 from my_ai_employee.connectors.wechat_csv import RawTransaction, WeChatCSVConnector
 from my_ai_employee.core.categorizer import categorize
 from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -95,9 +96,11 @@ class TransactionAdapter:
         session_factory: sessionmaker[Session],
         *,
         wechat_connector: WeChatCSVConnector | None = None,
+        alipay_connector: AlipayCSVConnector | None = None,
     ) -> None:
         self._store = TransactionStore(session_factory)
         self._wechat_connector = wechat_connector or WeChatCSVConnector()
+        self._alipay_connector = alipay_connector or AlipayCSVConnector()
 
     def import_wechat_csv(self, path: Path) -> TransactionImportResult:
         """解析并导入微信 CSV 文件."""
@@ -106,6 +109,14 @@ class TransactionAdapter:
             raise TypeError(f"path 必须是 Path,实际 {type(path).__name__}")
         rows = self._wechat_connector.safe_parse(path)
         return self.import_raw_transactions(rows, source="wechat")
+
+    def import_alipay_csv(self, path: Path) -> TransactionImportResult:
+        """解析并导入支付宝 CSV 文件(D7.4 跨源共用)."""
+
+        if not isinstance(path, Path):
+            raise TypeError(f"path 必须是 Path,实际 {type(path).__name__}")
+        rows = self._alipay_connector.safe_parse(path)
+        return self.import_raw_transactions(rows, source="alipay")
 
     def import_raw_transactions(
         self,
