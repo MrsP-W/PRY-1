@@ -102,10 +102,12 @@ def test_parse_metadata_result_empty() -> None:
 
 
 def test_parse_metadata_result_single_note() -> None:
-    """2.2 单条 note 解析(AppleScript list 格式)."""
+    """2.2 单条 note 解析(D9.6.2 协议:每行一条 + ASCII 30 字段间)."""
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
-    result_str = "{x-coredata://ICNote/A|Notes|笔记 A|0|2026-06-15T10:00:00}"
+    sep = chr(30)  # D9.6.2 P1-2: ASCII 30 (RS) 字段间分隔符
+    # 新协议:每行一条 note,字段间 ASCII 30
+    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}笔记 A{sep}0{sep}2026-06-15T10:00:00\n"
     notes = NotesConnector._parse_metadata_result(result_str)
     assert len(notes) == 1
     assert notes[0]["apple_note_id"] == "x-coredata://ICNote/A"
@@ -115,20 +117,20 @@ def test_parse_metadata_result_single_note() -> None:
 
 
 def test_parse_metadata_result_multiple_notes() -> None:
-    """2.3 多条 notes 解析(逗号分隔,失败隔离)."""
+    """2.3 多条 notes 解析(每行一条 + 失败隔离)."""
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
-    # 含 1 条空 ID(应跳过)+ 2 条正常
+    sep = chr(30)  # D9.6.2 P1-2: ASCII 30 (RS) 字段间分隔符
+    # 新协议:每行一条 note,字段间 ASCII 30
+    # 3 条:1 条空 ID(应跳过)+ 2 条正常
     result_str = (
-        "{,Notes|空 ID|0|2026-06-15T10:00:00, "
-        "x-coredata://ICNote/B|工作|工作笔记|1|2026-06-15T11:00:00, "
-        "x-coredata://ICNote/C|生活|生活笔记|0|2026-06-15T12:00:00}"
+        f"{sep}Notes{sep}空 ID{sep}0{sep}2026-06-15T10:00:00\n"
+        f"x-coredata://ICNote/B{sep}工作{sep}工作笔记{sep}1{sep}2026-06-15T11:00:00\n"
+        f"x-coredata://ICNote/C{sep}生活{sep}生活笔记{sep}0{sep}2026-06-15T12:00:00\n"
     )
     notes = NotesConnector._parse_metadata_result(result_str)
     # 3 条(空 ID 那条 apple_note_id 为空,_parse_metadata_line 返回 None)
-    # 实际:空 ID 那条 _parse_metadata_line 返回 None(空 ID 视为占位,跳过)
-    # 剩 2 条 + 1 条 "空 ID" 也会被解析
-    # 重新核对逻辑:空 ID 视为占位跳过,所以剩 2 条
+    # 空 ID 视为占位跳过,剩 2 条
     assert len(notes) == 2
     ids = [n["apple_note_id"] for n in notes]
     assert "x-coredata://ICNote/B" in ids
@@ -139,8 +141,83 @@ def test_parse_metadata_line_malformed() -> None:
     """2.4 metadata 行格式错误(段数 < 5) → NotesConnectorError."""
     from my_ai_employee.connectors.apple_notes import NotesConnector, NotesConnectorError
 
+    sep = chr(30)
     with pytest.raises(NotesConnectorError, match="metadata 行格式错误"):
-        NotesConnector._parse_metadata_line("id1|folder1|title1")  # 缺 2 段
+        NotesConnector._parse_metadata_line(f"id1{sep}folder1{sep}title1")  # 缺 2 段
+
+
+# ===== 2.5-2.8 D9.6.2 P1-2 ASCII 30 分隔符 4 边界 case(避逗号/竖线/英文日期坑)=====
+
+
+def test_parse_metadata_title_with_comma() -> None:
+    """2.5 标题含逗号不被切(D9.6.2 新协议:无 list 元素,"," 不参与字段切)."""
+    from my_ai_employee.connectors.apple_notes import NotesConnector
+
+    sep = chr(30)
+    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}Meeting, with, commas{sep}0{sep}2026-06-15T10:00:00\n"
+    notes = NotesConnector._parse_metadata_result(result_str)
+    assert len(notes) == 1
+    # 关键:title 含逗号不被切(因为新协议不再用 "," 切 list 元素,改用 ASCII 30 切字段)
+    assert notes[0]["title"] == "Meeting, with, commas"
+
+
+def test_parse_metadata_title_with_pipe() -> None:
+    """2.6 标题含 | 不被切(ASCII 30 替代 | 作为字段间分隔符)."""
+    from my_ai_employee.connectors.apple_notes import NotesConnector
+
+    sep = chr(30)
+    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}Pipe | in | title{sep}0{sep}2026-06-15T10:00:00\n"
+    notes = NotesConnector._parse_metadata_result(result_str)
+    assert len(notes) == 1
+    # 关键:title 含 | 不被切(因为字段间用 ASCII 30,不是 |)
+    assert notes[0]["title"] == "Pipe | in | title"
+
+
+def test_parse_metadata_english_date_locale() -> None:
+    """2.7 英文 locale 日期 'Monday, June 15, 2026 at 14:30:00' 完整保留 + 真解析.
+
+    D9.6.2 P1-2 修复:旧 list 拼接 + split(',') 会把 Monday, June 15... 拆碎,modified_at 段只剩
+    'Monday' 后续 _parse_modified_at_ms 永远失败 → 兜底 0。本测试验证:
+    1. modified_at 段必含完整英文日期字符串
+    2. _parse_modified_at_ms 真解析(返回 > 0 ms,而非兜底 0)
+    """
+    from my_ai_employee.connectors.apple_notes import NotesConnector
+
+    sep = chr(30)
+    # AppleScript 默认英文 locale 输出格式
+    en_date = "Monday, June 15, 2026 at 14:30:00"
+    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}test{sep}0{sep}{en_date}\n"
+    notes = NotesConnector._parse_metadata_result(result_str)
+    assert len(notes) == 1
+    # 关键:modified_at_ms 必非 0(解析成功)
+    assert notes[0]["modified_at_ms"] > 0, (
+        f"英文日期未被真解析,modified_at_ms={notes[0]['modified_at_ms']}"
+    )
+    # 2026-06-15 14:30:00 UTC → 大约 1.78e12 ms
+    import datetime
+    expected = int(datetime.datetime(2026, 6, 15, 14, 30, 0).timestamp() * 1000)
+    # 允许 ±1 小时时区误差(系统时区可能不是 UTC)
+    assert abs(notes[0]["modified_at_ms"] - expected) < 3600 * 1000
+
+
+def test_parse_metadata_multiple_notes_robust() -> None:
+    """2.8 多条 notes 解析时,即使含逗号/竖线/英文日期 都不互相影响."""
+    from my_ai_employee.connectors.apple_notes import NotesConnector
+
+    sep = chr(30)
+    en_date = "Monday, June 15, 2026 at 14:30:00"
+    # 2 条 notes,各自含特殊字符(用 \n 分隔 notes,字段间用 ASCII 30)
+    result_str = (
+        f"x-coredata://ICNote/A{sep}Notes{sep}A, with comma{sep}0{sep}2026-06-15T10:00:00\n"
+        f"x-coredata://ICNote/B{sep}Notes{sep}B | with | pipe{sep}0{sep}{en_date}\n"
+    )
+    notes = NotesConnector._parse_metadata_result(result_str)
+    assert len(notes) == 2
+    titles = sorted([n["title"] for n in notes])
+    assert titles == ["A, with comma", "B | with | pipe"]
+    # 第二条带英文日期,modified_at_ms 必非 0
+    b_note = next(n for n in notes if n["apple_note_id"].endswith("/B"))
+    assert b_note["modified_at_ms"] > 0
 
 
 # ===== 3. safe_parse 严判(4 tests)=====

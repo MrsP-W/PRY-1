@@ -64,15 +64,30 @@ class NotesConnectorError(Exception):
 
 # ===== AppleScript 范本(沿 D6 日报员 4 坑严判)=====
 
+# 字段分隔符:D9.6.2 P1-2 修复 — 用 ASCII 30 (RS) 替代 "|"
+# 修复原因:AppleScript modification date as string 默认英文 locale 输出
+# `Monday, June 15, 2026 at 14:30:00` 天然含逗号+空格 + 历史用 | 会被标题里 | 切错位。
+# 字段内子分隔符预留 ASCII 31 (US),后续可加子字段。
+# Python 端用 _FIELD_SEP = chr(30) 解析(对应 ASCII 30 / 0x1e / RS)。
+_FIELD_SEP: str = chr(30)          # ASCII 30 / RS, 字段间分隔符
+_SUB_FIELD_SEP: str = chr(31)      # ASCII 31 / US, 字段内子分隔符(预留)
+
 
 # AppleScript 模板:逐行抓取所有 notes 的元数据(不返回 body/attachments,避免 OOM)
-# 格式:每个 note 一行 `id|folder|title|is_private|modified_at_iso`
+# 格式:每个 note 一行 `id<RS>folder<RS>title<RS>is_private<RS>modified_at_iso\n`
 # 解析层从 AppleScript 直接读 body 太慢,采用两次 AppleScript 范本:
 #   1. list_all_notes_metadata() — 抓所有 id/folder/title/is_private/modified_at
 #   2. get_note_body(apple_id) — 按需单条读 body + attachments
+#
+# D9.6.2 P1-2 修复:用 ASCII 30 (RS) 字段间分隔符 + 显式 newline 替代 AppleScript list 拼接。
+# 旧 AppleScript list-of-strings 拼接方式(`outList & ...`)会被 AppleScript 用 ", " 拼成 list,
+# Python 端 split(",") 把含逗号的 title (如 "Meeting, with, commas") 切碎。
+# 新协议:每条 note 一行,字段间用 RS,Python 端 split("\\n") + split(RS) 解析。
 _APPLE_SCRIPT_LIST_METADATA = """
 tell application "Notes"
-    set outList to {}
+    set outText to ""
+    set sepField to ASCII character 30
+    set sepLine to ASCII character 10
     repeat with n in notes
         try
             set nId to id of n as string
@@ -97,9 +112,9 @@ tell application "Notes"
         try
             set nMod to (modification date of n as string)
         end try
-        set outList to outList & (nId & "|" & nFolder & "|" & nTitle & "|" & nPriv & "|" & nMod)
+        set outText to outText & (nId & sepField & nFolder & sepField & nTitle & sepField & nPriv & sepField & nMod) & sepLine
     end repeat
-    return outList
+    return outText
 end tell
 """
 
@@ -245,9 +260,14 @@ class NotesConnector:
     def _parse_metadata_result(result: str) -> list[dict[str, Any]]:
         """解析 AppleScript 一次抓回的 metadata 字符串.
 
-        AppleScript 返回的是 `{}` list 字符串(逗号分隔,带 `{` `}`),
-        解析层先把字符串切行(以换行/逗号为分隔符,AppleScript `&` 拼出来是连续行)
-        然后每行按 `|` 切 5 段。
+        D9.6.2 P1-2 协议变更:
+          - 旧:AppleScript list-of-strings 拼接 + Python split(",") + Python split("|")
+            问题:标题里 "," 会被 list 元素分隔切碎;标题里 "|" 错位;
+                 英文日期 "Monday, June 15, 2026 at 14:30:00" 被切碎
+          - 新:AppleScript 每行一条 note + 字段间用 ASCII 30 (RS) + Python split("\n") + split(RS)
+            优势:RS 不在 str.splitlines() 的 line-sep 集合里(?),不冲突任何常见字符
+                  (注:chr(30) 实际在 splitlines() 的 line-sep 集合里,这里我们用 split("\n")
+                   手动处理,不用 splitlines())
 
         Returns:
             list[dict]: 解析后的 metadata 列表
@@ -257,23 +277,20 @@ class NotesConnector:
         """
         if not result or not result.strip():
             return []
-        # AppleScript 返回的 list 字符串示例: {"id1|folder1|title1|0|2026-06-15}", "id2|..."}
-        # 简化处理:按行切(AppleScript list 用 `, ` 分隔,但 `&` 拼接的字符串可能有换行)
+        # 用 split("\n") 替代 splitlines():splitlines() 会把 chr(30) 当 line separator,
+        # 把 5 段连体字符串切碎
         lines: list[str] = []
-        for raw_line in result.splitlines():
-            stripped = raw_line.strip().rstrip(",").strip()
+        for raw_line in result.split("\n"):
+            stripped = raw_line.strip()
             if not stripped:
                 continue
-            # 去 AppleScript 列表外层 { }
+            # 兼容旧 AppleScript list 输出:可能含 { } 包裹(防御性剥除)
             if stripped.startswith("{"):
                 stripped = stripped[1:].strip()
             if stripped.endswith("}"):
                 stripped = stripped[:-1].strip()
-            # 按 `, ` 切(AppleScript list 元素分隔)
-            for element in stripped.split(","):
-                element = element.strip().strip('"').strip()
-                if element:
-                    lines.append(element)
+            if stripped:
+                lines.append(stripped)
 
         notes: list[dict[str, Any]] = []
         for line in lines:
@@ -288,14 +305,19 @@ class NotesConnector:
 
     @staticmethod
     def _parse_metadata_line(line: str) -> dict[str, Any] | None:
-        """解析单行 metadata(5 段 `id|folder|title|is_private|modified_at`).
+        """解析单行 metadata(5 段 `id<RS>folder<RS>title<RS>is_private<RS>modified_at`).
+
+        字段分隔符:D9.6.2 P1-2 修复 — 沿 ASCII 30 (RS) 替代 "|",避:
+          - 标题里 "|" 错位
+          - AppleScript 英文日期 "Monday, June 15, 2026 at 14:30:00" 不被错切
+          - 标题里 "," + folder 名字含 "," 不被 list 元素分隔错位
 
         Returns:
             dict 或 None(空行返回 None)
         """
         if not line or not line.strip():
             return None
-        parts = line.split("|")
+        parts = line.split(_FIELD_SEP)
         if len(parts) < 5:
             raise NotesConnectorError(
                 f"metadata 行格式错误(应 5 段,实际 {len(parts)} 段): {line!r}"
@@ -309,7 +331,7 @@ class NotesConnector:
             return None  # 空 ID 视为占位,跳过
         # is_private 严判
         is_private = is_private_str == "1" if is_private_str in ("0", "1") else False
-        # modified_at_iso 解析失败也兜底为 0(本阶段不严格同步时间,仅占位)
+        # modified_at 解析失败也兜底为 0(本阶段不严格同步时间,仅占位)
         modified_at_ms = NotesConnector._parse_modified_at_ms(modified_at_str)
         return {
             "apple_note_id": apple_note_id,
