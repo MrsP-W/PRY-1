@@ -1088,6 +1088,7 @@ class TestTopLevelExports:
             build_outbox_policy_context,
             compute_outbox_acceptance,
         )
+
         # 仅验证可导入,不验证行为(行为在 TestXxx 类中已覆盖)
 
     def test_outbox_block_reason_values_is_frozenset_2(self) -> None:

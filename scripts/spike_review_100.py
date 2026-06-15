@@ -1022,9 +1022,11 @@ def run_spike(output_dir: Path) -> None:
                     "max_ms": max(latencies) if latencies else 0,
                     "avg_ms": int(statistics.mean(latencies)) if latencies else 0,
                     "p50_ms": int(statistics.median(latencies)) if latencies else 0,
-                    "p95_ms": int(statistics.quantiles(latencies, n=20)[18])
-                    if len(latencies) >= 20
-                    else 0,
+                    "p95_ms": (
+                        int(statistics.quantiles(latencies, n=20)[18])
+                        if len(latencies) >= 20
+                        else 0
+                    ),
                 },
                 "expected_match": {
                     "matched": matches_expected["total"],

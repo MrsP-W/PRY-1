@@ -289,8 +289,8 @@ def test_alembic_transactions_two_indexes_exist(
             assert idx2, "idx_transactions_status_imported 索引缺失"
             ddl2 = idx2[0][0].upper().replace('"', "")
             assert "STATUS" in ddl2
-            assert "IMPORTED_AT_MS DESC" in ddl2, (
-                f"expected 'imported_at_ms DESC' in idx2 DDL, got: {idx2[0][0]}"
-            )
+            assert (
+                "IMPORTED_AT_MS DESC" in ddl2
+            ), f"expected 'imported_at_ms DESC' in idx2 DDL, got: {idx2[0][0]}"
     finally:
         db.close()

@@ -65,9 +65,9 @@ def test_fingerprint_cross_source_same_signature() -> None:
     fp_wechat = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克咖啡(国贸店)")
     fp_alipay = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克咖啡(国贸店)")
 
-    assert fp_wechat == fp_alipay, (
-        f"D7 跨源 fingerprint 应相同(无 source 维度),wechat={fp_wechat} != alipay={fp_alipay}"
-    )
+    assert (
+        fp_wechat == fp_alipay
+    ), f"D7 跨源 fingerprint 应相同(无 source 维度),wechat={fp_wechat} != alipay={fp_alipay}"
     assert len(fp_wechat) == 32
 
 
@@ -250,9 +250,9 @@ def test_l3_mark_cross_source_candidate(session_factory) -> None:
     updated_wechat = store.by_external_id("wechat", "wechat-l3-001")
     assert updated_wechat is not None
     assert updated_wechat.needs_confirm == 1, "D7 L3:跨源标记 wechat 应 needs_confirm=1"
-    assert updated_wechat.candidate_match_id == alipay_tx.id, (
-        f"D7 L3:candidate_match_id 应指向 alipay 老交易,实际 {updated_wechat.candidate_match_id}"
-    )
+    assert (
+        updated_wechat.candidate_match_id == alipay_tx.id
+    ), f"D7 L3:candidate_match_id 应指向 alipay 老交易,实际 {updated_wechat.candidate_match_id}"
 
     # alipay 老交易不应被改动(防"误合并")
     alipay_unchanged = store.get_by_id(alipay_tx.id)

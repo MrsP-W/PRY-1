@@ -200,9 +200,9 @@ def test_multi_candidate_selects_min_id_intentionally(adapter, session_factory) 
     result = adapter.import_raw_transactions([raw], source="wechat")
 
     # 行为契约:3 候选 → candidate_count=3 + 选最小 id
-    assert result.candidate_count == 3, (
-        f"D6.6 P2:多候选 candidate_count 应=3,实际 {result.candidate_count}"
-    )
+    assert (
+        result.candidate_count == 3
+    ), f"D6.6 P2:多候选 candidate_count 应=3,实际 {result.candidate_count}"
     assert set(result.candidate_ids) == {alipay1.id, alipay2.id, alipay3.id}
 
     new_tx = store.by_external_id("wechat", "wechat-multi-001")
@@ -322,6 +322,6 @@ def test_atomicity_insert_rollback_on_illegal_transition(
     assert result.failed_items[0].error_type == "TransactionIllegalTransitionError"
 
     # 关键:DB 不留半成品(整事务回滚)
-    assert store.by_external_id("wechat", "atomic-001") is None, (
-        "D6.6 P2 原子性:状态机非法转换 → insert 必须回滚,DB 不留半成品"
-    )
+    assert (
+        store.by_external_id("wechat", "atomic-001") is None
+    ), "D6.6 P2 原子性:状态机非法转换 → insert 必须回滚,DB 不留半成品"

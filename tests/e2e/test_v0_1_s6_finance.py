@@ -165,9 +165,9 @@ def test_s6_wechat_csv_import_100_inmemory(session_factory: sessionmaker[Session
     # Adapter 6 计数 + 3 详情
     assert result.parsed == 100, f"parsed 应等于 100,实际 {result.parsed}"
     assert result.inserted == 100, f"inserted 应等于 100,实际 {result.inserted}"
-    assert result.categorized + result.needs_confirm == 100, (
-        f"categorized + needs_confirm 应等于 100,实际 {result.categorized + result.needs_confirm}"
-    )
+    assert (
+        result.categorized + result.needs_confirm == 100
+    ), f"categorized + needs_confirm 应等于 100,实际 {result.categorized + result.needs_confirm}"
     assert result.duplicates == 0, f"duplicates 应等于 0,实际 {result.duplicates}"
     assert result.failed == 0, f"failed 应等于 0,实际 {result.failed}"
     assert len(result.imported_ids) == 100
@@ -177,9 +177,9 @@ def test_s6_wechat_csv_import_100_inmemory(session_factory: sessionmaker[Session
     rows = store.list_by_source("wechat", limit=200)
     assert len(rows) == 100
     statuses = {row.status for row in rows}
-    assert statuses.issubset({"categorized", "needs_confirm"}), (
-        f"终态 status 应 ⊆ {{categorized, needs_confirm}},实际 {statuses}"
-    )
+    assert statuses.issubset(
+        {"categorized", "needs_confirm"}
+    ), f"终态 status 应 ⊆ {{categorized, needs_confirm}},实际 {statuses}"
     # 5 类分类至少命中 1 类(避免全 OTHER 兜底,验证 categorizer 真在工作)
     categories = {row.category for row in rows}
     assert len(categories) >= 2, f"分类应至少 2 类,实际 {categories}"

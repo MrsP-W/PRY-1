@@ -55,8 +55,7 @@ def _make_pretend_alembic_db(db_path: Path, revision: str = "0007_transactions")
     try:
         conn.execute("CREATE TABLE alembic_version (version_num VARCHAR(32) NOT NULL)")
         conn.execute("INSERT INTO alembic_version (version_num) VALUES (?)", (revision,))
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE transactions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 source TEXT NOT NULL,
@@ -76,8 +75,7 @@ def _make_pretend_alembic_db(db_path: Path, revision: str = "0007_transactions")
                 notes TEXT,
                 UNIQUE(source, external_transaction_id)
             )
-            """
-        )
+            """)
         conn.commit()
     finally:
         conn.close()
@@ -197,9 +195,9 @@ def test_cli_exits_0_on_valid_csv(tmp_path: Path, capsys: pytest.CaptureFixture[
     valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
     rc = _run_cli_with_mock_db(valid_csv, db)
     captured = capsys.readouterr()
-    assert rc == 0, (
-        f"D6.6 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
-    )
+    assert (
+        rc == 0
+    ), f"D6.6 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
     # 输出含 parsed=5 inserted=5
     assert "parsed=5" in captured.out, f"输出缺 parsed=5:{captured.out}"
     assert "inserted=5" in captured.out, f"输出缺 inserted=5:{captured.out}"

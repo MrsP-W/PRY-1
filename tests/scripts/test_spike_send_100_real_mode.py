@@ -55,22 +55,22 @@ def test_cli_no_smtp_password_argparse() -> None:
     """
     result = _run_cli("--help")
     assert result.returncode == 0, f"--help 失败: {result.stderr}"
-    assert "--smtp-password" not in result.stdout, (
-        f"D5.6.2 P0 凭证链路:--smtp-password 必须从 CLI 删除!\n实际 --help 输出:\n{result.stdout}"
-    )
+    assert (
+        "--smtp-password" not in result.stdout
+    ), f"D5.6.2 P0 凭证链路:--smtp-password 必须从 CLI 删除!\n实际 --help 输出:\n{result.stdout}"
 
 
 def test_cli_smtp_provider_in_choices() -> None:
     """D5.6.2 P0 凭证链路:--smtp-provider choices 必须白名单(qq/outlook/gmail)。"""
     result = _run_cli("--help")
     assert result.returncode == 0
-    assert "--smtp-provider" in result.stdout, (
-        f"D5.6.2:--smtp-provider 应在 --help:\n{result.stdout}"
-    )
+    assert (
+        "--smtp-provider" in result.stdout
+    ), f"D5.6.2:--smtp-provider 应在 --help:\n{result.stdout}"
     # choices 应包含 qq/outlook/gmail 三选项
-    assert "{qq,outlook,gmail}" in result.stdout or "qq" in result.stdout, (
-        f"D5.6.2:--smtp-provider choices 应含 qq/outlook/gmail:\n{result.stdout}"
-    )
+    assert (
+        "{qq,outlook,gmail}" in result.stdout or "qq" in result.stdout
+    ), f"D5.6.2:--smtp-provider choices 应含 qq/outlook/gmail:\n{result.stdout}"
 
 
 # ===== B. run_spike 入口严判 =====
@@ -87,13 +87,13 @@ def test_run_spike_rejects_placeholder_password() -> None:
 
     sig = inspect.signature(spike_send_100.run_spike)
     params = sig.parameters
-    assert "smtp_password" not in params, (
-        f"D5.6.2 P0 凭证链路:run_spike 签名必删 smtp_password(防占位/泄露)!实际参数: {list(params)}"
-    )
+    assert (
+        "smtp_password" not in params
+    ), f"D5.6.2 P0 凭证链路:run_spike 签名必删 smtp_password(防占位/泄露)!实际参数: {list(params)}"
     # 新签名必须含 smtp_provider
-    assert "smtp_provider" in params, (
-        f"D5.6.2 P0 凭证链路:run_spike 签名必含 smtp_provider!实际参数: {list(params)}"
-    )
+    assert (
+        "smtp_provider" in params
+    ), f"D5.6.2 P0 凭证链路:run_spike 签名必含 smtp_provider!实际参数: {list(params)}"
 
 
 def test_run_spike_rejects_test_local_host(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -232,21 +232,21 @@ def test_run_spike_reads_password_from_keychain(
     # 断言 1:SpikeResult 必返回(D5.6.5.1 P2-1 修复,顺带验证)
     assert result is not None, "D5.6.5.1 P2-1:run_spike 必返回 SpikeResult(不再 None)"
     # 断言 2:Keychain 函数被调用(provider 透传 + email 透传)
-    assert mock_call.called, (
-        "D5.6.2 P0 凭证链路:REAL 模式必须调 keychain.get_smtp_password_for_provider,但实际未被调用!"
-    )
-    assert called_with == [("qq", "real_user@qq.com")], (
-        f"D5.6.3 P2-4:Keychain 调用入参必为 (qq, real_user@qq.com),实际 {called_with!r}"
-    )
+    assert (
+        mock_call.called
+    ), "D5.6.2 P0 凭证链路:REAL 模式必须调 keychain.get_smtp_password_for_provider,但实际未被调用!"
+    assert called_with == [
+        ("qq", "real_user@qq.com")
+    ], f"D5.6.3 P2-4:Keychain 调用入参必为 (qq, real_user@qq.com),实际 {called_with!r}"
     # 断言 3:返回的密码非空(无占位/空字符串)
     assert real_password, "D5.6.3 P2-4:real_password 必非空(无占位)"
     # 断言 4:D5.7.1 P1-1 双层防御 — factory 必被调用 1 次
-    assert len(factory_calls) == 1, (
-        f"D5.7.1 P1-1:smtp_transport_factory 必被调用 1 次,实际 {len(factory_calls)}"
-    )
-    assert isinstance(factory_calls[0], InMemorySmtpTransport), (
-        f"D5.7.1 P1-1:factory 返回值必为 InMemorySmtpTransport,实际 {type(factory_calls[0]).__name__}"
-    )
+    assert (
+        len(factory_calls) == 1
+    ), f"D5.7.1 P1-1:smtp_transport_factory 必被调用 1 次,实际 {len(factory_calls)}"
+    assert isinstance(
+        factory_calls[0], InMemorySmtpTransport
+    ), f"D5.7.1 P1-1:factory 返回值必为 InMemorySmtpTransport,实际 {type(factory_calls[0]).__name__}"
     # 断言 5:D5.7.1 P1-1 — SmtpLibTransport 必未构造(测试环境绝不能连 smtp.qq.com)
     assert len(smtp_lib_constructor_calls) == 0, (
         f"D5.7.1 P1-1:SmtpLibTransport 必未构造(测试环境绝不能连 smtp.qq.com),"

@@ -57,8 +57,7 @@ def upgrade() -> None:
     副作用: 重建表会让 SQLAlchemy 重新读 schema, alembic_version 保持 0003
     """
     # 1) 建临时表(目标 schema — UNIQUE(fingerprint))
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE events_new (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             event           TEXT    NOT NULL,
@@ -70,18 +69,15 @@ def upgrade() -> None:
             created_at      INTEGER NOT NULL,
             UNIQUE(fingerprint)
         )
-        """
-    )
+        """)
     # 2) 拷数据: INSERT OR IGNORE 防御旧库已存在的重复行(subject_id=NULL + 同 fingerprint)
     #    UNIQUE(fingerprint) 冲突时保留最早插入的(id 最小), 后续重复行被忽略
-    op.execute(
-        """
+    op.execute("""
         INSERT OR IGNORE INTO events_new
             (id, event, status, source, subject_id, fingerprint, event_metadata, created_at)
         SELECT id, event, status, source, subject_id, fingerprint, event_metadata, created_at
         FROM events
-        """
-    )
+        """)
     # 3) 删旧表
     op.execute("DROP TABLE events")
     # 4) 改名
@@ -102,8 +98,7 @@ def downgrade() -> None:
     被合并的数据(有损). 这是用户主动选择回滚的代价.
     """
     # 1) 建临时表(回滚目标 schema)
-    op.execute(
-        """
+    op.execute("""
         CREATE TABLE events_old (
             id              INTEGER PRIMARY KEY AUTOINCREMENT,
             event           TEXT    NOT NULL,
@@ -115,17 +110,14 @@ def downgrade() -> None:
             created_at      INTEGER NOT NULL,
             UNIQUE(event, source, subject_id, fingerprint)
         )
-        """
-    )
+        """)
     # 2) 拷数据(不回填已被合并的重复行)
-    op.execute(
-        """
+    op.execute("""
         INSERT INTO events_old
             (id, event, status, source, subject_id, fingerprint, event_metadata, created_at)
         SELECT id, event, status, source, subject_id, fingerprint, event_metadata, created_at
         FROM events
-        """
-    )
+        """)
     # 3) 删旧表 + 改名
     op.execute("DROP TABLE events")
     op.execute("ALTER TABLE events_old RENAME TO events")

@@ -153,12 +153,12 @@ class TestFallbackChain:
     def test_chain_tiers_distinct(self) -> None:
         """主选/备选/兜底全异构(v2 设计: 异构优先, 避免同 provider 雪崩)."""
         for task, chain in FALLBACK_CHAINS.items():
-            assert chain.primary != chain.secondary, (
-                f"{task}: primary == secondary ({chain.primary})"
-            )
-            assert chain.secondary != chain.tertiary, (
-                f"{task}: secondary == tertiary ({chain.secondary})"
-            )
+            assert (
+                chain.primary != chain.secondary
+            ), f"{task}: primary == secondary ({chain.primary})"
+            assert (
+                chain.secondary != chain.tertiary
+            ), f"{task}: secondary == tertiary ({chain.secondary})"
             assert chain.primary != chain.tertiary, f"{task}: primary == tertiary ({chain.primary})"
 
     def test_get_chain_returns_config(self) -> None:

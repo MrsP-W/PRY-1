@@ -766,9 +766,7 @@ def run_spike(
             p95 = (
                 statistics.quantiles(dispatcher_latencies_sorted, n=20)[18]
                 if len(dispatcher_latencies_sorted) >= 20
-                else dispatcher_latencies_sorted[-1]
-                if dispatcher_latencies_sorted
-                else 0.0
+                else dispatcher_latencies_sorted[-1] if dispatcher_latencies_sorted else 0.0
             )
             avg = (
                 statistics.mean(dispatcher_latencies_sorted) if dispatcher_latencies_sorted else 0.0

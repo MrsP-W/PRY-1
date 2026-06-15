@@ -59,8 +59,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
         # 清理旧 revision + 插新 revision(避免多次调用累积)
         conn.execute("DELETE FROM alembic_version")
         conn.execute("INSERT INTO alembic_version (version_num) VALUES (?)", (revision,))
-        conn.execute(
-            """
+        conn.execute("""
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 apple_note_id TEXT NOT NULL,
@@ -74,8 +73,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
                 updated_at_ms INTEGER NOT NULL,
                 UNIQUE(apple_note_id)
             )
-            """
-        )
+            """)
         conn.commit()
     finally:
         conn.close()
@@ -282,9 +280,9 @@ def test_cli_spike_idempotent_second_run(
     # 第二次跑(同 DB)
     rc2 = _run_cli_with_mock_db(db, ["spike", "--n", "5"])
     captured2 = capsys.readouterr()
-    assert rc2 == 0, (
-        f"spike 二次跑应 exit 0,实际 {rc2}\nstdout={captured2.out}\nstderr={captured2.err}"
-    )
+    assert (
+        rc2 == 0
+    ), f"spike 二次跑应 exit 0,实际 {rc2}\nstdout={captured2.out}\nstderr={captured2.err}"
     assert "inserted=0" in captured2.out
     assert "skipped=5" in captured2.out
 

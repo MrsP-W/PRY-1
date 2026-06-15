@@ -157,19 +157,19 @@ def test_real_mode_unlocked_with_smtp_real_network_env(
 
     # 断言 1:SpikeResult 必返回(D5.6.5.1 P2-1 修复)
     assert result is not None, "D5.6.5.1 P2-1:run_spike 必返回 SpikeResult(不再 None)"
-    assert result.mode == "real", (
-        f"D5.6.5.1 P2-1:SpikeResult.mode 必为 'real'(env 解锁+real_send=True),实际 {result.mode!r}"
-    )
-    assert result.smtp_real_network_unlocked is True, (
-        f"D5.6.5.1 P2-1:SpikeResult.smtp_real_network_unlocked 必为 True,实际 {result.smtp_real_network_unlocked!r}"
-    )
+    assert (
+        result.mode == "real"
+    ), f"D5.6.5.1 P2-1:SpikeResult.mode 必为 'real'(env 解锁+real_send=True),实际 {result.mode!r}"
+    assert (
+        result.smtp_real_network_unlocked is True
+    ), f"D5.6.5.1 P2-1:SpikeResult.smtp_real_network_unlocked 必为 True,实际 {result.smtp_real_network_unlocked!r}"
     # 断言 2:factory 必被调用(关键!验证双层防御)
-    assert len(factory_calls) == 1, (
-        f"D5.6.5.1 P1-1:smtp_transport_factory 必被调用 1 次,实际 {len(factory_calls)}"
-    )
-    assert isinstance(factory_calls[0], InMemorySmtpTransport), (
-        f"D5.6.5.1 P1-1:factory 返回值必为 InMemorySmtpTransport,实际 {type(factory_calls[0]).__name__}"
-    )
+    assert (
+        len(factory_calls) == 1
+    ), f"D5.6.5.1 P1-1:smtp_transport_factory 必被调用 1 次,实际 {len(factory_calls)}"
+    assert isinstance(
+        factory_calls[0], InMemorySmtpTransport
+    ), f"D5.6.5.1 P1-1:factory 返回值必为 InMemorySmtpTransport,实际 {type(factory_calls[0]).__name__}"
     # 断言 3:SmtpLibTransport 必未构造(绝不能连真实 smtp.qq.com)
     assert len(smtp_lib_constructor_calls) == 0, (
         f"D5.6.5.1 P1-1:SmtpLibTransport 必未构造(测试环境绝不能连 smtp.qq.com),"
@@ -199,33 +199,33 @@ def test_smtp_transport_factory_injected_instead_of_smtp_lib(
     monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
 
     # 1. 常量契约:_SMTP_REAL_NETWORK_ENV 必存在且 == "SMTP_REAL_NETWORK"
-    assert hasattr(_spike_mod, "_SMTP_REAL_NETWORK_ENV"), (
-        "D5.6.4 P1-3:_SMTP_REAL_NETWORK_ENV 常量必存在(契约)"
-    )
-    assert _spike_mod._SMTP_REAL_NETWORK_ENV == "SMTP_REAL_NETWORK", (
-        f"D5.6.4 P1-3:_SMTP_REAL_NETWORK_ENV 必为 'SMTP_REAL_NETWORK',实际 {_spike_mod._SMTP_REAL_NETWORK_ENV!r}"
-    )
+    assert hasattr(
+        _spike_mod, "_SMTP_REAL_NETWORK_ENV"
+    ), "D5.6.4 P1-3:_SMTP_REAL_NETWORK_ENV 常量必存在(契约)"
+    assert (
+        _spike_mod._SMTP_REAL_NETWORK_ENV == "SMTP_REAL_NETWORK"
+    ), f"D5.6.4 P1-3:_SMTP_REAL_NETWORK_ENV 必为 'SMTP_REAL_NETWORK',实际 {_spike_mod._SMTP_REAL_NETWORK_ENV!r}"
 
     # 2. 签名契约:run_spike 必含 smtp_transport_factory 参数
     sig = inspect.signature(_spike_mod.run_spike)
-    assert "smtp_transport_factory" in sig.parameters, (
-        f"D5.6.4 P1-3:run_spike 签名必含 smtp_transport_factory,实际参数:{list(sig.parameters)}"
-    )
+    assert (
+        "smtp_transport_factory" in sig.parameters
+    ), f"D5.6.4 P1-3:run_spike 签名必含 smtp_transport_factory,实际参数:{list(sig.parameters)}"
 
     # 3. 源码契约:factory 优先分支必在 transport 选择段
     src = Path(_spike_mod.__file__).read_text()
-    assert "if smtp_transport_factory is not None:" in src, (
-        "D5.6.4 P1-3:源码必含 factory 优先分支(is None 严判)"
-    )
-    assert "transport = smtp_transport_factory()" in src, (
-        "D5.6.4 P1-3:源码必含 'transport = smtp_transport_factory()' 调用"
-    )
+    assert (
+        "if smtp_transport_factory is not None:" in src
+    ), "D5.6.4 P1-3:源码必含 factory 优先分支(is None 严判)"
+    assert (
+        "transport = smtp_transport_factory()" in src
+    ), "D5.6.4 P1-3:源码必含 'transport = smtp_transport_factory()' 调用"
     # 4. 顺序契约:factory 优先必早于 SmtpLibTransport()(否则 real_send 分支会先抢)
     factory_pos = src.find("smtp_transport_factory is not None")
     smtp_lib_pos = src.find("transport = SmtpLibTransport()")
-    assert factory_pos < smtp_lib_pos, (
-        f"D5.6.4 P1-3:factory 必早于 SmtpLibTransport 出现,factory={factory_pos} smtp_lib={smtp_lib_pos}"
-    )
+    assert (
+        factory_pos < smtp_lib_pos
+    ), f"D5.6.4 P1-3:factory 必早于 SmtpLibTransport 出现,factory={factory_pos} smtp_lib={smtp_lib_pos}"
 
     # 4. factory 调用计数:fake_factory 必能正常调用并返回 InMemorySmtpTransport
     factory_calls: list[InMemorySmtpTransport] = []
@@ -237,12 +237,12 @@ def test_smtp_transport_factory_injected_instead_of_smtp_lib(
         return inst
 
     inst = fake_factory()
-    assert isinstance(inst, InMemorySmtpTransport), (
-        f"D5.6.4 P1-3:fake factory 必返回 InMemorySmtpTransport,实际 {type(inst).__name__}"
-    )
-    assert len(factory_calls) == 1, (
-        f"D5.6.4 P1-3:fake factory 必被调用 1 次,实际 {len(factory_calls)}"
-    )
+    assert isinstance(
+        inst, InMemorySmtpTransport
+    ), f"D5.6.4 P1-3:fake factory 必返回 InMemorySmtpTransport,实际 {type(inst).__name__}"
+    assert (
+        len(factory_calls) == 1
+    ), f"D5.6.4 P1-3:fake factory 必被调用 1 次,实际 {len(factory_calls)}"
 
 
 def test_inmemory_mode_unaffected_by_env(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -264,16 +264,16 @@ def test_inmemory_mode_unaffected_by_env(monkeypatch: pytest.MonkeyPatch) -> Non
     src = Path(_spike_mod.__file__).read_text()
     # 验证:env 门在 if real_send: 分支内
     env_gate_pattern = r"if real_send:\s*\n\s*# 0\. D5\.6\.4 P1-3 修复[\s\S]*?SMTP_REAL_NETWORK"
-    assert re.search(env_gate_pattern, src), (
-        "D5.6.4 P1-3:env 门必在 if real_send: 分支内(InMemory 模式不触发)"
-    )
+    assert re.search(
+        env_gate_pattern, src
+    ), "D5.6.4 P1-3:env 门必在 if real_send: 分支内(InMemory 模式不触发)"
     # 验证:env 门在 if/elif/else 三分支的最顶端,先于 transport 选择
     # 间接:env 门在 run_spike 函数中,必早于 if smtp_transport_factory is not None:
     env_gate_pos = src.find("SMTP_REAL_NETWORK")
     factory_pos = src.find("smtp_transport_factory is not None")
-    assert env_gate_pos < factory_pos, (
-        f"D5.6.4 P1-3:env 门必在 factory 优先分支之前,env={env_gate_pos} factory={factory_pos}"
-    )
+    assert (
+        env_gate_pos < factory_pos
+    ), f"D5.6.4 P1-3:env 门必在 factory 优先分支之前,env={env_gate_pos} factory={factory_pos}"
 
 
 def test_real_smtp_transport_not_constructed_when_factory_injected(
@@ -316,28 +316,28 @@ def test_real_smtp_transport_not_constructed_when_factory_injected(
         src = Path(_spike_mod.__file__).read_text()
 
         # 必先看 factory 优先分支
-        assert "if smtp_transport_factory is not None:" in src, (
-            "D5.6.5.1 P1-1:源码必含 factory 优先分支"
-        )
+        assert (
+            "if smtp_transport_factory is not None:" in src
+        ), "D5.6.5.1 P1-1:源码必含 factory 优先分支"
         # 必看到 factory 调用的 transport 赋值
-        assert "transport = smtp_transport_factory()" in src, (
-            "D5.6.5.1 P1-1:源码必含 transport = smtp_transport_factory() 调用"
-        )
+        assert (
+            "transport = smtp_transport_factory()" in src
+        ), "D5.6.5.1 P1-1:源码必含 transport = smtp_transport_factory() 调用"
         # 必先于 SmtpLibTransport() 出现(factory 优先)
         factory_pos = src.find("transport = smtp_transport_factory()")
         smtp_lib_pos = src.find("transport = SmtpLibTransport()")
-        assert factory_pos < smtp_lib_pos, (
-            f"D5.6.5.1 P1-1:factory 必早于 SmtpLibTransport,factory={factory_pos} smtp_lib={smtp_lib_pos}"
-        )
+        assert (
+            factory_pos < smtp_lib_pos
+        ), f"D5.6.5.1 P1-1:factory 必早于 SmtpLibTransport,factory={factory_pos} smtp_lib={smtp_lib_pos}"
 
     # fake_factory 必能正常被调 + 返回 InMemorySmtpTransport
     inst = fake_factory()
     assert isinstance(inst, InMemorySmtpTransport)
     assert len(factory_calls) == 1
     # 在本测试中 SmtpLibTransport 必未构造(因我们没用它)
-    assert len(smtp_lib_ctor_calls) == 0, (
-        f"D5.6.5.1 P1-1:本测试未直接构造 SmtpLibTransport,实际构造了 {len(smtp_lib_ctor_calls)} 次"
-    )
+    assert (
+        len(smtp_lib_ctor_calls) == 0
+    ), f"D5.6.5.1 P1-1:本测试未直接构造 SmtpLibTransport,实际构造了 {len(smtp_lib_ctor_calls)} 次"
 
 
 def test_run_spike_returns_spike_result_dataclass(
@@ -365,14 +365,14 @@ def test_run_spike_returns_spike_result_dataclass(
     # 1. 签名契约:run_spike 返回类型注解必为 SpikeResult(非 None)
     # 注:Python 默认 PEP 563 注解是字符串(延迟求值),用 string 比较
     sig = inspect.signature(spike_send_100.run_spike)
-    assert sig.return_annotation == "SpikeResult", (
-        f"D5.6.5.1 P2-1:run_spike 返回类型注解必为 'SpikeResult',实际 {sig.return_annotation!r}"
-    )
+    assert (
+        sig.return_annotation == "SpikeResult"
+    ), f"D5.6.5.1 P2-1:run_spike 返回类型注解必为 'SpikeResult',实际 {sig.return_annotation!r}"
 
     # 2. SpikeResult dataclass 必存在(契约)
-    assert hasattr(spike_send_100, "SpikeResult"), (
-        "D5.6.5.1 P2-1:spike_send_100 模块必暴露 SpikeResult dataclass"
-    )
+    assert hasattr(
+        spike_send_100, "SpikeResult"
+    ), "D5.6.5.1 P2-1:spike_send_100 模块必暴露 SpikeResult dataclass"
 
     # 3. 字段契约:SpikeResult 必含 16 字段(D5.7.1 P2-3 统一:模式 2 + 计数 6 + 时延 3 + 注入 4 + 扩展 1)
     from dataclasses import fields  # noqa: PLC0415
@@ -396,9 +396,9 @@ def test_run_spike_returns_spike_result_dataclass(
         "injection_breach_actual",
         "extra",
     }
-    assert spike_result_fields == expected_fields, (
-        f"D5.6.5.1 P2-1:SpikeResult 字段不匹配,缺/多 {expected_fields ^ spike_result_fields}"
-    )
+    assert (
+        spike_result_fields == expected_fields
+    ), f"D5.6.5.1 P2-1:SpikeResult 字段不匹配,缺/多 {expected_fields ^ spike_result_fields}"
 
     # 4. 实际跑一次:env 解锁 + 注入 InMemory factory + mock Keychain → 验证返回 SpikeResult
     monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
@@ -423,12 +423,12 @@ def test_run_spike_returns_spike_result_dataclass(
         )
 
     # 5. 验证返回类型 + 关键字段
-    assert isinstance(result, spike_send_100.SpikeResult), (
-        f"D5.6.5.1 P2-1:run_spike 必返回 SpikeResult,实际 {type(result).__name__}"
-    )
+    assert isinstance(
+        result, spike_send_100.SpikeResult
+    ), f"D5.6.5.1 P2-1:run_spike 必返回 SpikeResult,实际 {type(result).__name__}"
     assert result.mode == "real", f"D5.6.5.1 P2-1:result.mode 必为 'real',实际 {result.mode!r}"
-    assert result.smtp_real_network_unlocked is True, (
-        f"D5.6.5.1 P2-1:result.smtp_real_network_unlocked 必为 True,实际 {result.smtp_real_network_unlocked!r}"
-    )
+    assert (
+        result.smtp_real_network_unlocked is True
+    ), f"D5.6.5.1 P2-1:result.smtp_real_network_unlocked 必为 True,实际 {result.smtp_real_network_unlocked!r}"
     assert result.total == 1, f"D5.6.5.1 P2-1:result.total 必为 1,实际 {result.total}"
     # 注意:此处不严判 result.sent(依赖 dispatcher 行为),只严判结构化字段

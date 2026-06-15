@@ -191,9 +191,9 @@ def test_alembic_schema_matches_d31_sql(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='labels'"
             ).fetchone()
             assert ddl is not None
-            assert "COLLATE NOCASE" in ddl[0].upper().replace('"', ""), (
-                f"expected COLLATE NOCASE in labels DDL, got: {ddl[0]}"
-            )
+            assert "COLLATE NOCASE" in ddl[0].upper().replace(
+                '"', ""
+            ), f"expected COLLATE NOCASE in labels DDL, got: {ddl[0]}"
     finally:
         db.close()
 
@@ -335,8 +335,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 1b) 手动 DROP 新约束 + 重建旧 4 字段 UNIQUE (模拟已迁移到 D4.3.1 改前 0002 的旧库)
             conn.exec_driver_sql("CREATE TABLE events_with_old_unique AS SELECT * FROM events")
             conn.exec_driver_sql("DROP TABLE events")
-            conn.exec_driver_sql(
-                """
+            conn.exec_driver_sql("""
                 CREATE TABLE events (
                     id              INTEGER PRIMARY KEY AUTOINCREMENT,
                     event           TEXT    NOT NULL,
@@ -348,8 +347,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
                     created_at      INTEGER NOT NULL,
                     UNIQUE(event, source, subject_id, fingerprint)
                 )
-                """
-            )
+                """)
             conn.exec_driver_sql("INSERT INTO events SELECT * FROM events_with_old_unique")
             conn.exec_driver_sql("DROP TABLE events_with_old_unique")
             # 1c) 验证旧 4 字段 UNIQUE 已生效
@@ -436,8 +434,7 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
         engine = make_sqlalchemy_engine(db)
         with engine.begin() as conn:
             # 1) 插第一条 subject_id=NULL
-            conn.exec_driver_sql(
-                """
+            conn.exec_driver_sql("""
                 INSERT INTO events
                     (event, status, source, subject_id, fingerprint, event_metadata, created_at)
                 VALUES
@@ -446,8 +443,7 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
                               "session_id": "s1", "ownership": "observe",
                               "provenance": "live", "fingerprint": "fp-A"}',
                      1000)
-                """
-            )
+                """)
             # 2) 同 fingerprint + subject_id=NULL 第二次插 → 必败(UNIQUE(fingerprint) 触发)
             #    注意: SQLCipher dialect 不一定包装 dbapi 异常为 SA IntegrityError
             #    (D3.3.3 教训: 双层 except 防御) — 同时接两种类型
@@ -455,8 +451,7 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
             from sqlalchemy.exc import IntegrityError as SAIntegrityError
 
             try:
-                conn.exec_driver_sql(
-                    """
+                conn.exec_driver_sql("""
                     INSERT INTO events
                         (event, status, source, subject_id, fingerprint, event_metadata, created_at)
                     VALUES
@@ -465,14 +460,13 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
                                   "session_id": "s1", "ownership": "observe",
                                   "provenance": "live", "fingerprint": "fp-A"}',
                          2000)
-                    """
-                )
+                    """)
                 inserted_twice = True
             except (SAIntegrityError, _sqlcipher_dbapi.IntegrityError):
                 inserted_twice = False
-            assert not inserted_twice, (
-                "UNIQUE(fingerprint) 失效: subject_id=NULL + 同 fingerprint 重复插入未被拒绝"
-            )
+            assert (
+                not inserted_twice
+            ), "UNIQUE(fingerprint) 失效: subject_id=NULL + 同 fingerprint 重复插入未被拒绝"
 
             # 3) 验证确实只有 1 条
             count = conn.exec_driver_sql(

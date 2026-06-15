@@ -216,9 +216,11 @@ class SmtpLibTransport:
             return SMTPSendResult(
                 status=SMTP_SEND_PERMANENT_BOUNCE,
                 smtp_code=e.smtp_code,
-                smtp_message=e.smtp_error.decode("utf-8", errors="replace")
-                if isinstance(e.smtp_error, bytes)
-                else str(e.smtp_error),
+                smtp_message=(
+                    e.smtp_error.decode("utf-8", errors="replace")
+                    if isinstance(e.smtp_error, bytes)
+                    else str(e.smtp_error)
+                ),
                 error_detail=f"data error: {e!r}",
             )
         except smtplib.SMTPServerDisconnected as e:
