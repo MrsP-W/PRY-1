@@ -21,12 +21,18 @@
      教训改以"launchctl list 必见 label"为唯一真理源)
     日志文件可读:log show with predicate process = my-ai-employee-monthly-report
 
-  ⚠️ 关于 ProgramArguments 里的 $(/bin/date '+%Y-%m')(2026-06-15 D10.5.3 P3-1):
-    launchd 不会做 shell 展开,L31 的 $(/bin/date '+%Y-%m') 是字面字符串,
-    实际 monthly_report.py 收到的 month 参数就是字面 "2026-06" 之类。
+  ⚠️ 关于 ProgramArguments 里的 month 字面值(2026-06-15 D10.5.3 P3-1 + D 阶段 B 类解封修):
+    launchd 不会做 shell 展开,之前 L31 写的 $(/bin/date '+%Y-%m') 是字面字符串,
+    实际 monthly_report.py 收到的 month 参数就是字面 "$(/bin/date '+%Y-%m')",
+    argparse 必 fail → exit 1。
+    2026-06-15 D 阶段(用户明确授权 B 类解封)改为静态 "2026-07" 字面值,
+    配合注释"每月 1 号 09:00 触发前需手动同步更新 month":
+      - 7/1 09:00 触发 → 改 "2026-07"
+      - 8/1 09:00 触发 → 改 "2026-08"
+      - 以此类推
     v0.2 wrapper 脚本决策(把 monthly_report.py 包到一个 shell 脚本里,
     由 wrapper 自己 date 取月份再调 monthly_report.py generate)留待 v0.2 启动评估。
-    当前 v0.1.0 范围:每月 1 号 09:00 触发时,需要手动同步更新 plist 的 month。
+    v0.1.0 当前行为:plist 字面 + 月报每次触发需手动同步,沿 D5.7.2 范本精神(显式 opt-in)。
 -->
 <plist version="1.0">
 <dict>
@@ -38,7 +44,7 @@
         <string>/Users/$USER/bin/my-ai-employee-monthly-report</string>
         <string>generate</string>
         <string>--month</string>
-        <string>$(/bin/date '+%Y-%m')</string>
+        <string>2026-07</string>
     </array>
 
     <key>EnvironmentVariables</key>
