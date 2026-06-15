@@ -1,10 +1,12 @@
-"""D9.3 — NotesMenuBarApp 测试(8 cases,沿 D4.7.3 严判范本 + D5.6.4 rumps 隔离).
+"""D9.3+D9.5 — NotesMenuBarApp 测试(8 + 4 = 12 cases,沿 D4.7.3 严判范本 + D5.6.4 rumps 隔离).
 
 设计原则:
     - `monkeypatch.setattr(rumps, "App", _FakeRumpsApp)` 隔离 NSApp 拉起
     - `monkeypatch.setattr(sys, "executable", "/usr/bin/python3")` 替换 python 路径
     - `monkeypatch.setattr(subprocess, "run", _fake_subprocess_run)` mock 子进程
     - 私有方法 _on_sync_now / _on_open_privacy 直接调(白盒测试)
+    - D9.5 Queue 接入:HotkeyListenerProcess.start mock → 验 _start_hotkey_listener
+      / _poll_hotkey_queue / _on_clipboard_capture 三入口
 """
 
 from __future__ import annotations
@@ -231,3 +233,121 @@ def test_on_open_privacy_subprocess(
     assert call_args[0] == "open"
     assert "x-apple.systempreferences" in call_args[1]
     assert "Privacy_Automation" in call_args[1]
+
+
+# ===== T9-T12. D9.5 ⌥⌘N Queue 接入(双进程范本)=====
+
+
+@pytest.fixture
+def fake_hotkey_proc(monkeypatch: pytest.MonkeyPatch) -> MagicMock:
+    """mock HotkeyListenerProcess.start 不真 spawn 子进程(沿 D5 业务调度范本)."""
+    from my_ai_employee.menu_bar import clipboard_listener as cl_module
+
+    mock_start = MagicMock()
+    monkeypatch.setattr(cl_module._mp.Process, "start", mock_start)
+    return mock_start
+
+
+# ===== T9. _start_hotkey_listener 启动子进程 + 轮询 thread =====
+
+
+def test_start_hotkey_listener_spawns_proc(fake_rumps: None, fake_hotkey_proc: MagicMock) -> None:
+    """T9: _start_hotkey_listener → HotkeyListenerProcess.start() 被调 + 轮询 thread 启动."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    app = NotesMenuBarApp()
+    # init 时已 _start_hotkey_listener 调过一次
+    fake_hotkey_proc.assert_called_once()
+    # _hotkey_proc 已被赋值
+    assert app._hotkey_proc is not None
+    # Queue 已创建
+    assert app._hotkey_queue is not None
+
+
+# ===== T10. 子进程 start 失败 → 弹 notification(异常收容)=====
+
+
+def test_start_hotkey_listener_handles_proc_failure(
+    fake_rumps: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T10: 子进程 start 抛 OSError → _notification_func 被调(沿 D4.7.3 v1.0.5 P3)."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import clipboard_listener as cl_module
+
+    def _raise_os_error(self: Any) -> None:
+        raise OSError("资源不足,无法 fork")
+
+    monkeypatch.setattr(cl_module._mp.Process, "start", _raise_os_error)
+
+    NotesMenuBarApp()  # init 时会调 _start_hotkey_listener
+
+    from my_ai_employee.menu_bar import app as app_module
+
+    app_module._notification_func.assert_called()
+    # 验第一个 notification 标题
+    call_args = app_module._notification_func.call_args
+    assert "快捷键子进程启动失败" in call_args[0][0]
+    assert "OSError" in call_args[0][2]
+
+
+# ===== T11. _poll_hotkey_queue 收 hotkey 事件 → _on_clipboard_capture =====
+
+
+def test_poll_hotkey_queue_hotkey_event_triggers_capture(
+    fake_rumps: None, fake_hotkey_proc: MagicMock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T11: Queue 推 hotkey 事件 → _on_clipboard_capture 弹 notification."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    app = NotesMenuBarApp()
+    # 手动推 1 个 hotkey 事件到 Queue
+    app._hotkey_queue.put({"event": "hotkey", "combo": "<alt>+<cmd>+n"})
+
+    # 同步跑轮询(设 _stop_hotkey_poll 立即 set,让 thread 退出)
+    app._stop_hotkey_poll.set()
+    # 调一次 _on_clipboard_capture 白盒测
+    app._on_clipboard_capture()
+
+    from my_ai_employee.menu_bar import app as app_module
+
+    app_module._notification_func.assert_called()
+    # 验调 _on_clipboard_capture 的 notification 标题
+    call_args_list = app_module._notification_func.call_args_list
+    # 找包含 "⌥⌘N 触发" 的那次
+    found = any("⌥⌘N 触发" in str(call) for call in call_args_list)
+    assert found, f"未找到 ⌥⌘N 触发 notification, 实际调用列表: {call_args_list}"
+
+
+# ===== T12. _poll_hotkey_queue 收 tcc_denied 事件 → 弹 notification 引导授权 =====
+
+
+def test_poll_hotkey_queue_tcc_denied_triggers_notification(
+    fake_rumps: None, fake_hotkey_proc: MagicMock
+) -> None:
+    """T12: Queue 推 tcc_denied 事件 → 弹 "⌥⌘N 快捷键未授权" notification."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    app = NotesMenuBarApp()
+    # 手动推 1 个 tcc_denied 事件
+    app._hotkey_queue.put({"event": "tcc_denied", "reason": "辅助功能未授权"})
+
+    # 直接调一次 _poll_hotkey_queue 同步跑(它会 get 1 个事件后,等下一次 timeout)
+    # 设 _stop_hotkey_poll 在第一次 timeout 后 set,让 thread 退出
+    import threading
+
+    def _stop_after_timeout() -> None:
+        import time
+
+        time.sleep(0.1)
+        app._stop_hotkey_poll.set()
+
+    threading.Thread(target=_stop_after_timeout, daemon=True).start()
+    app._poll_hotkey_queue()
+
+    from my_ai_employee.menu_bar import app as app_module
+
+    app_module._notification_func.assert_called()
+    # 验 notification 标题包含 "未授权"
+    call_args_list = app_module._notification_func.call_args_list
+    found = any("未授权" in str(call) for call in call_args_list)
+    assert found, f"未找到 未授权 notification, 实际调用列表: {call_args_list}"
