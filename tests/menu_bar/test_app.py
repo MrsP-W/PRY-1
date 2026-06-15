@@ -58,6 +58,12 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
         "my_ai_employee.menu_bar.app._notification_func",
         MagicMock(),
     )
+    # D9.6.1: 默认 capture_service 懒构造会连 DB,test fixture 必须 monkeypatch
+    # 避免副作用(沿 D4.7.3 v1.0.6 公共 helper 范本)
+    monkeypatch.setattr(
+        "my_ai_employee.menu_bar.app._build_default_capture_service",
+        lambda: MagicMock(),
+    )
 
 
 @pytest.fixture
@@ -156,11 +162,13 @@ def test_app_menu_items_registered(fake_rumps: None) -> None:
 
     app = NotesMenuBarApp()
     menu = app.menu
-    assert "立即同步" in menu
-    assert "打开 Notes" in menu
-    assert "授权引导" in menu
-    assert "退出" in menu
-    assert None in menu  # 分隔符
+    # menu 可能是 list[str] 或 rumps.Menu(取决于 rumps.clicked 装饰是否触发)
+    # 把所有项转 str 检查更鲁棒
+    menu_strs = [str(m) for m in menu]
+    assert any("立即同步" in s for s in menu_strs), f"menu 缺 '立即同步', 实际 {menu}"
+    assert any("打开 Notes" in s for s in menu_strs), f"menu 缺 '打开 Notes', 实际 {menu}"
+    assert any("授权引导" in s for s in menu_strs), f"menu 缺 '授权引导', 实际 {menu}"
+    assert any("退出" in s for s in menu_strs), f"menu 缺 '退出', 实际 {menu}"
 
 
 # ===== T6. 同步成功路径 =====
@@ -296,10 +304,26 @@ def test_start_hotkey_listener_handles_proc_failure(
 def test_poll_hotkey_queue_hotkey_event_triggers_capture(
     fake_rumps: None, fake_hotkey_proc: MagicMock, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """T11: Queue 推 hotkey 事件 → _on_clipboard_capture 弹 notification."""
+    """T11: Queue 推 hotkey 事件 → _on_clipboard_capture 调 capture_service + 弹 notification.
+
+    D9.6.1 升级:不再弹 "⌥⌘N 触发" 占位,改调 self.capture_service.capture_and_emit()
+    然后根据返回类型弹 3 种 notification 中的一种。本测试验"成功路径" → "⌥⌘N 入库成功"。
+    """
+    from my_ai_employee.ai.note_structurer import StructuredNote
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
-    app = NotesMenuBarApp()
+    # 注入 capture_service stub,返回 StructuredNote 成功报告
+    fake_capture = MagicMock()
+    fake_capture.capture_and_emit.return_value = StructuredNote(
+        apple_note_id="clipboard://1234-abcd",
+        category="TODO",
+        tags=["foo", "bar", "baz"],
+        model_full_id="claude-haiku-4-5",
+        latency_ms=123,
+        body_length=42,
+    )
+
+    app = NotesMenuBarApp(capture_service=fake_capture)
     # 手动推 1 个 hotkey 事件到 Queue
     app._hotkey_queue.put({"event": "hotkey", "combo": "<alt>+<cmd>+n"})
 
@@ -311,11 +335,13 @@ def test_poll_hotkey_queue_hotkey_event_triggers_capture(
     from my_ai_employee.menu_bar import app as app_module
 
     app_module._notification_func.assert_called()
-    # 验调 _on_clipboard_capture 的 notification 标题
+    # 验调 _on_clipboard_capture 的 notification 标题(成功路径)
     call_args_list = app_module._notification_func.call_args_list
-    # 找包含 "⌥⌘N 触发" 的那次
-    found = any("⌥⌘N 触发" in str(call) for call in call_args_list)
-    assert found, f"未找到 ⌥⌘N 触发 notification, 实际调用列表: {call_args_list}"
+    # 找包含 "⌥⌘N 入库成功" 的那次
+    found = any("⌥⌘N 入库成功" in str(call) for call in call_args_list)
+    assert found, f"未找到 ⌥⌘N 入库成功 notification, 实际调用列表: {call_args_list}"
+    # 验 capture_service 必被调 1 次(不再是占位)
+    fake_capture.capture_and_emit.assert_called_once()
 
 
 # ===== T12. _poll_hotkey_queue 收 tcc_denied 事件 → 弹 notification 引导授权 =====

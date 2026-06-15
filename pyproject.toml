@@ -44,6 +44,7 @@ dependencies = [
     "pyobjc-framework-Cocoa>=10.3",  # macOS Cocoa 绑定（菜单栏用 rumps 间接）
     "rumps>=0.4.0",                   # Mac 菜单栏 UI
     "pynput>=1.7.7",                  # 全局快捷键监听（D9.5 ⌥⌘N,macOS TCC 需辅助功能授权）
+    "pyperclip>=1.8.2",               # 剪贴板读取（D9.6.1 ⌥⌘N 触发后 pyperclip.paste）
     "httpx>=0.27",
 ]
 

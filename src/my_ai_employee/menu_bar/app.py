@@ -40,6 +40,13 @@ from typing import Any
 
 import rumps as _rumps
 
+from my_ai_employee.ai.note_structurer import (
+    FailureDecisionReport,
+    PrivateSkipDecisionReport,
+)
+from my_ai_employee.menu_bar.clipboard_capture import (
+    ClipboardCaptureService,
+)
 from my_ai_employee.menu_bar.clipboard_listener import (
     _EVENT_HOTKEY,
     _EVENT_TCC_DENIED,
@@ -95,6 +102,33 @@ def _validate_expense_service(obj: object) -> None:
         )
 
 
+def _build_default_capture_service() -> ClipboardCaptureService:
+    """构造默认 ClipboardCaptureService(沿 D4.7.3 v1.0.6 default_singleton 范本).
+
+    生产 NotesMenuBarApp() 无 capture_service 注入时,自动用 NoteStore + NoteStructurerService
+    默认实例建一个。注意: NoteStore + NoteStructurerService 的默认构造会触发 DB session
+    初始化,生产环境允许(启动菜单栏时本就要连 DB),test fixture 必须显式注入 capture_service
+    或 monkeypatch _build_default_capture_service 避免 DB / LLM 副作用。
+
+    Returns:
+        ClipboardCaptureService: 默认实例(store + structurer 默认)
+    """
+    from sqlalchemy.orm import sessionmaker
+
+    from my_ai_employee.ai.note_structurer import NoteStructurerService
+    from my_ai_employee.ai.router import get_router
+    from my_ai_employee.core.db import Database
+    from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine
+    from my_ai_employee.db.notes import NoteStore
+
+    db = Database.open()
+    engine = make_sqlalchemy_engine(db)
+    sf = sessionmaker(bind=engine, expire_on_commit=False)
+    store = NoteStore(sf)
+    structurer = NoteStructurerService(store=store, llm_provider=get_router())
+    return ClipboardCaptureService(store=store, structurer=structurer)
+
+
 class NotesMenuBarApp(_RumpsAppBase):
     """Apple Notes 菜单栏 App(D9.3 — 沿 D10 留 ExpenseService 注入点).
 
@@ -113,11 +147,15 @@ class NotesMenuBarApp(_RumpsAppBase):
         self,
         *,
         expense_service: ExpenseService | None = None,
+        capture_service: ClipboardCaptureService | None = None,
     ) -> None:
         """初始化菜单栏 App.
 
         Args:
             expense_service: 状态服务接口,None 时使用 ExpenseServiceStub 默认单例
+            capture_service: 剪贴板捕获服务(D9.6.1 沿 D4.7.3 v1.0.6 注入,None 时
+                              用 _build_default_capture_service 懒构造,test fixture
+                              必须显式注入以避免真读剪贴板 / 连 DB)
         """
         # 严判 expense_service(沿 D4.7.3 公共 helper 范本,避免嵌套 if)
         _validate_expense_service(expense_service)
@@ -133,6 +171,11 @@ class NotesMenuBarApp(_RumpsAppBase):
         # 轮询 thread 守护标记(测试可显式停掉)
         self._stop_hotkey_poll: _threading.Event = _threading.Event()
 
+        # 剪贴板捕获服务(D9.6.1 沿 D4.7.3 v1.0.6 注入 + 懒构造)
+        # 显式 None = 用 default;显式非 None = 用注入值
+        self._capture_service: ClipboardCaptureService | None = capture_service
+        self._capture_service_built: bool = capture_service is not None
+
         # 调 rumps.App.__init__ 启动 NSApp 主循环
         super().__init__("Notes", title=self._format_title(self._notes_count))
 
@@ -147,6 +190,21 @@ class NotesMenuBarApp(_RumpsAppBase):
 
         # 启动子进程 + 轮询 thread(放最末,即便失败也不影响主进程 NSApp)
         self._start_hotkey_listener()
+
+    @property
+    def capture_service(self) -> ClipboardCaptureService:
+        """懒构造剪贴板捕获服务(沿 D4.7.3 v1.0.6 default_singleton 范本).
+
+        首次访问时才连 DB + 构 NoteStructurerService(避免 __init__ 副作用)。
+
+        Returns:
+            ClipboardCaptureService: 显式注入的实例,或 _build_default_capture_service() 默认实例
+        """
+        if not self._capture_service_built:
+            self._capture_service = _build_default_capture_service()
+            self._capture_service_built = True
+        assert self._capture_service is not None  # 严判编译期
+        return self._capture_service
 
     def _format_title(self, count: int) -> str:
         """格式化菜单栏 title(数字 → 表情 + 数字).
@@ -258,19 +316,33 @@ class NotesMenuBarApp(_RumpsAppBase):
                 )
 
     def _on_clipboard_capture(self) -> None:
-        """⌥⌘N 触发后处理(本步先弹 notification 占位,S7 e2e 实化消费).
+        """⌥⌘N 触发后处理(D9.6.1 — ClipboardCaptureService 真链路接入).
 
-        后续(D10 / C5)会替换为:
-            1. 读 pyperclip.paste()
-            2. 调 NoteStructurerService.structure_and_emit(clip_id)
-            3. 写 NoteStore.insert(...)
-        本轮仅占位,弹 notification 让用户知道快捷键响应了。
+        业务流程(沿 D9.6.1 + D4.7.3 v1.0.6 范本):
+          1. 调 self.capture_service.capture_and_emit() 读剪贴板 + 落 NoteStore + 走 LLM
+             (capture_service 是 lazy property,首次访问时才连 DB)
+          2. isinstance 区分 3 类决策报告 → 弹不同 notification
         """
-        _notification_func(
-            "⌥⌘N 触发",
-            "剪贴板内容即将结构化入 Notes",
-            "D9.5 链路验证通过(S7 e2e 待 C5 实化消费)",
-        )
+        result = self.capture_service.capture_and_emit()
+        if isinstance(result, PrivateSkipDecisionReport):
+            _notification_func(
+                "⌥⌘N 业务阻断",
+                "私人笔记已跳过 LLM",
+                result.apple_note_id[:40],
+            )
+        elif isinstance(result, FailureDecisionReport):
+            _notification_func(
+                "⌥⌘N 失败",
+                f"reason={result.reason}",
+                str(result.last_error)[:100],
+            )
+        else:
+            # StructuredNote 成功
+            _notification_func(
+                "⌥⌘N 入库成功",
+                f"category={result.category}",
+                f"tags={len(result.tags)}",
+            )
 
 
 __all__ = ["NotesMenuBarApp"]
