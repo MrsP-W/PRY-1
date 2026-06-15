@@ -2,7 +2,7 @@
 
 > **目的**：把 5 层架构、关键决策理由、适配器契约、数据流、安全模型、失败模式讲清楚，作为 D1+ 所有编码的参考。
 >
-> **状态**：D1-D5.7.2 真正锁定(2026-06-14:smtp.qq.com:465 SSL 真实 1 封 SMTP 端到端实测通过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / B3 真正解封 / 1565 passed / 8 质量门 8/8 全绿 / 90.2% 覆盖,D5.6.5 commit `6ac8d9b` + D5.6.5.1 commit `2396def`+`b037334` 检查员驳回 5 缺陷全部修复 + D5.7 docs 收口 8 件套 commit `4a24504` + D5.7.1 检查员驳回 5 缺陷全部修复真正锁定 commit `2cd434e` + D5.7.2 docs 收口最后一致性修正 真正锁定 commit `ef83c63`)。**D5 业务调度器完全锁定,直接进入 v0.1 发布规划(commit `effef5a`,2026-06-14)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) — 4 子阶段 D6+D7+D9+D10 + 收口,D8 智能财务延后 v0.2,B1/B2/B4/outlook-gmail 仍延后,2026-07 中下旬发布。CalDAV / 菜单栏 / launchd 顺延 D6+。
+> **状态**：D1-D7 + D9.1-D9.5 + S6+S7 e2e 全部实化收口(2026-06-15:smtp.qq.com:465 SSL 真实 1 封 SMTP 端到端实测通过 + D6 微信账单 + D7 支付宝账单/跨源去重 + D9.1 Apple Notes 适配器 + D9.2 sync_notes.py CLI + D9.3 rumps 菜单栏骨架 + D9.4 NoteStructurerService 3 入口 + D9.5 ⌥⌘N 双进程范本 + S6+S7 端到端 e2e 实化 全部落地;1839 passed / 5 skipped / coverage 89.6% / 8 质量门 8/8 全绿;HEAD `ee70acb` ← `d0d3966` ← `a34f20f` ← `bfa48aa` ← `98d9d64` ← `87e16c2` ← `32fa260` ← `1ec2caf` 8 commits 收口链)。**D5 业务调度器完全锁定 + D9 Apple Notes 全链路实化,直接进入 v0.1 发布规划中段**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) — 4 子阶段 D6+D7+D9+D10 + 收口(D6/D7/D9.1-D9.5/S6/S7 e2e 已落,D10 待启动),D8 智能财务延后 v0.2,B1/B2/B4/outlook-gmail 仍延后,2026-07 中下旬发布。CalDAV / 菜单栏 / launchd 顺延 D6+。
 
 ---
 
@@ -12,7 +12,7 @@
 ┌─────────────────────────────────────────────────────────────┐
 │  L4 Agent 层（复用 Agent Assistant 7 角色 + Skill 生态,D5.5.3 起改为 5 复制）     │
 │  @信息员 @日报员 @教练员 @检查员 @SAP顾问 @回顾员 ...        │
-│  + 新增 @管家 @审计员（Week 2 实施）                         │
+│  + 新增 @管家 @审计员(Week 2 D10 实施,D9.5 ⌥⌘N 双进程范本已就绪可对接)         │
 ├─────────────────────────────────────────────────────────────┤
 │  L3 智能层 — minimax M3（统一 LLM）+ 规则引擎 fallback        │
 │  (分类/草稿/对账/结构化 — 关键路径 fallback 到本地规则)        │
@@ -70,7 +70,7 @@
 | **caldav** | iCloud（**优先**）/ Google Calendar | CalDAV | 5 min 轮询 | **D6+ 顺延**(原 Week 1 D5,2026-06-11 重新定义) |
 | **wechat_csv** | 微信账单 | CSV 文件导入 | 用户手动 / 每日 | Week 2 D6 |
 | **alipay_csv** | 支付宝账单 | CSV 文件导入 | 用户手动 / 每日 | Week 2 D7 |
-| **apple_notes** | Apple Notes | AppleScript 读取 | 事件触发 | Week 2 D9 |
+| **apple_notes** | Apple Notes | AppleScript 读取 | 事件触发 | Week 2 D9.1-D9.5(已落 6 commits 收口 `1ec2caf → ee70acb`) |
 | **apple_reminders** | Reminders（复用 Agent Assistant）| AppleScript | 5 min 轮询 | **D6+ 顺延**(原 Week 1 D5,2026-06-11 重新定义) |
 
 **适配器接口契约**（abstract）：
@@ -202,7 +202,7 @@ CREATE TABLE health_log (
 | **classifier** | 邮件正文 | 5 类标签 + 优先级 | minimax M3 |
 | **drafter** | 邮件 + 用户历史 | 回复草稿 | minimax M3 |
 | **finance_analyzer** | 当月交易 | 异常检测 + 月度报告 | minimax M3 |
-| **note_structurer** | 剪贴板/Notes 内容 | Markdown + tags | minimax M3 |
+| **note_structurer** | 剪贴板/Notes 内容 | Markdown + tags(D9.4 3 入口 `structure_and_emit` / `record_private_skip_and_emit` / `record_failure_and_emit` 已落) | minimax M3 |
 
 **LLM 路由策略**（✅ 2026-06-07 决策：**统一 minimax M3，不做本地 Ollama**）：
 
@@ -315,17 +315,18 @@ CREATE TABLE health_log (
 [Mac 通知 + 菜单栏更新]
 ```
 
-### 场景 4：剪贴板笔记自动结构化
+### 场景 4：剪贴板笔记自动结构化(D9.5 已实化,沿 ⌥⌘N 双进程范本)
 
 ```
 [User 按 ⌥⌘N]
-  ↓
-[L4 @内容编辑员 Agent]
-  ↓ 读取 NSPasteboard
-[L3 note_structurer]
+  ↓ (D9.5 pynput 子进程捕获,multiprocessing.Queue 传主进程)
+[L4 @内容编辑员 Agent / 菜单栏回调]
+  ↓ 读取 NSPasteboard (pyperclip.paste)
+[L3 note_structurer](D9.4 NoteStructurerService 3 入口)
   ↓ minimax M3 → Markdown + tags
-  ↓ INSERT INTO notes
-[Apple Notes 同步（可选）]
+  ↓ INSERT/UPDATE notes
+  ↓ is_private=True → PrivateSkipDecisionReport 业务硬阻断(不调 LLM,沿 D4.7.2 v1.0.6 SPAM 范本)
+[Mac 通知 + 菜单栏更新]
 ```
 
 ---
@@ -421,6 +422,6 @@ CREATE TABLE health_log (
 
 ---
 
-**最后更新**:2026-06-14(D5.7.2 commit `ef83c63` docs 收口最后一致性修正 + v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab` + 第四轮 4 缺陷修正 commit `c9bea39` + 第五轮 4 缺陷修正 commit 即将落)
+**最后更新**:2026-06-15(D9.2-D9.5 + S7 e2e 6 commits 收口链 `1ec2caf → 32fa260 → 87e16c2 → 98d9d64 → bfa48aa → d0d3966 → ee70acb` 实化;1839 passed / 5 skipped / coverage 89.6%;S7 e2e 2 skip 全部消除;下一棒 C6 docs 收口 + D10 启动)
 **状态**:D1-D5.7.2 真正锁定(D4.8 v1.0.1 commit `2e48179` + D5.1 `cce567a` + D5.1-fix `18284fa` + D5.2 `604f937` + D5.3 `192c215` + D5.4 `e9f3126` + D5.5 `3f449d9` + D5.5.1 + D5.5.2 `97b7605` + D5.5.3 `7e9bca0` + D5.5.4 `a7560c1` + D5.5.5 `a866810` + D5.6 v1 `c4a7d01` + D5.6.1 `fdf44c6` + D5.6.2 `819affb`+`8fdc088` + D5.6.3 `007a6be`+`2bc5b3b`+`3de03ed` + D5.6.4 `a75894c`+`e07feee`+`9d78900`+`fa7aff5` + D5.6.5 `6ac8d9b` + D5.6.5.1 `2396def`+`b037334` + D5.7 `4a24504` + D5.7.1 `2cd434e` + D5.7.2 `ef83c63` docs 收口最后一致性修正 + **v0.1 启动规划落地 commit `effef5a` + 7 缺陷修正 commit `87f2013` + 第二轮 6 缺陷修正 commit `03e5f48` + 第三轮 6 缺陷修正 commit `a05e6ab`(P1 × 3 + P2 × 3 修正 docs) + 第四轮 4 缺陷修正 commit `c9bea39`(P1 × 1 + P2 × 2 + P3 × 1 修正 docs + 3 层去重模型 + 11 项 DoD 统一 + 7 失效链接清理 + commit 落盘) + 第五轮 4 缺陷修正 commit 即将落(P1 × 2 + P2 × 1 + P3 × 1 修正 docs + architecture.md 3 层去重模型 + week2-mvp.md 6.4 任务 3 层化 + 11 项粒度统一 9 DoD + 2 延后 + commit 落盘)**:[docs/v0.1-launch-plan.md](v0.1-launch-plan.md) 4 子阶段 D6+D7+D9+D10 + 收口,2026-07 中下旬发布),**D5 业务调度器完全锁定,直接进入 v0.1 发布规划**
 **维护者**:Mr-PRY

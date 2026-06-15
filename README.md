@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：✅ D1-D7 + S6 e2e + D9.1 Apple Notes 底座已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过);S6 e2e 实化收口(3 个 skip → 真实断言,`expense_aggregate` 独立模块就绪)。D9.1 已完成 Apple Notes 适配器 + NoteStore + `0008_notes` migration。`make test` 1768 passed / 7 skipped / coverage 89.5%,8 质量门 8/8 全绿。下一棒:D9.2+ sync_notes / ⌥⌘N / S7 e2e。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：✅ D1-D7 + S6 e2e + D9.1-D9.5 Apple Notes 全链路 + S7 e2e 已落地并复检通过(2026-06-15)。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过);S6 e2e 实化收口(3 个 skip → 真实断言,`expense_aggregate` 独立模块就绪);**D9.2 sync_notes.py CLI + D9.3 rumps 菜单栏骨架 + D9.4 NoteStructurerService 3 入口 + D9.5 ⌥⌘N 双进程范本 全部实化;S7 剪贴板 → Notes 端到端 2 skip 全部消除**。`make test` 1839 passed / 5 skipped / coverage 89.6%,8 质量门 8/8 全绿。下一棒:C6 docs 收口 → D10 启动(Agent + 月报 + launchd + S8-S9 e2e)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D9.1 复检:1768 passed / 7 skipped,覆盖率 89.5%）
+├── tests/                    # pytest 单元测试（D9.5+S7 e2e 复检:1839 passed / 5 skipped,覆盖率 89.6%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D9.1 复检:1768 passed / 7 skipped,覆盖率 89.5%）
+make test    # pytest 单元测试（D9.5+S7 e2e 复检:1839 passed / 5 skipped,覆盖率 89.6%）
 ```
 
 ### 4. 文档 lint
@@ -170,7 +170,12 @@ make help
 | **D7 支付宝适配器**（CSV 解析 + 跨源去重 + import_all + 虚拟 spike）| ✅ 复检通过 | 2026-06-15 |
 | **S6 财务端到端**（微信/支付宝导入 + 菜单栏支出更新）| ✅ 复检通过 | 2026-06-15 |
 | **D9.1 Apple Notes 底座**（适配器 + NoteStore + 0008 migration）| ✅ 复检通过 | 2026-06-15 |
-| D9.2-D10 Week 2 | ⏳ | - |
+| **D9.2 sync_notes.py CLI**（subparsers spike/sync + 4 退出码 + alembic 校验 + HTML cleaner）| ✅ 落地 | 2026-06-15 |
+| **D9.3 菜单栏骨架**（rumps NotesMenuBarApp + ExpenseServiceStub 5 方法）| ✅ 落地 | 2026-06-15 |
+| **D9.4 NoteStructurerService**（3 入口 + 6 类 SYSTEM prompt + 抗注入范本）| ✅ 落地 | 2026-06-15 |
+| **D9.5 ⌥⌘N 全局快捷键**（pynput 子进程 + TCC 引导 + open_privacy_settings）| ✅ 落地 | 2026-06-15 |
+| **S7 剪贴板 → Notes 端到端**（NoteStore.insert + structure_and_emit + 30 笔 InMemory + 私有笔记业务阻断）| ✅ 落地 | 2026-06-15 |
+| D10 Agent + 月报 + launchd + S8/S9 e2e | ⏳ | - |
 | **v0.1 发布** | ⏳ | - |
 
 ---
@@ -186,7 +191,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试) |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → **D9.5+S7 e2e 1839 passed / 89.6%** |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本),launchd D6+ 顺延 |
 
 ---
@@ -240,6 +245,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-15（D9.1 复检:HEAD `1ec2caf`,Apple Notes 适配器 + NoteStore + `0008_notes` migration 已落;`make test` 1768 passed / 7 skipped / coverage 89.5%,`mypy src tests` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` 8 质量门 8/8 全绿。下一棒:D9.2+ sync_notes / ⌥⌘N / S7 e2e。）
+**最后更新**：2026-06-15（D9.5 + S7 e2e 复检:HEAD `ee70acb`,D9.2 sync_notes.py CLI + D9.3 rumps 菜单栏骨架 + D9.4 NoteStructurerService 3 入口 + D9.5 ⌥⌘N pynput 子进程 + S7 剪贴板 → Notes 端到端 2 skip 全部消除 6 commits 收口链落地;`make test` 1839 passed / 5 skipped / coverage 89.6%,`mypy src tests` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` 8 质量门 8/8 全绿。下一棒:C6 docs 收口 → D10 启动准备(Agent + 月报 + launchd + S8-S9 e2e)。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
