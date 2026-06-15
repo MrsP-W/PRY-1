@@ -43,6 +43,9 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make run$(RESET)      启动主程序（占位）"
 	@echo "  $(GREEN)make install-hooks$(RESET) 安装 pre-commit hook（自动 MD lint）"
 	@echo "  $(GREEN)make clean$(RESET)    清理临时文件（__pycache__/、*.log、*.tmp）"
+	@echo "  $(GREEN)make sync-notes$(RESET) D9.2 — Apple Notes 正常同步(真 AppleScript 调 Notes.app)"
+	@echo "  $(GREEN)make spike-notes$(RESET) D9.2 — Apple Notes spike(30 笔 faker 跑通链路,Mock runner)"
+	@echo "  $(GREEN)make test-notes$(RESET) D9.2 — Apple Notes 测试套件(12 cases:7 HTML cleaner + 5 CLI)"
 	@echo "  $(GREEN)make info$(RESET)     显示项目信息（Python 版本 + 关键路径）"
 	@echo "  $(GREEN)make venv$(RESET)     创建项目本地 venv（uv venv, Python 3.12）"
 	@echo "  $(GREEN)make install$(RESET)  同步依赖到 venv（uv sync --extra dev）"
@@ -158,6 +161,21 @@ install-hooks: ## 安装 pre-commit hook
 	@cp scripts/pre-commit .git/hooks/pre-commit
 	@chmod +x .git/hooks/pre-commit
 	@echo "$(GREEN)✅ Hook 已安装$(RESET)"
+
+.PHONY: sync-notes
+sync-notes: ## D9.2 — Apple Notes 正常同步(真 AppleScript 调 Notes.app)
+	@echo "$(BLUE)📝 同步 Apple Notes 到 notes 表(4 退出码契约)$(RESET)"
+	@$(PYTHON) scripts/sync_notes.py sync
+
+.PHONY: spike-notes
+spike-notes: ## D9.2 — Apple Notes spike(30 笔 faker,Mock runner 跑通链路)
+	@echo "$(BLUE)🧪 Apple Notes spike(30 笔 faker,验证 insert 链路)$(RESET)"
+	@$(PYTHON) scripts/sync_notes.py spike --n 30
+
+.PHONY: test-notes
+test-notes: ## D9.2 — Apple Notes 测试套件(12 cases)
+	@echo "$(BLUE)🧪 跑 Apple Notes 测试(7 HTML cleaner + 5 CLI 集成)$(RESET)"
+	@$(PYTHON) -m pytest tests/scripts/test_sync_notes.py -v
 
 .PHONY: clean
 clean: ## 清理临时文件
