@@ -152,7 +152,7 @@ def _run_cli_with_db_lock(
 
 
 def test_cli_sync_per_note_db_lock_propagates_to_exit_3(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """D9.6.3 P2-1:T1 sync 模式 + NoteStore.insert 抛 OperationalError → 整批 exit 3.
 
@@ -163,6 +163,7 @@ def test_cli_sync_per_note_db_lock_propagates_to_exit_3(
     """
     db = tmp_path / "sync_lock.db"
     _make_pretend_alembic_notes_db(db)
+    monkeypatch.setenv("NOTES_REAL_NETWORK", "1")
     rc = _run_cli_with_db_lock(db, ["sync"], mode="sync")
     captured = capsys.readouterr()
     assert rc == 3, (

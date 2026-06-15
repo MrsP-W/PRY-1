@@ -1,8 +1,8 @@
-"""D9.2 — sync_notes.py CLI + HTML cleaner 测试(12 cases).
+"""D9.2 — sync_notes.py CLI + HTML cleaner 测试(15 cases).
 
 承接 docs/v0.1-launch-plan.md §D9 + 沿 tests/scripts/test_import_wechat_cli.py 范本:
 
-测试覆盖(12 cases):
+测试覆盖(15 cases):
     HTML cleaner 单元测试(7 cases):
         T1. test_clean_html_plain_text             纯文本 → 单行
         T2. test_clean_html_nested_list            嵌套列表 → 含换行
@@ -12,12 +12,15 @@
         T6. test_clean_html_collapse_multi_blanks  多次空行折叠
         T7. test_clean_html_fallback_on_malformed  异常输入兜底
 
-    CLI 集成测试(5 cases):
+    CLI 集成测试(8 cases):
         T8.  test_cli_no_args_returns_1            argparse 缺子命令 → exit 1
         T9.  test_cli_spike_30_inmemory_success    spike 30 笔 → exit 0 + inserted=30
         T10. test_cli_spike_idempotent_second_run  spike 二次跑 → 全 skipped
         T11. test_cli_spike_alembic_too_old_exit_1 alembic revision 过旧 → exit 1
         T12. test_cli_spike_alembic_missing_exit_1 alembic_version 表不存在 → exit 1
+        T13. test_cli_sync_requires_real_network_env sync 默认 deny
+        T14. test_cli_sync_max_rows_one_with_db_path sync --max-rows 1 + --db-path
+        T15. test_cli_spike_db_path_argument_passed spike --db-path
 
 设计原则(沿 D6.6 P1/P2 修复 + D4.7.3 严判范本):
     - 直接 import main()(不 subprocess,避免 SQLCipher 加密 DB 问题)
@@ -32,7 +35,7 @@ from __future__ import annotations
 import sqlite3
 import sys
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -315,3 +318,102 @@ def test_cli_spike_alembic_missing_exit_1(
     captured = capsys.readouterr()
     assert rc == 1, f"alembic_version 表不存在应 exit 1,实际 {rc}\nstderr={captured.err}"
     assert "Alembic version 校验失败" in captured.err
+
+
+# ===== T13. sync 默认 deny:需 NOTES_REAL_NETWORK=1 =====
+
+
+def test_cli_sync_requires_real_network_env(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Spike B-1:T13 sync 真 AppleScript 默认 deny,需 NOTES_REAL_NETWORK=1 显式解锁。"""
+    from scripts import sync_notes  # noqa: PLC0415
+
+    monkeypatch.delenv("NOTES_REAL_NETWORK", raising=False)
+    rc = sync_notes.main(["sync", "--max-rows", "1"])
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "NOTES_REAL_NETWORK=1" in captured.err
+    assert "真实 Apple Notes 同步需显式设置环境变量" in captured.err
+
+
+# ===== T14. sync --max-rows 1 + --db-path =====
+
+
+def test_cli_sync_max_rows_one_with_db_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Spike B-1:T14 sync --max-rows 1 只入 1 条,且 --db-path 传给 Database.open。"""
+    from sqlalchemy import create_engine
+
+    from scripts import sync_notes  # noqa: PLC0415
+
+    db = tmp_path / "sync_max_rows.db"
+    _make_pretend_alembic_notes_db(db)
+    fake_db = _FakeDatabase(db)
+    plain_engine = create_engine(f"sqlite:///{db}")
+    fake_connector = MagicMock()
+    fake_connector.list_all_notes.return_value = [
+        {
+            "apple_note_id": "x-coredata://ICNote/ONE",
+            "folder": "Notes",
+            "title": "One",
+            "is_private": False,
+            "modified_at_ms": 1750000000000,
+        },
+        {
+            "apple_note_id": "x-coredata://ICNote/TWO",
+            "folder": "Notes",
+            "title": "Two",
+            "is_private": False,
+            "modified_at_ms": 1750000001000,
+        },
+    ]
+    fake_connector.get_note_body.side_effect = ["<p>Body One</p>", "<p>Body Two</p>"]
+
+    monkeypatch.setenv("NOTES_REAL_NETWORK", "1")
+    with (
+        patch.object(sync_notes, "Database") as mock_db_class,
+        patch.object(sync_notes, "make_sqlalchemy_engine", return_value=plain_engine),
+        patch.object(sync_notes, "NotesConnector", return_value=fake_connector),
+    ):
+        mock_db_class.open.return_value = fake_db
+        rc = sync_notes.main(["sync", "--max-rows", "1", "--db-path", str(db)])
+        mock_db_class.open.assert_called_once_with(db_path=db)
+
+    captured = capsys.readouterr()
+    assert rc == 0, f"sync --max-rows 1 应 exit 0,实际 {rc}\n{captured.err}"
+    assert "notes sync: parsed=1 inserted=1 skipped=0 failed=0" in captured.out
+    assert fake_connector.get_note_body.call_count == 1
+
+    conn = sqlite3.connect(str(db))
+    try:
+        note_count = conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0]
+    finally:
+        conn.close()
+    assert note_count == 1
+
+
+# ===== T15. spike --db-path =====
+
+
+def test_cli_spike_db_path_argument_passed(tmp_path: Path) -> None:
+    """Spike B-1:T15 spike --db-path 传给 Database.open,避免 dry-run 污染生产 DB。"""
+    from sqlalchemy import create_engine
+
+    from scripts import sync_notes  # noqa: PLC0415
+
+    db = tmp_path / "spike_db_path.db"
+    _make_pretend_alembic_notes_db(db)
+    fake_db = _FakeDatabase(db)
+    plain_engine = create_engine(f"sqlite:///{db}")
+
+    with (
+        patch.object(sync_notes, "Database") as mock_db_class,
+        patch.object(sync_notes, "make_sqlalchemy_engine", return_value=plain_engine),
+    ):
+        mock_db_class.open.return_value = fake_db
+        rc = sync_notes.main(["spike", "--n", "1", "--db-path", str(db)])
+        mock_db_class.open.assert_called_once_with(db_path=db)
+
+    assert rc == 0

@@ -4,8 +4,8 @@
 承接 docs/v0.1-launch-plan.md §D9 + 沿 scripts/import_wechat.py 范本:
 
 用法:
-    # 正常同步(真 AppleScript 调 Notes.app)
-    uv run python scripts/sync_notes.py sync
+    # 正常同步(真 AppleScript 调 Notes.app,需显式 env 解锁)
+    NOTES_REAL_NETWORK=1 uv run python scripts/sync_notes.py sync --max-rows 1
 
     # spike 模式(默认 30 笔 faker,Mock runner 跑通链路)
     uv run python scripts/sync_notes.py spike --n 30
@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -66,6 +67,10 @@ from my_ai_employee.db.notes import NoteDuplicateError, NoteStore  # noqa: E402
 
 # D9.2 决策:Apple Notes 同步所需最低 alembic revision(0008_notes)
 _MIN_ALEMBIC_REVISION: str = "0008_notes"
+
+# Spike B-1 预热新增:真实 AppleScript 同步默认 deny,沿 SMTP_REAL_NETWORK=1 范本。
+_NOTES_REAL_NETWORK_ENV: str = "NOTES_REAL_NETWORK"
+_NOTES_REAL_NETWORK_VALUE: str = "1"
 
 
 # ===== 工具函数 =====
@@ -97,7 +102,20 @@ def cmd_sync(args: argparse.Namespace) -> int:
     Returns:
         退出码(0/1/2/3)
     """
-    db = Database.open()
+    if os.environ.get(_NOTES_REAL_NETWORK_ENV) != _NOTES_REAL_NETWORK_VALUE:
+        _print_err(
+            f"真实 Apple Notes 同步需显式设置环境变量 "
+            f"{_NOTES_REAL_NETWORK_ENV}={_NOTES_REAL_NETWORK_VALUE},"
+            f"实际 env[{_NOTES_REAL_NETWORK_ENV}]="
+            f"{os.environ.get(_NOTES_REAL_NETWORK_ENV)!r}。"
+        )
+        _print_err(
+            f"示例:{_NOTES_REAL_NETWORK_ENV}={_NOTES_REAL_NETWORK_VALUE} "
+            f"uv run python scripts/sync_notes.py sync --max-rows 1"
+        )
+        return 1
+
+    db = Database.open(db_path=args.db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         try:
@@ -114,6 +132,8 @@ def cmd_sync(args: argparse.Namespace) -> int:
         failed_items: list[dict[str, str]] = []
 
         for metadata in connector.list_all_notes():
+            if args.max_rows is not None and parsed >= args.max_rows:
+                break
             parsed += 1
             apple_note_id = metadata["apple_note_id"]
             try:
@@ -201,7 +221,7 @@ def cmd_spike(args: argparse.Namespace) -> int:
     Returns:
         退出码(0/1/2/3)
     """
-    db = Database.open()
+    db = Database.open(db_path=args.db_path)
     try:
         engine = make_sqlalchemy_engine(db)
         try:
@@ -265,6 +285,13 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # sync 子命令
     sync_p = sub.add_parser("sync", help="正常同步(真 AppleScript 调 Notes.app)")
+    sync_p.add_argument(
+        "--max-rows",
+        type=_positive_int,
+        default=None,
+        help="最多处理 N 条 Notes(真实 spike 推荐 1,默认不限)",
+    )
+    sync_p.add_argument("--db-path", type=Path, default=None, help="可选 DB 路径,默认主库")
     sync_p.set_defaults(func=cmd_sync)
 
     # spike 子命令
@@ -272,9 +299,18 @@ def _build_parser() -> argparse.ArgumentParser:
     spike_p.add_argument(
         "--n", type=int, default=30, help="faker 笔记数(默认 30,沿 D5.6.4 spike 范本)"
     )
+    spike_p.add_argument("--db-path", type=Path, default=None, help="可选 DB 路径,默认主库")
     spike_p.set_defaults(func=cmd_spike)
 
     return parser
+
+
+def _positive_int(value: str) -> int:
+    """argparse type:正整数。"""
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("必须是正整数")
+    return parsed
 
 
 def main(argv: list[str] | None = None) -> int:
