@@ -191,9 +191,9 @@ def test_alembic_schema_matches_d31_sql(
                 "SELECT sql FROM sqlite_master WHERE type='table' AND name='labels'"
             ).fetchone()
             assert ddl is not None
-            assert "COLLATE NOCASE" in ddl[0].upper().replace(
-                '"', ""
-            ), f"expected COLLATE NOCASE in labels DDL, got: {ddl[0]}"
+            assert "COLLATE NOCASE" in ddl[0].upper().replace('"', ""), (
+                f"expected COLLATE NOCASE in labels DDL, got: {ddl[0]}"
+            )
     finally:
         db.close()
 
@@ -464,9 +464,9 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
                 inserted_twice = True
             except (SAIntegrityError, _sqlcipher_dbapi.IntegrityError):
                 inserted_twice = False
-            assert (
-                not inserted_twice
-            ), "UNIQUE(fingerprint) 失效: subject_id=NULL + 同 fingerprint 重复插入未被拒绝"
+            assert not inserted_twice, (
+                "UNIQUE(fingerprint) 失效: subject_id=NULL + 同 fingerprint 重复插入未被拒绝"
+            )
 
             # 3) 验证确实只有 1 条
             count = conn.exec_driver_sql(

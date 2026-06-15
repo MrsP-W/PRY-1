@@ -1532,9 +1532,9 @@ class TestDraftBatchV104OneToOneContract:
         assert len(results) == 1
         assert isinstance(results[0], DraftBlockedResult), f"非阻断/非异常: {type(results[0])}"
         # 阻断模板前缀 24 字符 + 原主题 177 字符 = 201 字符 → 截断到 176 字符 + 前缀 = 200
-        assert (
-            len(results[0].subject) == 200
-        ), f"截断后应是 200 字符(前缀 24 + 原 176), 实际 {len(results[0].subject)}"
+        assert len(results[0].subject) == 200, (
+            f"截断后应是 200 字符(前缀 24 + 原 176), 实际 {len(results[0].subject)}"
+        )
         assert results[0].subject.startswith("(DRAFT-NO-REPLY) [SPAM] ")
 
     def test_mixed_batch_with_extreme_subject_keeps_one_to_one(self) -> None:
@@ -2162,9 +2162,9 @@ class TestDraftV106ToneValidationBeforeBlock:
             )
         # 关键: stats 不变(没有 SPAM 阻断 +1 副作用)
         stats_after = dict(d.stats())
-        assert (
-            stats_after == stats_before
-        ), f"非法 tone 不应触发 SPAM 阻断, stats 不变. before={stats_before}, after={stats_after}"
+        assert stats_after == stats_before, (
+            f"非法 tone 不应触发 SPAM 阻断, stats 不变. before={stats_before}, after={stats_after}"
+        )
 
     def test_invalid_tone_type_with_spam_does_not_increment_blocked(self) -> None:
         """非法 tone type(int) + SPAM: 严判入口就抛 ValueError, blocked 计数 = 0."""
@@ -2179,9 +2179,9 @@ class TestDraftV106ToneValidationBeforeBlock:
                 allow_spam_reply=False,
             )
         # 阻断计数应该是 0(不是 1)
-        assert (
-            d.stats()["blocked"] == 0
-        ), f"非法 tone 不应触发 SPAM 阻断, blocked 计数必须 = 0, 实际 {d.stats()['blocked']}"
+        assert d.stats()["blocked"] == 0, (
+            f"非法 tone 不应触发 SPAM 阻断, blocked 计数必须 = 0, 实际 {d.stats()['blocked']}"
+        )
         assert d.stats()["total"] == 0
 
     def test_invalid_tone_non_spam_raises_without_stat_change(self) -> None:
@@ -2240,9 +2240,9 @@ class TestDraftBlockedCategoryV106AuditNewlineInjection:
         )
         # 关键: body 中不能有未转义的换行后跟"原分类: NOT_SPAM"
         # 注入的 `\n` 必须被转义为字面量 `\n`(即 `\\n`)
-        assert (
-            "\n原分类: NOT_SPAM" not in result.body
-        ), f"换行注入未被防御, body 含未转义的 '原分类: NOT_SPAM'. body={result.body!r}"
+        assert "\n原分类: NOT_SPAM" not in result.body, (
+            f"换行注入未被防御, body 含未转义的 '原分类: NOT_SPAM'. body={result.body!r}"
+        )
         # 截断 + json 转义后, 真发件人应该被转义(以 \\n 形式出现, 而非真换行)
         assert "evil@example.com\\n原分类" in result.body or "evil@example.com" in result.body
 
@@ -2306,9 +2306,9 @@ class TestDraftBlockedCategoryV106AuditNewlineInjection:
         original_category_lines = [
             line for line in result.body.split("\n") if line.startswith("原分类: ")
         ]
-        assert (
-            len(original_category_lines) == 1
-        ), f"audit 块应有 1 个'原分类'行, 实际 {len(original_category_lines)} 个"
+        assert len(original_category_lines) == 1, (
+            f"audit 块应有 1 个'原分类'行, 实际 {len(original_category_lines)} 个"
+        )
         assert original_category_lines[0] == "原分类: SPAM"
 
 
@@ -2713,9 +2713,9 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
         ]
         results = d.draft_batch(emails, allow_spam_reply=False)  # 批级默认阻断(被 per-email 覆盖)
         assert len(results) == 1
-        assert isinstance(
-            results[0], DraftResult
-        ), f"per-email allow=True 应走 LLM 路径, 实际 {type(results[0]).__name__}"
+        assert isinstance(results[0], DraftResult), (
+            f"per-email allow=True 应走 LLM 路径, 实际 {type(results[0]).__name__}"
+        )
         # 关键: per-email True 应该透传到 DraftResult.spam_reply_authorized
         assert results[0].spam_reply_authorized is True, (
             f"draft_batch 应透传 per-email allow_spam_reply=True, "
@@ -2915,9 +2915,9 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
         assert len(results) == 1
         assert isinstance(results[0], DraftResult)
         # 关键: per-email REJECT 应该透传到 DraftResult.spam_reply_intent
-        assert (
-            results[0].spam_reply_intent == DraftSpamReplyIntent.REJECT
-        ), f"per-email REJECT 应透传, 实际 {results[0].spam_reply_intent}"
+        assert results[0].spam_reply_intent == DraftSpamReplyIntent.REJECT, (
+            f"per-email REJECT 应透传, 实际 {results[0].spam_reply_intent}"
+        )
 
     def test_per_email_unsubscribe_propagates_to_draft(self) -> None:
         """per-email spam_reply_intent="UNSUBSCRIBE" → DraftResult.spam_reply_intent==UNSUBSCRIBE."""
@@ -3461,9 +3461,9 @@ class TestDraftBlockedCategoryV108EmojiSafelyHandle:
         # 关键: 不抛 ValueError, 正常返回 DraftBlockedResult
         assert isinstance(result, DraftBlockedResult)
         # blocked_body 必须 ≤ 2000 字符(MAX_BODY_CHARS 上限)
-        assert (
-            len(result.body) <= EmailDrafter.MAX_BODY_CHARS
-        ), f"blocked_body 超 2000 字符上限, 安全降级失败. 实际 {len(result.body)}"
+        assert len(result.body) <= EmailDrafter.MAX_BODY_CHARS, (
+            f"blocked_body 超 2000 字符上限, 安全降级失败. 实际 {len(result.body)}"
+        )
 
     def test_emoji_in_subject_does_not_explode(self) -> None:
         """P1-1 验证: 极端 emoji subject 不再触发构造异常."""
@@ -3519,9 +3519,9 @@ class TestDraftBlockedCategoryV108EmojiSafelyHandle:
             tone=DraftTone.FORMAL,
         )
         # 关键: body 中不能有未转义的换行后跟"原分类: NOT_SPAM"
-        assert (
-            "\n原分类: NOT_SPAM" not in result.body
-        ), f"换行注入未被防御, body 含未转义 '原分类: NOT_SPAM'. body={result.body!r}"
+        assert "\n原分类: NOT_SPAM" not in result.body, (
+            f"换行注入未被防御, body 含未转义 '原分类: NOT_SPAM'. body={result.body!r}"
+        )
         # 真发件人应被转义(以 \\n 形式出现, 而非真换行)
         assert "evil\\n原分类" in result.body or "evil" in result.body
 
@@ -3811,17 +3811,17 @@ class TestDraftResultV108RawContentTruncate:
         """raw_content = 501 字符(超 1 字符)→ 截断到 500 字符."""
         content = "X" * 501
         result = DraftResult(**{**self._valid_kwargs(), "raw_content": content})
-        assert (
-            len(result.raw_content) == 500
-        ), f"raw_content 应截断到 500 字符, 实际 {len(result.raw_content)}"
+        assert len(result.raw_content) == 500, (
+            f"raw_content 应截断到 500 字符, 实际 {len(result.raw_content)}"
+        )
 
     def test_raw_content_10070_chars_truncated_to_500(self) -> None:
         """复检实测: 10070 字符 → 截断到 500 字符(避免放大 D4.7.3 事件载荷)."""
         content = "Y" * 10070
         result = DraftResult(**{**self._valid_kwargs(), "raw_content": content})
-        assert (
-            len(result.raw_content) == 500
-        ), f"10070 字符 raw_content 应截断到 500, 实际 {len(result.raw_content)}"
+        assert len(result.raw_content) == 500, (
+            f"10070 字符 raw_content 应截断到 500, 实际 {len(result.raw_content)}"
+        )
 
     def test_raw_content_truncation_in_draft_path(self) -> None:
         """集成验证: drafter.draft() 路径返回的 raw_content 也截断到 500."""
@@ -3832,9 +3832,9 @@ class TestDraftResultV108RawContentTruncate:
         long_body = "Z" * 600  # 600 字符 body (subject 上限 200, body 上限 8000)
         valid_json = _valid_draft_json(body=long_body)
         # valid_json 总长 ≈ 700 字符(超过 500)
-        assert (
-            len(valid_json) > 500
-        ), f"测试设置错误: valid_json 长度应 > 500, 实际 {len(valid_json)}"
+        assert len(valid_json) > 500, (
+            f"测试设置错误: valid_json 长度应 > 500, 实际 {len(valid_json)}"
+        )
         mock_router.route.return_value = LLMResponse(
             content=valid_json,
             model_full_id="minimax/M3",
@@ -3844,9 +3844,9 @@ class TestDraftResultV108RawContentTruncate:
         )
         drafter = EmailDrafter(router=mock_router)
         result = drafter.draft(subject="x", sender="y", body_excerpt="z")
-        assert (
-            len(result.raw_content) == 500
-        ), f"draft() 路径 raw_content 应截断到 500, 实际 {len(result.raw_content)}"
+        assert len(result.raw_content) == 500, (
+            f"draft() 路径 raw_content 应截断到 500, 实际 {len(result.raw_content)}"
+        )
 
     def test_raw_content_to_dict_also_truncated(self) -> None:
         """to_dict 序列化也截断(避免 JSON 化事件载荷过大)."""

@@ -154,7 +154,9 @@ def test_parse_metadata_title_with_comma() -> None:
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
     sep = chr(30)
-    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}Meeting, with, commas{sep}0{sep}2026-06-15T10:00:00\n"
+    result_str = (
+        f"x-coredata://ICNote/A{sep}Notes{sep}Meeting, with, commas{sep}0{sep}2026-06-15T10:00:00\n"
+    )
     notes = NotesConnector._parse_metadata_result(result_str)
     assert len(notes) == 1
     # 关键:title 含逗号不被切(因为新协议不再用 "," 切 list 元素,改用 ASCII 30 切字段)
@@ -166,7 +168,9 @@ def test_parse_metadata_title_with_pipe() -> None:
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
     sep = chr(30)
-    result_str = f"x-coredata://ICNote/A{sep}Notes{sep}Pipe | in | title{sep}0{sep}2026-06-15T10:00:00\n"
+    result_str = (
+        f"x-coredata://ICNote/A{sep}Notes{sep}Pipe | in | title{sep}0{sep}2026-06-15T10:00:00\n"
+    )
     notes = NotesConnector._parse_metadata_result(result_str)
     assert len(notes) == 1
     # 关键:title 含 | 不被切(因为字段间用 ASCII 30,不是 |)
@@ -195,6 +199,7 @@ def test_parse_metadata_english_date_locale() -> None:
     )
     # 2026-06-15 14:30:00 UTC → 大约 1.78e12 ms
     import datetime
+
     expected = int(datetime.datetime(2026, 6, 15, 14, 30, 0).timestamp() * 1000)
     # 允许 ±1 小时时区误差(系统时区可能不是 UTC)
     assert abs(notes[0]["modified_at_ms"] - expected) < 3600 * 1000

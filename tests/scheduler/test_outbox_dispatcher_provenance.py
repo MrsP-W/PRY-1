@@ -214,22 +214,22 @@ def test_failed_without_approval_provenance_skipped(
 
     result = dispatcher.run_once()
     # 关键: 无审批凭据必 skipped,不是 sent,也不是 technical_failed
-    assert (
-        result.sent == 0
-    ), f"D5.6.3 P1-1:FAILED 无审批凭据必 skipped,实际 sent={result.sent}(绕过尝试!)"
-    assert (
-        result.skipped == 1
-    ), f"D5.6.3 P1-1:FAILED 无审批凭据必 skipped,实际 skipped={result.skipped}"
-    assert (
-        result.technical_failed == 0
-    ), f"D5.6.3 P1-1:FAILED 无审批凭据不应被当 technical_failed,实际 {result.technical_failed}"
+    assert result.sent == 0, (
+        f"D5.6.3 P1-1:FAILED 无审批凭据必 skipped,实际 sent={result.sent}(绕过尝试!)"
+    )
+    assert result.skipped == 1, (
+        f"D5.6.3 P1-1:FAILED 无审批凭据必 skipped,实际 skipped={result.skipped}"
+    )
+    assert result.technical_failed == 0, (
+        f"D5.6.3 P1-1:FAILED 无审批凭据不应被当 technical_failed,实际 {result.technical_failed}"
+    )
 
     # 验证 FAILED 状态保持(没被推到 SENT/FAILED 之外的任何状态)
     entry = store.by_id(failed_id)
     assert entry is not None
-    assert (
-        entry.status == OutboxStatus.FAILED.value
-    ), f"D5.6.3 P1-1:无审批凭据 FAILED 必保持 FAILED 状态,实际 {entry.status!r}"
+    assert entry.status == OutboxStatus.FAILED.value, (
+        f"D5.6.3 P1-1:无审批凭据 FAILED 必保持 FAILED 状态,实际 {entry.status!r}"
+    )
 
 
 def test_pending_send_without_approval_provenance_skipped(
@@ -253,16 +253,16 @@ def test_pending_send_without_approval_provenance_skipped(
 
     result = dispatcher.run_once()
     assert result.sent == 0, f"D5.6.2 P1.2:PENDING_SEND 永不被拉批,实际 sent={result.sent}"
-    assert (
-        result.total_picked == 0
-    ), f"D5.6.2 P1.2:PENDING_SEND 不入批,实际 total_picked={result.total_picked}"
+    assert result.total_picked == 0, (
+        f"D5.6.2 P1.2:PENDING_SEND 不入批,实际 total_picked={result.total_picked}"
+    )
 
     # 验证 PENDING_SEND 状态保持
     entry = store.by_id(pending_id)
     assert entry is not None
-    assert (
-        entry.status == OutboxStatus.PENDING_SEND.value
-    ), f"D5.6.2 P1.2:PENDING_SEND 必保持 PENDING_SEND,实际 {entry.status!r}"
+    assert entry.status == OutboxStatus.PENDING_SEND.value, (
+        f"D5.6.2 P1.2:PENDING_SEND 必保持 PENDING_SEND,实际 {entry.status!r}"
+    )
 
 
 def test_approved_with_approval_provenance_processed(
@@ -288,9 +288,9 @@ def test_approved_with_approval_provenance_processed(
     # 验证 APPROVED → SENT
     entry = store.by_id(approved_id)
     assert entry is not None
-    assert (
-        entry.status == OutboxStatus.SENT.value
-    ), f"D5.6.3 P1-1:APPROVED 应变 SENT,实际 {entry.status!r}"
+    assert entry.status == OutboxStatus.SENT.value, (
+        f"D5.6.3 P1-1:APPROVED 应变 SENT,实际 {entry.status!r}"
+    )
 
 
 def test_failed_with_approval_provenance_retries(
@@ -315,13 +315,13 @@ def test_failed_with_approval_provenance_retries(
     )
 
     result = dispatcher.run_once()
-    assert (
-        result.sent == 1
-    ), f"D5.6.3 P1-1:FAILED + 有审批凭据退避重试必被发送,实际 sent={result.sent}"
+    assert result.sent == 1, (
+        f"D5.6.3 P1-1:FAILED + 有审批凭据退避重试必被发送,实际 sent={result.sent}"
+    )
 
     # 验证 FAILED → SENT(走 FAILED → APPROVED → SENT 路径)
     entry = store.by_id(failed_id)
     assert entry is not None
-    assert (
-        entry.status == OutboxStatus.SENT.value
-    ), f"D5.6.3 P1-1:FAILED 重试后应变 SENT,实际 {entry.status!r}"
+    assert entry.status == OutboxStatus.SENT.value, (
+        f"D5.6.3 P1-1:FAILED 重试后应变 SENT,实际 {entry.status!r}"
+    )

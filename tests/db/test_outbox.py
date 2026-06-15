@@ -686,9 +686,9 @@ def test_insert_forces_status_pending_send(store: OutboxStore) -> None:
         tone="FORMAL",
         recipient_email="customer3@example.com",
     )
-    assert (
-        row.status == OutboxStatus.PENDING_SEND.value
-    ), f"D5.6.4 P1:insert 强制 status=PENDING_SEND,实际 {row.status!r}"
-    assert (
-        row.last_approved_at_ms is None
-    ), f"D5.6.4 P1:insert 后 last_approved_at_ms 必 None,实际 {row.last_approved_at_ms!r}"
+    assert row.status == OutboxStatus.PENDING_SEND.value, (
+        f"D5.6.4 P1:insert 强制 status=PENDING_SEND,实际 {row.status!r}"
+    )
+    assert row.last_approved_at_ms is None, (
+        f"D5.6.4 P1:insert 后 last_approved_at_ms 必 None,实际 {row.last_approved_at_ms!r}"
+    )

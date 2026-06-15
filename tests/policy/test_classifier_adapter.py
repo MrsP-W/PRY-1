@@ -1284,9 +1284,9 @@ class TestD46V102ThirdPassFixes:
                 consecutive_classify_failures=1,
             )
             # 如果没抛,说明运行时也漏了(回归)
-            assert (
-                r.failed is True
-            ), "Literal[True] 类型层面应固化 failed=True, 手动传 False 应在 __post_init__ 被拒"
+            assert r.failed is True, (
+                "Literal[True] 类型层面应固化 failed=True, 手动传 False 应在 __post_init__ 被拒"
+            )
         except ValueError as e:
             # 期望: __post_init__ 显式拒绝 failed != True
             assert "failed" in str(e).lower() or "literal" in str(e).lower()

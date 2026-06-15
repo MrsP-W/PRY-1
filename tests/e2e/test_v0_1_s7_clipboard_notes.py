@@ -114,9 +114,9 @@ def test_s7_clipboard_to_notes_shortcut(
     end_ms = int(time.time() * 1000)
 
     # 3) 断言: StructuredNote 6 字段契约(沿 D4.7.3 v1.0.5 P1)
-    assert isinstance(
-        result, StructuredNote
-    ), f"成功路径应返回 StructuredNote, 实际 {type(result).__name__}"
+    assert isinstance(result, StructuredNote), (
+        f"成功路径应返回 StructuredNote, 实际 {type(result).__name__}"
+    )
     assert result.category in {"URGENT", "TODO", "FYI", "SPAM", "PERSONAL", "DEFAULT"}
     assert len(result.tags) >= 2, f"tags 数量应 ≥ 2, 实际 {len(result.tags)}"
     assert result.body_length > 0

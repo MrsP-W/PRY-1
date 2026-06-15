@@ -224,9 +224,9 @@ def test_sending_to_sent_preserves_last_approved_at_ms(store: OutboxStore) -> No
     updated = store.update_status(
         outbox_id, "sent", from_status="sending", last_approved_at_ms=None
     )
-    assert (
-        updated.last_approved_at_ms == now_ms
-    ), f"D5.6.3 P1-1:SENDING → SENT 必须保留原 last_approved_at_ms,实际 {updated.last_approved_at_ms!r}"
+    assert updated.last_approved_at_ms == now_ms, (
+        f"D5.6.3 P1-1:SENDING → SENT 必须保留原 last_approved_at_ms,实际 {updated.last_approved_at_ms!r}"
+    )
 
 
 def test_sending_to_failed_preserves_last_approved_at_ms(store: OutboxStore) -> None:
@@ -243,7 +243,7 @@ def test_sending_to_failed_preserves_last_approved_at_ms(store: OutboxStore) -> 
     updated = store.update_status(
         outbox_id, "failed", from_status="sending", last_approved_at_ms=None
     )
-    assert (
-        updated.last_approved_at_ms == now_ms
-    ), f"D5.6.3 P1-1:SENDING → FAILED 必须保留原 last_approved_at_ms,实际 {updated.last_approved_at_ms!r}"
+    assert updated.last_approved_at_ms == now_ms, (
+        f"D5.6.3 P1-1:SENDING → FAILED 必须保留原 last_approved_at_ms,实际 {updated.last_approved_at_ms!r}"
+    )
     assert updated.status == "failed"

@@ -36,9 +36,9 @@ def test_merchants_table_no_source_dimension() -> None:
     """
     from my_ai_employee.core.merchants import MERCHANT_TO_CATEGORY
 
-    assert (
-        len(MERCHANT_TO_CATEGORY) > 100
-    ), f"商家表应有 100+ 条(实测 654 条),实际 {len(MERCHANT_TO_CATEGORY)} 条"
+    assert len(MERCHANT_TO_CATEGORY) > 100, (
+        f"商家表应有 100+ 条(实测 654 条),实际 {len(MERCHANT_TO_CATEGORY)} 条"
+    )
 
     # 严判:键不含 source 维度(无 'wechat:星巴克' / 'alipay:星巴克' 之类)
     for key in list(MERCHANT_TO_CATEGORY.keys())[:20]:
@@ -54,9 +54,9 @@ def test_categorize_cross_source_same_merchant() -> None:
     cat_wechat = categorize("星巴克咖啡(国贸店)")
     cat_alipay = categorize("星巴克咖啡(国贸店)")
     assert cat_wechat == TransactionCategory.DINING
-    assert (
-        cat_alipay == cat_wechat
-    ), f"D7 跨源同商家应同分类,wechat={cat_wechat} != alipay={cat_alipay}"
+    assert cat_alipay == cat_wechat, (
+        f"D7 跨源同商家应同分类,wechat={cat_wechat} != alipay={cat_alipay}"
+    )
 
 
 def test_5_categories_regression_cross_source() -> None:
@@ -78,9 +78,9 @@ def test_5_categories_regression_cross_source() -> None:
 
     for merchant in merchants:
         actual = categorize(merchant)
-        assert (
-            actual in all_categories
-        ), f"D7 跨源 5 类回归: {merchant!r} 应在 5 类之一,实际={actual.value}"
+        assert actual in all_categories, (
+            f"D7 跨源 5 类回归: {merchant!r} 应在 5 类之一,实际={actual.value}"
+        )
 
 
 def test_keyword_fallback_cross_source() -> None:
@@ -90,15 +90,15 @@ def test_keyword_fallback_cross_source() -> None:
 
     # 假设"美团外卖(午餐)"不在商家表但命中关键词(外卖 = HOME)
     actual = categorize("美团外卖(午餐)")
-    assert (
-        actual == TransactionCategory.HOME
-    ), f"关键词兜底链应命中 HOME(外卖=居家消费),实际 {actual.value}"
+    assert actual == TransactionCategory.HOME, (
+        f"关键词兜底链应命中 HOME(外卖=居家消费),实际 {actual.value}"
+    )
 
     # 假设"医院"不在商家表但命中关键词(医院 = OTHER)
     actual_other = categorize("协和医院(体检)")
-    assert (
-        actual_other == TransactionCategory.OTHER
-    ), f"关键词兜底链应命中 OTHER(医院=其他),实际 {actual_other.value}"
+    assert actual_other == TransactionCategory.OTHER, (
+        f"关键词兜底链应命中 OTHER(医院=其他),实际 {actual_other.value}"
+    )
 
 
 def test_categorize_alipay_unique_merchants() -> None:

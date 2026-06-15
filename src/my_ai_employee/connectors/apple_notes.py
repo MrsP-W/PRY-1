@@ -69,8 +69,8 @@ class NotesConnectorError(Exception):
 # `Monday, June 15, 2026 at 14:30:00` 天然含逗号+空格 + 历史用 | 会被标题里 | 切错位。
 # 字段内子分隔符预留 ASCII 31 (US),后续可加子字段。
 # Python 端用 _FIELD_SEP = chr(30) 解析(对应 ASCII 30 / 0x1e / RS)。
-_FIELD_SEP: str = chr(30)          # ASCII 30 / RS, 字段间分隔符
-_SUB_FIELD_SEP: str = chr(31)      # ASCII 31 / US, 字段内子分隔符(预留)
+_FIELD_SEP: str = chr(30)  # ASCII 30 / RS, 字段间分隔符
+_SUB_FIELD_SEP: str = chr(31)  # ASCII 31 / US, 字段内子分隔符(预留)
 
 
 # AppleScript 模板:逐行抓取所有 notes 的元数据(不返回 body/attachments,避免 OOM)

@@ -1565,9 +1565,9 @@ def test_run_once_batch_size_1_no_starvation_after_repeated_runs(
         if entry.status == "sent":
             sent_failed_count += 1
 
-    assert (
-        sent_failed_count >= 4
-    ), f"D5.5.5 P1 修复未生效!10 轮中 FAILED 处理数 = {sent_failed_count},期望 >= 4(均匀 5/5)"
+    assert sent_failed_count >= 4, (
+        f"D5.5.5 P1 修复未生效!10 轮中 FAILED 处理数 = {sent_failed_count},期望 >= 4(均匀 5/5)"
+    )
 
 
 def test_run_once_batch_size_1_only_new_pool_picks_pending(
@@ -1600,9 +1600,9 @@ def test_run_once_batch_size_1_only_new_pool_picks_pending(
     # D5.5.5 P3 关键断言:即使 retry_pool 空,也要选 new
     # 修复前(D5.5.4):retry_pick and new_pick 条件 + new_quota=0 → new_pick=[] → total_picked=0
     # 修复后(D5.5.5):elif new_pool: → new_pick = new_pool[:1] → total_picked=1
-    assert (
-        result.total_picked == 1
-    ), f"D5.5.5 P3 单池边界(仅 new)未生效!total_picked={result.total_picked},期望 1"
+    assert result.total_picked == 1, (
+        f"D5.5.5 P3 单池边界(仅 new)未生效!total_picked={result.total_picked},期望 1"
+    )
     assert result.sent == 1
     assert result.skipped == 0
 
@@ -1642,9 +1642,9 @@ def test_run_once_batch_size_1_only_retry_pool_picks_failed(
     result = dispatcher.run_once()
 
     # D5.5.5 P3 关键断言:即使 new_pool 空,也要选 retry
-    assert (
-        result.total_picked == 1
-    ), f"D5.5.5 P3 单池边界(仅 retry)未生效!total_picked={result.total_picked},期望 1"
+    assert result.total_picked == 1, (
+        f"D5.5.5 P3 单池边界(仅 retry)未生效!total_picked={result.total_picked},期望 1"
+    )
     assert result.sent == 1
     assert result.skipped == 0
 

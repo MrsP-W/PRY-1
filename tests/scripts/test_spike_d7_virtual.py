@@ -49,9 +49,9 @@ def _run_spike(
 def test_guard_1_env_locked_by_default() -> None:
     """门 1:env 门控 — 不设 D7_VIRTUAL_SPIKE=1 → exit 1."""
     result = _run_spike("--confirm", CONFIRM_PHRASE)
-    assert (
-        result.returncode == 1
-    ), f"未设 env 应 exit 1,实际 {result.returncode}\nstderr={result.stderr}"
+    assert result.returncode == 1, (
+        f"未设 env 应 exit 1,实际 {result.returncode}\nstderr={result.stderr}"
+    )
     assert SPIKE_ENV_VAR in result.stderr
 
 

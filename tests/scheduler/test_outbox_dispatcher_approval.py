@@ -196,28 +196,28 @@ def test_dispatcher_only_consumes_approved(dispatcher: OutboxDispatcher) -> None
     # APPROVED 直接发 + FAILED 退避解锁后发(沿 D5.6.2 P1.2 设计)
     assert result.sent == 2, f"D5.6.2:APPROVED + FAILED 必被发送,实际 sent={result.sent}"
     # PENDING_SEND 必不被拉批
-    assert (
-        result.skipped == 0
-    ), f"D5.6.2:本场景 PENDING_SEND 不入批不计数,实际 skipped={result.skipped}"
+    assert result.skipped == 0, (
+        f"D5.6.2:本场景 PENDING_SEND 不入批不计数,实际 skipped={result.skipped}"
+    )
 
     # 验证 PENDING_SEND 状态保持
     pending_entry = store.by_id(pending_id)
     assert pending_entry is not None
-    assert (
-        pending_entry.status == OutboxStatus.PENDING_SEND.value
-    ), f"D5.6.2 P1.2:Dispatcher 必不消费 PENDING_SEND,实际状态 {pending_entry.status!r}"
+    assert pending_entry.status == OutboxStatus.PENDING_SEND.value, (
+        f"D5.6.2 P1.2:Dispatcher 必不消费 PENDING_SEND,实际状态 {pending_entry.status!r}"
+    )
     # 验证 APPROVED 已变 SENT
     approved_entry = store.by_id(approved_id)
     assert approved_entry is not None
-    assert (
-        approved_entry.status == OutboxStatus.SENT.value
-    ), f"D5.6.2:APPROVED 必被发送变 SENT,实际 {approved_entry.status!r}"
+    assert approved_entry.status == OutboxStatus.SENT.value, (
+        f"D5.6.2:APPROVED 必被发送变 SENT,实际 {approved_entry.status!r}"
+    )
     # 验证 FAILED 退避后变 SENT(解锁 → APPROVED → SENT)
     failed_entry = store.by_id(failed_id)
     assert failed_entry is not None
-    assert (
-        failed_entry.status == OutboxStatus.SENT.value
-    ), f"D5.6.2:FAILED 退避后必被处理变 SENT,实际 {failed_entry.status!r}"
+    assert failed_entry.status == OutboxStatus.SENT.value, (
+        f"D5.6.2:FAILED 退避后必被处理变 SENT,实际 {failed_entry.status!r}"
+    )
 
 
 def test_dispatcher_skips_pending_send(dispatcher: OutboxDispatcher) -> None:
@@ -234,17 +234,17 @@ def test_dispatcher_skips_pending_send(dispatcher: OutboxDispatcher) -> None:
 
     result = dispatcher.run_once()
     assert result.sent == 0, f"D5.6.2 P1.2:PENDING_SEND 必不被发送,实际 sent={result.sent}"
-    assert (
-        result.total_picked == 0
-    ), f"D5.6.2 P1.2:PENDING_SEND 必不被拉批,实际 total_picked={result.total_picked}"
+    assert result.total_picked == 0, (
+        f"D5.6.2 P1.2:PENDING_SEND 必不被拉批,实际 total_picked={result.total_picked}"
+    )
 
     # 验证 5 封全保持 PENDING_SEND 状态
     for pid in pending_ids:
         entry = store.by_id(pid)
         assert entry is not None
-        assert (
-            entry.status == OutboxStatus.PENDING_SEND.value
-        ), f"D5.6.2 P1.2:outbox_id={pid} 必保持 PENDING_SEND,实际 {entry.status!r}"
+        assert entry.status == OutboxStatus.PENDING_SEND.value, (
+            f"D5.6.2 P1.2:outbox_id={pid} 必保持 PENDING_SEND,实际 {entry.status!r}"
+        )
 
 
 def test_from_address_uses_smtp_username(dispatcher: OutboxDispatcher) -> None:
@@ -253,9 +253,9 @@ def test_from_address_uses_smtp_username(dispatcher: OutboxDispatcher) -> None:
     验证 Dispatcher 构造 EmailMessage 时 msg['From'] = self._smtp_username。
     """
     # 直接验证 Dispatcher 内部字段
-    assert (
-        dispatcher._smtp_username == "real_user@qq.com"
-    ), f"D5.6.2 P1.1:smtp_username 必为 'real_user@qq.com',实际 {dispatcher._smtp_username!r}"
+    assert dispatcher._smtp_username == "real_user@qq.com", (
+        f"D5.6.2 P1.1:smtp_username 必为 'real_user@qq.com',实际 {dispatcher._smtp_username!r}"
+    )
 
     # 构造 EmailMessage 验证 From 字段(沿 D5.5.5 范本,直接走 dispatcher._build_message 不可见
     # 所以通过准备 1 封 APPROVED 触发 run_once,捕获 adapter 看到的 email_message)
@@ -303,12 +303,12 @@ def test_from_address_uses_smtp_username(dispatcher: OutboxDispatcher) -> None:
 
     dispatcher.run_once()
 
-    assert (
-        len(captured_messages) == 1
-    ), f"D5.6.2 P1.1:应捕获 1 个 EmailMessage,实际 {len(captured_messages)}"
+    assert len(captured_messages) == 1, (
+        f"D5.6.2 P1.1:应捕获 1 个 EmailMessage,实际 {len(captured_messages)}"
+    )
     msg = captured_messages[0]
     from_addr = msg.get("From", "")
-    assert (
-        from_addr == "real_user@qq.com"
-    ), f"D5.6.2 P1.1:From 必为 smtp_username='real_user@qq.com',实际 {from_addr!r}"
+    assert from_addr == "real_user@qq.com", (
+        f"D5.6.2 P1.1:From 必为 smtp_username='real_user@qq.com',实际 {from_addr!r}"
+    )
     assert "@test.local" not in from_addr, f"D5.6.2 P1.1:From 必不含 .test.local,实际 {from_addr!r}"

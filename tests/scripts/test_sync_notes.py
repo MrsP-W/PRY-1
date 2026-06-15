@@ -280,9 +280,9 @@ def test_cli_spike_idempotent_second_run(
     # 第二次跑(同 DB)
     rc2 = _run_cli_with_mock_db(db, ["spike", "--n", "5"])
     captured2 = capsys.readouterr()
-    assert (
-        rc2 == 0
-    ), f"spike 二次跑应 exit 0,实际 {rc2}\nstdout={captured2.out}\nstderr={captured2.err}"
+    assert rc2 == 0, (
+        f"spike 二次跑应 exit 0,实际 {rc2}\nstdout={captured2.out}\nstderr={captured2.err}"
+    )
     assert "inserted=0" in captured2.out
     assert "skipped=5" in captured2.out
 
