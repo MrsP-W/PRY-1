@@ -11,12 +11,13 @@ from __future__ import annotations
 
 import hashlib
 import secrets
-from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Literal, cast
 
 import pytest
+from sqlalchemy.orm import Session, sessionmaker
 
 # ===== Fakers =====
 
@@ -48,22 +49,28 @@ def _csv_to_raw_transactions(
         source: 'wechat' / 'alipay'
         ext_id_prefix: ext_id 前缀(传 unique 值防 L1 误命中)
     """
-    from my_ai_employee.connectors._types import RawTransaction
-
     import csv
+
+    from my_ai_employee.connectors._types import RawTransaction
 
     rows: list[RawTransaction] = []
     with open(csv_path, encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for i, row in enumerate(reader):
             # 解析日期(微信/支付宝两源共用 "YYYY-MM-DD HH:MM:SS" 格式)
-            dt_str = row.get("交易时间") or row.get("付款时间") or row.get("日期") or row.get("创建时间") or ""
+            dt_str = (
+                row.get("交易时间")
+                or row.get("付款时间")
+                or row.get("日期")
+                or row.get("创建时间")
+                or ""
+            )
             date_ = date.fromisoformat(dt_str.split(" ")[0])
             amount = Decimal(str(row["金额"]))
-            # type:微信是"收/付"列 → 映射到 "收入"/"支出"
+            # 类型映射:微信是"收/付"列 → 映射到 "收入"/"支出"
             raw_type = row.get("交易类型") or row.get("收/付") or row.get("收/支") or "支出"
             if raw_type in ("付", "支"):
-                type_ = "支出"
+                type_: Literal["支出", "收入"] = "支出"
             elif raw_type in ("收",):
                 type_ = "收入"
             else:
@@ -112,7 +119,7 @@ def _expand_to_100(rows_10: list) -> list:
                     date=raw.date,
                     amount=raw.amount,
                     counterparty=raw.counterparty,
-                    type=raw.type,
+                    type=cast(Literal["支出", "收入"], raw.type),
                     payment_method=raw.payment_method,
                     external_transaction_id=new_ext_id,
                     raw_row_hash=_raw_row_hash(
@@ -130,7 +137,7 @@ def _expand_to_100(rows_10: list) -> list:
 
 
 @pytest.mark.e2e
-def test_s6_wechat_csv_import_100_inmemory(session_factory: Iterator) -> None:
+def test_s6_wechat_csv_import_100_inmemory(session_factory: sessionmaker[Session]) -> None:
     """S6.1 — 微信 100 笔 InMemory 导入,3 层去重 + 5 类分类 + status 流转.
 
     复用 wechat_2024/2025 faker 样本(各 5 行,共 10 行 × 10 轮 = 100 笔),
@@ -146,9 +153,9 @@ def test_s6_wechat_csv_import_100_inmemory(session_factory: Iterator) -> None:
     from my_ai_employee.core.transaction_adapter import TransactionAdapter
     from my_ai_employee.db.transactions import TransactionStore
 
-    rows_10 = _csv_to_raw_transactions(_WECHAT_2024_CSV, source="wechat", ext_id_prefix="base") + _csv_to_raw_transactions(
-        _WECHAT_2025_CSV, source="wechat", ext_id_prefix="base"
-    )
+    rows_10 = _csv_to_raw_transactions(
+        _WECHAT_2024_CSV, source="wechat", ext_id_prefix="base"
+    ) + _csv_to_raw_transactions(_WECHAT_2025_CSV, source="wechat", ext_id_prefix="base")
     rows_100 = _expand_to_100(rows_10)
     assert len(rows_100) == 100
 
@@ -182,7 +189,7 @@ def test_s6_wechat_csv_import_100_inmemory(session_factory: Iterator) -> None:
 
 
 @pytest.mark.e2e
-def test_s6_cross_source_dedup(session_factory: Iterator) -> None:
+def test_s6_cross_source_dedup(session_factory: sessionmaker[Session]) -> None:
     """S6.2 — 跨源去重:同一笔交易(同日同金额同商家)不会被微信+支付宝两边都导入.
 
     复用 wechat_2024(5 行)+ alipay_2024(5 行),5 对全部跨源同 fingerprint
@@ -202,12 +209,8 @@ def test_s6_cross_source_dedup(session_factory: Iterator) -> None:
     adapter = TransactionAdapter(session_factory)
 
     # 正向:wechat 先入 → alipay 后入
-    wechat_rows = _csv_to_raw_transactions(
-        _WECHAT_2024_CSV, source="wechat", ext_id_prefix="s62-w"
-    )
-    alipay_rows = _csv_to_raw_transactions(
-        _ALIPAY_2024_CSV, source="alipay", ext_id_prefix="s62-a"
-    )
+    wechat_rows = _csv_to_raw_transactions(_WECHAT_2024_CSV, source="wechat", ext_id_prefix="s62-w")
+    alipay_rows = _csv_to_raw_transactions(_ALIPAY_2024_CSV, source="alipay", ext_id_prefix="s62-a")
 
     res_w = adapter.import_raw_transactions(wechat_rows, source="wechat")
     res_a = adapter.import_raw_transactions(alipay_rows, source="alipay")
@@ -263,16 +266,55 @@ def test_s6_cross_source_dedup(session_factory: Iterator) -> None:
     assert res_w2.candidate_count == 5
 
 
-# ===== S6.3 — 菜单栏支出总额(待 S6.3 commit 2 实化)=====
+# ===== S6.3 — 菜单栏支出总额(commit 2 真实断言)=====
 
 
 @pytest.mark.e2e
-def test_s6_menu_bar_expense_update(session_factory: Iterator) -> None:
+def test_s6_menu_bar_expense_update() -> None:
     """S6.3 — 菜单栏支出总额实时更新(写入 transactions 后触发).
 
     沿 core.expense_aggregate.current_month_expense 聚合查询,
     D9 menu_bar/expense_service.py 启动时直接 import 该函数。
 
-    实化在 S6.3 commit 2(S6.1+S6.2 commit 1 后),沿 [[d6-wechat-bill-launch]] §S6.3 段。
+    验证:
+      - 导入 100 笔 faker(沿 S6.1 _expand_to_100 范本)
+        + 50 笔 2024-05(wechat_2024_sample.csv × 10 轮)+ 50 笔 2025-03(wechat_2025 × 10 轮)
+      - current_month_expense(today=date(2024, 5, 31)) == Decimal("50635.00")
+        (10 轮 × (38.50 + 12.00 + 5000.00 + 28.00 + (-15.00)) = 10 × 5063.50 = 50635.00)
+      - current_month_expense(today=date(2025, 3, 31)) == Decimal("36035.00")
+        (10 轮 × (42.00 + 88.00 + 3500.00 + 15.50 + (-42.00)) = 10 × 3603.50 = 36035.00)
+      - 独立 InMemory sqlite(不污染其他 e2e session)
     """
-    pytest.skip("S6.3 菜单栏支出总额 — 待 S6.3 commit 2 expense_aggregate 落地后实化")
+    from decimal import Decimal
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from my_ai_employee.core.expense_aggregate import current_month_expense
+    from my_ai_employee.core.models import Base
+    from my_ai_employee.core.transaction_adapter import TransactionAdapter
+
+    # 独立 InMemory sqlite(沿 S6.2 反向范本,不污染其他 e2e session)
+    engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    sf = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    adapter = TransactionAdapter(sf)
+
+    # 100 笔 faker(沿 S6.1 _expand_to_100,50 笔 2024-05 + 50 笔 2025-03)
+    rows_10 = _csv_to_raw_transactions(
+        _WECHAT_2024_CSV, source="wechat", ext_id_prefix="s63-base"
+    ) + _csv_to_raw_transactions(_WECHAT_2025_CSV, source="wechat", ext_id_prefix="s63-base")
+    rows_100 = _expand_to_100(rows_10)
+    assert len(rows_100) == 100
+    res = adapter.import_raw_transactions(rows_100, source="wechat")
+    assert res.inserted == 100
+    assert res.failed == 0
+
+    # 当月支出总额断言
+    # 2024-05 月:10 轮 × 5063.50(38.50+12.00+5000.00+28.00+(-15.00)) = 50635.00
+    total_may = current_month_expense(sf, today=date(2024, 5, 31))
+    assert total_may == Decimal("50635.00"), f"2024-05 总额应等于 50635.00,实际 {total_may}"
+
+    # 2025-03 月:10 轮 × 3603.50(42.00+88.00+3500.00+15.50+(-42.00)) = 36035.00
+    total_mar = current_month_expense(sf, today=date(2025, 3, 31))
+    assert total_mar == Decimal("36035.00"), f"2025-03 总额应等于 36035.00,实际 {total_mar}"
