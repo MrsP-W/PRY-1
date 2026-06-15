@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.1 收口**(2026-06-15 D10.5)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + S8/S9 e2e **全部落地并复检通过**。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N;D10 7 Agent 角色 + monthly_report.py + launchd_install.sh + 9 端到端场景全过。`make test` **1955 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `f147694`)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [docs/architecture.md](docs/architecture.md)。
+> **状态**：🎯 **v0.1 收口 + 发布前真实 spike 准备**(2026-06-15)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + S8/S9 e2e **全部落地并复检通过**。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N;D10 7 Agent 角色 + monthly_report.py + launchd_install.sh + 9 端到端场景全过。当前 `make test` **1958 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `2af775f`,tag 不动);当前 HEAD 为 post-tag 发布前修复状态(精确 hash 见 `git log`)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [docs/architecture.md](docs/architecture.md)。
 
 ---
 
@@ -196,7 +196,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口) |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本)→ D10.3 launchd_install.sh 部署(5 源判定 + ~/bin/)+ 每月 1 号 09:00 月报触发 |
 
 ---
@@ -252,6 +252,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-15（v0.1 收口 D10.5.2:HEAD 当前 docs-only 状态(精确 hash 见 `git log`),`git tag v0.1.0` 在 commit `2af775f`(本 commit D10.5.2 为 README L255 HEAD hash drift 修正;HEAD 前进 1,tag 不动;沿 D5.7.2 docs 收口范本 + 用户决策 tag 移到 commit `2af775f`)。D10.1 7 Agent 角色契约 53 tests + D10.2 monthly_report.py + 14 tests + D10.3 launchd_install.sh + 21 tests + D10.4 S8+S9 e2e 实化 9 tests + D10.5 release-notes 8 段 5 commits 收口链落地;`make test` **1955 passed / 1 skipped / coverage 89.48%**,`mypy src tests` / `ruff check` / **`ruff format --check .`(扩)** / `alembic upgrade head --sql` / `uv build` / `make lint` / **`coverage fail_under=80`** 9 质量门 9/9 全绿。**9 端到端场景 S1-S9 全部 spike PASS**。下一棒:v0.1.0 正式发布 + 真实 spike 必跑清单(W3 6/30-7/4 真实 1 笔记同步 / 1 真实 ⌥⌘N / 真实 1 SMTP / 真实 1 月报 / 真实 1 launchd deploy)。）
+**最后更新**：2026-06-15（v0.1 收口后发布前修复状态:HEAD 已在 `v0.1.0` tag 后继续前进,精确 hash 见 `git log`;`git tag v0.1.0` 仍在 commit `2af775f` 不动。D10.1 7 Agent 角色契约 53 tests + D10.2 monthly_report.py + 14 tests + D10.3 launchd_install.sh + 21 tests + D10.4 S8+S9 e2e 实化 9 tests + D10.5 release-notes 8 段 5 commits 收口链落地;post-tag 已补 Spike A/B 证据、`sync_notes.py` 真跑安全阀、launchd install/uninstall/race/`--month` 字面修;当前 `make test` **1958 passed / 1 skipped / coverage 89.48%**,`mypy src tests` / `ruff check` / **`ruff format --check .`(扩)** / `alembic upgrade head --sql` / `uv build` / `make lint` / **`coverage fail_under=80`** 9 质量门 9/9 全绿。**9 端到端场景 S1-S9 全部 spike PASS**。下一棒:v0.1.0 正式发布前真实 spike 必跑清单(W3 6/30-7/4 真实 1 笔记同步 / 1 真实 ⌥⌘N / 真实 1 SMTP / 真实 1 月报 / 真实 1 launchd deploy)。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
