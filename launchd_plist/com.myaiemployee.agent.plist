@@ -15,8 +15,18 @@
 
   验收:
     launchctl list | grep myaiemployee 必见 com.myaiemployee.agent
-    launchctl print user/$(id -u)/com.myaiemployee.agent 必能读
+    (2026-06-15 D10.5.3 修正: 早期 docstring 写"launchctl print 必能读",
+     但 macOS Sequoia/Tahoe launchctl print user/<uid>/<label> 域命令
+     不稳定,会报 "Could not find service" / "Bad request",沿 Spike A §3.3
+     教训改以"launchctl list 必见 label"为唯一真理源)
     日志文件可读:log show with predicate process = my-ai-employee-monthly-report
+
+  ⚠️ 关于 ProgramArguments 里的 $(/bin/date '+%Y-%m')(2026-06-15 D10.5.3 P3-1):
+    launchd 不会做 shell 展开,L31 的 $(/bin/date '+%Y-%m') 是字面字符串,
+    实际 monthly_report.py 收到的 month 参数就是字面 "2026-06" 之类。
+    v0.2 wrapper 脚本决策(把 monthly_report.py 包到一个 shell 脚本里,
+    由 wrapper 自己 date 取月份再调 monthly_report.py generate)留待 v0.2 启动评估。
+    当前 v0.1.0 范围:每月 1 号 09:00 触发时,需要手动同步更新 plist 的 month。
 -->
 <plist version="1.0">
 <dict>
