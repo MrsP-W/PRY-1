@@ -146,3 +146,7 @@ exclude_lines = [
 ]
 show_missing = true
 precision = 1
+# D9.6.5 P3-1:全 9 质量门硬门槛(总覆盖率必 >= 80%)
+# 当前 89.9% 余量 9.9pp 安全;3 个低覆盖模块(core/keychain 35% / main.py 64% /
+# smtp.py 70%)是 total 不挡,模块级 fail_under 留 v0.2(B 类延后)
+fail_under = 80
