@@ -32,6 +32,12 @@ D3.3.3 教训应用:
 D6.6 P2 修复应用:
     - 启动校验 alembic_version >= '0008_notes'(防漏迁移)
     - failed_items 走 stderr 详情(每项 apple_id + error_class + msg)
+
+D9.6.3 P2-1 修复(2026-06-15 晨间精细代码审查):
+    - per-note `except Exception` 拆分:`except OperationalError: raise` + `except (ValueError, TypeError)`
+    - sync 模式(L145)与 spike 模式(L224)同构
+    - 业务失败 vs 技术失败语义对齐:OperationalError 必走 exit 3(技术失败)
+    - (ValueError, TypeError) 是 NoteStore 严判失败,走 failed_items + exit 2(业务失败)
 """
 
 from __future__ import annotations
@@ -133,6 +139,10 @@ def cmd_sync(args: argparse.Namespace) -> int:
             except NoteDuplicateError:
                 # 并发场景兜底(预检后另一进程已插入)
                 skipped += 1
+            except OperationalError:
+                # D9.6.3 P2-1:per-note OperationalError 必透传(D3.3.3 教训),
+                # 让外层 try 收 → 整批记 exit 3(技术失败),不计入 failed_items
+                raise
             except NotesConnectorError as e:
                 failed += 1
                 failed_items.append(
@@ -142,7 +152,8 @@ def cmd_sync(args: argparse.Namespace) -> int:
                         "msg": str(e),
                     }
                 )
-            except Exception as e:  # noqa: BLE001 — 严判外的兜底
+            except (ValueError, TypeError) as e:
+                # 严判外的兜底(沿 D3.3.3 教训:范围窄化,OperationalError/InterfaceError/DataError 不在)
                 failed += 1
                 failed_items.append(
                     {
@@ -221,7 +232,12 @@ def cmd_spike(args: argparse.Namespace) -> int:
                 inserted += 1
             except NoteDuplicateError:
                 skipped += 1
-            except Exception as e:  # noqa: BLE001 — 严判外的兜底
+            except OperationalError:
+                # D9.6.3 P2-1:spike 模式 per-note OperationalError 必透传,
+                # 与 sync 模式同构(D3.3.3 教训 + D9.6.3 P2-1 修复)
+                raise
+            except (ValueError, TypeError) as e:
+                # 严判外的兜底(OperationalError 已在前面透传,这里只接业务严判失败)
                 failed += 1
                 _print_err(f"spike failed: apple_id={apple_note_id!r} err={e!r}")
     except OperationalError as e:
