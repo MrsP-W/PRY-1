@@ -1,0 +1,12 @@
+# 2026-06-15 AI 学习计划
+
+- LLM context window 优化: 8k → 200k
+- macOS TCC 双进程范本: 沿 D4.7.3 v1.0.5
+- email auto-draft 周末 spike: 30 笔
+
+重点关注:
+- 不静默吞异常(沿 D4.7.3 v1.0.5 P3)
+- type 严判(拒 bool 子类陷阱)
+- strip() 严判语义非空
+
+下一棒: ⌥⌘N 全局快捷键 + NoteStore.insert 端到端验证

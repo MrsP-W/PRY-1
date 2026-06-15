@@ -78,6 +78,7 @@ def session_factory(temp_db_path: Path, fake_keychain):
 
     # 显式注册跨模块 ORM 表,避免依赖其他测试的 import 顺序。
     import my_ai_employee.core.outbox  # noqa: F401
+    import my_ai_employee.db.notes  # noqa: F401  # 触发 Note 10 列注册到 Base.metadata(S7 e2e 用)
     import my_ai_employee.db.transactions  # noqa: F401  # 触发 Transaction 16 列注册到 Base.metadata(S6.1/S6.2/S6.3 e2e 用)
     import my_ai_employee.events.models  # noqa: F401
     from my_ai_employee.core.models import Base
@@ -104,17 +105,20 @@ def smtp_inmemory():
 
 
 def pytest_collection_modifyitems(config, items):
-    """默认 skip S5(需真实 SMTP)+ S7-S9(等 D9/D10 落地)。
+    """默认 skip S5(需真实 SMTP)+ S8-S9(等 D10 落地)。
 
     S6 已实化(S6.1+S6.2+S6.3 真实断言在 test_v0_1_s6_finance.py):
         - 微信/支付宝 InMemory 100 笔导入
         - 跨源去重(L2 needs_confirm + candidate_match_id)
         - 菜单栏支出总额(沿 core.expense_aggregate 聚合)
+
+    S7 已实化(S7.1+S7.2 真实断言在 test_v0_1_s7_clipboard_notes.py):
+        - 剪贴板 → NoteStore.insert → NoteStructurerService.structure_and_emit
+        - sync_notes.py spike --n 30 subprocess 真跑断言
     """
     skip_real = pytest.mark.skip(
         reason="S5 真实 SMTP 需 SMTP_REAL_NETWORK=1 env + 沿 D5.6.5 4 重防误发参数"
     )
-    skip_s7 = pytest.mark.skip(reason="S7 ⌥⌘N 剪贴板 → Notes — 等 D9 落地")
     skip_s8 = pytest.mark.skip(reason="S8 每月 1 号 09:00 月报 — 等 D10 落地")
     skip_s9 = pytest.mark.skip(reason="S9 launchd 重启自愈 — 等 D10 落地")
 
@@ -123,9 +127,7 @@ def pytest_collection_modifyitems(config, items):
         if "s5_real_smtp" in item.nodeid:
             if os.environ.get("SMTP_REAL_NETWORK") != "1":
                 item.add_marker(skip_real)
-        # S7-S9:始终 skip(等 D9/D10 落地后去除 skip)
-        elif "s7_clipboard_notes" in item.nodeid:
-            item.add_marker(skip_s7)
+        # S8-S9:始终 skip(等 D10 落地后去除 skip)
         elif "s8_monthly_report" in item.nodeid:
             item.add_marker(skip_s8)
         elif "s9_launchd_recovery" in item.nodeid:
