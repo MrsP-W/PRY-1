@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：✅ D1-D5.7.2 真正锁定（D5 业务调度器已完结：D5.1 ✅ → D5.2 ✅ → D5.3 ✅ → D5.4 ✅ → D5.5 ✅ → D5.5.1 ✅ → D5.5.2 ✅ → D5.5.3 ✅ P0 外部 symlink 修复 + P1 调度公平性 + P2 Heartbeat 恢复 → D5.5.4 commit `a7560c1` ✅ P1 双向回填 + 单槽跨轮次轮换 + P3 refresh_last_seen bool 严判 → D5.5.5 commit `a866810` ✅ P1 单槽轮换条件修复 + P2 测试断言升级 + P3 K 段单池边界测试 + 文档数据同步 → D5.6 v1 commit `c4a7d01` ⏸️ 被检查员驳回(措辞失实) → D5.6.1 commit `fdf44c6` ⏸️ 5 项修复后被检查员二次驳回 → D5.6.2 commit `819affb`+`8fdc088` ⏸️ 7 项二次修复后被检查员第三轮驳回 → D5.6.3 commit `007a6be`+`2bc5b3b`+`3de03ed` ⏸️ 第三轮 7 项反馈后被检查员**第四轮**驳回(5 缺陷) → D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` ✅ 第四轮 5 缺陷全部修复(P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass) → **D5.6.5 commit `6ac8d9b` ✅ 真实 1 封 SMTP 端到端实测通过**(`smtp.qq.com:465 SSL`,from=to=`477***009@qq.com`,4 重防误发 + SMTP_REAL_NETWORK=1 门控全过,sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / 真实 vs InMemory 性能 ≈ 160x),**B3 真正解封**,1563 passed / 8 质量门 8/8 全绿(90.4%) → **D5.6.5.1 commit `2396def`+`b037334` ✅ 检查员驳回 5 缺陷全部修复**(P1-1 测试隔离双层防御 + P1-2 邮箱脱敏 5 文件 + P2-1 SpikeResult 16 字段结构化 + P2-2 文档一致 5 处翻 D5.6.5 + P2-3 措辞 smtp 250 OK ≠ 真实送达),1565 passed / 8 质量门 8/8 全绿 → **D5.7 commit `4a24504` ✅ docs 收口 8 件套**(week1-mvp §D5 末棒 + §D4.8 已知限制清理 + README L7/L42/L168 + CLAUDE.md + mapping §11 + D5 业务调度器报告 + 跨项目 memory) → **D5.7.1 commit `2cd434e` ✅ 检查员驳回 5 缺陷全部修复真正锁定**(P1-1 旧测试 SMTP 触网风险 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接路径 + P2-3 SpikeResult 字段数 16 统一) → **D5.7.2 commit `ef83c63` ✅ docs 收口最后一致性修正 真正锁定**(P1 D5 验收报告覆盖率表实测重生成:总覆盖 90.4%→90.2% / send_adapter 92.3%→84.8% / smtp 88.1%→69.6% / keychain 86.5%→45.7% + P2-1 README 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 D5.6.5-real-send-1 下一棒翻 v0.1 + P2-4 d4-claw-code-mapping 链接路径 + P2-5 DoD 证据补全)。**下一步 v0.1 发布规划** + D6+ CalDAV/菜单栏/launchd 顺延(Week 2 决策点)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：✅ D1-D7 已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过,1727 passed / 10 skipped / coverage 89.8%,8 质量门本轮全绿)。下一棒:先实化 S6 e2e,再进入 D9 Apple Notes + ⌥⌘N。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D5.5.5:1534 个，覆盖率约 90.3%）
+├── tests/                    # pytest 单元测试（D7 复检:1727 passed / 10 skipped,覆盖率 89.8%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D5.5.5:1534 个，覆盖率约 90.3%）
+make test    # pytest 单元测试（D7 复检:1727 passed / 10 skipped,覆盖率 89.8%）
 ```
 
 ### 4. 文档 lint
@@ -166,9 +166,10 @@ make help
 | **D3 数据层 + 同步**（D3.1 加密 SQLite + D3.2 ORM/alembic + D3.3 IMAP 同步 1万封 0.35s）| ✅ 完成 | 2026-06-08 |
 | **D4 智能层**（D4.1 LLM 路由 + D4.6 分类器 + D4.7 草稿生成 + D4.8 草稿入库 v1.0.1）| ✅ 完成 | 2026-06-11 |
 | **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| ✅ **D5.7.2 真正锁定** | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5 ✅ / D5.6.3 ⏸️(4th round 驳回) / D5.6.4 ✅ (5 项第四轮修复 100% 落地) / **D5.6.5 ✅** (真实 1 封 SMTP 端到端实测通过, sent=1/1.27s, smtp.qq.com:465 SSL) / **D5.6.5.1 ✅** (检查员驳回 5 缺陷全部修复,P1-1 测试隔离 + P1-2 邮箱脱敏 + P2-1 SpikeResult 16 字段 + P2-2 文档一致 + P2-3 措辞澄清) / **D5.7 docs 收口 8 件套** ✅ / **D5.7.1 真正锁定** ✅ (检查员驳回 5 缺陷全部修复,P1-1 旧测试 SMTP 触网 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接 + P2-3 SpikeResult 字段数 16 统一) / **D5.7.2 真正锁定** ✅ (docs 收口最后一致性修正,P1 D5 报告覆盖率表实测重生成 + P2-1 README 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径 + P2-5 DoD 证据补全) |
-| D6+ CalDAV + 菜单栏 + launchd | ⏸️ 顺延 | Week 2 决策点 |
-| **Week 1 末决策点** | ⏳ | - |
-| D7-D11 Week 2 | ⏳ | - |
+| **D6 微信账单适配器**（CSV 解析 + 3 层去重 + TransactionAdapter）| ✅ 完成 | 2026-06-15 |
+| **D7 支付宝适配器**（CSV 解析 + 跨源去重 + import_all + 虚拟 spike）| ✅ 复检通过 | 2026-06-15 |
+| **S6 财务端到端**（微信/支付宝导入 + 菜单栏支出更新）| ⏳ 待实化 e2e | 下一棒 |
+| D9-D10 Week 2 | ⏳ | - |
 | **v0.1 发布** | ⏳ | - |
 
 ---
@@ -238,6 +239,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-14（**D5.7.2 commit `ef83c63` ✅ docs 收口最后一致性修正 真正锁定**:P1 D5 验收报告覆盖率表实测重生成(总覆盖 90.4%→90.2% / send_adapter 92.3%→84.8% / smtp 88.1%→69.6% / keychain 86.5%→45.7%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 D5.6.5-real-send-1 下一棒翻 v0.1 + P2-4 d4-claw-code-mapping 链接路径修复 + P2-5 DoD 证据补全,1565 passed / 8 门 8/8 全绿 / 90.2% 覆盖。D5.7.1 commit `2cd434e` 检查员驳回 5 缺陷全部修复真正锁定:P1-1 旧测试 SMTP 触网风险 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接路径 + P2-3 SpikeResult 字段数 16 统一。D5.7 commit `4a24504` docs 收口 8 件套:week1-mvp §D5 末棒 + §D4.8 已知限制清理 + README L7/L42/L168 + CLAUDE.md + mapping §11 + D5 业务调度器报告 + 跨项目 memory。D5.6.5.1 commit `2396def`+`b037334` 检查员驳回 5 缺陷全部修复收口:P1-1 测试隔离双层防御 + P1-2 邮箱脱敏 5 文件 + P2-1 SpikeResult 16 字段结构化 + P2-2 文档一致 5 处翻 D5.6.5 + P2-3 措辞 smtp 250 OK ≠ 真实送达。D5.6.5 commit `6ac8d9b` 真实 1 封 SMTP 端到端实测通过:smtp.qq.com:465 SSL sent=1/1.27s / 状态机 4 步全过 / 7 字段 DispatcherResult 全 ok / 4 重防误发 + SMTP_REAL_NETWORK=1 门控全过 / B3 真正解封,1563 passed / 90.4% / 8 质量门 8/8 全绿。D5.6.4 commit `a75894c`+`e07feee`+`9d78900`+`fa7aff5` 第四轮 5 缺陷全部修复收口:P0 虚拟时钟 is None 严判 + P1-1 send_and_emit 收窄 APPROVED only + P1-2 OutboxStore.insert 防审批伪造 + P1-3 SMTP_REAL_NETWORK 门控 + transport factory 注入 + SpikeResult dataclass。**下一步 v0.1 发布规划** + D6+ CalDAV/菜单栏/launchd 顺延(Week 2 决策点)）
+**最后更新**：2026-06-15（D7 复检收口:HEAD `f94e9c2`,D7 虚拟 spike 5 段全过,`make test` 1727 passed / 10 skipped / coverage 89.8%,`ruff check` / `ruff format --check` / `mypy src tests` / `make lint` / `uv build` / `alembic upgrade head --sql` 全绿。下一棒:S6 e2e 去 skip + 菜单栏支出更新验证,随后 D9。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY

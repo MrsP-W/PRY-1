@@ -107,7 +107,7 @@ def pytest_collection_modifyitems(config, items):
     skip_real = pytest.mark.skip(
         reason="S5 真实 SMTP 需 SMTP_REAL_NETWORK=1 env + 沿 D5.6.5 4 重防误发参数"
     )
-    skip_s6 = pytest.mark.skip(reason="S6 微信/支付宝 CSV 导入 — 等 D6/D7 落地")
+    skip_s6 = pytest.mark.skip(reason="S6 微信/支付宝 CSV 导入 — D6+D7 已落,待 S6 e2e 实化")
     skip_s7 = pytest.mark.skip(reason="S7 ⌥⌘N 剪贴板 → Notes — 等 D9 落地")
     skip_s8 = pytest.mark.skip(reason="S8 每月 1 号 09:00 月报 — 等 D10 落地")
     skip_s9 = pytest.mark.skip(reason="S9 launchd 重启自愈 — 等 D10 落地")
