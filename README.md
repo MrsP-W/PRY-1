@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.1 收口**(2026-06-15 D10.5)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + S8/S9 e2e **全部落地并复检通过**。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N;D10 7 Agent 角色 + monthly_report.py + launchd_install.sh + 9 端到端场景全过。`make test` **1955 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 即将落。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [docs/architecture.md](docs/architecture.md)。
+> **状态**：🎯 **v0.1 收口**(2026-06-15 D10.5)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + S8/S9 e2e **全部落地并复检通过**。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N;D10 7 Agent 角色 + monthly_report.py + launchd_install.sh + 9 端到端场景全过。`make test` **1955 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `f147694`)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [docs/architecture.md](docs/architecture.md)。
 
 ---
 
@@ -252,6 +252,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-15（v0.1 收口 D10.5:HEAD `390c04a`,D10.1 7 Agent 角色契约 53 tests + D10.2 monthly_report.py + 14 tests + D10.3 launchd_install.sh + 21 tests + D10.4 S8+S9 e2e 实化 9 tests + D10.5 release-notes 8 段 5 commits 收口链落地;`make test` **1955 passed / 1 skipped / coverage 89.48%**,`mypy src tests` / `ruff check` / **`ruff format --check .`(扩)** / `alembic upgrade head --sql` / `uv build` / `make lint` / **`coverage fail_under=80`** 9 质量门 9/9 全绿。**9 端到端场景 S1-S9 全部 spike PASS**。`docs/v0.1-release-notes.md` 8 段结构完成 + **`git tag v0.1.0` 即将落**。下一棒:v0.1.0 正式发布 + 真实 spike 必跑清单(W3 6/30-7/4 真实 1 笔记同步 / 1 真实 ⌥⌘N / 真实 1 SMTP / 真实 1 月报 / 真实 1 launchd deploy)。）
+**最后更新**：2026-06-15（v0.1 收口 D10.5:HEAD `fa8ee62`,`git tag v0.1.0` 在 commit `f147694`(本 commit 为 docs-only 收口最后一致性修正,HEAD 前进 1,tag 不动;沿 D5.7.2 docs 收口范本)。D10.1 7 Agent 角色契约 53 tests + D10.2 monthly_report.py + 14 tests + D10.3 launchd_install.sh + 21 tests + D10.4 S8+S9 e2e 实化 9 tests + D10.5 release-notes 8 段 5 commits 收口链落地;`make test` **1955 passed / 1 skipped / coverage 89.48%**,`mypy src tests` / `ruff check` / **`ruff format --check .`(扩)** / `alembic upgrade head --sql` / `uv build` / `make lint` / **`coverage fail_under=80`** 9 质量门 9/9 全绿。**9 端到端场景 S1-S9 全部 spike PASS**。下一棒:v0.1.0 正式发布 + 真实 spike 必跑清单(W3 6/30-7/4 真实 1 笔记同步 / 1 真实 ⌥⌘N / 真实 1 SMTP / 真实 1 月报 / 真实 1 launchd deploy)。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
