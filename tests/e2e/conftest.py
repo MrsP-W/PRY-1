@@ -105,7 +105,7 @@ def smtp_inmemory():
 
 
 def pytest_collection_modifyitems(config, items):
-    """默认 skip S5(需真实 SMTP)+ S8-S9(等 D10 落地)。
+    """默认 skip S5(需真实 SMTP);S6-S9 已实化(D6+D7+D9+D10 全部落地).
 
     S6 已实化(S6.1+S6.2+S6.3 真实断言在 test_v0_1_s6_finance.py):
         - 微信/支付宝 InMemory 100 笔导入
@@ -115,20 +115,26 @@ def pytest_collection_modifyitems(config, items):
     S7 已实化(S7.1+S7.2 真实断言在 test_v0_1_s7_clipboard_notes.py):
         - 剪贴板 → NoteStore.insert → NoteStructurerService.structure_and_emit
         - sync_notes.py spike --n 30 subprocess 真跑断言
+
+    S8 已实化(S8.1-S8.3 真实断言在 test_v0_1_s8_monthly_report.py,D10.4 启动):
+        - monthly_report.py generate subprocess 真跑(2026-06 或上月)
+        - 审计员通知频率 ≤ 1 次/月 契约
+        - 月报模板 9 段 10 占位符 验证
+
+    S9 已实化(S9.1-S9.6 真实断言在 test_v0_1_s9_launchd_recovery.py,D10.4 启动):
+        - plist 部署结构 + Label + StartCalendarInterval(1 号 09:00)
+        - install.sh ~/bin/ 部署 + 5 源验证
+        - uninstall.sh 卸载 plist + --purge-bin
+        - 管家 24h 在岗 + D5.5 SLA/Heartbeat 联动
+        - shell -n 语法验证(install.sh + uninstall.sh)
     """
     skip_real = pytest.mark.skip(
         reason="S5 真实 SMTP 需 SMTP_REAL_NETWORK=1 env + 沿 D5.6.5 4 重防误发参数"
     )
-    skip_s8 = pytest.mark.skip(reason="S8 每月 1 号 09:00 月报 — 等 D10 落地")
-    skip_s9 = pytest.mark.skip(reason="S9 launchd 重启自愈 — 等 D10 落地")
 
     for item in items:
         # S5:仅当 SMTP_REAL_NETWORK != "1" 时 skip
         if "s5_real_smtp" in item.nodeid:
             if os.environ.get("SMTP_REAL_NETWORK") != "1":
                 item.add_marker(skip_real)
-        # S8-S9:始终 skip(等 D10 落地后去除 skip)
-        elif "s8_monthly_report" in item.nodeid:
-            item.add_marker(skip_s8)
-        elif "s9_launchd_recovery" in item.nodeid:
-            item.add_marker(skip_s9)
+        # S8-S9:已实化(D10.4 commit 即将落),不再 skip

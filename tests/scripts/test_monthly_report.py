@@ -169,7 +169,7 @@ def test_b5_generate_no_transactions_exits_2(tmp_path, capsys, monkeypatch):
     monkeypatch.setattr(
         monthly_report,
         "_open_session_factory",
-        lambda db_path: (fake_factory, fake_db),
+        lambda db_path, no_encrypt=False: (fake_factory, fake_db),
     )
 
     rc = monthly_report.main(
@@ -189,7 +189,7 @@ def test_b6_generate_alembic_too_old_exits_1(tmp_path, capsys, monkeypatch):
     from scripts import monthly_report
 
     # 模拟 alembic 校验失败的场景
-    def fake_open_raises(db_path):
+    def fake_open_raises(db_path, no_encrypt=False):
         raise RuntimeError(f"alembic_version '0006_old' < '0007_transactions'")
 
     monkeypatch.setattr(

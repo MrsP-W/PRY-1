@@ -185,12 +185,42 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
     }
 
 
-def _open_session_factory(db_path: Path | None) -> tuple[sessionmaker[Session], object]:
+def _open_session_factory(
+    db_path: Path | None, *, no_encrypt: bool = False,
+) -> tuple[sessionmaker[Session], object]:
     """打开 DB + 校验 alembic + 返回 sessionmaker(测试可 mock).
+
+    Args:
+        db_path: DB 路径(None → 默认 ~/Library/Application Support/my-ai-employee/data.db)
+        no_encrypt: True → 走明文 sqlite(测试/开发用,生产必为 False)
 
     Returns:
         (sessionmaker, db_handle) — db_handle.close() 必调用于释放连接
+
+    Raises:
+        RuntimeError: alembic_version 缺失或 < _MIN_ALEMBIC_REVISION
+        OperationalError: DB 锁或连接错误
     """
+    if no_encrypt:
+        # 测试/开发路径:明文 sqlite(避免 SQLCipher 加密)
+        from sqlalchemy import create_engine
+        if db_path is None:
+            raise ValueError("no_encrypt 模式必显式 --db-path")
+        engine = create_engine(
+            f"sqlite:///{db_path}",
+            connect_args={"check_same_thread": False},
+        )
+        assert_min_revision(engine, _MIN_ALEMBIC_REVISION)
+        Base.metadata.create_all(engine)
+        factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+        # 返回一个 fake db_handle(不需 close)
+        class _FakeDb:
+            def close(self) -> None:
+                pass
+        return (factory, _FakeDb())
+
+    # 生产路径:SQLCipher 加密 DB
     db = Database.open(db_path=db_path)
     engine = make_sqlalchemy_engine(db)
     assert_min_revision(engine, _MIN_ALEMBIC_REVISION)
@@ -222,7 +252,9 @@ def cmd_generate(args: argparse.Namespace) -> int:
             return 1
 
     try:
-        factory, db = _open_session_factory(args.db_path)
+        factory, db = _open_session_factory(
+            args.db_path, no_encrypt=args.no_encrypt
+        )
     except RuntimeError as e:
         print(f"Alembic version 校验失败: {e}", file=sys.stderr)
         print("请先跑: alembic upgrade head", file=sys.stderr)
@@ -304,6 +336,11 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p_gen.add_argument("--output", type=Path, default=None, help="输出路径(默认 reports/finance-monthly-YYYY-MM.md)")
     p_gen.add_argument("--db-path", type=Path, default=None, help="可选 DB 路径")
+    p_gen.add_argument(
+        "--no-encrypt",
+        action="store_true",
+        help="走明文 sqlite(测试/开发用,生产必为 False)",
+    )
     p_gen.set_defaults(func=cmd_generate)
 
     # validate 子命令

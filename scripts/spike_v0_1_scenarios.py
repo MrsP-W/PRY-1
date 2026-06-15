@@ -40,6 +40,7 @@ def _run_scenario(scenario: str) -> int:
         str(test_file),
         "-v",
         "--tb=short",
+        "--no-cov",  # e2e 不 import 源,coverage 必为 0%(避免 fail_under 误报)
     ]
     print(f"▶️  跑 {scenario}: {' '.join(cmd)}")
 
