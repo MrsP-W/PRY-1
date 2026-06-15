@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：✅ D1-D7 + S6 e2e 已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过);S6 e2e 实化收口(3 个 skip → 真实断言,`expense_aggregate` 独立模块就绪 D9 0 schema 变更可启动)。`make test` 1738 passed / 7 skipped / coverage 89.9%,8 质量门 8/8 全绿。下一棒:D9 Apple Notes + ⌥⌘N(W3+)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：✅ D1-D7 + S6 e2e + D9.1 Apple Notes 底座已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过);S6 e2e 实化收口(3 个 skip → 真实断言,`expense_aggregate` 独立模块就绪)。D9.1 已完成 Apple Notes 适配器 + NoteStore + `0008_notes` migration。`make test` 1768 passed / 7 skipped / coverage 89.5%,8 质量门 8/8 全绿。下一棒:D9.2+ sync_notes / ⌥⌘N / S7 e2e。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D7+S6 e2e 复检:1738 passed / 7 skipped,覆盖率 89.9%）
+├── tests/                    # pytest 单元测试（D9.1 复检:1768 passed / 7 skipped,覆盖率 89.5%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D7+S6 e2e 复检:1738 passed / 7 skipped,覆盖率 89.9%）
+make test    # pytest 单元测试（D9.1 复检:1768 passed / 7 skipped,覆盖率 89.5%）
 ```
 
 ### 4. 文档 lint
@@ -168,8 +168,9 @@ make help
 | **D5 业务调度器**（SMTP 发送 + 状态机 + SLA）| ✅ **D5.7.2 真正锁定** | D5.1 ✅ / D5.2 ✅ / D5.3 ✅ / D5.4 ✅ / D5.5 ✅ / D5.6.3 ⏸️(4th round 驳回) / D5.6.4 ✅ (5 项第四轮修复 100% 落地) / **D5.6.5 ✅** (真实 1 封 SMTP 端到端实测通过, sent=1/1.27s, smtp.qq.com:465 SSL) / **D5.6.5.1 ✅** (检查员驳回 5 缺陷全部修复,P1-1 测试隔离 + P1-2 邮箱脱敏 + P2-1 SpikeResult 16 字段 + P2-2 文档一致 + P2-3 措辞澄清) / **D5.7 docs 收口 8 件套** ✅ / **D5.7.1 真正锁定** ✅ (检查员驳回 5 缺陷全部修复,P1-1 旧测试 SMTP 触网 + P1-2 邮箱脱敏固化 + P2-1 D5.7 状态统一 + P2-2 跨项目链接 + P2-3 SpikeResult 字段数 16 统一) / **D5.7.2 真正锁定** ✅ (docs 收口最后一致性修正,P1 D5 报告覆盖率表实测重生成 + P2-1 README 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径 + P2-5 DoD 证据补全) |
 | **D6 微信账单适配器**（CSV 解析 + 3 层去重 + TransactionAdapter）| ✅ 完成 | 2026-06-15 |
 | **D7 支付宝适配器**（CSV 解析 + 跨源去重 + import_all + 虚拟 spike）| ✅ 复检通过 | 2026-06-15 |
-| **S6 财务端到端**（微信/支付宝导入 + 菜单栏支出更新）| ⏳ 待实化 e2e | 下一棒 |
-| D9-D10 Week 2 | ⏳ | - |
+| **S6 财务端到端**（微信/支付宝导入 + 菜单栏支出更新）| ✅ 复检通过 | 2026-06-15 |
+| **D9.1 Apple Notes 底座**（适配器 + NoteStore + 0008 migration）| ✅ 复检通过 | 2026-06-15 |
+| D9.2-D10 Week 2 | ⏳ | - |
 | **v0.1 发布** | ⏳ | - |
 
 ---
@@ -239,6 +240,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-15（S6 e2e 实化收口:HEAD `aecdd38`,3 commits 收口链 `14dfb3c` + `aecdd38` + `待 S6 收口 docs commit`,S6 3 个 skip 改真实断言 + `expense_aggregate` 独立模块就绪,`make test` 1738 passed / 7 skipped / coverage 89.9%,`mypy src tests` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` 8 质量门 8/8 全绿。下一棒:D9 Apple Notes + ⌥⌘N(W3+)。）
+**最后更新**：2026-06-15（D9.1 复检:HEAD `1ec2caf`,Apple Notes 适配器 + NoteStore + `0008_notes` migration 已落;`make test` 1768 passed / 7 skipped / coverage 89.5%,`mypy src tests` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` 8 质量门 8/8 全绿。下一棒:D9.2+ sync_notes / ⌥⌘N / S7 e2e。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
