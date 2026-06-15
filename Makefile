@@ -46,6 +46,8 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make sync-notes$(RESET) D9.2 — Apple Notes 正常同步(真 AppleScript 调 Notes.app)"
 	@echo "  $(GREEN)make spike-notes$(RESET) D9.2 — Apple Notes spike(30 笔 faker 跑通链路,Mock runner)"
 	@echo "  $(GREEN)make test-notes$(RESET) D9.2 — Apple Notes 测试套件(12 cases:7 HTML cleaner + 5 CLI)"
+	@echo "  $(GREEN)make monthly-report$(RESET) D10.2 — 数字生活月报生成(沿 D5.6.5 4 退出码范本)"
+	@echo "  $(GREEN)make validate-monthly$(RESET) D10.2 — 校验月报模板必含占位符"
 	@echo "  $(GREEN)make info$(RESET)     显示项目信息（Python 版本 + 关键路径）"
 	@echo "  $(GREEN)make venv$(RESET)     创建项目本地 venv（uv venv, Python 3.12）"
 	@echo "  $(GREEN)make install$(RESET)  同步依赖到 venv（uv sync --extra dev）"
@@ -176,6 +178,16 @@ spike-notes: ## D9.2 — Apple Notes spike(30 笔 faker,Mock runner 跑通链路
 test-notes: ## D9.2 — Apple Notes 测试套件(12 cases)
 	@echo "$(BLUE)🧪 跑 Apple Notes 测试(7 HTML cleaner + 5 CLI 集成)$(RESET)"
 	@$(PYTHON) -m pytest tests/scripts/test_sync_notes.py -v
+
+.PHONY: monthly-report
+monthly-report: ## D10.2 — 数字生活月报生成(沿 D5.6.5 4 退出码范本)
+	@echo "$(BLUE)📊 生成当月数字生活月报(默认上月)$(RESET)"
+	@$(PYTHON) -m scripts.monthly_report generate --month $$(date -v-1d +%Y-%m 2>/dev/null || date -d 'last month' +%Y-%m)
+
+.PHONY: validate-monthly
+validate-monthly: ## D10.2 — 校验月报模板必含占位符(10 占位符)
+	@echo "$(BLUE)✅ 校验月报模板(10 占位符)$(RESET)"
+	@$(PYTHON) -m scripts.monthly_report validate
 
 .PHONY: clean
 clean: ## 清理临时文件
