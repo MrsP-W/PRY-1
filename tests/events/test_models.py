@@ -17,6 +17,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from my_ai_employee.core.models import Base  # noqa: E402
+from my_ai_employee.core.outbox import OutboxEntry  # noqa: E402, F401  # 触发 outbox 表注册(D4.8)
+from my_ai_employee.db.notes import Note  # noqa: E402, F401  # 触发 Note 注册到 Base.metadata(D9.1)
+from my_ai_employee.db.transactions import (  # noqa: E402, F401
+    Transaction,  # 触发 transactions 表注册(D6.4)
+)
 from my_ai_employee.events import (  # noqa: E402
     Event,
     EventOwnership,
@@ -29,11 +34,11 @@ from my_ai_employee.events import (  # noqa: E402
 
 class TestMetadataRegistration:
     def test_events_table_registered(self) -> None:
-        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions)."""
+        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions; D9.1 启动后第 10 张是 notes)."""
         tables = sorted(Base.metadata.tables.keys())
         assert "events" in tables
-        # 9 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions
-        assert len(tables) == 9
+        # 10 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes
+        assert len(tables) == 10
 
     def test_events_table_has_7_columns(self) -> None:
         """events 表 7 字段 (id + event + status + source + subject_id + fingerprint + event_metadata + created_at)."""

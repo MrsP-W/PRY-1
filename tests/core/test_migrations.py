@@ -149,7 +149,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0007_transactions"
+        assert version[0] == "0008_notes"
     finally:
         db.close()
 
@@ -374,10 +374,10 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             assert ddl is not None
             assert "UNIQUE(fingerprint)" in ddl[0]
             assert "UNIQUE(event, source, subject_id, fingerprint)" not in ddl[0]
-            # 3b) alembic_version 已记录 0005(D5.2 head)
+            # 3b) alembic_version 已记录 0008(D9.1 head)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0007_transactions"
+            assert version[0] == "0008_notes"
     finally:
         db.close()
 
@@ -411,7 +411,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0007_transactions"
+            assert version[0] == "0008_notes"
     finally:
         db.close()
 

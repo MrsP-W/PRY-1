@@ -13,3 +13,20 @@ Week 2 实施顺序：wechat_csv → alipay_csv → apple_notes
 
 设计原则：失败隔离（单适配器失败不传染，借鉴应急版范本）。
 """
+
+from my_ai_employee.connectors._types import RawNote, RawTransaction
+from my_ai_employee.connectors.apple_notes import (
+    NotesConnector,
+    NotesConnectorError,
+    build_raw_note,
+    safe_parse,
+)
+
+__all__ = [
+    "RawNote",
+    "RawTransaction",
+    "NotesConnector",
+    "NotesConnectorError",
+    "build_raw_note",
+    "safe_parse",
+]

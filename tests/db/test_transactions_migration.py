@@ -160,13 +160,14 @@ def test_alembic_downgrade_drops_transactions_table(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """Case 2 — alembic downgrade -1 跑通后 transactions 表被 drop(outbox / events 等其他表仍在)。"""
+    """Case 2 — alembic downgrade 显式回到 0006 后 transactions 表被 drop(outbox / events / notes 等其他表仍在)。"""
     from alembic import command
 
-    # 先 upgrade head(确保 transactions 表存在)
+    # 先 upgrade head(确保 transactions + notes 表存在)
     command.upgrade(alembic_cfg, "head")
-    # 再 downgrade -1(应删 transactions 表)
-    command.downgrade(alembic_cfg, "-1")
+    # 显式 downgrade 到 0006(0007_transactions 之前)— 删 transactions 表
+    # 0008_notes 创建 notes 表 + 0007_transactions 创建 transactions 表,要走 2 步
+    command.downgrade(alembic_cfg, "0006_outbox_approval_provenance")
 
     db = Database.open(db_path=tmp_db_path)
     try:
@@ -180,6 +181,8 @@ def test_alembic_downgrade_drops_transactions_table(
             ]
             # transactions 表已删
             assert "transactions" not in tables
+            # notes 表(D9.1,比 transactions 更晚)也已删
+            assert "notes" not in tables
             # 其他表(outbox / events / emails / ...)仍在
             assert "outbox" in tables
             assert "events" in tables
@@ -216,10 +219,12 @@ def test_alembic_upgrade_downgrade_upgrade_idempotent(
             ]
             # transactions 表已重新建
             assert "transactions" in tables
-            # alembic_version = head(D6.4 = 0007_transactions)
+            # notes 表(D9.1)也建了
+            assert "notes" in tables
+            # alembic_version = head(D9.1 = 0008_notes)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0007_transactions"
+            assert version[0] == "0008_notes"
     finally:
         db.close()
 
