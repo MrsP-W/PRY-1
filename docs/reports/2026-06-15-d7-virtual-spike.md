@@ -1,8 +1,8 @@
 # D7 虚拟 spike 报告 — 5 段全链路验证
 
 > **状态**: 🎯 5 段全跑  ·  **承接**: D7 3 commits 收口链(8b2b736 → b6f009b → 1f6a3ac)  
-> **模式**: inmemory  ·  **env 门控**: True  ·  **db_path**: `/var/folders/v0/nct319_x3gzdwj8rsw6v6m3r0000gn/T/d7_virtual_spike_1781486779_8b4a70ad.db`  
-> **seed**: 7  ·  **pairs**: 3  ·  **总耗时**: 0.020s  
+> **模式**: inmemory  ·  **env 门控**: True  ·  **db_path**: `/var/folders/v0/nct319_x3gzdwj8rsw6v6m3r0000gn/T/d7_virtual_spike_1781487165_39d1aa68.db`  
+> **seed**: 7  ·  **pairs**: 3  ·  **总耗时**: 0.032s  
 
 ## 1. 5 段结果汇总
 
@@ -37,18 +37,13 @@
 - ✅ **confirm 文本**: `yes-i-understand-this-is-virtual`(已传)
 - ✅ **--pairs 范围**: 1-20(实际 3)
 - ✅ **--seed 非负**: 实际 7
-- ✅ **DB 隔离**: `/var/folders/v0/nct319_x3gzdwj8rsw6v6m3r0000gn/T/d7_virtual_spike_1781486779_8b4a70ad.db`(临时 sqlite,绝不入真实 DB)
+- ✅ **DB 隔离**: `/var/folders/v0/nct319_x3gzdwj8rsw6v6m3r0000gn/T/d7_virtual_spike_1781487165_39d1aa68.db`(临时 sqlite,绝不入真实 DB)
 
-## 5. 8 质量门最终复跑状态
+## 5. 脚本外质量门复跑记录
 
-- ✅ pytest: 待复跑(脚本运行后)
-- ✅ mypy src tests: 0 errors(沿 D7 锁定状态)
-- ✅ ruff check: All checks passed
-- ✅ ruff format --check: 167 files formatted
-- ✅ coverage: 89.8%(目标 90%,差 0.2%)
-- ✅ alembic upgrade head --sql: 0 errors
-- ✅ uv build: sdist + wheel OK
-- ✅ make lint: 0 errors(49 Markdown files)
+- 2026-06-15 复检:`make test` = 1727 passed / 10 skipped / coverage 89.8%。
+- 2026-06-15 复检:`ruff check` / `ruff format --check` / `mypy src tests` / `make lint` 全绿。
+- 本脚本仅验证 D7 虚拟 spike 5 段链路;后续质量门以当次命令输出为准。
 
 ## 6. 结论
 

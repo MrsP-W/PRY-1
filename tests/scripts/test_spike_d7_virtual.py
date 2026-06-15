@@ -113,7 +113,7 @@ def test_spike_5_segments_all_pass(tmp_path: Path) -> None:
     - --pairs 5(范围) ✓
     - --seed 42(非负) ✓
     - 5 段全过(PASS)
-    - 报告写入 docs/reports/2026-06-15-d7-virtual-spike.md
+    - 报告写入指定 --report-dir
     """
     result = _run_spike(
         "--confirm",
@@ -146,7 +146,7 @@ def test_spike_5_segments_all_pass(tmp_path: Path) -> None:
     assert "inserted=" in content or "**inserted**" in content
 
 
-def test_spike_different_pairs_runs_segments() -> None:
+def test_spike_different_pairs_runs_segments(tmp_path: Path) -> None:
     """--pairs=2 也应能跑(段 C/D 的"对数"参数化)."""
     result = _run_spike(
         "--confirm",
@@ -155,13 +155,15 @@ def test_spike_different_pairs_runs_segments() -> None:
         "2",
         "--seed",
         "100",
+        "--report-dir",
+        str(tmp_path / "reports"),
         env_extra={SPIKE_ENV_VAR: SPIKE_ENV_VALUE},
     )
     assert result.returncode == 0
     assert "5 段全过: True" in result.stdout
 
 
-def test_spike_creates_temporary_db_not_real() -> None:
+def test_spike_creates_temporary_db_not_real(tmp_path: Path) -> None:
     """DB 隔离:spike 跑的 DB 是临时 sqlite,绝不入真实 ~/Library."""
     result = _run_spike(
         "--confirm",
@@ -170,6 +172,8 @@ def test_spike_creates_temporary_db_not_real() -> None:
         "3",
         "--seed",
         "7",
+        "--report-dir",
+        str(tmp_path / "reports"),
         env_extra={SPIKE_ENV_VAR: SPIKE_ENV_VALUE},
     )
     assert result.returncode == 0
