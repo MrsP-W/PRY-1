@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  D10.3 launchd plist for v0.1 数字生活月报 + launchd 保活
+
+  触发时机:每月 1 号 09:00 触发 monthly_report generate(沿 week2-mvp.md L224 + 审计员触发)
+  部署位置:~/Library/LaunchAgents/com.myaiemployee.agent.plist(用户级)
+  装载方式:launchctl load -w plist(沿 launchd_install.sh 范本)
+
+  设计决策(2026-06-15 锁定):
+    RunAtLoad=false(避免开机就触发;用户期望是每月 1 号 09:00)
+    StandardOutPath/StandardErrorPath 走 ~/Library/Logs/MyAIEmployee/(沿 macOS 标准日志位置)
+    StartCalendarInterval:Month=1, Day=1, Hour=9, Minute=0(每月 1 号 09:00 准点)
+    ProgramArguments 沿 ~/bin/ 部署(launchd 在 macOS Sequoia TCC 不允许 Documents/ 路径)
+
+  验收:
+    launchctl list | grep myaiemployee 必见 com.myaiemployee.agent
+    launchctl print user/$(id -u)/com.myaiemployee.agent 必能读
+    日志文件可读:log show with predicate process = my-ai-employee-monthly-report
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.myaiemployee.agent</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/$USER/bin/my-ai-employee-monthly-report</string>
+        <string>generate</string>
+        <string>--month</string>
+        <string>$(/bin/date '+%Y-%m')</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/$USER/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/$USER</string>
+    </dict>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Month</key>
+        <integer>1</integer>
+        <key>Day</key>
+        <integer>1</integer>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <false/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/agent.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/agent.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/$USER</string>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>1</integer>
+</dict>
+</plist>
