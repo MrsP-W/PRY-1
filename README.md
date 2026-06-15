@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：✅ D1-D7 已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过,1727 passed / 10 skipped / coverage 89.8%,8 质量门本轮全绿)。下一棒:先实化 S6 e2e,再进入 D9 Apple Notes + ⌥⌘N。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
+> **状态**：✅ D1-D7 + S6 e2e 已落地并复检通过。D5.7.2 业务调度器真正锁定;D6 微信账单 + D7 支付宝账单/跨源去重已完成(D7 虚拟 spike 5 段全过);S6 e2e 实化收口(3 个 skip → 真实断言,`expense_aggregate` 独立模块就绪 D9 0 schema 变更可启动)。`make test` 1738 passed / 7 skipped / coverage 89.9%,8 质量门 8/8 全绿。下一棒:D9 Apple Notes + ⌥⌘N(W3+)。详见 [docs/architecture.md](docs/architecture.md) / [docs/week1-mvp.md](docs/week1-mvp.md) / [docs/week2-mvp.md](docs/week2-mvp.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试（D7 复检:1727 passed / 10 skipped,覆盖率 89.8%）
+├── tests/                    # pytest 单元测试（D7+S6 e2e 复检:1738 passed / 7 skipped,覆盖率 89.9%）
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试（D7 复检:1727 passed / 10 skipped,覆盖率 89.8%）
+make test    # pytest 单元测试（D7+S6 e2e 复检:1738 passed / 7 skipped,覆盖率 89.9%）
 ```
 
 ### 4. 文档 lint
@@ -239,6 +239,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-15（D7 复检收口:HEAD `f94e9c2`,D7 虚拟 spike 5 段全过,`make test` 1727 passed / 10 skipped / coverage 89.8%,`ruff check` / `ruff format --check` / `mypy src tests` / `make lint` / `uv build` / `alembic upgrade head --sql` 全绿。下一棒:S6 e2e 去 skip + 菜单栏支出更新验证,随后 D9。）
+**最后更新**：2026-06-15（S6 e2e 实化收口:HEAD `aecdd38`,3 commits 收口链 `14dfb3c` + `aecdd38` + `待 S6 收口 docs commit`,S6 3 个 skip 改真实断言 + `expense_aggregate` 独立模块就绪,`make test` 1738 passed / 7 skipped / coverage 89.9%,`mypy src tests` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` 8 质量门 8/8 全绿。下一棒:D9 Apple Notes + ⌥⌘N(W3+)。）
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
