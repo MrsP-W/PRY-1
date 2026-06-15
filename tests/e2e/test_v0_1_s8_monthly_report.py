@@ -14,12 +14,9 @@ import sqlite3
 import subprocess
 import sys
 from datetime import date
-from decimal import Decimal
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
@@ -54,24 +51,40 @@ def _make_test_db(db_path: Path, target_year: int, target_month: int) -> None:
         """)
         # 2 笔本月(本月)
         from calendar import monthrange
+
         last_day = monthrange(target_year, target_month)[1]
-        for i, (day, amt, cat) in enumerate([
-            (5, "3500.00", "salary"),  # 收入
-            (15, "-380.00", "dining"),  # 支出
-        ]):
+        for i, (day, amt, cat) in enumerate(
+            [
+                (5, "3500.00", "salary"),  # 收入
+                (15, "-380.00", "dining"),  # 支出
+            ]
+        ):
             conn.execute(
                 "INSERT INTO transactions (source, external_transaction_id, transaction_date, "
                 "amount, counterparty, category, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                ("wechat", f"tx-{target_year}-{target_month}-{i}", f"{target_year}-{target_month:02d}-{day:02d}",
-                 amt, f"商户{i}", cat, "categorized"),
+                (
+                    "wechat",
+                    f"tx-{target_year}-{target_month}-{i}",
+                    f"{target_year}-{target_month:02d}-{day:02d}",
+                    amt,
+                    f"商户{i}",
+                    cat,
+                    "categorized",
+                ),
             )
         # 1 笔大额异常(> 1000)
         conn.execute(
             "INSERT INTO transactions (source, external_transaction_id, transaction_date, "
             "amount, counterparty, category, status) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            ("alipay", f"tx-{target_year}-{target_month}-big",
-             f"{target_year}-{target_month:02d}-{last_day:02d}",
-             "-1500.00", "奢侈品", "shopping", "categorized"),
+            (
+                "alipay",
+                f"tx-{target_year}-{target_month}-big",
+                f"{target_year}-{target_month:02d}-{last_day:02d}",
+                "-1500.00",
+                "奢侈品",
+                "shopping",
+                "categorized",
+            ),
         )
         conn.commit()
     finally:
@@ -99,11 +112,16 @@ def test_s8_monthly_report_generation(tmp_path):
     output_path = tmp_path / f"finance-monthly-{target}.md"
     # 跑 subprocess 调 monthly_report.py(用临时 DB + --no-encrypt 测试模式)
     cmd = [
-        sys.executable, "-m", "scripts.monthly_report",
+        sys.executable,
+        "-m",
+        "scripts.monthly_report",
         "generate",
-        "--month", target,
-        "--db-path", str(db_path),
-        "--output", str(output_path),
+        "--month",
+        target,
+        "--db-path",
+        str(db_path),
+        "--output",
+        str(output_path),
         "--no-encrypt",
     ]
     result = subprocess.run(cmd, cwd=PROJECT_ROOT, capture_output=True, text=True, timeout=60)
@@ -154,9 +172,16 @@ def test_s8_monthly_report_template_rendered():
 
     # 必含 10 占位符
     placeholders = (
-        "{month}", "{generated_at}", "{total_income}", "{total_expense}",
-        "{net_balance}", "{transaction_count}", "{category_breakdown}",
-        "{anomaly_highlights}", "{income_mom}", "{expense_mom}",
+        "{month}",
+        "{generated_at}",
+        "{total_income}",
+        "{total_expense}",
+        "{net_balance}",
+        "{transaction_count}",
+        "{category_breakdown}",
+        "{anomaly_highlights}",
+        "{income_mom}",
+        "{expense_mom}",
     )
     for ph in placeholders:
         assert ph in content, f"月报模板必含占位符 {ph!r}"

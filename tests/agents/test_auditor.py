@@ -83,9 +83,7 @@ def test_auditor_4_red_lines():
 def test_auditor_collaboration_with_steward():
     """审计员 ↔ 管家 双向强制(管家执行 + 审计员监督)."""
     body = _read()
-    assert "@审计员 ↔ @管家" in body or "审计员 ↔ 管家" in body, (
-        "审计员必与管家双向强制"
-    )
+    assert "@审计员 ↔ @管家" in body or "审计员 ↔ 管家" in body, "审计员必与管家双向强制"
 
 
 def test_auditor_triggers_inspector_for_quality_gate():

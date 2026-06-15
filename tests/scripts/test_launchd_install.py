@@ -15,10 +15,7 @@ from __future__ import annotations
 
 import plistlib
 import re
-import sys
 from pathlib import Path
-
-import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLIST_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.agent.plist"
@@ -27,6 +24,7 @@ UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
 
 
 # ===== A. plist XML 良构 =====
+
 
 def test_a1_plist_exists():
     """A1. plist 文件必存."""
@@ -55,9 +53,7 @@ def test_a4_plist_program_arguments():
         data = plistlib.load(f)
     args = data.get("ProgramArguments", [])
     assert len(args) >= 2, f"ProgramArguments 必 >= 2 元素,实际 {args}"
-    assert "my-ai-employee-monthly-report" in args[0], (
-        f"第 1 元素必含脚本名,实际 {args[0]!r}"
-    )
+    assert "my-ai-employee-monthly-report" in args[0], f"第 1 元素必含脚本名,实际 {args[0]!r}"
     assert "generate" in args, f"必传 'generate' 子命令,实际 {args}"
 
 
@@ -93,17 +89,22 @@ def test_a8_plist_standard_log_paths():
         data = plistlib.load(f)
     out = data.get("StandardOutPath", "")
     err = data.get("StandardErrorPath", "")
-    assert "Library/Logs/MyAIEmployee" in out, f"StandardOutPath 必 ~/Library/Logs/MyAIEmployee/,实际 {out}"
-    assert "Library/Logs/MyAIEmployee" in err, f"StandardErrorPath 必 ~/Library/Logs/MyAIEmployee/,实际 {err}"
+    assert "Library/Logs/MyAIEmployee" in out, (
+        f"StandardOutPath 必 ~/Library/Logs/MyAIEmployee/,实际 {out}"
+    )
+    assert "Library/Logs/MyAIEmployee" in err, (
+        f"StandardErrorPath 必 ~/Library/Logs/MyAIEmployee/,实际 {err}"
+    )
 
 
 # ===== B. install.sh 契约 =====
 
+
 def test_b1_install_sh_exists_and_executable():
     """B1. install.sh 必存且可执行."""
     assert INSTALL_SH.exists(), f"install.sh 必存: {INSTALL_SH}"
-    import os
     import stat
+
     mode = INSTALL_SH.stat().st_mode
     assert mode & stat.S_IXUSR, "install.sh 必可执行"
 
@@ -145,9 +146,7 @@ def test_b6_install_sh_deploys_to_home_bin():
     """B6. install.sh 必部署到 ~/bin/(沿 D5.6 memory ~/bin/ 部署范本)."""
     text = INSTALL_SH.read_text(encoding="utf-8")
     # ~/bin 路径必出现
-    assert "${HOME}/bin" in text or "$HOME/bin" in text, (
-        "install.sh 必部署到 ~/bin/(沿 D5.6 范本)"
-    )
+    assert "${HOME}/bin" in text or "$HOME/bin" in text, "install.sh 必部署到 ~/bin/(沿 D5.6 范本)"
 
 
 def test_b7_install_sh_uses_sed_for_user_replacement():
@@ -166,10 +165,12 @@ def test_b8_install_sh_uses_launchctl_load():
 
 # ===== C. uninstall.sh 契约 =====
 
+
 def test_c1_uninstall_sh_exists_and_executable():
     """C1. uninstall.sh 必存且可执行."""
     assert UNINSTALL_SH.exists(), f"uninstall.sh 必存: {UNINSTALL_SH}"
     import stat
+
     mode = UNINSTALL_SH.stat().st_mode
     assert mode & stat.S_IXUSR, "uninstall.sh 必可执行"
 

@@ -112,9 +112,7 @@ def test_agent_readme_lists_7_roles():
 def test_agent_readme_marks_copied_vs_owned():
     """Agent README 必区分 5 复制 vs 2 专属(沿 D5.5.3 范本)."""
     readme = README_PATH.read_text(encoding="utf-8")
-    assert "复制" in readme and "专属" in readme, (
-        "Agent README 必区分复制 vs 专属"
-    )
+    assert "复制" in readme and "专属" in readme, "Agent README 必区分复制 vs 专属"
     for role in COPIED_ROLES:
         assert role in readme
     for role in PROJECT_OWNED_ROLES:
@@ -132,10 +130,10 @@ def test_agent_readme_role_count_matches_actual():
 def test_copied_roles_have_color_marker():
     """5 复制角色必含色彩标识(沿 Agent Assistant .md 范本)."""
     # 7 常见色系:🔴🟠🟡🟢🔵🟣⚪(覆盖 Agent Assistant 全部角色)
-    COLOR_MARKERS = ("🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚪")
+    color_markers = ("🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚪")
     for role in COPIED_ROLES:
         body = (AGENTS_DIR / f"{role}.md").read_text(encoding="utf-8")
-        assert any(emoji in body for emoji in COLOR_MARKERS), (
+        assert any(emoji in body for emoji in color_markers), (
             f"{role}.md 必含色彩标识(沿 Agent Assistant 范本)"
         )
 
@@ -143,6 +141,4 @@ def test_copied_roles_have_color_marker():
 def test_no_legacy_symlinks_in_agents_dir():
     """D5.5.3 软链 → 实际文件复制(防 uv build FileNotFoundError)."""
     for path in AGENTS_DIR.glob("*.md"):
-        assert not path.is_symlink(), (
-            f"{path.name} 不应是软链(D5.5.3 P0 修复:软链 → 实际文件复制)"
-        )
+        assert not path.is_symlink(), f"{path.name} 不应是软链(D5.5.3 P0 修复:软链 → 实际文件复制)"

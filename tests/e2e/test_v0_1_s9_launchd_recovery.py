@@ -11,9 +11,7 @@ D10.4 范围(2026-06-15 启动):skip 占位 → 真实断言.
 from __future__ import annotations
 
 import plistlib
-import re
 import subprocess
-import sys
 from pathlib import Path
 
 import pytest
@@ -43,9 +41,7 @@ def test_s9_launchd_plist_deployment_structure():
     assert "generate" in args, "S9.1 必传 generate 子命令"
 
     cal = data.get("StartCalendarInterval", {})
-    assert cal.get("Month") == 1 and cal.get("Day") == 1, (
-        f"S9.1 必每月 1 号触发,实际 {cal}"
-    )
+    assert cal.get("Month") == 1 and cal.get("Day") == 1, f"S9.1 必每月 1 号触发,实际 {cal}"
     assert cal.get("Hour") == 9, "S9.1 必 09:00 触发"
 
     # RunAtLoad=false(避免开机就触发)
@@ -97,9 +93,7 @@ def test_s9_steward_agent_monitors_all_adapters():
 def test_s9_steward_24h_on_duty_with_sla():
     """S9.5 — @管家 必 24h 在岗 + SLA 告警(沿 D5.5 Heartbeat)."""
     body = STEWARD_PATH.read_text(encoding="utf-8")
-    assert "24h 在岗" in body or "24小时在岗" in body, (
-        "S9.5 管家必明示 24h 在岗"
-    )
+    assert "24h 在岗" in body or "24小时在岗" in body, "S9.5 管家必明示 24h 在岗"
     # SLA 告警必联动 D5.5
     assert "D5.5" in body or "SLA" in body or "Heartbeat" in body, (
         "S9.5 管家必联动 D5.5 SLA/Heartbeat"
@@ -117,18 +111,20 @@ def test_s9_launchd_recovery_subprocess_succeeds():
     # shell -n 模式 = 解析不执行
     result = subprocess.run(
         ["bash", "-n", str(INSTALL_SH)],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
     assert result.returncode == 0, (
-        f"S9.6 install.sh 语法必正确,实际 rc={result.returncode},"
-        f"stderr: {result.stderr}"
+        f"S9.6 install.sh 语法必正确,实际 rc={result.returncode},stderr: {result.stderr}"
     )
 
     result = subprocess.run(
         ["bash", "-n", str(UNINSTALL_SH)],
-        capture_output=True, text=True, timeout=10,
+        capture_output=True,
+        text=True,
+        timeout=10,
     )
     assert result.returncode == 0, (
-        f"S9.6 uninstall.sh 语法必正确,实际 rc={result.returncode},"
-        f"stderr: {result.stderr}"
+        f"S9.6 uninstall.sh 语法必正确,实际 rc={result.returncode},stderr: {result.stderr}"
     )

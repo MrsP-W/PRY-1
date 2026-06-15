@@ -142,9 +142,7 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
         category_breakdown = "_(当月无支出)_"
 
     # 异常高亮(单笔 > 1000 元 + 偏离均值 3σ — 沿 week2-mvp.md L175 D8 风格,简化版)
-    anomalies = [
-        r for r in rows if abs(r.amount) > Decimal("1000")
-    ]
+    anomalies = [r for r in rows if abs(r.amount) > Decimal("1000")]
     if anomalies:
         lines = ["⚠️ **大额交易** (单笔 > ¥1000)", ""]
         for r in anomalies[:5]:  # 最多列 5 笔
@@ -186,7 +184,9 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
 
 
 def _open_session_factory(
-    db_path: Path | None, *, no_encrypt: bool = False,
+    db_path: Path | None,
+    *,
+    no_encrypt: bool = False,
 ) -> tuple[sessionmaker[Session], object]:
     """打开 DB + 校验 alembic + 返回 sessionmaker(测试可 mock).
 
@@ -204,6 +204,7 @@ def _open_session_factory(
     if no_encrypt:
         # 测试/开发路径:明文 sqlite(避免 SQLCipher 加密)
         from sqlalchemy import create_engine
+
         if db_path is None:
             raise ValueError("no_encrypt 模式必显式 --db-path")
         engine = create_engine(
@@ -218,6 +219,7 @@ def _open_session_factory(
         class _FakeDb:
             def close(self) -> None:
                 pass
+
         return (factory, _FakeDb())
 
     # 生产路径:SQLCipher 加密 DB
@@ -252,9 +254,7 @@ def cmd_generate(args: argparse.Namespace) -> int:
             return 1
 
     try:
-        factory, db = _open_session_factory(
-            args.db_path, no_encrypt=args.no_encrypt
-        )
+        factory, db = _open_session_factory(args.db_path, no_encrypt=args.no_encrypt)
     except RuntimeError as e:
         print(f"Alembic version 校验失败: {e}", file=sys.stderr)
         print("请先跑: alembic upgrade head", file=sys.stderr)
@@ -281,8 +281,10 @@ def cmd_generate(args: argparse.Namespace) -> int:
         return 2
 
     # 渲染模板
-    output_path = Path(args.output) if args.output else (
-        PROJECT_ROOT / "reports" / f"finance-monthly-{year}-{month:02d}.md"
+    output_path = (
+        Path(args.output)
+        if args.output
+        else (PROJECT_ROOT / "reports" / f"finance-monthly-{year}-{month:02d}.md")
     )
     output_path.parent.mkdir(parents=True, exist_ok=True)
     rendered = template_text.format(
@@ -325,16 +327,19 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # generate 子命令
     p_gen = subparsers.add_parser("generate", help="生成月报 Markdown")
-    p_gen.add_argument(
-        "--month", required=True, help="月份 YYYY-MM(如 2026-06;默认上月)"
-    )
+    p_gen.add_argument("--month", required=True, help="月份 YYYY-MM(如 2026-06;默认上月)")
     p_gen.add_argument(
         "--template",
         type=Path,
         default=PROJECT_ROOT / "templates" / "finance_monthly.md",
         help="模板路径(默认 templates/finance_monthly.md)",
     )
-    p_gen.add_argument("--output", type=Path, default=None, help="输出路径(默认 reports/finance-monthly-YYYY-MM.md)")
+    p_gen.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="输出路径(默认 reports/finance-monthly-YYYY-MM.md)",
+    )
     p_gen.add_argument("--db-path", type=Path, default=None, help="可选 DB 路径")
     p_gen.add_argument(
         "--no-encrypt",

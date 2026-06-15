@@ -60,9 +60,7 @@ def test_steward_frontmatter_metadata_type_agent():
     """metadata.type 必为 'agent'(L4 角色类型契约)."""
     fm = _frontmatter()
     assert "metadata:" in fm, "frontmatter 必含 metadata 段"
-    assert "type: agent" in fm or "type:agent" in fm, (
-        f"metadata.type 必为 'agent',实际 fm={fm!r}"
-    )
+    assert "type: agent" in fm or "type:agent" in fm, f"metadata.type 必为 'agent',实际 fm={fm!r}"
 
 
 def test_steward_responsibilities_listed():
@@ -98,9 +96,7 @@ def test_steward_no_duplicate_with_auditor_prompts():
     auditor = (AGENTS_DIR / "审计员.md").read_text(encoding="utf-8")
     steward_body = _read()
     # 管家执行 → 审计员监督,职责不重叠
-    assert "执行" in steward_body and "监督" in auditor, (
-        "管家 = 执行,审计员 = 监督(双角色边界)"
-    )
+    assert "执行" in steward_body and "监督" in auditor, "管家 = 执行,审计员 = 监督(双角色边界)"
 
 
 @pytest.mark.parametrize(

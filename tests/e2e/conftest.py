@@ -134,7 +134,6 @@ def pytest_collection_modifyitems(config, items):
 
     for item in items:
         # S5:仅当 SMTP_REAL_NETWORK != "1" 时 skip
-        if "s5_real_smtp" in item.nodeid:
-            if os.environ.get("SMTP_REAL_NETWORK") != "1":
-                item.add_marker(skip_real)
+        if "s5_real_smtp" in item.nodeid and os.environ.get("SMTP_REAL_NETWORK") != "1":
+            item.add_marker(skip_real)
         # S8-S9:已实化(D10.4 commit 即将落),不再 skip

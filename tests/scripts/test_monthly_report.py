@@ -29,7 +29,6 @@ import sqlite3
 import sys
 from datetime import date
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
@@ -56,6 +55,7 @@ def _make_pretend_alembic_db(db_path: Path, revision: str = "0007_transactions")
 
 
 # ===== A. cmd_validate =====
+
 
 def test_a1_validate_default_template_passes(capsys, monkeypatch):
     """A1. validate 默认模板 → exit 0 + ✅ 校验通过."""
@@ -101,6 +101,7 @@ def test_a4_validate_path_is_dir_exits_1(tmp_path, capsys):
 
 # ===== B. cmd_generate =====
 
+
 def test_b1_generate_missing_month_arg_exits_2(capsys):
     """B1. 缺 --month 参数 → argparse exit 2(usage error)."""
     from scripts import monthly_report
@@ -137,8 +138,10 @@ def test_b4_generate_template_not_exists_exits_1(capsys):
     rc = monthly_report.main(
         [
             "generate",
-            "--month", "2026-06",
-            "--template", "/nonexistent/template.md",
+            "--month",
+            "2026-06",
+            "--template",
+            "/nonexistent/template.md",
         ]
     )
     captured = capsys.readouterr()
@@ -148,20 +151,19 @@ def test_b4_generate_template_not_exists_exits_1(capsys):
 
 def test_b5_generate_no_transactions_exits_2(tmp_path, capsys, monkeypatch):
     """B5. transactions 表 0 行 → exit 2(业务失败)."""
-    from scripts import monthly_report
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
+
+    from scripts import monthly_report
 
     db_path = tmp_path / "v0.1.db"
     _make_pretend_alembic_db(db_path)  # alembic_version 验过 + transactions 表空
 
     # 用真实 ORM schema 创建表(create_all 走 Base.metadata)
-    from my_ai_employee.core.models import Base
     import my_ai_employee.db.transactions  # noqa: F401  # 触发 Transaction 16 列注册
+    from my_ai_employee.core.models import Base
 
-    engine = create_engine(
-        f"sqlite:///{db_path}", connect_args={"check_same_thread": False}
-    )
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     fake_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     fake_db = type("DB", (), {"close": lambda self: None})()
@@ -175,8 +177,10 @@ def test_b5_generate_no_transactions_exits_2(tmp_path, capsys, monkeypatch):
     rc = monthly_report.main(
         [
             "generate",
-            "--month", "2026-06",
-            "--db-path", str(db_path),
+            "--month",
+            "2026-06",
+            "--db-path",
+            str(db_path),
         ]
     )
     captured = capsys.readouterr()
@@ -190,17 +194,17 @@ def test_b6_generate_alembic_too_old_exits_1(tmp_path, capsys, monkeypatch):
 
     # 模拟 alembic 校验失败的场景
     def fake_open_raises(db_path, no_encrypt=False):
-        raise RuntimeError(f"alembic_version '0006_old' < '0007_transactions'")
+        raise RuntimeError("alembic_version '0006_old' < '0007_transactions'")
 
-    monkeypatch.setattr(
-        monthly_report, "_open_session_factory", fake_open_raises
-    )
+    monkeypatch.setattr(monthly_report, "_open_session_factory", fake_open_raises)
 
     rc = monthly_report.main(
         [
             "generate",
-            "--month", "2026-06",
-            "--db-path", str(tmp_path / "dummy.db"),
+            "--month",
+            "2026-06",
+            "--db-path",
+            str(tmp_path / "dummy.db"),
         ]
     )
     captured = capsys.readouterr()
@@ -210,24 +214,29 @@ def test_b6_generate_alembic_too_old_exits_1(tmp_path, capsys, monkeypatch):
 
 # ===== C. _parse_month 边界 =====
 
+
 def test_c1_parse_month_valid():
     """C1. 合法 '2026-06' → (2026, 6)."""
     from scripts import monthly_report
+
     assert monthly_report._parse_month("2026-06") == (2026, 6)
 
 
 def test_c2_parse_month_invalid_raises():
     """C2. 非法 'abc' → ValueError."""
     from scripts import monthly_report
+
     with pytest.raises(ValueError):
         monthly_report._parse_month("abc")
 
 
 # ===== D. _month_bounds =====
 
+
 def test_d1_month_bounds_non_leap():
     """D1. 2026-02(非闰年)→ (2026-02-01, 2026-02-28)."""
     from scripts import monthly_report
+
     first, last = monthly_report._month_bounds(2026, 2)
     assert first == date(2026, 2, 1)
     assert last == date(2026, 2, 28)
@@ -236,6 +245,7 @@ def test_d1_month_bounds_non_leap():
 def test_d2_month_bounds_december_year_boundary():
     """D2. 12 月跨年边界(2026-12 → 2026-12-31)."""
     from scripts import monthly_report
+
     first, last = monthly_report._month_bounds(2026, 12)
     assert first == date(2026, 12, 1)
     assert last == date(2026, 12, 31)
