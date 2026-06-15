@@ -439,6 +439,77 @@ class NoteStore:
             )
             return list(session.execute(stmt).scalars().all())
 
+    def mark_structured(
+        self,
+        apple_note_id: str,
+        tags: list[str],
+    ) -> Note:
+        """D9.4 业务接入入口 — 写 tags(逗号分隔)+ 刷新 synced_at_ms.
+
+        业务定义(沿 D9.4 plan 决策 3, D9.1 NoteStore 增量扩展):
+          - 写 tags 字段(Note.tags 是 TEXT 存逗号分隔字符串,非 list[str])
+          - 写 synced_at_ms = int(time.time() * 1000)(覆盖 D9.1 写入时的同步时间)
+          - 严判 apple_note_id / tags 边界(双层防御:工厂层严判 + 字段类型)
+
+        Args:
+            apple_note_id: Apple ID(已存在 row 的主索引)
+            tags: 标签 list[str](本方法内部 join 为逗号分隔字符串;每项必 strip 非空)
+
+        Returns:
+            更新后的 Note(已 refresh)
+
+        Raises:
+            ValueError: apple_note_id / tags 业务层严判失败(空 / 越界 / 类型错)
+            RuntimeError: apple_note_id 不存在(透传, Adapter 转技术失败入口)
+            sqlalchemy.exc.OperationalError / DataError / InterfaceError: 技术失败
+                (D3.3.3 教训:except 范围窄化, 不静默吞)
+
+        D9.4 决策(对 plan 决策 3 微调,2026-06-15 锁定):
+          - plan 决策 3 假设 NoteStore 暴露 session() 上下文方法, NoteStructurerService
+            在事务内 db_note.tags = tags 直接写
+          - 实际 D9.1 NoteStore 没暴露 session()(只暴露 5 个读 + insert), 强行访问
+            self._store._sf 破坏封装(私有属性 _ 前缀)
+          - C3 真修: NoteStore 新增 mark_structured(apple_note_id, tags) 公共方法,
+            沿 D6.4 TransactionStore.update_status 范本(原子化 + 严判)
+          - 公共 API 增量 +1, 比破坏封装或建 NoteStore.session() 上下文方法都干净
+        """
+        # 1. 严判 apple_note_id(沿 D9.1 _validate_apple_note_id)
+        apple_note_id = self._validate_apple_note_id(apple_note_id)
+        # 2. 严判 tags: 必传非空 list, 每项必 strip 非空 str
+        if not isinstance(tags, list):
+            raise ValueError(
+                f"tags 必须是 list[str], 实际 type={type(tags).__name__}, value={tags!r}"
+            )
+        if not tags:
+            raise ValueError(f"tags 必非空 list(空 list 等于 '清空', 应传 None), 实际 {tags!r}")
+        cleaned: list[str] = []
+        for idx, item in enumerate(tags):
+            if not isinstance(item, str):
+                raise ValueError(
+                    f"tags[{idx}] 必须是 str, 实际 type={type(item).__name__}, value={item!r}"
+                )
+            stripped = item.strip()
+            if not stripped:
+                raise ValueError(f"tags[{idx}] 仅含空白字符, 应传非空或非纯空白, 实际 {item!r}")
+            cleaned.append(stripped)
+        # 3. 写库(沿 D9.1 范本:try/except IntegrityError 不在此路径出现, UNIQUE 不会撞)
+        # D3.3.3 教训:OperationalError/DataError/InterfaceError 不捕获, 透传 Adapter
+        #    → record_failure_and_emit 技术失败入口
+        # 主键修正(D9.4 fix): Note ORM 主键是 `id`(INTEGER AUTOINCREMENT),不是
+        # `apple_note_id`. `session.get(Note, apple_note_id)` 会用 apple_note_id 当主键查,
+        # 必然查不到. 改用 `select(Note).where(Note.apple_note_id == apple_note_id)` 范本.
+        now_ms = int(time.time() * 1000)
+        with self._sf() as session:
+            stmt = select(Note).where(Note.apple_note_id == apple_note_id)
+            db_note = session.execute(stmt).scalar_one_or_none()
+            if db_note is None:
+                raise ValueError(f"apple_note_id={apple_note_id!r} 不存在, 无法 mark_structured")
+            db_note.tags = ",".join(cleaned)
+            db_note.synced_at_ms = now_ms
+            session.commit()
+            session.refresh(db_note)
+            return db_note
+
 
 # ===== 模块导出 =====
 

@@ -29,6 +29,30 @@ from my_ai_employee.ai.prompts.draft import (
 from my_ai_employee.ai.prompts.draft import (
     build_user_message as build_draft_user_message,
 )
+from my_ai_employee.ai.prompts.note_structurer import (  # noqa: E402
+    SYSTEM_PROMPT_DEFAULT as NOTE_STRUCTURER_SYSTEM_PROMPT_DEFAULT,
+)
+from my_ai_employee.ai.prompts.note_structurer import (
+    SYSTEM_PROMPT_FYI as NOTE_STRUCTURER_SYSTEM_PROMPT_FYI,
+)
+from my_ai_employee.ai.prompts.note_structurer import (
+    SYSTEM_PROMPT_PERSONAL as NOTE_STRUCTURER_SYSTEM_PROMPT_PERSONAL,
+)
+from my_ai_employee.ai.prompts.note_structurer import (
+    SYSTEM_PROMPT_SPAM as NOTE_STRUCTURER_SYSTEM_PROMPT_SPAM,
+)
+from my_ai_employee.ai.prompts.note_structurer import (
+    SYSTEM_PROMPT_TODO as NOTE_STRUCTURER_SYSTEM_PROMPT_TODO,
+)
+from my_ai_employee.ai.prompts.note_structurer import (
+    SYSTEM_PROMPT_URGENT as NOTE_STRUCTURER_SYSTEM_PROMPT_URGENT,
+)
+from my_ai_employee.ai.prompts.note_structurer import (  # noqa: E402
+    build_system_prompt as build_note_structurer_system_prompt,
+)
+from my_ai_employee.ai.prompts.note_structurer import (  # noqa: E402
+    build_user_message as build_note_structurer_user_message,
+)
 from my_ai_employee.ai.prompts.review import (
     build_system_prompt as build_review_system_prompt,
 )
@@ -49,6 +73,15 @@ __all__ = [
     "SYSTEM_PROMPT_PERSONAL",
     "build_draft_system_prompt",
     "build_draft_user_message",
+    # note_structurer (D9.4 — 6+2 重命名, 避免与 draft 命名空间冲突)
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_DEFAULT",
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_URGENT",
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_TODO",
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_FYI",
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_SPAM",
+    "NOTE_STRUCTURER_SYSTEM_PROMPT_PERSONAL",
+    "build_note_structurer_system_prompt",
+    "build_note_structurer_user_message",
     # review (D4.7.4)
     "build_review_system_prompt",
     "build_review_user_message",
