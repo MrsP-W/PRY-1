@@ -34,11 +34,15 @@ from my_ai_employee.events import (  # noqa: E402
 
 class TestMetadataRegistration:
     def test_events_table_registered(self) -> None:
-        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions; D9.1 启动后第 10 张是 notes)."""
+        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions; D9.1 启动后第 10 张是 notes; B4.1 启动后第 11 张是 recipient_blacklist)."""
+        from my_ai_employee.db.blacklist import (
+            RecipientBlacklist,  # noqa: F401  # 触发 recipient_blacklist 表注册(B4.1)
+        )
+
         tables = sorted(Base.metadata.tables.keys())
         assert "events" in tables
-        # 10 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes
-        assert len(tables) == 10
+        # 11 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist
+        assert len(tables) == 11
 
     def test_events_table_has_7_columns(self) -> None:
         """events 表 7 字段 (id + event + status + source + subject_id + fingerprint + event_metadata + created_at)."""

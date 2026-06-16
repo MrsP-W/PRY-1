@@ -104,8 +104,12 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 # ===== Metadata / 6 个 Model 注册 =====
 
 
-def test_ten_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 10 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes, mirror schema.sql)。"""
+def test_eleven_models_registered_in_metadata() -> None:
+    """Base.metadata 注册了 11 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist, mirror schema.sql)。"""
+    from my_ai_employee.db.blacklist import (
+        RecipientBlacklist,  # noqa: F401  # 触发 recipient_blacklist 表注册(B4.1)
+    )
+
     tables = list_tables()
     assert tables == sorted(
         [
@@ -119,6 +123,7 @@ def test_ten_models_registered_in_metadata() -> None:
             "outbox",
             "transactions",
             "notes",
+            "recipient_blacklist",
         ]
     )
 
