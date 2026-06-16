@@ -170,7 +170,7 @@ class OutboxStore:
             recipient_email: 收件人邮箱(Adapter 严判含 @)
             reviewer_decision_event_id: FK → events.id(D4.7.4 审阅通过事件,可空)
             drafter_decision_event_id: FK → events.id(D4.7.3 草稿生成事件,可空)
-            priority: OutboxPriority 3 选 1,默认 "normal"
+            priority: OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest),默认 "normal"
             created_at: Unix epoch ms(默认 = 当前时间)
             last_approved_at_ms: D5.6.4 P1 严判:必传 None(D5.6.3 P1-1 整改后语义)
                               强制走 update_status(APPROVED) 才能设审批时间戳,
@@ -317,7 +317,7 @@ class OutboxStore:
           旧积压优先出,新邮件按到达顺序排队。
 
         Args:
-            priority: OutboxPriority 3 选 1(字符串,严判)
+            priority: OutboxPriority 6 选 1(字符串,严判,v0.2 B1.1 扩 3→6)
             limit: 返回上限,默认 100
 
         Returns:

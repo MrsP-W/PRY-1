@@ -211,9 +211,9 @@ class TestValidateHelpers:
             _validate_outbox_priority(1)  # type: ignore[arg-type]
 
     def test_validate_outbox_priority_rejects_invalid(self) -> None:
-        """_validate_outbox_priority 白名单 3 选 1。"""
-        with pytest.raises(ValueError, match="priority 必须是 OutboxPriority 3 选 1"):
-            _validate_outbox_priority("super_urgent")  # 不在 3 选 1 白名单
+        """_validate_outbox_priority 白名单 6 选 1(v0.2 B1.1 扩 3→6)。"""
+        with pytest.raises(ValueError, match="priority 必须是 OutboxPriority 6 选 1"):
+            _validate_outbox_priority("super_urgent")  # 不在 6 选 1 白名单
 
     # ---- _validate_outbox_block_reason(2 tests)----
 

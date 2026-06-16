@@ -14,7 +14,7 @@
                     D4.8 4 状态 → D5.2 6 状态(加 sending / failed,B5 解封项)
     - OutboxTone: 3 语气(FORMAL / FRIENDLY / CONCISE),与 D4.7.3 DraftTone 字段值一致
                   (独立枚举,业务边界清晰:outbox 是入库产物,draft 是生成过程)
-    - OutboxPriority: 3 优先级(urgent / normal / low)
+    - OutboxPriority: 6 优先级(v0.2 B1.1 扩 3→6:urgent / high / normal / low / batch / digest)
 
 状态机白名单 ALLOWED_TRANSITIONS(D5.2 B5 解封项 — 6 状态 × 各自目标集):
     PENDING_SEND → {SENDING, APPROVED, FAILED, CANCELLED}
@@ -37,7 +37,7 @@ OutboxEntry 12 字段(0004 11 字段 + 0006 加 last_approved_at_ms,D5.6.3 P1-1 
     - status              TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 6 选 1(D5.2 扩)
     - created_at          INTEGER NOT NULL — Unix epoch ms
     - recipient_email     TEXT NOT NULL — 含 @ 即可
-    - priority            TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+    - priority            TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest)
     - last_approved_at_ms INTEGER NULL — D5.6.3 P1-1 审批凭据(显式审批时间戳,Unix epoch ms)
                           应用层 OutboxDispatcher 拉批严判 is not None,防 FAILED 绕过审批契约
 

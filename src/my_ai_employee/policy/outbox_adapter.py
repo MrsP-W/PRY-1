@@ -136,12 +136,12 @@ def _validate_outbox_recipient_email(recipient: Any) -> str:
 
 
 def _validate_outbox_priority(priority: Any) -> str:
-    """严判 priority(OutboxPriority 3 选 1, D4.7.3 v1.0.5 P2-1 范本: type 严判在 hash 前)."""
+    """严判 priority(OutboxPriority 6 选 1,v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest, D4.7.3 v1.0.5 P2-1 范本: type 严判在 hash 前)."""
     if type(priority) is not str:
         raise ValueError(f"priority 必须是 str, 实际 {type(priority).__name__}={priority!r}")
     if priority not in _OUTBOX_PRIORITY_CHOICES:
         raise ValueError(
-            f"priority 必须是 OutboxPriority 3 选 1 {_OUTBOX_PRIORITY_CHOICES!r}, 实际 {priority!r}"
+            f"priority 必须是 OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6) {_OUTBOX_PRIORITY_CHOICES!r}, 实际 {priority!r}"
         )
     return priority
 
@@ -350,7 +350,7 @@ class OutboxDecisionReport:
         body: 已严判 10-8000 字符
         tone: OutboxTone 3 选 1
         recipient_email: 含 @ 的字符串
-        priority: OutboxPriority 3 选 1
+        priority: OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest)
         subject_length: len(subject)
         body_length: len(body)
         latency_ms: 入库耗时(>= 0)
@@ -366,7 +366,7 @@ class OutboxDecisionReport:
     body: str
     tone: str  # OutboxTone 3 选 1
     recipient_email: str
-    priority: str  # OutboxPriority 3 选 1
+    priority: str  # OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest)
     subject_length: int = 0  # 兼容旧调用
     body_length: int = 0
     latency_ms: int = 0
@@ -617,7 +617,7 @@ class EmailOutboxAdapter:
             body: 草稿正文(10-8000 字符,strip 非空)
             tone: OutboxTone 3 选 1
             recipient_email: 含 @ 字符串
-            priority: OutboxPriority 3 选 1,默认 "normal"
+            priority: OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6:urgent/high/normal/low/batch/digest),默认 "normal"
             reviewer_decision_event_id: FK → events.id(D4.7.4 审阅通过事件,可空)
             drafter_decision_event_id: FK → events.id(D4.7.3 草稿生成事件,可空)
 
