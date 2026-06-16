@@ -213,7 +213,7 @@ class OutboxEntry(Base):
         - last_approved_at_ms NULL 默认(D5.6.3 P1-1 审批凭据)→ 调度器拉批严判 is not None
           防 PENDING_SEND → FAILED → APPROVED → SENT 绕过用户审批契约
 
-    字段注解(完全 mirror 0004_outbox_table migration + 0006 字段):
+    字段注解(完全 mirror 0004_outbox_table migration + 0006 字段 + 0009_sla_due_at v0.2 B2.1):
         - id:                     INTEGER PK AUTOINCREMENT
         - email_id:               INTEGER NOT NULL UNIQUE — 关联 emails.id
         - subject:                TEXT NOT NULL — 1-200 字符,strip() 后非空
@@ -224,9 +224,13 @@ class OutboxEntry(Base):
         - status:                 TEXT NOT NULL DEFAULT 'pending_send' — OutboxStatus 6 选 1(D5.2 扩)
         - created_at:             INTEGER NOT NULL — Unix epoch ms
         - recipient_email:        TEXT NOT NULL — 含 @ 即可
-        - priority:               TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 3 选 1
+        - priority:               TEXT NOT NULL DEFAULT 'normal' — OutboxPriority 6 选 1(v0.2 B1.1 扩 3→6)
         - last_approved_at_ms:    INTEGER NULL — D5.6.3 P1-1 审批凭据,Unix epoch ms,
                                    OutboxDispatcher 拉批严判 is not None
+        - sla_due_at_ms:          INTEGER NULL — v0.2 B2.1 新增,OutboxStore.insert 时预计算
+                                   (= created_at + sla_threshold_ms(priority)),用于调度器
+                                   优先 SLA 临近(避免每次实时算 age_ms)。旧 outbox 条目
+                                   NULL 表示未预计算,OutboxStore.update 不强制更新(向后兼容)。
 
     约束:
         - UNIQUE(email_id) — 入库幂等性(D4.8 契约 4)
@@ -234,6 +238,7 @@ class OutboxEntry(Base):
     索引:
         - idx_outbox_status_created_at(status, created_at DESC) — D5+ 调度器轮询
         - idx_outbox_priority_created_at(priority, created_at DESC) — 紧急优先排序
+        - idx_outbox_sla_due_at(sla_due_at_ms) — v0.2 B2.1 新增,SLA 临近查询热路径
     """
 
     __tablename__ = "outbox"
@@ -260,6 +265,11 @@ class OutboxEntry(Base):
     # - 严判:OutboxDispatcher 拉批时 is not None,否则 skipped(防 PENDING_SEND → FAILED
     #   → APPROVED → SENT 绕过用户审批契约)
     last_approved_at_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # v0.2 B2.1 新增:SLA 截止时间预计算(created_at + sla_threshold_ms(priority))
+    # - nullable=True:旧 outbox 条目 NULL 表示未预计算(向后兼容)
+    # - 写入时机:OutboxStore.insert 内部预计算(B2.1)
+    # - 应用层使用:OutboxDispatcher 优先 sla_due_at_ms < now_ms + 5min 的紧急项
+    sla_due_at_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     # 约束 + 索引(与 0004_outbox_table migration 一致,D3.2.3 DESC 索引用 text() 表达)
     __table_args__ = (
@@ -278,6 +288,8 @@ class OutboxEntry(Base):
         ),
         Index("idx_outbox_status_created_at", "status", text("created_at DESC")),
         Index("idx_outbox_priority_created_at", "priority", text("created_at DESC")),
+        # v0.2 B2.1 新增:SLA 临近查询热路径
+        Index("idx_outbox_sla_due_at", "sla_due_at_ms"),
     )
 
 

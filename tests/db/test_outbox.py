@@ -182,8 +182,14 @@ def test_outbox_entry_tablename_is_outbox() -> None:
     assert OutboxEntry.__tablename__ == "outbox"
 
 
-def test_outbox_entry_has_11_columns() -> None:
-    """OutboxEntry 11 字段(与 0004 migration 1:1)。"""
+def test_outbox_entry_has_12_columns() -> None:
+    """OutboxEntry 12 字段(v0.2 B2.1 加 sla_due_at_ms)。
+
+    历史字段数:
+      - 0004_outbox_table: 10 字段
+      - 0006 last_approved_at_ms 加列: 11 字段
+      - 0009_sla_due_at 加列: 12 字段(v0.2 B2.1)
+    """
     expected_columns = {
         "id",
         "email_id",
@@ -197,6 +203,7 @@ def test_outbox_entry_has_11_columns() -> None:
         "recipient_email",
         "priority",
         "last_approved_at_ms",  # D5.6.3 P1-1 审批凭据(0006 migration 加)
+        "sla_due_at_ms",  # v0.2 B2.1 SLA 截止时间预计算(0009_sla_due_at 加)
     }
     actual_columns = {c.name for c in OutboxEntry.__table__.columns}
     assert actual_columns == expected_columns

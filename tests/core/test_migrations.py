@@ -132,12 +132,15 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0007_transactions(D6.4 启动 head 推到 0007)。
+    """alembic_version 表记录当前 head revision = 0009_sla_due_at(v0.2 B2.1 推到 0009)。
 
-    D5.2 修订: D4.8 锁定时 head=0004_outbox,D5.2 加 migration 0005_outbox_sending_state
-    后 head 推到 0005(B5 解封项,业务层 StrEnum 4→6 + 状态机白名单,无 DDL 改动)。
-    D5.6.3 修订: 0006_outbox_approval_provenance(head 推到 0006,加 last_approved_at_ms 列)。
-    D6.4 修订: 0007_transactions(head 推到 0007,新建 transactions 16 列表)。
+    历史 head 演进:
+      - D4.8 锁定时 head=0004_outbox
+      - D5.2 加 migration 0005_outbox_sending_state 后 head 推到 0005
+      - D5.6.3 加 0006_outbox_approval_provenance(head 推到 0006)
+      - D6.4 加 0007_transactions(head 推到 0007)
+      - D9.1 加 0008_notes(head 推到 0008)
+      - v0.2 B2.1 加 0009_sla_due_at(head 推到 0009)
     """
     from alembic import command
 
@@ -149,7 +152,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0008_notes"
+        assert version[0] == "0009_sla_due_at"
     finally:
         db.close()
 
@@ -273,9 +276,12 @@ def test_orm_metadata_tables_match_alembic_tables(
     """ORM Base.metadata 表数 == alembic 实际建出的表数（除 alembic_version / sqlite_sequence）。"""
     from alembic import command
 
-    # 0) 显式 import events.models 让 Event 注册到 Base.metadata
-    #    (D4.3.2 复检发现: core/models.py 不 import events/models.py, Event 没注册)
+    # 0) 显式 import 各表 ORM 模型让 Base.metadata 注册表
+    #    (沿 D4.3.2 复检发现: core/models.py 不 import 各表模块)
     from my_ai_employee.events import models as _events_models  # noqa: F401
+    from my_ai_employee.core.outbox import OutboxEntry  # noqa: F401  # outbox 表
+    from my_ai_employee.db.transactions import Transaction  # noqa: F401  # transactions 表
+    from my_ai_employee.db.notes import Note  # noqa: F401  # notes 表 (D9.1)
 
     # 1) alembic 跑通
     command.upgrade(alembic_cfg, "head")
@@ -372,10 +378,10 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             assert ddl is not None
             assert "UNIQUE(fingerprint)" in ddl[0]
             assert "UNIQUE(event, source, subject_id, fingerprint)" not in ddl[0]
-            # 3b) alembic_version 已记录 0008(D9.1 head)
+            # 3b) alembic_version 已记录 0009(v0.2 B2.1 head)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0008_notes"
+            assert version[0] == "0009_sla_due_at"
     finally:
         db.close()
 
@@ -409,7 +415,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0008_notes"
+            assert version[0] == "0009_sla_due_at"
     finally:
         db.close()
 

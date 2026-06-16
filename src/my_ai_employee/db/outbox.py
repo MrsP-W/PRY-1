@@ -209,7 +209,15 @@ class OutboxStore:
         if created_at is None:
             created_at = int(time.time() * 1000)
 
-        # 2. 插入(D3.3.3 教训: 窄 except, 只接 IntegrityError)
+        # 2. v0.2 B2.1:预计算 sla_due_at_ms = created_at + sla_threshold_ms(priority)
+        # - 严判 priority(白名单 + type 严判在 hash 前,沿 D4.7.3 v1.0.5 P2-1)
+        # - 不需要跨字段强一致(sla_due_at_ms 是预计算字段,独立)
+        # - 严判优先级延后到 OutBoxEntry.__init__(沿 ORM 默认),helper _compute_sla_due_at_ms 仅算值
+        sla_due_at_ms: int | None = self._compute_sla_due_at_ms(
+            priority_value=priority, created_at_ms=created_at
+        )
+
+        # 3. 插入(D3.3.3 教训: 窄 except, 只接 IntegrityError)
         with self._session_factory() as session:
             try:
                 row = OutboxEntry(
@@ -224,6 +232,7 @@ class OutboxStore:
                     recipient_email=recipient_email,
                     priority=priority,
                     last_approved_at_ms=last_approved_at_ms,
+                    sla_due_at_ms=sla_due_at_ms,
                 )
                 session.add(row)
                 session.commit()
@@ -468,7 +477,10 @@ class OutboxStore:
 
     @staticmethod
     def _normalize_priority(value: Any) -> str:
-        """严判 priority 字符串(同上严判范本)。"""
+        """严判 priority 字符串(同上严判范本)。
+
+        v0.2 B1.1: 6 选 1(URGENT/HIGH/NORMAL/LOW/BATCH/DIGEST)。
+        """
         if type(value) is not str:
             raise TypeError(
                 f"priority 必须是 str 或 OutboxPriority 枚举,实际 {type(value).__name__}={value!r}"
@@ -477,9 +489,50 @@ class OutboxStore:
 
         if value not in _OUTBOX_PRIORITY_CHOICES:
             raise ValueError(
-                f"priority 必须是 OutboxPriority 3 选 1 {_OUTBOX_PRIORITY_CHOICES!r},实际 {value!r}"
+                f"priority 必须是 OutboxPriority 6 选 1 {_OUTBOX_PRIORITY_CHOICES!r},实际 {value!r}"
             )
         return value
+
+    @staticmethod
+    def _compute_sla_due_at_ms(priority_value: str, created_at_ms: int) -> int | None:
+        """v0.2 B2.1:预计算 SLA 截止时间(created_at + sla_threshold_ms(priority))。
+
+        Args:
+            priority_value: OutboxPriority 6 选 1(白名单内,本方法假定 caller 已 _normalize_priority 严判)
+            created_at_ms: 入库的 created_at(Unix epoch ms,本方法假定 caller 已默认填充)
+
+        Returns:
+            sla_due_at_ms: 预计算 SLA 截止时间(created_at + sla_threshold_ms(priority))
+            None: 若 priority 未在 _SLA_THRESHOLDS 白名单内(理论上 _normalize_priority 已过滤,
+                  此处防御性返回 None)
+
+        设计:
+          - 沿 D5.6.4 P1-2 范本:helper 抽离不混在 insert 主逻辑里
+          - 严判 priority_value(type 严判在 hash 前)
+          - 严判 created_at_ms(bool 子类陷阱 + int 边界 >= 0)
+          - _SLA_THRESHOLDS 6 选 1(沿 v0.2 B1.1 扩 3→6)
+          - 不需要跨字段强一致(sla_due_at_ms 是预计算字段,独立)
+        """
+        # 1. priority type 严判(白名单 hash 前)
+        if type(priority_value) is not str:
+            raise TypeError(
+                f"priority_value 必须是 str,实际 {type(priority_value).__name__}={priority_value!r}"
+            )
+        # 2. created_at_ms 严判(bool 子类陷阱 + int 边界)
+        if type(created_at_ms) is bool or not isinstance(created_at_ms, int) or created_at_ms < 0:
+            raise ValueError(
+                f"created_at_ms 必须是原生 int(非 bool) >= 0,实际 "
+                f"{type(created_at_ms).__name__}={created_at_ms!r}"
+            )
+        # 3. 查 _SLA_THRESHOLDS 拿 threshold_ms
+        from my_ai_employee.scheduler.sla import _SLA_THRESHOLDS
+
+        if priority_value not in _SLA_THRESHOLDS:
+            # 理论上 _normalize_priority 已过滤,此处防御性返回 None
+            return None
+        threshold_ms, _warning_ms = _SLA_THRESHOLDS[priority_value]
+        # 4. 预计算 sla_due_at_ms
+        return created_at_ms + threshold_ms
 
 
 __all__ = [
