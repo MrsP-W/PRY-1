@@ -169,23 +169,33 @@ _OUTBOX_TONE_CHOICES: frozenset[str] = frozenset(t.value for t in OutboxTone)
 
 
 class OutboxPriority(StrEnum):
-    """Outbox 3 优先级枚举(D5+ 发送调度器排序用)。
+    """Outbox 6 优先级枚举(D5+ 发送调度器排序用,v0.2 B1 扩展)。
 
     跨字段校验(应用层 _validate_outbox_priority 严判,D4.7.3 v1.0.4 P1-1 范本):
         - priority=urgent ↔ email_category=URGENT(D4.7.4 联动契约)
         - 不允许 priority=urgent + email_category ∈ {TODO, FYI, SPAM, PERSONAL}
           (D5+ 调度器会把 urgent 当作高优先级,误标会浪费调度资源)
 
-    顺序固定(urgent 最先 / low 最后),业务层做"按优先级排序"时可直接用
+    顺序固定(urgent 最先 / digest 最后),业务层做"按优先级排序"时可直接用
     list(OutboxPriority) 排序(urgent 在前)。
+
+    v0.2 B1 扩展(2026-06-16 上午):
+      - URGENT/NORMAL/LOW 原 3 类(D5 沿用)
+      - 新增 HIGH(URGENT 之下 NORMAL 之上,30min SLA,v0.2 B1.1)
+      - 新增 BATCH(批量发送,24h SLA,可错峰,v0.2 B1.1)
+      - 新增 DIGEST(摘要合并,7d SLA,v0.2 B1.1)
+      - BATCH/DIGEST 是子分类(批量/摘要),不是优先级提升(决策沿 v0.2-substage-mapping.md §1.5)
     """
 
     URGENT = "urgent"  # 紧急:D4.7.4 联动 email_category=URGENT 触发,D5+ 优先发送
+    HIGH = "high"  # 高优(v0.2 B1.1 新增,30min SLA,URGENT 之下 NORMAL 之上)
     NORMAL = "normal"  # 普通:默认,大多数邮件
     LOW = "low"  # 低优:D5+ 调度器排到最后
+    BATCH = "batch"  # 批量(v0.2 B1.1 新增,24h SLA,可错峰)
+    DIGEST = "digest"  # 摘要(v0.2 B1.1 新增,7d SLA,合并发送)
 
 
-# 3 优先级枚举值集合(O(1) 校验)
+# 6 优先级枚举值集合(O(1) 校验,v0.2 B1.1 扩展)
 _OUTBOX_PRIORITY_CHOICES: frozenset[str] = frozenset(p.value for p in OutboxPriority)
 
 

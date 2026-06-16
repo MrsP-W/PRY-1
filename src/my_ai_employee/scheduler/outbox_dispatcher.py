@@ -96,13 +96,23 @@ from my_ai_employee.policy.send_adapter import (
 from my_ai_employee.scheduler.backoff import compute_retry_after_ms
 from my_ai_employee.scheduler.sla import SLAEvaluator, SLAStatus
 
-# ===== 优先级映射(沿 D4.8 范本 — URGENT 最先 / LOW 最后)=====
+# ===== 优先级映射(沿 D4.8 范本 — URGENT 最先 / DIGEST 最后,v0.2 B1.1 扩 6 类)=====
 
 # priority DESC 排序用数值键 — 业务层做"按优先级排序"时直接用
+# v0.2 B1.1 扩展(2026-06-16 上午): 加 HIGH=4 / BATCH=1 / DIGEST=0
+#   - URGENT=5(原 3):最优先,5min SLA
+#   - HIGH=4(新):高优,30min SLA,URGENT 之下 NORMAL 之上
+#   - NORMAL=3(原 2):默认,4h SLA
+#   - LOW=2(原 1):低优,24h SLA
+#   - BATCH=1(新):批量,24h SLA,可错峰
+#   - DIGEST=0(新):摘要,7d SLA,合并发送
 _PRIORITY_SORT_KEY: dict[str, int] = {
-    OutboxPriority.URGENT.value: 3,
-    OutboxPriority.NORMAL.value: 2,
-    OutboxPriority.LOW.value: 1,
+    OutboxPriority.URGENT.value: 5,
+    OutboxPriority.HIGH.value: 4,
+    OutboxPriority.NORMAL.value: 3,
+    OutboxPriority.LOW.value: 2,
+    OutboxPriority.BATCH.value: 1,
+    OutboxPriority.DIGEST.value: 0,
 }
 
 

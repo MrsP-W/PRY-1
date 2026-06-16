@@ -103,9 +103,12 @@ def test_evaluator_normal_below_warning() -> None:
 
 
 def test_evaluator_invalid_priority_raises() -> None:
-    """SLAEvaluator.evaluate 高优先级 "high" → ValueError(白名单外,D5 范围)。"""
+    """SLAEvaluator.evaluate 完全非法 priority → ValueError(白名单外)。
+
+    v0.2 B1.1 扩 6 类后,"high" 已是合法 priority(HIGH=4),改为测真正非法的 "superduper"。
+    """
     with pytest.raises(ValueError, match="priority 必须是"):
-        SLAEvaluator.evaluate(priority="high", age_ms=1000)
+        SLAEvaluator.evaluate(priority="superduper", age_ms=1000)
 
 
 def test_evaluator_negative_age_raises() -> None:

@@ -142,12 +142,15 @@ def test_outbox_tone_has_3_values() -> None:
     assert len(OutboxTone) == 3
 
 
-def test_outbox_priority_has_3_values() -> None:
-    """OutboxPriority 3 优先级枚举值(week1-mvp.md:846 锁定)。"""
+def test_outbox_priority_has_6_values() -> None:
+    """OutboxPriority 6 优先级枚举值(week1-mvp.md:846 锁定 + v0.2 B1.1 扩 3 类)。"""
     assert OutboxPriority.URGENT.value == "urgent"
+    assert OutboxPriority.HIGH.value == "high"  # v0.2 B1.1 新增
     assert OutboxPriority.NORMAL.value == "normal"
     assert OutboxPriority.LOW.value == "low"
-    assert len(OutboxPriority) == 3
+    assert OutboxPriority.BATCH.value == "batch"  # v0.2 B1.1 新增
+    assert OutboxPriority.DIGEST.value == "digest"  # v0.2 B1.1 新增
+    assert len(OutboxPriority) == 6
 
 
 def test_outbox_status_choices_is_frozenset_6() -> None:
@@ -165,10 +168,10 @@ def test_outbox_tone_choices_is_frozenset_3() -> None:
     assert frozenset({"FORMAL", "FRIENDLY", "CONCISE"}) == _OUTBOX_TONE_CHOICES
 
 
-def test_outbox_priority_choices_is_frozenset_3() -> None:
-    """_OUTBOX_PRIORITY_CHOICES = frozenset 3 元素。"""
+def test_outbox_priority_choices_is_frozenset_6() -> None:
+    """_OUTBOX_PRIORITY_CHOICES = frozenset 6 元素(v0.2 B1.1 扩 3→6)。"""
     assert isinstance(_OUTBOX_PRIORITY_CHOICES, frozenset)
-    assert frozenset({"urgent", "normal", "low"}) == _OUTBOX_PRIORITY_CHOICES
+    assert frozenset({"urgent", "high", "normal", "low", "batch", "digest"}) == _OUTBOX_PRIORITY_CHOICES
 
 
 # ===== 2. OutboxEntry ORM 模型(8 tests)=====

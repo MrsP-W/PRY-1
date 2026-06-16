@@ -44,6 +44,10 @@ from my_ai_employee.core.outbox import OutboxPriority
 _URGENT_THRESHOLD_MS: int = 5 * 60 * 1000  # 300_000
 _URGENT_WARNING_MS: int = 3 * 60 * 1000  # 180_000
 
+# HIGH 优先级 SLA:30 分钟硬超,15 分钟预警(v0.2 B1.1 新增)
+_HIGH_THRESHOLD_MS: int = 30 * 60 * 1000  # 1_800_000
+_HIGH_WARNING_MS: int = 15 * 60 * 1000  # 900_000
+
 # NORMAL 优先级 SLA:4 小时硬超,2 小时预警
 _NORMAL_THRESHOLD_MS: int = 4 * 60 * 60 * 1000  # 14_400_000
 _NORMAL_WARNING_MS: int = 2 * 60 * 60 * 1000  # 7_200_000
@@ -52,11 +56,22 @@ _NORMAL_WARNING_MS: int = 2 * 60 * 60 * 1000  # 7_200_000
 _LOW_THRESHOLD_MS: int = 24 * 60 * 60 * 1000  # 86_400_000
 _LOW_WARNING_MS: int = 12 * 60 * 60 * 1000  # 43_200_000
 
-# 优先级 → (threshold_ms, warning_ms) 映射
+# BATCH 优先级 SLA:24 小时硬超,12 小时预警(v0.2 B1.1 新增,与 LOW 一致)
+_BATCH_THRESHOLD_MS: int = 24 * 60 * 60 * 1000  # 86_400_000
+_BATCH_WARNING_MS: int = 12 * 60 * 60 * 1000  # 43_200_000
+
+# DIGEST 优先级 SLA:7 天硬超,3 天预警(v0.2 B1.1 新增)
+_DIGEST_THRESHOLD_MS: int = 7 * 24 * 60 * 60 * 1000  # 604_800_000
+_DIGEST_WARNING_MS: int = 3 * 24 * 60 * 60 * 1000  # 259_200_000
+
+# 优先级 → (threshold_ms, warning_ms) 映射(v0.2 B1.1 扩 6 类)
 _SLA_THRESHOLDS: dict[str, tuple[int, int]] = {
     OutboxPriority.URGENT.value: (_URGENT_THRESHOLD_MS, _URGENT_WARNING_MS),
+    OutboxPriority.HIGH.value: (_HIGH_THRESHOLD_MS, _HIGH_WARNING_MS),
     OutboxPriority.NORMAL.value: (_NORMAL_THRESHOLD_MS, _NORMAL_WARNING_MS),
     OutboxPriority.LOW.value: (_LOW_THRESHOLD_MS, _LOW_WARNING_MS),
+    OutboxPriority.BATCH.value: (_BATCH_THRESHOLD_MS, _BATCH_WARNING_MS),
+    OutboxPriority.DIGEST.value: (_DIGEST_THRESHOLD_MS, _DIGEST_WARNING_MS),
 }
 
 
