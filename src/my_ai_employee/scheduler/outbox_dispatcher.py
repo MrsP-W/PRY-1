@@ -131,8 +131,8 @@ def _is_sla_urgent(entry: Any, now_ms: int) -> bool:
         now_ms:  当前时间(Unix epoch ms)
 
     Returns:
-        bool: True = SLA 临近(sla_due_at_ms < now_ms + 5min,严格 <)
-              False = 非临近(包含 sla_due_at_ms=None / 已过期 / 宽裕 3 种)
+        bool: True = SLA 临近(已过期 + 临近 5min 内,即 sla_due_at_ms < now_ms + 5min,严格 <)
+              False = 非临近(包含 sla_due_at_ms=None / 宽裕 2 种)
 
     契约细节:
         - sla_due_at_ms is None → False(沿 B2.1 向后兼容,旧 outbox 条目 NULL 视为非临近)
