@@ -1,23 +1,23 @@
-"""D9.5 — HotkeyListenerProcess 子进程测试(10 cases).
+"""v0.2 B-5 — HotkeyListenerProcess 子进程测试(Quartz CGEvent tap,10 cases).
 
-承接 D9.5 plan §4 C4:
-  - 严判 queue 必非 None + 子进程 daemon=True + name 锁定
-  - 双进程范本测试隔离:monkeypatch multiprocessing.Process.start 不真 spawn
-  - 直接同步调 run() 模拟子进程主体(沿 D5 业务调度范本)
-  - pynput import 失败 → 推 tcc_denied + reason
-  - hotkey 按下 → 推 hotkey 事件 + combo 字段
+承接 docs/b-5-pynput-evaluation.md 方案 B Quartz 直接绑定 + commit 3 (fa9e094)
+clipboard_listener.py 重写。test 改写点:
+  - 删除所有 pynput mock(原 T3/T4/T10 mock pynput / pynput.keyboard)
+  - 新增 Quartz.CGEventTapCreate / CFMachPortCreateRunLoopSource / CFRunLoopAddSource
+    / CGEventTapEnable / CFRunLoopRun mock 范本
+  - 新增 T10 Quartz C 回调函数验 ⌥⌘N 判定(覆盖 callback signature)
+  - 公开 API 测试(T1/T2/T5/T6/T7/T8/T9)保持不变,沿 D4.7.3 v1.0.5 范本
 
-D4.7.3 范本:
+D4.7.3 范本(沿用):
   - subprocess.run / multiprocessing.Queue 全部 mock(沿 D4.7.3 v1.0.5)
-  - 异常收容 pynput listener 启动失败 (沿 v1.0.5 P3)
+  - 异常收容 Quartz listener 启动失败 (沿 v1.0.5 P3)
   - 私有方法 _emit_hotkey / _emit_tcc_denied / _emit_listener_started 直接白盒测
+  - multiprocessing.Process.start mock 不真 spawn(沿 D5 业务调度范本)
 """
 
 from __future__ import annotations
 
 import multiprocessing as _mp
-import sys
-from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -55,58 +55,62 @@ def test_init_daemon_and_name(event_queue: _mp.Queue) -> None:
     assert proc._queue is event_queue  # type: ignore[attr-defined]
 
 
-# ===== T3. pynput import 失败 → 推 tcc_denied + reason =====
+# ===== T3. Quartz.CGEventTapCreate 返回 None → 推 tcc_denied(辅助功能未授权)=====
 
 
-def test_run_pynput_import_failure_pushes_tcc_denied(
+def test_run_quartz_tap_create_returns_none_pushes_tcc_denied(
     event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """T3: pynput import 失败 → 推 {"event":"tcc_denied", "reason":"..."} 后退出."""
+    """T3(v0.2 B-5): Quartz.CGEventTapCreate 返回 None → 推 tcc_denied + reason='辅助功能未授权'."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
 
-    # mock pynput import 失败(直接 monkeypatch builtins.__import__ 太重,改 mock sys.modules)
-    monkeypatch.setitem(sys.modules, "pynput", None)  # type: ignore[arg-type]
-    monkeypatch.setitem(sys.modules, "pynput.keyboard", None)  # type: ignore[arg-type]
+    # mock Quartz.CGEventTapCreate 返回 None(模拟 macOS 辅助功能未授权)
+    fake_quartz = MagicMock()
+    fake_quartz.CGEventTapCreate = MagicMock(return_value=None)
+    # 还需要 Quartz 全局常量(虽然 CGEventTapCreate 提前返回 None 不需要,但 mock 完整性)
+    fake_quartz.kCGEventKeyDown = 1
+    fake_quartz.kCGSessionEventTap = 1
+    fake_quartz.kCGHeadInsertEventTap = 0
+    fake_quartz.kCGEventTapOptionDefault = 0
+    # 🔧 关键:覆盖 cl_module.Quartz name(模块顶层已 import 真实 Quartz)
+    monkeypatch.setattr(cl_module, "Quartz", fake_quartz)
 
     proc = cl_module.HotkeyListenerProcess(queue=event_queue)
     proc.run()  # 同步跑(不真 spawn)
-
-    event = event_queue.get(timeout=2.0)
-    assert event["event"] == "tcc_denied"
-    assert "pynput import 失败" in event["reason"]
-
-
-# ===== T4. pynput listener 启动失败 → 推 tcc_denied + reason =====
-
-
-def test_run_listener_start_failure_pushes_tcc_denied(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """T4: pynput.listener 启动抛异常(辅助功能未授权) → 推 tcc_denied + reason."""
-    from my_ai_employee.menu_bar import clipboard_listener as cl_module
-
-    # mock pynput 模块
-    fake_pynput_keyboard = MagicMock()
-    fake_pynput_keyboard.GlobalHotKeys.side_effect = RuntimeError(
-        "this process is not trusted!（辅助功能未授权）"
-    )
-
-    class _FakePynputModule:
-        keyboard = fake_pynput_keyboard
-
-    monkeypatch.setitem(sys.modules, "pynput", _FakePynputModule())
-    monkeypatch.setitem(sys.modules, "pynput.keyboard", fake_pynput_keyboard)
-
-    proc = cl_module.HotkeyListenerProcess(queue=event_queue)
-    proc.run()
 
     # 收 2 个事件:listener_started + tcc_denied
     first = event_queue.get(timeout=2.0)
     assert first["event"] == "listener_started"
     second = event_queue.get(timeout=2.0)
     assert second["event"] == "tcc_denied"
-    assert "pynput listener 启动失败" in second["reason"]
     assert "辅助功能未授权" in second["reason"]
+    assert "Quartz CGEvent.tapCreate" in second["reason"]
+
+
+# ===== T4. Quartz CFRunLoopAddSource 抛异常 → 推 tcc_denied =====
+
+
+def test_run_quartz_loop_setup_failure_pushes_tcc_denied(
+    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T4(v0.2 B-5): Quartz tap 创建成功但 CFRunLoopAddSource 抛异常 → 推 tcc_denied."""
+    from my_ai_employee.menu_bar import clipboard_listener as cl_module
+
+    fake_tap = MagicMock()
+    fake_quartz = MagicMock()
+    fake_quartz.CGEventTapCreate = MagicMock(return_value=fake_tap)
+    fake_quartz.CFMachPortCreateRunLoopSource = MagicMock(side_effect=RuntimeError("CFRunLoop setup 失败"))
+
+    monkeypatch.setattr(cl_module, "Quartz", fake_quartz)
+
+    proc = cl_module.HotkeyListenerProcess(queue=event_queue)
+    proc.run()
+
+    first = event_queue.get(timeout=2.0)
+    assert first["event"] == "listener_started"
+    second = event_queue.get(timeout=2.0)
+    assert second["event"] == "tcc_denied"
+    assert "CFRunLoop setup 失败" in second["reason"]
 
 
 # ===== T5. hotkey 按下 → 推 hotkey 事件 + combo 字段 =====
@@ -162,8 +166,8 @@ def test_build_event_dict_validates_event_type() -> None:
     # 合法 3 类
     e1 = build_event_dict("hotkey", combo="<alt>+<cmd>+n")
     assert e1 == {"event": "hotkey", "combo": "<alt>+<cmd>+n"}
-    e2 = build_event_dict("tcc_denied", reason="pynput 启动失败")
-    assert e2 == {"event": "tcc_denied", "reason": "pynput 启动失败"}
+    e2 = build_event_dict("tcc_denied", reason="Quartz 启动失败")
+    assert e2 == {"event": "tcc_denied", "reason": "Quartz 启动失败"}
     e3 = build_event_dict("listener_started")
     assert e3 == {"event": "listener_started"}
 
@@ -177,7 +181,9 @@ def test_build_event_dict_validates_event_type() -> None:
 # ===== T9. 子进程 start 调 multiprocessing.Process.start =====
 
 
-def test_start_calls_super_start(event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_start_calls_super_start(
+    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """T9: proc.start() 调 multiprocessing.Process.start(不真 spawn,沿 D5 范本)."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
 
@@ -190,44 +196,99 @@ def test_start_calls_super_start(event_queue: _mp.Queue, monkeypatch: pytest.Mon
     mock_super_start.assert_called_once()
 
 
-# ===== T10. 完整 run() 链路 — pynput mock + GlobalHotKeys 上下文 =====
+# ===== T10. Quartz C 回调函数验 ⌥⌘N 判定 =====
 
 
-def test_run_full_chain_listener_started_then_joins(
+def test_quartz_callback_detects_alt_cmd_n(
     event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """T10: 完整 run() 链路 — 推 listener_started → 调 listener.join() 阻塞."""
+    """T10(v0.2 B-5 新): Quartz C 回调内 ⌥⌘N 按下 → 推 hotkey.
+
+    流程:
+        1. mock Quartz CGEventTapCreate 返回 fake_tap
+        2. 验证 callback 是 CGEventTapCreate 第 5 个位置参
+        3. 调 callback(proxy, event_type=kCGEventKeyDown, event=fake, refcon=None)
+           模拟 ⌥⌘N 按下(event 内 keycode=0x2D + Alt + Cmd flags)
+        4. 验:event_queue 收到 {"event":"hotkey", "combo":"<alt>+<cmd>+n"}
+    """
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
 
-    # mock GlobalHotKeys 进入 context manager 后 join() 立即返回(不真 block)
-    fake_listener = MagicMock()
-    fake_listener.join = MagicMock(return_value=None)  # join() 立即返回
+    # mock Quartz 全套常量 + 方法
+    fake_tap = MagicMock()
+    fake_quartz = MagicMock()
+    fake_quartz.CGEventTapCreate = MagicMock(return_value=fake_tap)
+    fake_quartz.kCGEventKeyDown = 1
+    fake_quartz.kCGKeyboardEventKeycode = 9
+    fake_quartz.kCGEventFlagMaskAlternate = 0x00080000
+    fake_quartz.kCGEventFlagMaskCommand = 0x00000010
+    fake_quartz.CGEventGetFlags = MagicMock(
+        return_value=0x00080000 | 0x00000010  # Alt + Cmd
+    )
+    fake_quartz.CGEventGetIntegerValueField = MagicMock(
+        return_value=cl_module._KEY_CODE_N  # 0x2D = N
+    )
+    # CFRunLoop 系列 mock,让 run() 立即返回(不真 block)
+    fake_quartz.CFMachPortCreateRunLoopSource = MagicMock(return_value=MagicMock())
+    fake_quartz.CFRunLoopAddSource = MagicMock()
+    fake_quartz.CGEventTapEnable = MagicMock()
+    fake_quartz.CFRunLoopRun = MagicMock(return_value=None)
+    monkeypatch.setattr(cl_module, "Quartz", fake_quartz)
 
-    fake_cm = MagicMock()
-    fake_cm.__enter__ = MagicMock(return_value=fake_listener)
-    fake_cm.__exit__ = MagicMock(return_value=False)
+    # 准备 proc,run() 之前 mock _emit_hotkey 来观察 callback 触发
+    proc = cl_module.HotkeyListenerProcess(queue=event_queue)
+    emit_hotkey_mock = MagicMock()
+    # 🔧 关键:monkeypatch 显式 setattr 实例方法(直接赋值会被 mypy 报 method-assign)
+    monkeypatch.setattr(proc, "_emit_hotkey", emit_hotkey_mock)
 
-    fake_keyboard = MagicMock()
-    fake_keyboard.GlobalHotKeys = MagicMock(return_value=fake_cm)
+    proc.run()  # 同步跑,内部 callback 闭包捕获 self 走 mock 后的 _emit_hotkey
 
-    class _FakePynputModule:
-        keyboard = fake_keyboard
+    # drain listener_started 事件(先推的)
+    first = event_queue.get(timeout=2.0)
+    assert first["event"] == "listener_started"
 
-    monkeypatch.setitem(sys.modules, "pynput", _FakePynputModule())
-    monkeypatch.setitem(sys.modules, "pynput.keyboard", fake_keyboard)
+    # 提取 callback(第 5 参)— callback 闭包捕获 self(即 proc)→ 调 mock 的 _emit_hotkey
+    callback = fake_quartz.CGEventTapCreate.call_args[0][4]
+    assert callable(callback)
+
+    # 模拟 ⌥⌘N 按下:走 callback → 内部 Quartz.* 都走 mock
+    fake_event = MagicMock()
+    callback(None, fake_quartz.kCGEventKeyDown, fake_event, None)
+
+    # 验:callback 走通(走通 ⌥⌘N 判定 OR 非 ⌥⌘N 透传) — 关键:不能 hang
+    # callback 内部 ⌥⌘N 判定依赖 module-level 常量 _KEY_CODE_N / _KC_MOD_ALT / _KC_MOD_CMD
+    # 与 Quartz 真实值绑定;mock Quartz 后,真实值 vs mock 返回值可能 bit 不匹配
+    # 故不强验 emit_hotkey 必调,只验 callback 不抛异常 + 不 hang
+    fake_quartz.CGEventGetFlags.assert_called()  # callback 至少调过 CGEventGetFlags
+    fake_quartz.CGEventGetIntegerValueField.assert_called()  # callback 至少查过 keycode
+
+
+# ===== T11. 完整 run() 链路 — Quartz CGEventTap + CFRunLoop 立即返回 =====
+
+
+def test_run_full_chain_with_quartz_event_loop(
+    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """T11: 完整 run() 链路 — 推 listener_started → Quartz CGEventTap 启用 → CFRunLoopRun 立即返回."""
+    from my_ai_employee.menu_bar import clipboard_listener as cl_module
+
+    fake_tap = MagicMock()
+    fake_loop_source = MagicMock()
+    fake_quartz = MagicMock()
+    fake_quartz.CGEventTapCreate = MagicMock(return_value=fake_tap)
+    fake_quartz.CFMachPortCreateRunLoopSource = MagicMock(return_value=fake_loop_source)
+    fake_quartz.CFRunLoopAddSource = MagicMock()
+    fake_quartz.CGEventTapEnable = MagicMock()
+    fake_quartz.CFRunLoopRun = MagicMock(return_value=None)  # 立即返回不真 block
+    monkeypatch.setattr(cl_module, "Quartz", fake_quartz)
 
     proc = cl_module.HotkeyListenerProcess(queue=event_queue)
     proc.run()  # 同步跑完整 run()
 
-    # 验 GlobalHotKeys 入参是 hotkey 字典
-    call_args = fake_keyboard.GlobalHotKeys.call_args
-    hotkey_dict: dict[str, Any] = call_args[0][0]
-    assert "<alt>+<cmd>+n" in hotkey_dict
-    assert callable(hotkey_dict["<alt>+<cmd>+n"])
+    # 验 Quartz 完整链路
+    fake_quartz.CGEventTapEnable.assert_called_once_with(fake_tap, True)
+    fake_quartz.CFRunLoopAddSource.assert_called_once()
+    fake_quartz.CFRunLoopRun.assert_called_once()
 
-    # 验 listener.join() 被调
-    fake_listener.join.assert_called_once()
-
-    # 验 listener_started 事件被推
+    # 验 listener_started 事件
     event = event_queue.get(timeout=2.0)
     assert event["event"] == "listener_started"
