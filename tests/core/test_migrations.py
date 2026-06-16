@@ -276,12 +276,13 @@ def test_orm_metadata_tables_match_alembic_tables(
     """ORM Base.metadata 表数 == alembic 实际建出的表数（除 alembic_version / sqlite_sequence）。"""
     from alembic import command
 
+    from my_ai_employee.core.outbox import OutboxEntry  # noqa: F401  # outbox 表
+    from my_ai_employee.db.notes import Note  # noqa: F401  # notes 表 (D9.1)
+    from my_ai_employee.db.transactions import Transaction  # noqa: F401  # transactions 表
+
     # 0) 显式 import 各表 ORM 模型让 Base.metadata 注册表
     #    (沿 D4.3.2 复检发现: core/models.py 不 import 各表模块)
     from my_ai_employee.events import models as _events_models  # noqa: F401
-    from my_ai_employee.core.outbox import OutboxEntry  # noqa: F401  # outbox 表
-    from my_ai_employee.db.transactions import Transaction  # noqa: F401  # transactions 表
-    from my_ai_employee.db.notes import Note  # noqa: F401  # notes 表 (D9.1)
 
     # 1) alembic 跑通
     command.upgrade(alembic_cfg, "head")

@@ -210,9 +210,13 @@ class OutboxStore:
             created_at = int(time.time() * 1000)
 
         # 2. v0.2 B2.1:预计算 sla_due_at_ms = created_at + sla_threshold_ms(priority)
-        # - 严判 priority(白名单 + type 严判在 hash 前,沿 D4.7.3 v1.0.5 P2-1)
+        # - hotfix: 先 _normalize_priority 把 priority 规约成合法白名单 6 选 1
+        #   (修复前: priority="INVALID" 也能过 type 严判 → _SLA_THRESHOLDS miss
+        #    → 防御性返回 None → 静默写入 priority=INVALID + sla_due_at_ms=None,
+        #    绕过 B1 6 类契约 + 污染 B2 SLA 字段,见 B2.1 hotfix)
+        # - 双层防御: insert 入口 + helper 内 type 严判,任何一层漏都不会放过非法值
         # - 不需要跨字段强一致(sla_due_at_ms 是预计算字段,独立)
-        # - 严判优先级延后到 OutBoxEntry.__init__(沿 ORM 默认),helper _compute_sla_due_at_ms 仅算值
+        priority = self._normalize_priority(priority)
         sla_due_at_ms: int | None = self._compute_sla_due_at_ms(
             priority_value=priority, created_at_ms=created_at
         )

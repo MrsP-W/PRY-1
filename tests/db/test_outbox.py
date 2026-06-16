@@ -171,7 +171,10 @@ def test_outbox_tone_choices_is_frozenset_3() -> None:
 def test_outbox_priority_choices_is_frozenset_6() -> None:
     """_OUTBOX_PRIORITY_CHOICES = frozenset 6 元素(v0.2 B1.1 扩 3→6)。"""
     assert isinstance(_OUTBOX_PRIORITY_CHOICES, frozenset)
-    assert frozenset({"urgent", "high", "normal", "low", "batch", "digest"}) == _OUTBOX_PRIORITY_CHOICES
+    assert (
+        frozenset({"urgent", "high", "normal", "low", "batch", "digest"})
+        == _OUTBOX_PRIORITY_CHOICES
+    )
 
 
 # ===== 2. OutboxEntry ORM 模型(8 tests)=====
@@ -702,3 +705,144 @@ def test_insert_forces_status_pending_send(store: OutboxStore) -> None:
     assert row.last_approved_at_ms is None, (
         f"D5.6.4 P1:insert 后 last_approved_at_ms 必 None,实际 {row.last_approved_at_ms!r}"
     )
+
+
+# ===== 9. B2.1 hotfix: insert 入口 priority 严判(3 tests,2026-06-16)=====
+# v0.2 B2.1 hotfix:OutboxStore.insert 入口必须 _normalize_priority 把 priority
+# 规约成合法白名单 6 选 1。
+# - 修复前: insert() 直接把原始 priority 传给 _compute_sla_due_at_ms,helper 内
+#   `if priority_value not in _SLA_THRESHOLDS: return None` 防御性返回 None
+#   → priority="INVALID" 也能过 type 严判 + 走 None 分支 + 写入 INVALID + sla_due_at_ms=None
+#   → 绕过 B1 6 类契约 + 污染 B2 SLA 字段
+# - 修复后: insert() 入口调 _normalize_priority(沿 status 同款严判范本),INVALID 一律 ValueError
+# - 双层防御: insert 入口 + helper 内 type 严判,任一层漏都不会放过非法值
+
+
+def test_insert_rejects_invalid_priority_raises_valueerror(store: OutboxStore) -> None:
+    """B2.1 hotfix P1-A:insert 入口严判 priority 必须在 _OUTBOX_PRIORITY_CHOICES 6 选 1。
+
+    修复前(回归 bug): priority="INVALID" 可成功插入,entry.priority="INVALID" +
+    entry.sla_due_at_ms=None,绕过 B1 6 类契约 + 污染 B2 SLA 字段。
+
+    修复后: insert() 入口调 _normalize_priority → "INVALID" 不在 6 选 1 → ValueError,
+    阻止写入,保证所有 outbox 条目 priority 字段必合法。
+    """
+    with pytest.raises(ValueError, match="priority 必须是 OutboxPriority 6 选 1"):
+        store.insert(
+            email_id=10,
+            subject="测试非法 priority 拒收",
+            body="测试非法 priority 必被 insert 入口 ValueError 拒绝,正文超过十个字符。",
+            tone="FORMAL",
+            recipient_email="reject@example.com",
+            priority="INVALID",
+        )
+    # 大小写错误也必拒(严判是 _OUTBOX_PRIORITY_CHOICES 6 选 1,小写只接 normal/low)
+    with pytest.raises(ValueError, match="priority 必须是 OutboxPriority 6 选 1"):
+        store.insert(
+            email_id=11,
+            subject="测试 URGENT 大小写错误也拒收",
+            body="_OUTBOX_PRIORITY_CHOICES 是小写集合,大写 URGENT 必拒收。",
+            tone="FORMAL",
+            recipient_email="case@example.com",
+            priority="URGENT",  # 大写,小写集合不含
+        )
+    # 旧 3 类的 NORMAL(大写)同理必拒
+    with pytest.raises(ValueError, match="priority 必须是 OutboxPriority 6 选 1"):
+        store.insert(
+            email_id=12,
+            subject="测试 NORMAL 大写拒收",
+            body="_OUTBOX_PRIORITY_CHOICES 是小写集合,大写 NORMAL 必拒收。",
+            tone="FORMAL",
+            recipient_email="normal-case@example.com",
+            priority="NORMAL",
+        )
+
+
+def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) -> None:
+    """B2.1 hotfix P1-A:type 严判(沿 _normalize_priority 范本,type 严判在 hash 前)。
+
+    非 str 类型(列表 / 字典 / 集合 / None / int / bool)必抛 TypeError,不抛 ValueError
+    (D4.7.3 v1.0.5 P2-1 范本:type 严判在 hash 前,防 list/dict/set 触发 TypeError)。
+    """
+    # 1. 列表 — 非可哈希类型,严判 type 优先
+    with pytest.raises(TypeError, match="priority 必须是 str"):
+        store.insert(
+            email_id=20,
+            subject="测试列表 type 严判",
+            body="测试 priority=[] 必被 _normalize_priority TypeError 拒绝。",
+            tone="FORMAL",
+            recipient_email="list@example.com",
+            priority=[],  # type: ignore[arg-type]
+        )
+    # 2. 字典 — 非可哈希类型
+    with pytest.raises(TypeError, match="priority 必须是 str"):
+        store.insert(
+            email_id=21,
+            subject="测试字典 type 严判",
+            body="测试 priority={} 必被 _normalize_priority TypeError 拒绝。",
+            tone="FORMAL",
+            recipient_email="dict@example.com",
+            priority={},  # type: ignore[arg-type]
+        )
+    # 3. int — 非 str 类型
+    with pytest.raises(TypeError, match="priority 必须是 str"):
+        store.insert(
+            email_id=22,
+            subject="测试 int type 严判",
+            body="测试 priority=123 必被 _normalize_priority TypeError 拒绝。",
+            tone="FORMAL",
+            recipient_email="int@example.com",
+            priority=123,  # type: ignore[arg-type]
+        )
+    # 4. None — 非 str 类型
+    with pytest.raises(TypeError, match="priority 必须是 str"):
+        store.insert(
+            email_id=23,
+            subject="测试 None type 严判",
+            body="测试 priority=None 必被 _normalize_priority TypeError 拒绝。",
+            tone="FORMAL",
+            recipient_email="none@example.com",
+            priority=None,  # type: ignore[arg-type]
+        )
+
+
+def test_insert_accepts_all_6_priorities(store: OutboxStore) -> None:
+    """B2.1 hotfix P1-A:6 类 priority 全接受(URGENT/HIGH/NORMAL/LOW/BATCH/DIGEST)。
+
+    业务背景(沿 v0.2 B1.1):
+        URGENT  紧急  5min SLA
+        HIGH    高优  30min SLA  # v0.2 B1.1 新增
+        NORMAL  普通  4h SLA
+        LOW     低优  24h SLA
+        BATCH   批量  24h SLA   # v0.2 B1.1 新增(可错峰)
+        DIGEST  摘要  7d SLA    # v0.2 B1.1 新增(合并发送)
+
+    本测试正面验证 6 类 priority 都能成功插入 + sla_due_at_ms 必非 None
+    (因为 6 类全在 _SLA_THRESHOLDS 白名单内,不应返回 None)。
+    """
+    from my_ai_employee.scheduler.sla import _SLA_THRESHOLDS
+
+    for idx, priority_value in enumerate(
+        ["urgent", "high", "normal", "low", "batch", "digest"], start=30
+    ):
+        entry = store.insert(
+            email_id=idx,
+            subject=f"测试 {priority_value} priority 接受",
+            body=f"测试 {priority_value} 6 类 priority 必被 insert 入口接受,正文超过十个字符。",
+            tone="FORMAL",
+            recipient_email=f"{priority_value}@example.com",
+            priority=priority_value,
+        )
+        assert entry.priority == priority_value, (
+            f"expected priority={priority_value!r}, got {entry.priority!r}"
+        )
+        # 6 类 priority 全在 _SLA_THRESHOLDS 白名单内,sla_due_at_ms 必非 None
+        assert entry.sla_due_at_ms is not None, (
+            f"{priority_value} 必算 sla_due_at_ms,不应返回 None(6 类全在 _SLA_THRESHOLDS 内)"
+        )
+        # 验证 sla_due_at_ms = created_at + threshold_ms(_SLA_THRESHOLDS[priority][0])
+        expected_threshold_ms, _ = _SLA_THRESHOLDS[priority_value]
+        assert entry.sla_due_at_ms == entry.created_at + expected_threshold_ms, (
+            f"{priority_value} sla_due_at_ms 必 = created_at + threshold_ms,"
+            f"got {entry.sla_due_at_ms} vs {entry.created_at} + {expected_threshold_ms}"
+        )
