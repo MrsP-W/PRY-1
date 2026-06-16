@@ -236,7 +236,7 @@ fi
 echo ""
 echo "🎉 launchd 部署完成!"
 echo "下次触发:每月 1 号 09:00(沿 StartCalendarInterval)"
-echo "手动测试:open 'x-launchd://run/com.myaiemployee.agent'  或 launchctl kickstart -k user/$(id -u)/com.myaiemployee.agent"
+echo "手动测试:open 'x-launchd://run/com.myaiemployee.agent'  或 launchctl kickstart -k gui/$(id -u)/com.myaiemployee.agent"
 echo "查看日志:tail -f ${LOG_DIR}/agent.out.log"
 echo "清理:bash scripts/launchd_install.sh uninstall"
 
