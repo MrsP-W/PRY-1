@@ -1338,6 +1338,41 @@ class TestBlacklistStoreIntegration:
         assert found.recipient_email == "lifecycle@example.com"
         assert blacklist_check_helper(store, "lifecycle@example.com") is True
 
+    def test_blacklist_store_dict_type_mismatch_rejected(self) -> None:
+        """13.9 blacklist_store 传 dict → ValueError(type 严判,拒 duck-typed fake)。
+
+        B4.2 closure 测口径填实:Adapter.__init__ 不接受任何非 RecipientBlacklistStore 实例,
+        即使有 is_blocked/find_by_email 方法的 dict 也拒收(防止 duck-type 漏接)。
+        """
+        fake_dict = {
+            "is_blocked": lambda email: False,
+            "find_by_email": lambda email: None,
+        }
+        with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
+            EmailOutboxAdapter(source="outbox_dict_test", blacklist_store=fake_dict)  # type: ignore[arg-type]
+
+    def test_blacklist_store_list_type_mismatch_rejected(self) -> None:
+        """13.10 blacklist_store 传 list → ValueError(type 严判,拒 list 替身)。"""
+        with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
+            EmailOutboxAdapter(source="outbox_list_test", blacklist_store=[])  # type: ignore[arg-type]
+
+    def test_blacklist_store_subclass_type_mismatch_rejected(self) -> None:
+        """13.11 blacklist_store 传 RecipientBlacklistStore 子类 → ValueError(type() is 严格)。
+
+        type(...) is 严格等价(非 isinstance)防止子类被误识别为真 Store:
+        黑名单 hot-path 阻塞是安全门,严禁子类偷偷绕过严判。
+        """
+
+        class _FakeSubclass(RecipientBlacklistStore):
+            """仅用于测试 type() is 严判的子类替身."""
+
+            def __init__(self) -> None:
+                pass  # 故意不调 super().__init__,避免 session_factory 强依赖
+
+        fake_subclass = _FakeSubclass()
+        with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
+            EmailOutboxAdapter(source="outbox_subclass_test", blacklist_store=fake_subclass)
+
 
 def blacklist_check_helper(
     store: RecipientBlacklistStore,

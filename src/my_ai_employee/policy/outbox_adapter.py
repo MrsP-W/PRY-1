@@ -158,6 +158,29 @@ def _validate_outbox_block_reason(reason: Any) -> str:
     return reason
 
 
+def _validate_outbox_blacklist_store(
+    blacklist_store: Any,
+) -> RecipientBlacklistStore | None:
+    """严判 blacklist_store(v0.2 B4.2 closure 范本,D4.7.3 v1.0.3 P2-2 is None fallback 沿用).
+
+    契约:
+        - None 允许(不接黑名单,Adapter 默认不阻断)
+        - 非 None 必 type(...) is RecipientBlacklistStore(拒 dict/list/falsey 替身)
+
+    Raises:
+        ValueError: 非 None 且 type 不匹配 RecipientBlacklistStore
+    """
+    if blacklist_store is None:
+        return None
+    if type(blacklist_store) is not RecipientBlacklistStore:
+        raise ValueError(
+            f"blacklist_store 必须是 RecipientBlacklistStore 或 None"
+            f"(D4.7.3 v1.0.3 P2-2 is None fallback), 实际 "
+            f"{type(blacklist_store).__name__}={blacklist_store!r}"
+        )
+    return blacklist_store
+
+
 # ===== compute_outbox_acceptance(3 条 AC 契约描述)=====
 
 
@@ -587,7 +610,8 @@ class EmailOutboxAdapter:
         # B4.2 引入: blacklist_store 默认 None(不接黑名单);注入 RecipientBlacklistStore
         # 时 store_and_emit 入口会调 is_blocked(recipient_email) hot-path 阻断
         # D4.7.3 v1.0.3 P2-2 范本: is None fallback(防 falsey 替身)
-        self._blacklist_store = blacklist_store if blacklist_store is not None else None
+        # B4.2 closure: type 严判,拒 dict/list/falsey 替身(D4.7.3 v1.0.5 P2-2 严判范本)
+        self._blacklist_store = _validate_outbox_blacklist_store(blacklist_store)
         # D4.8 首次引入: 默认 EventStore=None(由 caller 注入,D4.8.6/7 单元测试用 FakeEventStore)
 
     def build_lane_entry_id(self, run_id: str) -> str:
