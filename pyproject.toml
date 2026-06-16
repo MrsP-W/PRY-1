@@ -42,8 +42,9 @@ dependencies = [
     "loguru>=0.7.3",              # 日志
     # macOS 原生
     "pyobjc-framework-Cocoa>=10.3",  # macOS Cocoa 绑定（菜单栏用 rumps 间接）
+    "pyobjc-framework-Quartz>=10.3", # v0.2 B-5 — CGEvent tap 全局快捷键监听（替代 pynput 1.7.7 + macOS Sequoia 不接收 bug 修复,沿 docs/b-5-pynput-evaluation.md 方案 B）
     "rumps>=0.4.0",                   # Mac 菜单栏 UI
-    "pynput>=1.7.7",                  # 全局快捷键监听（D9.5 ⌥⌘N,macOS TCC 需辅助功能授权）
+    "pynput>=1.7.7",                  # 全局快捷键监听（D9.5 ⌥⌘N,macOS TCC 需辅助功能授权,v0.2 B-5 保留作业务层兜底不删,沿 D5.5.5 删依赖慎之又慎）
     "pyperclip>=1.8.2",               # 剪贴板读取（D9.6.1 ⌥⌘N 触发后 pyperclip.paste）
     "httpx>=0.27",
 ]
