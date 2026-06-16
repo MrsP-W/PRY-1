@@ -647,6 +647,64 @@ class TransactionStore:
             stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
             return list(session.execute(stmt).scalars().all())
 
+    def list_by_counterparty(
+        self,
+        counterparty: str,
+        *,
+        since: date | None = None,
+        until: date | None = None,
+        limit: int = 100,
+    ) -> list[Transaction]:
+        """按 counterparty 查多条(可选 since / until 日期过滤,D8 商家画像必传).
+
+        沿 D6.4 list_by_source 同构 + 增 until 参数(D8 商家画像月末截止)。
+
+        Args:
+            counterparty: 商家名(归一化前,必填非空)
+            since: 起始日期(含),None 表示不限
+            until: 结束日期(含),None 表示不限(D8.2 商家画像算 σ 时必传)
+            limit: 返回上限,默认 100
+
+        Returns:
+            按 imported_at_ms DESC 排序的 Transaction 列表
+
+        Raises:
+            TypeError: counterparty 非 str / since 或 until 非 date
+            ValueError: limit 越界 / counterparty 空字符串
+        """
+        # 1. counterparty 严判(必填非空)
+        if not isinstance(counterparty, str):
+            raise TypeError(
+                f"counterparty 必须是 str,实际 type={type(counterparty).__name__}, "
+                f"value={counterparty!r}"
+            )
+        counterparty_stripped = counterparty.strip()
+        if not counterparty_stripped:
+            raise ValueError(f"counterparty 必填非空白,实际 {counterparty!r}")
+        # 2. since / until 严判(沿 list_by_source 同构 + 加 until)
+        for arg_name, arg_val in (("since", since), ("until", until)):
+            if arg_val is not None and (
+                isinstance(arg_val, str) or not hasattr(arg_val, "isoformat")
+            ):
+                raise TypeError(
+                    f"{arg_name} 必须是 date(非 str),"
+                    f"实际 type={type(arg_val).__name__}, value={arg_val!r}"
+                )
+        # 3. limit 严判(沿 list_by_source)
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 10000:
+            raise ValueError(
+                f"limit 必须是 [1, 10000] 的 int(非 bool),"
+                f"实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        with self._session_factory() as session:
+            stmt = select(Transaction).where(Transaction.counterparty == counterparty_stripped)
+            if since is not None:
+                stmt = stmt.where(Transaction.transaction_date >= since)
+            if until is not None:
+                stmt = stmt.where(Transaction.transaction_date <= until)
+            stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
     def find_candidates_by_fingerprint(
         self,
         fingerprint: str,

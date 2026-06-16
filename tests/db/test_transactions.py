@@ -430,3 +430,76 @@ def test_update_status_confirmed_requires_confirmed_at_ms(store, valid_tx_params
             from_status="categorized",
             confirmed_at_ms=1234567890,
         )
+
+
+# ===== Segment 10 (v0.2 D8.1): list_by_counterparty(2 cases)=====
+
+
+def test_list_by_counterparty_filters_by_counterparty_and_date_range(store) -> None:
+    """Case 28 (D8.1) — list_by_counterparty 按商家 + 时间窗过滤 + 按 imported_at_ms DESC 排序."""
+    # 插 5 笔 "星巴克"(6 月内) + 3 笔 "麦当劳"(6 月内) + 1 笔 "星巴克"(5 月)
+    fixtures = [
+        # (counterparty, transaction_date, ext_id)
+        ("星巴克", date(2026, 6, 14), "starbucks-001"),
+        ("星巴克", date(2026, 6, 10), "starbucks-002"),
+        ("星巴克", date(2026, 6, 5), "starbucks-003"),
+        ("星巴克", date(2026, 5, 28), "starbucks-004"),  # 5 月(被 since 过滤)
+        ("星巴克", date(2026, 6, 15), "starbucks-005"),
+        ("麦当劳", date(2026, 6, 11), "mcdonalds-001"),
+        ("麦当劳", date(2026, 6, 12), "mcdonalds-002"),
+        ("麦当劳", date(2026, 6, 13), "mcdonalds-003"),
+    ]
+    for cp, td, ext_id in fixtures:
+        # 32 chars 小写 hex — 沿 D6.2 normalize_fingerprint 派生规则
+        # 用 hash(ext_id) 转 hex 取前 32 位(纯小写 hex)
+        fp = format(hash(ext_id) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, "032x")
+        store.insert(
+            source="wechat",
+            external_transaction_id=ext_id,
+            transaction_date=td,
+            amount=Decimal("30.00"),
+            counterparty=cp,
+            normalized_fingerprint=fp,
+            raw_row_json="{}",
+            status="categorized",
+            imported_at_ms=int(td.strftime("%s")) * 1000,
+        )
+
+    # 1. 按商家查 → 5 笔星巴克(全部,不限 since)
+    rows = store.list_by_counterparty("星巴克")
+    assert len(rows) == 5
+    # 2. since=2026-06-01 → 过滤 5 月那笔,剩 4 笔
+    rows = store.list_by_counterparty("星巴克", since=date(2026, 6, 1))
+    assert len(rows) == 4
+    # 3. since + until 双过滤
+    rows = store.list_by_counterparty("星巴克", since=date(2026, 6, 5), until=date(2026, 6, 14))
+    assert len(rows) == 3
+    # 4. 跨商家隔离(麦当劳查不到星巴克)
+    rows = store.list_by_counterparty("麦当劳")
+    assert len(rows) == 3
+
+
+def test_list_by_counterparty_validates_arguments(store) -> None:
+    """Case 29 (D8.1) — list_by_counterparty 严判 counterparty 非 str / 空字符串 / since 非 date."""
+    # counterparty 非 str → TypeError
+    with pytest.raises(TypeError, match="counterparty 必须是 str"):
+        store.list_by_counterparty(123)  # type: ignore[arg-type]
+    # counterparty 空字符串 → ValueError
+    with pytest.raises(ValueError, match="counterparty 必填非空白"):
+        store.list_by_counterparty("")
+    with pytest.raises(ValueError, match="counterparty 必填非空白"):
+        store.list_by_counterparty("   \n\t")
+    # since 非 date → TypeError
+    with pytest.raises(TypeError, match="since 必须是 date"):
+        store.list_by_counterparty("星巴克", since="2026-06-01")  # type: ignore[arg-type]
+    # until 非 date → TypeError
+    with pytest.raises(TypeError, match="until 必须是 date"):
+        store.list_by_counterparty("星巴克", until="2026-06-30")  # type: ignore[arg-type]
+    # limit 越界 → ValueError
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_counterparty("星巴克", limit=0)
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_counterparty("星巴克", limit=10001)
+    # limit 非 int → ValueError(不是 TypeError,沿 list_by_source 同款)
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_counterparty("星巴克", limit="100")  # type: ignore[arg-type]
