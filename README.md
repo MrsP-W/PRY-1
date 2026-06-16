@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.1 收口 + 发布前真实 spike 准备**(2026-06-15)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + S8/S9 e2e **全部落地并复检通过**。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N;D10 7 Agent 角色 + monthly_report.py + launchd_install.sh + 9 端到端场景全过。当前 `make test` **1958 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `2af775f`,tag 不动);当前 HEAD 为 post-tag 发布前修复状态(精确 hash 见 `git log`)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [docs/architecture.md](docs/architecture.md)。
+> **状态**：🎯 **v0.1.0 正式发布前最后收官**(2026-06-16 上午)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + **6/16 A 阶段真跑 3 步按顺序**(Notes 1 + ⌥⌘N 降级 + SMTP 1)全部收口。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N(降级);D10 7 Agent 角色 + monthly_report.py + launchd_install.sh;**9 端到端 7/9 实化 + 1 降级(S7 ⌥⌘N 触发, pynput 1.7.7 + macOS Sequoia 兼容问题) + 1 等触发(S8/S9 launchd 1 号 09:00 月报真实生成)**。当前 `make test` **1958 passed / 1 skipped / coverage 89.48%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `2af775f`,tag 不动);当前 HEAD `6f3128a` 为 post-tag docs 收口状态(精确 hash 见 `git log`)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [reports/v0.1-real-spike-b-real-2026-06-16.md](reports/v0.1-real-spike-b-real-2026-06-16.md) / [docs/architecture.md](docs/architecture.md)。
 
 ---
 
