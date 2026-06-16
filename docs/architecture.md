@@ -331,6 +331,57 @@ CREATE TABLE health_log (
   ↓ D9.6.4 真调 _poll_hotkey_queue 验分发(D9.6.1 的 MagicMock 替代真链路,真 queue.get → mock.assert_called_once)
 ```
 
+### 场景 5：收件人黑名单双层防御(B4.1-B4.3 已实化,v0.2 P1 6/16 晚落地)
+
+> **来源**:[docs/v0.2-substage-mapping.md §3](v0.2-substage-mapping.md#3-b4-blacklist_recipients-配置表-p1-6-16-晚实化收口8-commits)
+> 关联:`Agent Assistant/memory/b4-blacklist-recipients-launch.md` / [[b4-2-blacklist-adapter-launch]] / [[b4-2-closure-type-strict]] / [[b4-3-smtp-send-blacklist]]
+
+**第 1 层 — 入库前防误拦**(B4.2 store_and_emit 入口 hot-path):
+
+```
+[草稿生成] L3 drafter.record_draft_and_emit()
+  ↓ subject/body/tone/recipient_email 透传到 L3 outbox 业务层
+[L2 outbox_adapter.store_and_emit() — B4.2 hot-path]
+  ↓ 1) __init__ 严判 blacklist_store: _validate_outbox_blacklist_store(type() is RecipientBlacklistStore / None)
+  ↓ 2) 严判后、outbox_store.insert 前 hot-path 调 blacklist_store.is_blocked(recipient_email)
+  ↓ ───── 命中 ─────
+  ↓ record_store_business_blocked_and_emit(reason="blacklisted_recipient", last_error=f"{email} 命中黑名单(reason=..., added_by=...)")
+  ↓ → OutboxBlockedDecisionReport(blocked=True / kind=business_blocked / cf=0 / 永不 retry)
+  ↓ ↓ ↓ ↓ 不走 outbox_store.insert,UNIQUE 不触发,smtplib 不连
+  ↓ ───── 未命中 ─────
+  ↓ outbox_store.insert + lane_entry_id="outbox:<source>:<run_id>" + PolicyEngine.evaluate
+  ↓ → OutboxDecisionReport(outbox_stored=True / outbox_id >= 1 / 11 字段透传)
+```
+
+**第 2 层 — SMTP 发送前二次防御**(B4.3 send_and_emit 入口 hot-path):
+
+```
+[用户 1-click 审批] store.update_status(APPROVED, last_approved_at_ms=now)
+  ↓ OutboxDispatcher.run_once 拉取 APPROVED 行(D5.6.4 P1 收窄)
+[L2 send_adapter.send_and_emit() — B4.3 二次防御]
+  ↓ 1) __init__ 严判 blacklist_store: _validate_outbox_blacklist_store(同 L1 helper 复用)
+  ↓ 2) outbox_store.by_id(outbox_id) 拿 entry → entry.status == APPROVED 严判 → last_approved_at_ms 非 None 严判
+  ↓ 3) **审批通过 ≠ 拉黑解除** → hot-path 调 blacklist_store.is_blocked(entry.recipient_email)
+  ↓ ───── 命中 ─────
+  ↓ record_send_business_blocked_and_emit(reason="blacklisted_recipient", last_error=...)
+  ↓ → SendBlockedDecisionReport(send_blocked=True / kind=business_blocked / cf=0)
+  ↓ ↓ ↓ ↓ 状态机走 APPROVED → CANCELLED 终态(永不 retry),不连 smtplib
+  ↓ ───── 未命中 ─────
+  ↓ store.update_status(SENDING, from_status=APPROVED) → smtplib connect/login/send_message
+  ↓ → SendDecisionReport(send_succeeded=True / outbox_id >= 1)
+```
+
+**关键决策**(沿 [[d5-6-5-real-send]] 真实 1 封范本):
+
+| 维度 | 决策 | 理由 |
+|------|------|------|
+| 二次防御位置 | 业务层 `send_and_emit()` 而非 transport 层 `SmtpLibTransport.connect()` | transport 层注入成本高(SmtpLibTransport + InMemorySmtpTransport 都要改);业务层入口更接近"邮件未发出"语义 |
+| helper 复用 | 复用 outbox_adapter `_validate_outbox_blacklist_store` | D4.7.3 v1.0.3 P1-1 范本,契约改一处全改 |
+| 阻断入口 | `record_*_business_blocked_and_emit(reason="blacklisted_recipient")` | 业务阻断 cf=0 永不 retry,沿 D4.7.3 v1.0.6 SPAM 范本 |
+| 软删除兼容 | `is_blocked()` 仅返回 `is_active=1` 命中 | deactive 后 hot-path 返回 False → 不阻断 |
+| 4 重防误发 | to=to / from=from / subject=subject / body=body 全显式参数 | 沿 D5.6.5 真实 1 封范本 |
+| SMTP_REAL_NETWORK 门控 | env=1 才真发 | 防止测试环境真发邮件 |
+
 ---
 
 ## 5. 安全模型
