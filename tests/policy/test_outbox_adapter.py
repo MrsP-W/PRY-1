@@ -45,6 +45,12 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from my_ai_employee.core import keychain  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
+
+# B4.2 黑名单接入测试用
+from my_ai_employee.db.blacklist import (  # noqa: E402,F401  # 触发 ORM 注册
+    RecipientBlacklist,
+    RecipientBlacklistStore,
+)
 from my_ai_employee.db.outbox import OutboxEmailDuplicateError, OutboxStore  # noqa: E402
 from my_ai_employee.policy.outbox_adapter import (  # noqa: E402
     OUTBOX_BLOCK_REASON_VALUES,
@@ -738,6 +744,7 @@ class TestStoreAndEmit:
             tone="FRIENDLY",
             recipient_email="user@example.com",
         )
+        assert isinstance(report, OutboxDecisionReport)
         assert report.outbox_id is not None
         entry = adapter._outbox_store.by_email_id(200)  # type: ignore[union-attr]
         assert entry is not None
@@ -812,6 +819,7 @@ class TestStoreAndEmit:
             tone=_VALID_TONE,
             recipient_email=_VALID_RECIPIENT,
         )
+        assert isinstance(report, OutboxDecisionReport)
         assert report.priority == "normal"
         entry = adapter._outbox_store.by_email_id(800)  # type: ignore[union-attr]
         assert entry is not None
@@ -1010,6 +1018,7 @@ class TestIntegration:
             tone=_VALID_TONE,
             recipient_email="original@example.com",
         )
+        assert isinstance(first, OutboxDecisionReport)
         # contextlib.suppress(D4.7.3 v1.0.6 范本 + ruff SIM105)
         with contextlib.suppress(OutboxEmailDuplicateError):
             adapter.store_and_emit(
@@ -1036,6 +1045,7 @@ class TestIntegration:
             tone=_VALID_TONE,
             recipient_email="test@example.com",
         )
+        assert isinstance(report, OutboxDecisionReport)
         assert report.priority == "normal"
         entry = adapter._outbox_store.by_email_id(1900)  # type: ignore[union-attr]
         assert entry is not None
@@ -1103,3 +1113,235 @@ class TestTopLevelExports:
         from my_ai_employee.policy import EmailOutboxAdapter
 
         assert isinstance(EmailOutboxAdapter, type)
+
+
+# ===== 13. B4.2 黑名单 hot-path 集成测试(8 tests)=====
+
+
+@pytest.fixture
+def blacklist_store(session_factory) -> RecipientBlacklistStore:  # type: ignore[no-untyped-def]
+    """RecipientBlacklistStore 实例(注入 session_factory)。"""
+    from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+    return RecipientBlacklistStore(session_factory)
+
+
+@pytest.fixture
+def adapter_with_blacklist(
+    outbox_store: OutboxStore,
+    blacklist_store: RecipientBlacklistStore,
+) -> EmailOutboxAdapter:
+    """EmailOutboxAdapter 注入 OutboxStore + RecipientBlacklistStore(6 依赖全开)。"""
+    return EmailOutboxAdapter(
+        source="outbox_bl_test",
+        outbox_store=outbox_store,
+        engine=PolicyEngine(),
+        blacklist_store=blacklist_store,
+    )
+
+
+class TestBlacklistStoreIntegration:
+    """v0.2 B4.2 黑名单 hot-path 集成测试(8 tests)。
+
+    范围边界(用户决策 2026-06-16 锁定):
+    - 本轮不动 SMTP 发送路径(在 B4.3)
+    - 本轮不动 launchd 重启(6/23)
+    - 仅 store_and_emit 入口 hot-path 接 is_blocked() 检查
+    - 命中 → record_store_business_blocked_and_emit(reason="blacklisted_recipient")
+
+    D4.7.3 25 教训应用:
+    - P1-1 跨字段校验: blacklist_store 必 RecipientBlacklistStore
+    - P1-2 双向强一致: is_blocked=True → 必走业务阻断入口(reason 黑名单已含)
+    - P2-1 type 严判: blacklist_store type() 必 RecipientBlacklistStore
+    - P2-2 异常范围窄化: blacklisted_recipient 业务阻断 last_error 必 strip() 非空
+    """
+
+    def test_blacklist_hit_returns_blocked_report(
+        self,
+        adapter_with_blacklist: EmailOutboxAdapter,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.1 黑名单命中 → store_and_emit 返回 OutboxBlockedDecisionReport(reason="blacklisted_recipient")。
+
+        阻断入口 OutboxBlockedDecisionReport.blocked=True + kind=business_blocked + cf=0。
+        """
+        blacklist_store.insert(
+            recipient_email="spam@bad.com",
+            reason="用户举报",
+            added_by="manual",
+        )
+
+        report = adapter_with_blacklist.store_and_emit(
+            email_id=1100,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="spam@bad.com",
+        )
+        assert isinstance(report, OutboxBlockedDecisionReport)
+        assert report.blocked is True
+        assert report.kind == "business_blocked"
+        assert report.reason == "blacklisted_recipient"
+        assert report.consecutive_outbox_failures == 0  # 业务阻断永不计入 cf
+        assert report.recipient_email == "spam@bad.com"
+        assert "spam@bad.com" in report.last_error
+        assert "用户举报" in report.last_error
+
+    def test_blacklist_hit_does_not_insert_outbox_row(
+        self,
+        adapter_with_blacklist: EmailOutboxAdapter,
+        blacklist_store: RecipientBlacklistStore,
+        outbox_store: OutboxStore,
+    ) -> None:
+        """13.2 黑名单命中 → outbox 表无新行(根本没 insert,UNIQUE 也不触发)。"""
+        blacklist_store.insert(recipient_email="blocked@evil.com")
+
+        adapter_with_blacklist.store_and_emit(
+            email_id=1101,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="blocked@evil.com",
+        )
+        # outbox 表必无 email_id=1101 行(阻断路径不走 insert)
+        entry = outbox_store.by_email_id(1101)
+        assert entry is None
+
+    def test_blacklist_miss_normal_insert(
+        self,
+        adapter_with_blacklist: EmailOutboxAdapter,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.3 黑名单未命中 → store_and_emit 正常入库返回 OutboxDecisionReport。"""
+        blacklist_store.insert(recipient_email="blocked@evil.com")  # 入黑名单另一邮箱
+
+        report = adapter_with_blacklist.store_and_emit(
+            email_id=1102,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="clean@example.com",  # 不在黑名单
+        )
+        assert isinstance(report, OutboxDecisionReport)
+        assert report.outbox_stored is True
+        assert report.outbox_id >= 1
+        assert report.recipient_email == "clean@example.com"
+
+    def test_blacklist_store_none_default_no_block(
+        self,
+        outbox_store: OutboxStore,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.4 blacklist_store=None 默认 → 即使邮箱在黑名单也**不阻断**(沿 D4.7.3 v1.0.3 P2-2 is None fallback)。
+
+        用 inbox 创建黑名单,但 adapter 不接 blacklist_store,所以不阻断。
+        """
+        blacklist_store.insert(recipient_email="not-blocked@evil.com")
+        adapter_no_blacklist = EmailOutboxAdapter(
+            source="outbox_no_bl",
+            outbox_store=outbox_store,
+            engine=PolicyEngine(),
+            blacklist_store=None,
+        )
+        report = adapter_no_blacklist.store_and_emit(
+            email_id=1103,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="not-blocked@evil.com",
+        )
+        assert isinstance(report, OutboxDecisionReport)
+        assert report.outbox_stored is True
+
+    def test_blacklist_inactive_soft_deleted_not_blocked(
+        self,
+        adapter_with_blacklist: EmailOutboxAdapter,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.5 黑名单软删除(is_active=0)→ 不阻断,正常入库。
+
+        Store.is_blocked() 仅返回 is_active=1 的命中,软删除后 hot-path 返回 False。
+        """
+        entry = blacklist_store.insert(
+            recipient_email="was-blocked@evil.com",
+            reason="测试软删除",
+        )
+        blacklist_store.deactivate(entry.id)
+        # 软删除后 is_blocked 返回 False
+        assert blacklist_store.is_blocked("was-blocked@evil.com") is False
+
+        report = adapter_with_blacklist.store_and_emit(
+            email_id=1104,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="was-blocked@evil.com",
+        )
+        assert isinstance(report, OutboxDecisionReport)
+        assert report.outbox_stored is True
+
+    def test_blacklist_init_with_full_dependencies(
+        self,
+        outbox_store: OutboxStore,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.6 __init__ 接收 blacklist_store 注入(6 依赖全开)。"""
+        a = EmailOutboxAdapter(
+            source="outbox_full",
+            outbox_store=outbox_store,
+            engine=PolicyEngine(),
+            heartbeat=None,
+            board=None,
+            blacklist_store=blacklist_store,
+        )
+        assert a._blacklist_store is blacklist_store  # type: ignore[attr-defined]
+
+    def test_blacklist_store_includes_added_by_in_last_error(
+        self,
+        adapter_with_blacklist: EmailOutboxAdapter,
+        blacklist_store: RecipientBlacklistStore,
+    ) -> None:
+        """13.7 黑名单命中 last_error 包含 added_by(可审计追溯)。
+
+        B4.1 added_by 3 选 1 枚举,本测试用 auto_spam 验证 last_error 拼接。
+        """
+        blacklist_store.insert(
+            recipient_email="auto-spam@evil.com",
+            reason="自动识别 spam",
+            added_by="auto_spam",
+        )
+        report = adapter_with_blacklist.store_and_emit(
+            email_id=1105,
+            subject=_VALID_SUBJECT,
+            body=_VALID_BODY,
+            tone=_VALID_TONE,
+            recipient_email="auto-spam@evil.com",
+        )
+        assert isinstance(report, OutboxBlockedDecisionReport)
+        # last_error 拼接: "{email} 命中黑名单(reason={reason}, added_by={added_by})"
+        assert "auto-spam@evil.com" in report.last_error
+        assert "自动识别 spam" in report.last_error
+        assert "auto_spam" in report.last_error
+
+    def test_blacklist_store_session_factory_injected(
+        self,
+        session_factory,
+    ) -> None:
+        """13.8 RecipientBlacklistStore 接收 session_factory 注入(沿 D4.8.3 范本)。"""
+        from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+        store = RecipientBlacklistStore(session_factory)
+        # 插入 → 查 → 全链路打通
+        store.insert(recipient_email="lifecycle@example.com", reason="test")
+        found = store.find_by_email("lifecycle@example.com")
+        assert found is not None
+        assert found.recipient_email == "lifecycle@example.com"
+        assert blacklist_check_helper(store, "lifecycle@example.com") is True
+
+
+def blacklist_check_helper(
+    store: RecipientBlacklistStore,
+    email: str,
+) -> bool:
+    """Helper:hot-path check(沿 D4.8 业务层范本:helper 提到模块顶层,不在 class 内)。"""
+    return store.is_blocked(email)

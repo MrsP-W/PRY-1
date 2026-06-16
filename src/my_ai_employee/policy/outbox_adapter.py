@@ -39,6 +39,7 @@ from my_ai_employee.core.outbox import (
     OutboxEntry,
     OutboxStatus,
 )
+from my_ai_employee.db.blacklist import RecipientBlacklistStore
 from my_ai_employee.db.outbox import OutboxStore
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 
@@ -56,7 +57,7 @@ from my_ai_employee.policy.task_packet import PermissionProfile, TaskPacket
 OUTBOX_BLOCK_REASON_VALUES: frozenset[str] = frozenset(
     {
         "duplicate_email_id",  # UNIQUE(email_id) 冲突(D4.8 契约 4 幂等性)
-        "blacklisted_recipient",  # 收件人在黑名单(D5+ 接入 blacklist_recipients 配置表)
+        "blacklisted_recipient",  # 收件人在黑名单(v0.2 B4.2 接入 recipient_blacklist 配置表)
     }
 )
 
@@ -568,6 +569,7 @@ class EmailOutboxAdapter:
         engine: PolicyEngine | None = None,
         heartbeat: Heartbeat | None = None,
         board: LaneBoard | None = None,
+        blacklist_store: RecipientBlacklistStore | None = None,
     ) -> None:
         # D4.7.3 v1.0.5 P2-2 范本: source 严判 strip() 语义非空
         if not isinstance(source, str) or not source.strip():
@@ -582,6 +584,10 @@ class EmailOutboxAdapter:
             heartbeat if heartbeat is not None else Heartbeat(idle_threshold_ms=30_000)
         )
         self._board = board if board is not None else LaneBoard(idle_threshold_ms=60_000)
+        # B4.2 引入: blacklist_store 默认 None(不接黑名单);注入 RecipientBlacklistStore
+        # 时 store_and_emit 入口会调 is_blocked(recipient_email) hot-path 阻断
+        # D4.7.3 v1.0.3 P2-2 范本: is None fallback(防 falsey 替身)
+        self._blacklist_store = blacklist_store if blacklist_store is not None else None
         # D4.8 首次引入: 默认 EventStore=None(由 caller 注入,D4.8.6/7 单元测试用 FakeEventStore)
 
     def build_lane_entry_id(self, run_id: str) -> str:
@@ -608,7 +614,7 @@ class EmailOutboxAdapter:
         transport_alive: bool = True,
         run_id: str = "",
         now_ms: int | None = None,
-    ) -> OutboxDecisionReport:
+    ) -> OutboxDecisionReport | OutboxBlockedDecisionReport:
         """成功入库入口(对应契约 1 成功路径).
 
         Args:
@@ -622,7 +628,9 @@ class EmailOutboxAdapter:
             drafter_decision_event_id: FK → events.id(D4.7.3 草稿生成事件,可空)
 
         Returns:
-            OutboxDecisionReport: outbox_stored=True + outbox_id >= 1 + 11 字段透传
+            OutboxDecisionReport | OutboxBlockedDecisionReport:
+                - 正常入库: OutboxDecisionReport(outbox_stored=True + outbox_id >= 1 + 11 字段透传)
+                - 黑名单命中(v0.2 B4.2): OutboxBlockedDecisionReport(reason="blacklisted_recipient")
 
         Raises:
             ValueError: 入口严判失败
@@ -647,6 +655,33 @@ class EmailOutboxAdapter:
             raise ValueError(
                 "outbox_store 未注入 — EmailOutboxAdapter.__init__ 必须传 outbox_store="
                 "OutboxStore(session_factory),D4.8.3 单元测试用 FakeOutboxStore 注入"
+            )
+
+        # 1.5 黑名单 hot-path 检查(v0.2 B4.2 接入)
+        # - blacklist_store=None → 不阻断(显式 None = 不接黑名单,沿 D4.7.3 v1.0.3 P2-2 is None fallback)
+        # - 命中黑名单 → 走 record_store_business_blocked_and_emit 业务阻断入口
+        #   (reason="blacklisted_recipient" 已在 OUTBOX_BLOCK_REASON_VALUES 白名单)
+        # - last_error 拼接 "{recipient} 命中黑名单({reason from blacklist table})"
+        #   严判: 走 record_store_business_blocked_and_emit 的 last_error str 严判
+        if self._blacklist_store is not None and self._blacklist_store.is_blocked(recipient_email):
+            block_entry = self._blacklist_store.find_by_email(recipient_email)
+            block_reason = block_entry.reason if block_entry else ""
+            last_error_str = (
+                f"{recipient_email} 命中黑名单"
+                f"(reason={block_reason or 'unspecified'}, added_by={block_entry.added_by if block_entry else 'unknown'})"
+            )
+            # 走业务阻断入口(reason 白名单已含 blacklisted_recipient)
+            return self.record_store_business_blocked_and_emit(
+                email_id=email_id,
+                subject=subject,
+                body=body,
+                tone=tone,
+                recipient_email=recipient_email,
+                reason="blacklisted_recipient",
+                last_error=last_error_str,
+                transport_alive=transport_alive,
+                run_id=run_id,
+                now_ms=now_ms,
             )
 
         # 2. 入库(D3.3.3 异常窄化: IntegrityError → 业务阻断;OperationalError → 技术失败)
