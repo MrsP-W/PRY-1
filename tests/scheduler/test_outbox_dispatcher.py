@@ -61,10 +61,12 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from sqlalchemy import update  # noqa: E402
+
 from my_ai_employee.connectors.smtp import InMemorySmtpTransport  # noqa: E402
 from my_ai_employee.core import keychain  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
-from my_ai_employee.core.outbox import OutboxStatus  # noqa: E402
+from my_ai_employee.core.outbox import OutboxEntry, OutboxStatus  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
 from my_ai_employee.db.outbox import OutboxStore  # noqa: E402
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness  # noqa: E402
@@ -172,6 +174,7 @@ def _insert_entry(
     status: str = OutboxStatus.APPROVED.value,  # D5.6.2:Dispatcher 只消费 APPROVED+FAILED
     created_at: int | None = None,
     last_approved_at_ms: int | None = None,  # D5.6.3 P1-1:仅 APPROVED 必传审批凭据
+    subject: str = "测试邮件主题",  # v0.2 B2.2:支持自定义 subject(测试排序顺序用)
 ) -> int:
     # D5.6.3 P1-1:测试时为 APPROVED/FAILED 条目模拟"已审批"状态(caller 显式传 None 才走"无审批")
     if last_approved_at_ms is None and status in (
@@ -182,7 +185,7 @@ def _insert_entry(
     # D5.6.4 P1:insert 强制 PENDING_SEND + 不接受 last_approved_at_ms,先 insert 再 update_status
     entry = store.insert(
         email_id=email_id,
-        subject="测试邮件主题",
+        subject=subject,
         body="测试邮件正文内容,超过十个字符。",
         tone="FORMAL",
         recipient_email=f"customer{email_id}@example.com",
@@ -1655,3 +1658,205 @@ def test_run_once_batch_size_1_only_retry_pool_picks_failed(
         if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"  # type: ignore[union-attr]
     ]
     assert len(sent_ids) == 1, f"期望 1 个 SENT,实际 {len(sent_ids)}"
+
+
+# ===== v0.2 B2.2: Dispatcher 优先 SLA 临近(沿 D5.6.4 P1-3 helper 抽离范本)=====
+
+
+def _override_sla_due_at_ms(
+    session_factory,  # type: ignore[no-untyped-def]
+    entry_id: int,
+    sla_due_at_ms: int | None,
+) -> None:
+    """测试辅助:直接 SQL 覆写 outbox.sla_due_at_ms(测试 SLA 临近排序用).
+
+    OutboxStore.insert 已预计算 sla_due_at_ms = created_at + threshold(priority)
+    (B2.1 hotfix 沿 v0.2-b1-b2-readiness),测试中要模拟"5min 临近"或"已过期"等
+    边界 case 必绕过预计算,直接 SQL update。
+    """
+    with session_factory() as session:
+        session.execute(
+            update(OutboxEntry)
+            .where(OutboxEntry.id == entry_id)
+            .values(sla_due_at_ms=sla_due_at_ms)
+        )
+        session.commit()
+
+
+def test_run_once_prioritizes_sla_urgent_low_over_normal_non_urgent(
+    store: OutboxStore,
+    smtp_transport: InMemorySmtpTransport,
+    session_factory,  # type: ignore[no-untyped-def]
+) -> None:
+    """v0.2 B2.2 P1 核心契约: SLA 临近(LOW)在排序上必先于非临近(URGENT)。
+
+    场景: 3 个 APPROVED entry 同时进 dispatcher:
+        - LOW + sla_due_at_ms = now+2min(真临近)
+        - URGENT + sla_due_at_ms = now+2h(非临近,优先级最高但 SLA 宽裕)
+        - HIGH + sla_due_at_ms = None(无 SLA,非临近)
+
+    期望发送顺序:LOW(临近) > URGENT(非临近 priority DESC) > HIGH(无 SLA)
+
+    反向证明 B2.2 必改:旧排序仅看 priority DESC → 期望顺序 URGENT → HIGH → LOW
+    B2.2 改后 → LOW(临近)前置,URGENT(非临近)排第 2,HIGH(无 SLA)排第 3
+    """
+    # 1) 注入固定 now_ms
+    fixed_now_ms = 1_700_000_000_000
+    # 2) 插 3 个 APPROVED entry(每个唯一 subject 标识,后续断言发送顺序)
+    eid_low = _insert_entry(
+        store,
+        email_id=1001,
+        priority="low",
+        subject="B22_LOW_URGENT",
+    )
+    eid_urgent = _insert_entry(
+        store,
+        email_id=1002,
+        priority="urgent",
+        subject="B22_URGENT_NORMAL",
+    )
+    eid_high = _insert_entry(
+        store,
+        email_id=1003,
+        priority="high",
+        subject="B22_HIGH_NO_SLA",
+    )
+    # 3) 覆写 sla_due_at_ms(LOW 临近 / URGENT 宽裕 / HIGH 显式 None)
+    _override_sla_due_at_ms(session_factory, eid_low, fixed_now_ms + 2 * 60 * 1000)
+    _override_sla_due_at_ms(session_factory, eid_urgent, fixed_now_ms + 2 * 60 * 60 * 1000)
+    _override_sla_due_at_ms(session_factory, eid_high, None)
+    # 4) 构造 dispatcher(显式 source + adapter 走 smtp_transport 验证发送顺序)
+    dispatcher = OutboxDispatcher(
+        source="test-b22",
+        send_adapter=EmailSendAdapter(
+            source="test-b22",
+            outbox_store=store,
+            smtp_transport=smtp_transport,
+        ),
+        outbox_store=store,
+        heartbeat=Heartbeat(idle_threshold_ms=30_000),
+        batch_size=10,
+    )
+    # 5) 跑 run_once(now_ms=fixed) → 3 个全 APPROVED 全入批
+    result = dispatcher.run_once(now_ms=fixed_now_ms)
+    # 6) 断言 3 个全 sent(无 skipped / failed)
+    assert result.sent == 3, f"B2.2 期望 sent=3,实际 {result.sent}(失败/跳过意味着排序/状态机问题)"
+    # 7) 关键断言: 发送顺序必须是 LOW(临近)→ URGENT → HIGH
+    sent_subjects = [log["subject"] for log in smtp_transport.sent_log]
+    assert sent_subjects == [
+        "B22_LOW_URGENT",
+        "B22_URGENT_NORMAL",
+        "B22_HIGH_NO_SLA",
+    ], (
+        f"B2.2 SLA 临近排序失败!\n"
+        f"  期望顺序: [LOW 临近, URGENT 非临近, HIGH 无 SLA]\n"
+        f"  实际顺序: {sent_subjects}\n"
+        f"  B2.2 必须把 sla_due_at_ms < now+5min 的紧急项前移到 priority 之前"
+    )
+
+
+def test_helper_is_sla_urgent_boundary_cases() -> None:
+    """v0.2 B2.2 P2 helper 自身契约: _is_sla_urgent(entry, now_ms) -> bool 边界用例。
+
+    5 边界 case:
+        1. sla_due_at_ms = None → False(NULL 不视为临近,沿 B2.1 向后兼容)
+        2. sla_due_at_ms = now + 5min(临界相等) → False(< 严格比较,临界不临近)
+        3. sla_due_at_ms = now + 5min - 1ms → True(1ms 临近)
+        4. sla_due_at_ms = now - 1ms → True(已过期 1ms 也视为紧急)
+        5. sla_due_at_ms = now + 1h → False(宽裕 1h,非临近)
+    """
+    from types import SimpleNamespace
+
+    from my_ai_employee.scheduler.outbox_dispatcher import _is_sla_urgent
+
+    now_ms = 1_700_000_000_000
+    five_min_ms = 5 * 60 * 1000
+
+    # Case 1: None → False
+    e_none = SimpleNamespace(sla_due_at_ms=None)
+    assert _is_sla_urgent(e_none, now_ms) is False, "sla_due_at_ms=None 应返回 False"
+
+    # Case 2: now + 5min 临界相等 → False(< 严格)
+    e_boundary = SimpleNamespace(sla_due_at_ms=now_ms + five_min_ms)
+    assert _is_sla_urgent(e_boundary, now_ms) is False, (
+        "临界相等 now+5min 应返回 False(< 严格),实际 True"
+    )
+
+    # Case 3: now + 5min - 1ms → True(真临近 1ms)
+    e_one_ms = SimpleNamespace(sla_due_at_ms=now_ms + five_min_ms - 1)
+    assert _is_sla_urgent(e_one_ms, now_ms) is True, "now+5min-1ms 应返回 True"
+
+    # Case 4: now - 1ms → True(已过期 1ms 也紧急)
+    e_breach = SimpleNamespace(sla_due_at_ms=now_ms - 1)
+    assert _is_sla_urgent(e_breach, now_ms) is True, "now-1ms 已过期应返回 True"
+
+    # Case 5: now + 1h → False(宽裕)
+    e_safe = SimpleNamespace(sla_due_at_ms=now_ms + 60 * 60 * 1000)
+    assert _is_sla_urgent(e_safe, now_ms) is False, "now+1h 宽裕应返回 False"
+
+
+def test_run_once_non_urgent_preserves_priority_and_created_at_order(
+    store: OutboxStore,
+    smtp_transport: InMemorySmtpTransport,
+) -> None:
+    """v0.2 B2.2 P3 反向契约: 非 SLA 临近项保持原 priority DESC + created_at ASC 排序。
+
+    2 个 entry 都非临近:
+        - URGENT(早,created_at=t1)  + sla_due_at = None(显式 None)
+        - NORMAL(晚,created_at=t2>t1) + sla_due_at = now+2h(非临近)
+
+    期望: URGENT 仍先(原 priority DESC 排序保持)
+    反向证明 B2.2 不破坏非临近场景的向后兼容
+    """
+    # 1) 固定 now + created_at(保证 NORMAL 晚于 URGENT)
+    fixed_now_ms = 1_700_000_000_000
+    t1 = fixed_now_ms - 10 * 60 * 1000  # URGENT 早 10min
+    t2 = fixed_now_ms - 1 * 60 * 1000  # NORMAL 晚 1min
+    # 2) 插 2 个 APPROVED
+    eid_urgent = _insert_entry(
+        store,
+        email_id=2001,
+        priority="urgent",
+        created_at=t1,
+        subject="B22_P3_URGENT",
+    )
+    eid_normal = _insert_entry(
+        store,
+        email_id=2002,
+        priority="normal",
+        created_at=t2,
+        subject="B22_P3_NORMAL",
+    )
+    # 3) 显式置 sla_due_at_ms = None(URGENT) + 非临近(NORMAL)
+    with store._session_factory() as session:  # type: ignore[attr-defined]
+        session.execute(
+            update(OutboxEntry).where(OutboxEntry.id == eid_urgent).values(sla_due_at_ms=None)
+        )
+        session.execute(
+            update(OutboxEntry)
+            .where(OutboxEntry.id == eid_normal)
+            .values(sla_due_at_ms=fixed_now_ms + 2 * 60 * 60 * 1000)
+        )
+        session.commit()
+    # 4) 跑 dispatcher
+    dispatcher = OutboxDispatcher(
+        source="test-b22-p3",
+        send_adapter=EmailSendAdapter(
+            source="test-b22-p3",
+            outbox_store=store,
+            smtp_transport=smtp_transport,
+        ),
+        outbox_store=store,
+        heartbeat=Heartbeat(idle_threshold_ms=30_000),
+        batch_size=10,
+    )
+    result = dispatcher.run_once(now_ms=fixed_now_ms)
+    # 5) 断言 URGENT 先于 NORMAL
+    assert result.sent == 2
+    sent_subjects = [log["subject"] for log in smtp_transport.sent_log]
+    assert sent_subjects == ["B22_P3_URGENT", "B22_P3_NORMAL"], (
+        f"B2.2 P3 反向契约失败!\n"
+        f"  非临近场景期望 [URGENT 早, NORMAL 晚]\n"
+        f"  实际顺序: {sent_subjects}\n"
+        f"  B2.2 不应破坏非临近场景的 priority DESC 排序"
+    )

@@ -77,6 +77,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from email.message import EmailMessage
+from typing import Any
 
 from loguru import logger
 
@@ -114,6 +115,34 @@ _PRIORITY_SORT_KEY: dict[str, int] = {
     OutboxPriority.BATCH.value: 1,
     OutboxPriority.DIGEST.value: 0,
 }
+
+
+# v0.2 B2.2: SLA 临近窗口 — 5 分钟(D5 业务调度器范本,5min 阈值是业界"即将逾期"惯例)
+_SLA_URGENT_WINDOW_MS: int = 5 * 60 * 1000
+
+
+def _is_sla_urgent(entry: Any, now_ms: int) -> bool:
+    """v0.2 B2.2: 判断 outbox entry 是否 SLA 临近(即将逾期 5min 内)。
+
+    沿 D5.6.4 P1-3 helper 抽离范本(辅助函数下沉,test 隔离,排序逻辑简化)。
+
+    Args:
+        entry:   任意带 sla_due_at_ms 属性的对象(OutboxEntry 或 SimpleNamespace)
+        now_ms:  当前时间(Unix epoch ms)
+
+    Returns:
+        bool: True = SLA 临近(sla_due_at_ms < now_ms + 5min,严格 <)
+              False = 非临近(包含 sla_due_at_ms=None / 已过期 / 宽裕 3 种)
+
+    契约细节:
+        - sla_due_at_ms is None → False(沿 B2.1 向后兼容,旧 outbox 条目 NULL 视为非临近)
+        - sla_due_at_ms < now_ms + 5min → True(已过期 + 临近 5min 内)
+        - sla_due_at_ms >= now_ms + 5min → False(临界相等不临近,严格 < 比较)
+    """
+    sla_due_at_ms = getattr(entry, "sla_due_at_ms", None)
+    if sla_due_at_ms is None:
+        return False
+    return bool(sla_due_at_ms < now_ms + _SLA_URGENT_WINDOW_MS)
 
 
 # ===== DispatcherResult dataclass(7 字段 — 沿 core/sync.py:SyncResult 7 字段范本)=====
@@ -413,8 +442,12 @@ class OutboxDispatcher:
         failed_entries = store.by_status(OutboxStatus.FAILED.value, limit=self._batch_size)
         # 合并 + 优先级排序(批内统一排序,失败重试与新邮件同台竞争)
         all_entries = approved_entries + failed_entries
+        # v0.2 B2.2:第 0 关键字 = sla_urgent_key(0=临近,1=非临近)
+        #   临近项(sla_due_at_ms < now+5min)前置,LOW 临近 > URGENT 非临近
+        #   非临近项保持原 priority DESC + created_at ASC(沿 D5.5.4 / D5.5.5 范本)
         all_entries.sort(
             key=lambda e: (
+                0 if _is_sla_urgent(e, start_ms) else 1,  # B2.2 SLA 临近前置
                 -_PRIORITY_SORT_KEY.get(e.priority, 0),  # priority DESC
                 e.created_at,  # created_at ASC(同优先级先入先出)
             )
@@ -492,8 +525,11 @@ class OutboxDispatcher:
             # else: 两池都空 → 不选任何,total_picked=0
         # 步骤 4:合并 + 全局重排(各池已 sorted;批内统一按 priority+created_at 排序)
         selected: list[OutboxEntry] = list(new_pick) + list(retry_pick)
+        # v0.2 B2.2:批内重排同步加 SLA 临近第 0 关键字(沿 L416-421 范本)
+        #   防 all_entries 已按 SLA 临近排,但 new_pick / retry_pick 拆分后顺序丢失
         selected.sort(
             key=lambda e: (
+                0 if _is_sla_urgent(e, start_ms) else 1,  # B2.2 SLA 临近前置
                 -_PRIORITY_SORT_KEY.get(e.priority, 0),
                 e.created_at,
             )
