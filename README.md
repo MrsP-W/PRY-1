@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.1.0 正式发布前最后收官**(2026-06-16 下午)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + **6/16 A 阶段真跑 3 步按顺序**(Notes 1 + ⌥⌘N 降级 + SMTP 1)全部收口 + **6/16 上午 B 阶段真跑 2 步**(Spike C 月报真实生成 + Spike D launchd 真实部署)全部收口 + **6/16 下午 v0.2 B1/B2 docs 收口**(B1.1 6 优先级扩展 + B1.2 注释漂移同步 + B2.1 sla_due_at_ms + B2.2 SLA 临近排序) + **6/16 下午 v0.2 B4.1 收件人黑名单配置表落子层**(alembic 0010 + Store/严判/16 tests) + **6/16 晚 v0.2 B4.2 OutboxAdapter 黑名单 hot-path 阻断**(store_and_emit 入口接 is_blocked + 8 tests,union return type + 4 isinstance 收窄 + last_error 审计追溯) + **6/16 晚 v0.2 B4.2 closure blacklist_store type 严判**(`_validate_outbox_blacklist_store` helper + type(...) is 严格 + 3 负例测试(dict/list/subclass 拒收)) + **6/16 晚 v0.2 B4.3 EmailSendAdapter SMTP 发送路径二次防御**(send_and_emit 入口前再调 is_blocked,4 重防误发 + SMTP_REAL_NETWORK 门控沿 [[d5-6-5-real-send]] 范本,B4 收口 docs 待启动)。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N(降级);D10 7 Agent 角色 + monthly_report.py + launchd_install.sh;**9 端到端 9/9 已实化**(S7 ⌥⌘N 触发链路降级 → 业务层以 spike 30 笔 faker 验证 insert 链路代偿 / S8 月报真实生成(Spike C 6/16) / S9 launchd 真实部署(Spike D 6/16,装载实化,真触发等 6/23 全链路重启时手动 kickstart 补足))。当前 `make test` **1991 passed / 1 skipped / coverage 89.47%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `2af775f`,tag 不动);当前 HEAD 为 post-tag docs 收口状态(v0.2 B4.3 启动)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [reports/v0.1-real-spike-b-real-2026-06-16.md](reports/v0.1-real-spike-b-real-2026-06-16.md) / [docs/architecture.md](docs/architecture.md)。
+> **状态**：🎯 **v0.1.0 正式发布前最后收官**(2026-06-16 下午)。D1-D7 + S6 e2e + D9.1-D9.6 Apple Notes 全链路 + S7 e2e + D10 Agent 集成 + 月报 + launchd + **6/16 A 阶段真跑 3 步按顺序**(Notes 1 + ⌥⌘N 降级 + SMTP 1)全部收口 + **6/16 上午 B 阶段真跑 2 步**(Spike C 月报真实生成 + Spike D launchd 真实部署)全部收口 + **6/16 下午 v0.2 B1/B2 docs 收口**(B1.1 6 优先级扩展 + B1.2 注释漂移同步 + B2.1 sla_due_at_ms + B2.2 SLA 临近排序) + **6/16 下午 v0.2 B4.1 收件人黑名单配置表落子层**(alembic 0010 + Store/严判/16 tests) + **6/16 晚 v0.2 B4.2 OutboxAdapter 黑名单 hot-path 阻断**(store_and_emit 入口接 is_blocked + 8 tests,union return type + 4 isinstance 收窄 + last_error 审计追溯) + **6/16 晚 v0.2 B4.2 closure blacklist_store type 严判**(`_validate_outbox_blacklist_store` helper + type(...) is 严格 + 3 负例测试(dict/list/subclass 拒收)) + **6/16 晚 v0.2 B4.3 EmailSendAdapter SMTP 发送路径二次防御**(send_and_emit 入口前再调 is_blocked + 6 tests,union return type + 3 isinstance 收窄 + 复用 outbox_adapter `_validate_outbox_blacklist_store` helper + SEND_BLOCK_REASON_VALUES 扩 3→4 + blacklisted_recipient 业务阻断路径 + dispatcher.py union 收窄,B4 收口 docs 待启动)。D5.7.2 业务调度器真正锁定(B3 真实 SMTP 解封);D6+D7 微信/支付宝跨源去重;D9 Apple Notes + ⌥⌘N(降级);D10 7 Agent 角色 + monthly_report.py + launchd_install.sh;**9 端到端 9/9 已实化**(S7 ⌥⌘N 触发链路降级 → 业务层以 spike 30 笔 faker 验证 insert 链路代偿 / S8 月报真实生成(Spike C 6/16) / S9 launchd 真实部署(Spike D 6/16,装载实化,真触发等 6/23 全链路重启时手动 kickstart 补足))。当前 `make test` **1997 passed / 1 skipped / coverage 89.5%**,**9 质量门 9/9 全绿**(8 原 + 1 fail_under)。**Git tag `v0.1.0`** 已落(commit `2af775f`,tag 不动);当前 HEAD 为 post-tag docs 收口状态(v0.2 B4.3 SMTP 发送路径二次防御)。详见 [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [reports/v0.1-real-spike-b-real-2026-06-16.md](reports/v0.1-real-spike-b-real-2026-06-16.md) / [docs/architecture.md](docs/architecture.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(1991 passed / 1 skipped,覆盖率 89.47%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(1997 passed / 1 skipped,覆盖率 89.5%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(1991 passed / 1 skipped,覆盖率 89.47%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(1997 passed / 1 skipped,覆盖率 89.5%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

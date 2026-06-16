@@ -9,7 +9,7 @@ D5.3 5 项契约(2026-06-12 启动):
        - send_and_emit(成功, send_succeeded=True) → SendDecisionReport
          状态机推进: PENDING_SEND/APPROVED → SENDING → SENT
          event: email.send.sent
-       - record_send_business_blocked_and_emit(业务阻断, 3 类白名单) → SendBlockedDecisionReport
+       - record_send_business_blocked_and_emit(业务阻断, 4 类白名单,v0.2 B4.3 扩 3→4) → SendBlockedDecisionReport
          触发: smtplib.SMTPRecipientsRefused / SMTPSenderRefused / SMTPDataError
          状态: PENDING_SEND/APPROVED → CANCELLED(永不 retry, recovery_policy="none")
          event: email.send.business_blocked
@@ -57,6 +57,7 @@ from dataclasses import dataclass
 from typing import Any, Literal, Protocol
 
 from my_ai_employee.core.outbox import OutboxStatus
+from my_ai_employee.db.blacklist import RecipientBlacklistStore
 from my_ai_employee.db.outbox import OutboxIllegalTransitionError, OutboxStore
 from my_ai_employee.policy.exceptions import (
     SMTPSendIllegalTransitionError,
@@ -70,6 +71,7 @@ from my_ai_employee.policy.lane_board import LaneBoard, LaneEntry, LaneStatus
 # 复用 D4.8 契约 helper(改一处全改 — D4.7.3 v1.0.3 P1-1 范本)
 from my_ai_employee.policy.outbox_adapter import (
     _validate_draft_tone,  # noqa: F401  # OutboxTone 字段值与 DraftTone 一致
+    _validate_outbox_blacklist_store,  # v0.2 B4.3 复用:send_and_emit hot-path 严判
     _validate_outbox_body,
     _validate_outbox_email_id,
     _validate_outbox_priority,
@@ -103,13 +105,15 @@ class _SMTPTransportLike(Protocol):
     def quit(self) -> Any: ...
 
 
-# ===== 业务阻断 reason 白名单(D5.3 契约 1 — 业务阻断入口 3 类)=====
+# ===== 业务阻断 reason 白名单(D5.3 契约 1 — 业务阻断入口 4 类,v0.2 B4.3 扩 3→4)=====
 
 SEND_BLOCK_REASON_VALUES: frozenset[str] = frozenset(
     {
         "recipients_refused",  # smtplib.SMTPRecipientsRefused(收件人 5xx)
         "sender_refused",  # smtplib.SMTPSenderRefused(发件人被拒)
         "data_error",  # smtplib.SMTPDataError(4xx 数据错误)
+        # v0.2 B4.3:黑名单命中(审批通过 ≠ 拉黑解除,SMTP 发送前再调 is_blocked)
+        "blacklisted_recipient",
     }
 )
 
@@ -228,7 +232,7 @@ def build_send_blocked_packet(
         scope=[_SEND_SCOPE_BLOCKED],
         resources=["connectors/smtp.py"],
         acceptance_criteria=[
-            f"reason 必为 3 类白名单(实际 {reason})",
+            f"reason 必为 4 类白名单(实际 {reason})",
             "send_blocked: Literal[True]",
             "kind=Literal['business_blocked']",
         ],
@@ -427,7 +431,7 @@ class SendBlockedDecisionReport:
     字段名硬区分(D4.7.3 v1.0.3 P2-1 范本):
         - send_blocked: Literal[True](业务阻断专属字段名)
         - kind: Literal["business_blocked"](与 SendFailureDecisionReport 区分)
-        - reason: 3 类白名单(recipients_refused / sender_refused / data_error)
+        - reason: 4 类白名单(recipients_refused / sender_refused / data_error / blacklisted_recipient)
         - last_error: 阻断原因描述(必填非空)
         - consecutive_send_failures: 必为 0(业务阻断不计入失败累加器)
     """
@@ -437,7 +441,7 @@ class SendBlockedDecisionReport:
     lane_entry_id: str
     liveness: Liveness
     last_error: str  # 必填非空
-    reason: str  # 3 类白名单
+    reason: str  # 4 类白名单
     outbox_id: int
     email_id: int
     subject: str
@@ -451,7 +455,7 @@ class SendBlockedDecisionReport:
     kind: Literal["business_blocked"] = "business_blocked"
 
     def __post_init__(self) -> None:
-        """D5.3 业务阻断字段契约校验(7 项核心契约 + 3 类白名单)."""
+        """D5.3 业务阻断字段契约校验(7 项核心契约 + 4 类白名单)."""
         if self.send_blocked is not True:
             raise ValueError(
                 f"SendBlockedDecisionReport.send_blocked 必为 True, 实际 {self.send_blocked!r}"
@@ -473,7 +477,7 @@ class SendBlockedDecisionReport:
             )
         if self.reason not in SEND_BLOCK_REASON_VALUES:
             raise ValueError(
-                f"SendBlockedDecisionReport.reason 必须是 3 类白名单 "
+                f"SendBlockedDecisionReport.reason 必须是 4 类白名单 "
                 f"{sorted(SEND_BLOCK_REASON_VALUES)!r}, 实际 {self.reason!r}"
             )
         if (
@@ -587,7 +591,7 @@ class SendFailureDecisionReport:
 class EmailSendAdapter:
     """D5.3 业务层接入适配器 — outbox SMTP 发送 接入 PolicyEngine 5 件套.
 
-    复用 D4.7.3 + D4.7.4 + D4.8 范本(5 依赖可注入 + 三入口架构):
+    复用 D4.7.3 + D4.7.4 + D4.8 范本(6 依赖可注入 + 三入口架构):
         - source: 数据源头(必填非空白)
         - smtp_transport: SMTPTransport Protocol(D5.1 SmtpLibTransport 生产 +
           InMemorySmtpTransport 测试,D5.3 接受任何兼容类)
@@ -595,10 +599,13 @@ class EmailSendAdapter:
         - engine: PolicyEngine(D4.4 决策引擎)
         - heartbeat: Heartbeat(LLM 探活)
         - board: LaneBoard(发送任务看板)
+        - blacklist_store: RecipientBlacklistStore(v0.2 B4.3 SMTP 发送路径二次防御,
+          复用 outbox_adapter._validate_outbox_blacklist_store helper)
 
     三入口互斥(D4.7.3 v1.0.1 P1-1 拆分):
         - send_and_emit(成功, send_succeeded=True) → SendDecisionReport
-        - record_send_business_blocked_and_emit(业务阻断, 3 类白名单) → SendBlockedDecisionReport
+          (v0.2 B4.3:黑名单命中时返回 SendBlockedDecisionReport)
+        - record_send_business_blocked_and_emit(业务阻断, 4 类白名单) → SendBlockedDecisionReport
         - record_send_failure_and_emit(技术失败, 4 类异常) → SendFailureDecisionReport
 
     lane_entry_id 命名: send:<source>:<run_id>(与 classify: / sync: / draft: / review: / outbox: 区分)
@@ -624,6 +631,7 @@ class EmailSendAdapter:
         engine: PolicyEngine | None = None,
         heartbeat: Heartbeat | None = None,
         board: LaneBoard | None = None,
+        blacklist_store: RecipientBlacklistStore | None = None,
     ) -> None:
         # D4.7.3 v1.0.5 P2-2 范本: source 严判 strip() 语义非空
         if not isinstance(source, str) or not source.strip():
@@ -639,6 +647,10 @@ class EmailSendAdapter:
             heartbeat if heartbeat is not None else Heartbeat(idle_threshold_ms=30_000)
         )
         self._board = board if board is not None else LaneBoard(idle_threshold_ms=60_000)
+        # v0.2 B4.3 引入: blacklist_store 默认 None(不接二次防御);注入 RecipientBlacklistStore
+        # 时 send_and_emit 入口前会调 is_blocked(entry.recipient_email) 二次校验
+        # 复用 outbox_adapter._validate_outbox_blacklist_store(type 严判 + is None fallback)
+        self._blacklist_store = _validate_outbox_blacklist_store(blacklist_store)
 
     def build_lane_entry_id(self, run_id: str) -> str:
         """生成 LaneBoard entry_id: 'send:<source>:<run_id>'."""
@@ -680,7 +692,7 @@ class EmailSendAdapter:
         run_id: str = "",
         transport_alive: bool = True,
         now_ms: int | None = None,
-    ) -> SendDecisionReport:
+    ) -> SendDecisionReport | SendBlockedDecisionReport:
         """成功发送入口(对应契约 1 成功路径 — PENDING_SEND/APPROVED → SENDING → SENT).
 
         Args:
@@ -695,7 +707,9 @@ class EmailSendAdapter:
             now_ms: 注入"当前时间"(测试用, None = int(time.time() * 1000))
 
         Returns:
-            SendDecisionReport: send_succeeded=True + outbox_id >= 1 + 11 字段透传
+            SendDecisionReport | SendBlockedDecisionReport:
+                - 正常发送: SendDecisionReport(send_succeeded=True + outbox_id >= 1 + 11 字段透传)
+                - 黑名单命中(v0.2 B4.3): SendBlockedDecisionReport(reason="blacklisted_recipient")
 
         Raises:
             ValueError: 入口严判失败
@@ -763,6 +777,31 @@ class EmailSendAdapter:
             raise ValueError(
                 f"outbox_id={outbox_id} 状态=APPROVED 但 last_approved_at_ms=None,"
                 f"无法 send_and_emit(D5.6.4 审批凭据必传,APPROVED 必带 last_approved_at_ms)"
+            )
+
+        # 2.5 v0.2 B4.3 二次防御:审批通过 ≠ 拉黑解除,SMTP 发送前再调 is_blocked
+        # 防护场景:入库时收件人不在黑名单(放行)→ 用户审批后被人工/自动加入黑名单 →
+        # 若不再校验,SMTP 会真发给黑名单邮箱
+        # 沿 B4.2 store_and_emit 范本:_validate_outbox_blacklist_store 严判 + hot-path 检查 +
+        # 命中走业务阻断入口(已含黑名单 reason 白名单)
+        if self._blacklist_store is not None and self._blacklist_store.is_blocked(
+            entry.recipient_email
+        ):
+            block_entry = self._blacklist_store.find_by_email(entry.recipient_email)
+            block_reason = block_entry.reason if block_entry else ""
+            last_error_str = (
+                f"{entry.recipient_email} 命中黑名单"
+                f"(reason={block_reason or 'unspecified'}, "
+                f"added_by={block_entry.added_by if block_entry else 'unknown'})"
+            )
+            # 走业务阻断入口(reason 白名单已含 blacklisted_recipient,Send 4 类扩)
+            return self.record_send_business_blocked_and_emit(
+                outbox_id=outbox_id,
+                reason="blacklisted_recipient",
+                last_error=last_error_str,
+                run_id=run_id,
+                transport_alive=transport_alive,
+                now_ms=now_ms,
             )
 
         # 3. 状态机推进 #1: PENDING_SEND/APPROVED → SENDING
@@ -1002,11 +1041,11 @@ class EmailSendAdapter:
         transport_alive: bool = True,
         now_ms: int | None = None,
     ) -> SendBlockedDecisionReport:
-        """业务阻断发送入口(对应契约 1 业务阻断路径 — 3 类白名单).
+        """业务阻断发送入口(对应契约 1 业务阻断路径 — 4 类白名单,v0.2 B4.3 扩 3→4).
 
         Args:
             outbox_id: OutboxEntry.id(>= 1)
-            reason: 3 类白名单(recipients_refused / sender_refused / data_error)
+            reason: 4 类白名单(recipients_refused / sender_refused / data_error)
             last_error: 阻断原因描述(str | Exception, 内部 str() 化)
 
         Returns:
@@ -1023,7 +1062,7 @@ class EmailSendAdapter:
             raise ValueError(f"reason 必须是 str, 实际 {type(reason).__name__}={reason!r}")
         if reason not in SEND_BLOCK_REASON_VALUES:
             raise ValueError(
-                f"reason 必须是 3 类白名单 {sorted(SEND_BLOCK_REASON_VALUES)!r}, 实际 {reason!r}"
+                f"reason 必须是 4 类白名单 {sorted(SEND_BLOCK_REASON_VALUES)!r}, 实际 {reason!r}"
             )
         if type(transport_alive) is not bool:
             raise ValueError(

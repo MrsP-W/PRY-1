@@ -265,12 +265,13 @@ def test_build_send_policy_context_consistent() -> None:
 
 
 def test_send_block_reason_values_whitelist() -> None:
-    """SEND_BLOCK_REASON_VALUES 冻结集含 3 类白名单(沿 D4.8 范本)."""
+    """SEND_BLOCK_REASON_VALUES 冻结集含 4 类白名单(v0.2 B4.3 扩 3→4 范本)."""
     assert isinstance(SEND_BLOCK_REASON_VALUES, frozenset)
     assert "recipients_refused" in SEND_BLOCK_REASON_VALUES
     assert "sender_refused" in SEND_BLOCK_REASON_VALUES
     assert "data_error" in SEND_BLOCK_REASON_VALUES
-    assert len(SEND_BLOCK_REASON_VALUES) == 3
+    assert "blacklisted_recipient" in SEND_BLOCK_REASON_VALUES
+    assert len(SEND_BLOCK_REASON_VALUES) == 4
 
 
 def test_send_failure_error_categories_whitelist() -> None:
@@ -396,6 +397,7 @@ def test_send_and_emit_success_approved_to_sent_pending_path(
         smtp_password="test_authcode_16",
         email_message=_make_email_message(),
     )
+    assert isinstance(report, SendDecisionReport)
     assert report.send_succeeded is True
     assert report.outbox_id == outbox_id
     # 状态机推进正确
@@ -433,6 +435,7 @@ def test_send_and_emit_success_approved_to_sent(
         smtp_password="test_authcode_16",
         email_message=_make_email_message(),
     )
+    assert isinstance(report, SendDecisionReport)
     assert report.send_succeeded is True
     entry = store.by_id(outbox_id)
     assert entry is not None
@@ -814,7 +817,7 @@ def test_record_blocked_invalid_reason(
         outbox_store=store,
         smtp_transport=smtp_transport,
     )
-    with pytest.raises(ValueError, match="3 类白名单"):
+    with pytest.raises(ValueError, match="4 类白名单"):
         adapter.record_send_business_blocked_and_emit(
             outbox_id=outbox_id,
             reason="invalid_reason_xxx",
@@ -1258,6 +1261,7 @@ def test_send_and_emit_latency_ms_non_negative_with_injected_now_ms(
     )
 
     # 关键断言:latency_ms 必 >= 0(防"时间倒流")
+    assert isinstance(report, SendDecisionReport)
     assert report.latency_ms >= 0, (
         f"D5.6.4 P0 修复失败:latency_ms={report.latency_ms} 负值,"
         f"说明 end_ms 还在用真实时间(系统时间 < 虚拟 now_ms)"
@@ -1267,3 +1271,250 @@ def test_send_and_emit_latency_ms_non_negative_with_injected_now_ms(
         f"D5.6.4 P0 修复不完全:latency_ms={report.latency_ms} != 0,"
         f"说明 start_ms/end_ms 时间源不一致"
     )
+
+
+# ===== v0.2 B4.3 EmailSendAdapter 黑名单 hot-path 二次防御(6 tests)=====
+
+
+def _approve_entry(store: OutboxStore, outbox_id: int) -> None:
+    """把 outbox_id 推到 APPROVED 状态(D5.6.4 P1 收窄要求 send_and_emit 必接 APPROVED)。"""
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
+
+
+def test_send_blacklist_hit_returns_blocked_report(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-1 黑名单命中 → send_and_emit 返回 SendBlockedDecisionReport(reason="blacklisted_recipient")。
+
+    阻断入口 SendBlockedDecisionReport.send_blocked=True + kind=business_blocked + cf=0。
+    """
+    from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+    blacklist_store = RecipientBlacklistStore(session_factory=session_factory_for_test(store))
+    blacklist_store.insert(
+        recipient_email="evil@bad.com",
+        reason="用户举报 spam",
+        added_by="manual",
+    )
+    outbox_id = _insert_pending_entry(store, email_id=2001)
+    # 调整 entry.recipient_email 与黑名单邮箱一致
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
+    # 由于 _insert_pending_entry 用的 recipient_email 形如 customer{email_id}@example.com,
+    # 黑名单是 evil@bad.com,我们要构造新条目 recipient_email = evil@bad.com
+    # 重新构造:insert + 改 recipient_email(直接 update 不可,需要新增一条)
+    outbox_id_evil = store.insert(
+        email_id=2002,
+        subject="测试主题",
+        body="测试正文超过十个字符,合规。",
+        tone="FORMAL",
+        recipient_email="evil@bad.com",
+    ).id
+    assert outbox_id_evil is not None
+    _approve_entry(store, outbox_id_evil)
+
+    adapter = EmailSendAdapter(
+        source="test-send-b43",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+        blacklist_store=blacklist_store,
+    )
+
+    smtp_transport.inject_status = SMTP_SEND_OK
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id_evil,
+        smtp_host="smtp.test.local",
+        smtp_port=465,
+        smtp_username="test@test.local",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    assert isinstance(report, SendBlockedDecisionReport)
+    assert report.send_blocked is True
+    assert report.kind == "business_blocked"
+    assert report.reason == "blacklisted_recipient"
+    assert report.consecutive_send_failures == 0  # 业务阻断永不计入 cf
+    assert report.recipient_email == "evil@bad.com"
+    assert "evil@bad.com" in report.last_error
+    assert "用户举报 spam" in report.last_error
+    # 关键:smtp_transport 没被调用(D4.7.3 v1.0.1 业务阻断零副作用)
+    assert len(smtp_transport.sent_log) == 0
+
+
+def test_send_blacklist_hit_does_not_transition_to_sending(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-2 黑名单命中 → outbox 不推到 SENDING,直接走 CANCELLED 终态(业务阻断路径)。"""
+    from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+    blacklist_store = RecipientBlacklistStore(session_factory=session_factory_for_test(store))
+    blacklist_store.insert(recipient_email="blocked@evil.com")
+    outbox_id = store.insert(
+        email_id=2003,
+        subject="测试主题",
+        body="测试正文超过十个字符,合规。",
+        tone="FORMAL",
+        recipient_email="blocked@evil.com",
+    ).id
+    assert outbox_id is not None
+    _approve_entry(store, outbox_id)
+
+    adapter = EmailSendAdapter(
+        source="test-send-b43-noop",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+        blacklist_store=blacklist_store,
+    )
+    adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.test.local",
+        smtp_port=465,
+        smtp_username="test@test.local",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    entry = store.by_id(outbox_id)
+    assert entry is not None
+    # 业务阻断:CANCELLED 终态,没有 SENDING 中间态
+    assert entry.status == "cancelled"
+    # smtp_transport 没真发
+    assert len(smtp_transport.sent_log) == 0
+
+
+def test_send_blacklist_miss_normal_send(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-3 黑名单未命中 → 走正常 send_and_emit 成功路径(SendDecisionReport)。"""
+    from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+    blacklist_store = RecipientBlacklistStore(session_factory=session_factory_for_test(store))
+    # 黑名单里有别的邮箱,不影响正常发送
+    blacklist_store.insert(recipient_email="other@evil.com")
+    outbox_id = _insert_pending_entry(store, email_id=2004)
+    _approve_entry(store, outbox_id)
+
+    adapter = EmailSendAdapter(
+        source="test-send-b43-pass",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+        blacklist_store=blacklist_store,
+    )
+    smtp_transport.inject_status = SMTP_SEND_OK
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.test.local",
+        smtp_port=465,
+        smtp_username="test@test.local",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    assert isinstance(report, SendDecisionReport)
+    assert report.send_succeeded is True
+    entry = store.by_id(outbox_id)
+    assert entry is not None
+    assert entry.status == "sent"
+
+
+def test_send_blacklist_none_default_no_block(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-4 blacklist_store=None(默认)→ 不阻断,正常发送(D4.7.3 v1.0.3 P2-2 is None fallback)。"""
+    outbox_id = _insert_pending_entry(store, email_id=2005)
+    _approve_entry(store, outbox_id)
+
+    adapter = EmailSendAdapter(
+        source="test-send-b43-none",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+        # blacklist_store 不传,默认 None
+    )
+    smtp_transport.inject_status = SMTP_SEND_OK
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.test.local",
+        smtp_port=465,
+        smtp_username="test@test.local",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    assert isinstance(report, SendDecisionReport)
+    assert report.send_succeeded is True
+
+
+def test_send_blacklist_inactive_soft_deleted_not_blocked(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-5 黑名单软删除(is_active=0)→ 不阻断(沿 B4.1 Store 软删除兼容)。"""
+    from my_ai_employee.db.blacklist import RecipientBlacklistStore
+
+    blacklist_store = RecipientBlacklistStore(session_factory=session_factory_for_test(store))
+    entry = blacklist_store.insert(recipient_email="soft-del@evil.com")
+    # 软删除(B4.1 deactivate 接收 bl_id:int,非 recipient_email)
+    blacklist_store.deactivate(entry.id)
+    outbox_id = store.insert(
+        email_id=2006,
+        subject="测试主题",
+        body="测试正文超过十个字符,合规。",
+        tone="FORMAL",
+        recipient_email="soft-del@evil.com",
+    ).id
+    assert outbox_id is not None
+    _approve_entry(store, outbox_id)
+
+    adapter = EmailSendAdapter(
+        source="test-send-b43-soft",
+        outbox_store=store,
+        smtp_transport=smtp_transport,
+        blacklist_store=blacklist_store,
+    )
+    smtp_transport.inject_status = SMTP_SEND_OK
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.test.local",
+        smtp_port=465,
+        smtp_username="test@test.local",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    assert isinstance(report, SendDecisionReport)
+    assert report.send_succeeded is True
+
+
+def test_send_blacklist_store_dict_type_mismatch_rejected(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport
+) -> None:
+    """B4.3-6 blacklist_store 传 dict → ValueError(type 严判,拒 duck-typed fake)。
+
+    复用 outbox_adapter._validate_outbox_blacklist_store(type() is 严格):
+    黑名单 SMTP 二次防御是安全门,严禁子类偷偷绕过严判。
+    """
+    fake_dict = {
+        "is_blocked": lambda email: False,
+        "find_by_email": lambda email: None,
+    }
+    with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
+        EmailSendAdapter(
+            source="test-send-b43-dict",
+            outbox_store=store,
+            smtp_transport=smtp_transport,
+            blacklist_store=fake_dict,  # type: ignore[arg-type]
+        )
+
+
+def session_factory_for_test(store: OutboxStore):  # type: ignore[no-untyped-def]
+    """从 OutboxStore 反推 session_factory(供 RecipientBlacklistStore 复用,避免 fixture 重复)。
+
+    沿 B4.2 测试范本:用 store 的 session_factory 共享同一个 SQLite InMemory DB,
+    保证 RecipientBlacklist 与 OutboxEntry 在同一 session 内可见。
+    """
+    # OutboxStore.__init__ 接受 session_factory,反射取出
+    return store._session_factory  # type: ignore[attr-defined]

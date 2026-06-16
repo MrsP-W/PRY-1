@@ -92,6 +92,7 @@ from my_ai_employee.policy.exceptions import (
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.send_adapter import (
     EmailSendAdapter,
+    SendBlockedDecisionReport,  # v0.2 B4.3:union return type 引入
     SendDecisionReport,
 )
 from my_ai_employee.scheduler.backoff import compute_retry_after_ms
@@ -736,8 +737,9 @@ class OutboxDispatcher:
 
         # 6. 调 send_and_emit — 异常按 D5.3 映射分流
         # D5.6.1 P0 修复:从 self._smtp_* 读,不再硬编码 smtp.test.local / @test.local / 占位密码
+        # v0.2 B4.3:返回类型改 union(SendDecisionReport | SendBlockedDecisionReport)
         try:
-            report: SendDecisionReport = adapter.send_and_emit(
+            report: SendDecisionReport | SendBlockedDecisionReport = adapter.send_and_emit(
                 outbox_id=entry.id,  # type: ignore[arg-type]
                 smtp_host=self._smtp_host,
                 smtp_port=self._smtp_port,
@@ -750,7 +752,8 @@ class OutboxDispatcher:
             )
             logger.debug(
                 f"OutboxDispatcher sent: outbox_id={entry.id} event_id={report.event_id} "
-                f"latency_ms={report.latency_ms}"
+                # v0.2 B4.3:union return type,只 SendDecisionReport 有 latency_ms
+                f"latency_ms={getattr(report, 'latency_ms', 0)}"
             )
             # 6a. 成功 → 清内存退避状态
             self._failure_state.pop(entry.id, None)
