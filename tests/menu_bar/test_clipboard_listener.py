@@ -99,7 +99,9 @@ def test_run_quartz_loop_setup_failure_pushes_tcc_denied(
     fake_tap = MagicMock()
     fake_quartz = MagicMock()
     fake_quartz.CGEventTapCreate = MagicMock(return_value=fake_tap)
-    fake_quartz.CFMachPortCreateRunLoopSource = MagicMock(side_effect=RuntimeError("CFRunLoop setup 失败"))
+    fake_quartz.CFMachPortCreateRunLoopSource = MagicMock(
+        side_effect=RuntimeError("CFRunLoop setup 失败")
+    )
 
     monkeypatch.setattr(cl_module, "Quartz", fake_quartz)
 
@@ -181,9 +183,7 @@ def test_build_event_dict_validates_event_type() -> None:
 # ===== T9. 子进程 start 调 multiprocessing.Process.start =====
 
 
-def test_start_calls_super_start(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_start_calls_super_start(event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch) -> None:
     """T9: proc.start() 调 multiprocessing.Process.start(不真 spawn,沿 D5 范本)."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
 

@@ -101,27 +101,19 @@ class HotkeyListenerProcess(_mp.Process):
             # Quartz C 回调函数(签名固定:(proxy, type, event, refcon) -> CGEvent)
             # 仅判 ⌥⌘N 组合(Alt + Cmd + N 按下) → 推 hotkey
             # 其他事件透传返回 event(沿 Quartz 文档)
-            def _callback(
-                proxy: Any, event_type: int, event: Any, refcon: Any
-            ) -> Any:
+            def _callback(proxy: Any, event_type: int, event: Any, refcon: Any) -> Any:
                 if event_type != Quartz.kCGEventKeyDown:
                     return event
                 flags = Quartz.CGEventGetFlags(event)
-                keycode = Quartz.CGEventGetIntegerValueField(
-                    event, Quartz.kCGKeyboardEventKeycode
-                )
-                if (
-                    keycode == _KEY_CODE_N
-                    and (flags & _KC_MOD_ALT)
-                    and (flags & _KC_MOD_CMD)
-                ):
+                keycode = Quartz.CGEventGetIntegerValueField(event, Quartz.kCGKeyboardEventKeycode)
+                if keycode == _KEY_CODE_N and (flags & _KC_MOD_ALT) and (flags & _KC_MOD_CMD):
                     self._emit_hotkey()
                 return event
 
             # 注册全局事件 tap(沿 Quartz 文档)
             tap = Quartz.CGEventTapCreate(
-                Quartz.kCGSessionEventTap,        # 会话级 tap(全系统范围)
-                Quartz.kCGHeadInsertEventTap,    # 在事件流头部插入
+                Quartz.kCGSessionEventTap,  # 会话级 tap(全系统范围)
+                Quartz.kCGHeadInsertEventTap,  # 在事件流头部插入
                 Quartz.kCGEventTapOptionDefault,  # 主动监听(可过滤)
                 Quartz.CGEventMaskBit(Quartz.kCGEventKeyDown),  # 只监听键盘按下
                 _callback,
@@ -129,9 +121,7 @@ class HotkeyListenerProcess(_mp.Process):
             )
             if tap is None:
                 # CGEvent.tapCreate 返回 None = 辅助功能未授权(沿 macOS TCC 范本)
-                self._emit_tcc_denied(
-                    reason="Quartz CGEvent.tapCreate 返回 None(辅助功能未授权)"
-                )
+                self._emit_tcc_denied(reason="Quartz CGEvent.tapCreate 返回 None(辅助功能未授权)")
                 return
 
             # 把 tap 接入 CFRunLoop 主循环(子进程内)
@@ -187,9 +177,7 @@ def build_event_dict(event_type: str, **fields: Any) -> dict[str, Any]:
     """
     valid_events = {_EVENT_HOTKEY, _EVENT_TCC_DENIED, _EVENT_LISTENER_STARTED}
     if event_type not in valid_events:
-        raise ValueError(
-            f"event_type 必 ∈ {sorted(valid_events)}, 实际 {event_type!r}"
-        )
+        raise ValueError(f"event_type 必 ∈ {sorted(valid_events)}, 实际 {event_type!r}")
     return {"event": event_type, **fields}
 
 
