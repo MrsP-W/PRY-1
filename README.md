@@ -189,6 +189,7 @@ make help
 | **v0.2 D8.4** S11 真链路 spike(35 baseline + 1 ¥888 异常) + e2e 3 cases | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2.1 #4** NoteStore 状态机化(sync_status 5 状态 NEW/STRUCTURED/PRIVATE_SKIP/FAILED/ARCHIVED + 状态机守卫 + 13 tests) | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2.1 #5** NoteStore L2/L3 跨源去重(normalized_fingerprint title+folder+updated_at_date SHA-256 + find_candidates_by_fingerprint + 11 tests) | ✅ 6/17 落地 | 2026-06-17 |
+| **v0.2.1 #3** ExpenseServiceStub 实化(ExpenseServiceImpl 7 方法 + NoteStore/AnomalyDetector + 5 分钟缓存 + 12 tests) | ✅ 6/17 落地 | 2026-06-17 |
 
 ---
 
