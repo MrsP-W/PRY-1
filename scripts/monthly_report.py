@@ -58,6 +58,7 @@ _REQUIRED_PLACEHOLDERS = (
     "{transaction_count}",
     "{category_breakdown}",
     "{anomaly_highlights}",
+    "{cold_start_merchants}",  # D8.5.3 新增
     "{income_mom}",
     "{expense_mom}",
 )
@@ -158,15 +159,26 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
     )
 
     anomaly_lines: list[str] = []
+    cold_start_lines: list[str] = []
     try:
         for r in rows:
             results = _detector.detect_all(r)
-            if results:
-                kinds = ", ".join(sorted({res.kind for res in results}))
+            if not results:
+                continue
+            # D8.5.3 拆分:真异常(is_signal=False) vs 业务信号(is_signal=True,只 new_merchant)
+            true_anomalies = [res for res in results if not res.is_signal]
+            signals = [res for res in results if res.is_signal]
+            if true_anomalies:
+                kinds = ", ".join(sorted({res.kind for res in true_anomalies}))
                 anomaly_lines.append(
                     f"- {r.transaction_date} | {r.counterparty or '?'} | "
                     f"¥{r.amount} | 异常={kinds} | {r.category or '?'}"
                 )
+            if signals:
+                # 冷启动信号只列商家(去重)
+                for res in signals:
+                    cp = res.context.get("counterparty", r.counterparty or "?")
+                    cold_start_lines.append(cp)
     except Exception as _e:  # noqa: BLE001 — Detector 异常不能让月报崩
         # 异常告警为业务信号,非阻塞(沿 D4.7.3 v1.0.1 范本:业务阻断 vs 技术失败分离)
         anomaly_lines = [f"_(异常检测暂不可用: {type(_e).__name__})_"]
@@ -185,6 +197,24 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
         )
     else:
         anomaly_highlights = "✅ 无异常"
+
+    # 冷启动商家段(D8.5.3 新增) — 商家画像 < 5 笔历史,标 is_signal=True
+    # 业务信号 ≠ 真异常,单独成段展示,不影响 anomaly_highlights 误报率
+    unique_cold_start = sorted(set(cold_start_lines))
+    if unique_cold_start:
+        cold_start_merchants = "\n".join(
+            [
+                "🌱 **冷启动商家** (D8.5.3 业务信号 — 商家画像 < 5 笔历史)",
+                "",
+                "本月首次出现或累计 < 5 笔的商家(不是真异常,无需告警):",
+                "",
+                *[f"- {cp}" for cp in unique_cold_start[:20]],
+                "",
+                "> 注:冷启动商家仅作业务信号展示,不计入异常告警段;累计 5 笔后自动画像",
+            ]
+        )
+    else:
+        cold_start_merchants = "_(无冷启动商家)_"
 
     # 上月对比(同比环比 = month-over-month)
     prev_stmt = select(Transaction).where(
@@ -209,6 +239,7 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
         "transaction_count": len(rows),
         "category_breakdown": category_breakdown,
         "anomaly_highlights": anomaly_highlights,
+        "cold_start_merchants": cold_start_merchants,  # D8.5.3 新增
         "income_mom": _delta(total_income, prev_income),
         "expense_mom": _delta(total_expense, prev_expense),
         "income_yoy": "—",  # v0.1 不做同比(留 v0.2)
