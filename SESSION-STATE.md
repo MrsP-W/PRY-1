@@ -1,13 +1,15 @@
-# SESSION-STATE — 端午连休 checkpoint
+# SESSION-STATE — 端午不休息 + NoteStructurerService 启动
 
-> **最后更新**:2026-06-17 17:30 · **项目**:我的AI员工 · **HEAD**: `29f282e`
-> **状态**:✅ v0.2.1 docs 收口 · 端午连休保持 · 6/23+ 全链路重启
+> **最后更新**:2026-06-17 17:45 · **项目**:我的AI员工 · **HEAD**: `517728c`
+> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · NoteStructurerService.structure_and_emit 接入开工
 
 ---
 
-## 🎯 端午连休(6/19-22)策略 — 链路暂停
+## 🎯 端午不休息(6/19-22)策略 — 继续推进
 
-**决策**:B 选项「端午连休保持」— 2 days 工作日 6/17-18 收口,6/19-22 链路暂停,6/23 周二全链路重启。
+**决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
+
+**当前启动候选**:**NoteStructurerService.structure_and_emit 接入**(v0.2.2 P0 / 1 commit / 业务层接入)。
 
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 会话生命周期管理 + 4 阈值切分 + 4 步旧大历史处理
 
@@ -23,15 +25,17 @@
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ⏸️ 推迟到 6/23+(真 CSV 待用户手动导出) |
 | outlook/gmail SMTP provider | ⏸️ docs-only(等用户单独决策) |
+| **NoteStructurerService.structure_and_emit 接入** | 🟢 **开工**(2026-06-17 选定,v0.2.2 P0) |
 
-## 📅 端午连休时间线(2026)
+## 📅 端午不休息时间线(2026)
 
 | 日期 | 星期 | 行动 | 状态 |
 |------|------|------|------|
-| 6/17 | 周三 | **今天** — v0.2.1 docs 收口 commit `29f282e` | ✅ 完成 |
-| 6/18 | 周四 | **明天** — B 阶段启动项 7 项 checklist 启动 | ⏳ 待办 |
-| 6/19-22 | 端午 4 天连休 | 链路回归日(信息员 v1.6 应急版 + 周末简化模式) | ⏸️ 暂停 |
-| 6/23 | 周二 | **全链路重启** + 手动 `launchctl kickstart -k gui/$(id -u)/com.myaiemployee.agent` | ⏸️ 计划 |
+| 6/17 | 周三 | v0.2.1 docs 收口 `29f282e` + 端午准备 `517728c` | ✅ |
+| 6/17 17:45 | 周三 | **NoteStructurerService.structure_and_emit 接入开工** | 🟢 进行中 |
+| 6/18 | 周四 | NoteStructurerService 接入继续 | ⏳ |
+| 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
+| 6/23+ | 周二 | W3 真账单 spike(等真 CSV) | ⏸️ |
 
 ## 📋 6/23 下一棒(用户手动触发)
 
@@ -42,12 +46,15 @@
 5. **7/1 月度复盘** — B 类延后清单重新评估
 6. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送)
 
-## 🔒 端午期间禁止触碰
+## 🔒 端午不休息期间禁止触碰(范围收窄)
 
-- ❌ 我的AI员工项目代码(6/19-22 链路暂停)
-- ❌ Agent Assistant 项目(7 文件夹重构 uncommitted churn,避免混合未提交变更)
-- ❌ v0.1.0 tag 锚(2af775f 不动,沿 D5.7.2 范本)
 - ❌ outlook/gmail SMTP provider 决策(单独门控)
+- ❌ v0.1.0 tag 锚(2af775f 不动,沿 D5.7.2 范本)
+- ❌ Agent Assistant 项目(7 文件夹重构 uncommitted churn,避免混合未提交变更)
+
+**可继续**:
+- ✅ v0.2.2+ 启动候选(NoteStructurerService / 1-click UI / L3 模糊匹配 / OAuth Phase 2 / badge 刷新 / 57 errors 调优)
+- ✅ 真账单 spike(等用户提供真实 CSV)
 
 ## 🆘 6/23 重启后首查项
 
