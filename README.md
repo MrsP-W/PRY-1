@@ -234,6 +234,8 @@ make help
 | [docs/week1-mvp.md](docs/week1-mvp.md) | Week 1 计划（D1-D5：邮件 + 日程）|
 | [docs/week2-mvp.md](docs/week2-mvp.md) | Week 2 计划（D6-D10：财务 + 笔记）|
 | [docs/v0.1-launch-plan.md](docs/v0.1-launch-plan.md) | v0.1 启动规划(D6/D7/D9/D10 4 子阶段 + 收口)|
+| [docs/v0.2-launch-plan.md](docs/v0.2-launch-plan.md) | v0.2 启动规划(6 子阶段预映射 + 5 决策 + 完成定义)|
+| [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 
 ---
 
