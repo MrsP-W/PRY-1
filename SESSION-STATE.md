@@ -1,6 +1,6 @@
 # SESSION-STATE — 端午不休息 + v0.2.2 候选 #3 关闭
 
-> **最后更新**:2026-06-17 20:30 · **项目**:我的AI员工 · **HEAD**: `b3e1a4e` (待 commit)
+> **最后更新**:2026-06-17 20:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
 > **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭
 
 ---
@@ -17,9 +17,9 @@
 
 | 维度 | 实际值 |
 |------|--------|
-| HEAD | `b3e1a4e feat(dedup+notes): v0.2.2 #3 L3 模糊匹配 ±1 day 接入` (待 commit) |
+| v0.2.2 #3 收口锚 | `de3d1f7 docs(closure): v0.2.2 #3 L3 模糊匹配 ±1 day 收口报告` |
 | 分支 | `main` |
-| 工作区 | docs-only 收口待 commit ✅ |
+| 工作区 | clean ✅ |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
 | 8/8 质量门 | 全绿(2159 passed / 1 skipped / 7 others) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
@@ -27,7 +27,7 @@
 | outlook/gmail SMTP provider | ⏸️ docs-only(等用户单独决策) |
 | **NoteStructurerService.structure_and_emit 接入** | ✅ **关闭**(commit `4862fb3` · 4 文件 / +204 -7 / 3 new tests) |
 | **NoteConfirmService 1-click 确认 UI** | ✅ **关闭**(commit `1c2331a` · 5 文件 / +1104 -1 / 32 new tests) |
-| **L3 模糊匹配 ±1 day** | ✅ **关闭**(commit `b3e1a4e` 待 commit · 4 文件 / +358 -3 / 24 new tests) |
+| **L3 模糊匹配 ±1 day** | ✅ **关闭**(feat `5de016a` + docs `de3d1f7` · 24 new tests) |
 
 ## 📅 端午不休息时间线(2026)
 
@@ -38,10 +38,10 @@
 | 6/17 18:00 | 周三 | **v0.2.2 P0 收口 docs commit `07a9f26`**(2 文件 / +124 -11) | ✅ |
 | 6/17 19:00 | 周三 | NoteConfirmService 1-click 确认 UI 接入开工 | ✅ |
 | 6/17 19:30 | 周三 | **v0.2.2 #2 feat commit `1c2331a`**(5 文件 / +1104 -1 / 32 new tests) | ✅ |
-| 6/17 19:30 | 周三 | **v0.2.2 #2 收口 docs 待 commit**(1 文件 reports + SESSION-STATE) | 🟢 |
+| 6/17 19:30 | 周三 | **v0.2.2 #2 收口 docs commit `90cd131`**(reports + SESSION-STATE) | ✅ |
 | 6/18 | 周四 | L3 模糊匹配 ±1 day 开工 | ✅ |
-| 6/17 20:00 | 周三 | **v0.2.2 #3 feat commit `b3e1a4e`**(4 文件 / +358 -3 / 24 new tests) | ✅ |
-| 6/17 20:30 | 周三 | **v0.2.2 #3 收口 docs 待 commit**(1 文件 reports + SESSION-STATE) | 🟢 |
+| 6/17 20:00 | 周三 | **v0.2.2 #3 feat commit `5de016a`**(4 文件 / +358 -3 / 24 new tests) | ✅ |
+| 6/17 20:30 | 周三 | **v0.2.2 #3 收口 docs commit `de3d1f7`**(reports + SESSION-STATE) | ✅ |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV) | ⏸️ |
 
