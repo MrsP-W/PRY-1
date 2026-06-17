@@ -705,6 +705,77 @@ class TransactionStore:
             stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
             return list(session.execute(stmt).scalars().all())
 
+    def list_by_source_in_time_window(
+        self,
+        source: str,
+        *,
+        since_ms: int,
+        until_ms: int | None = None,
+        limit: int = 200,
+    ) -> list[Transaction]:
+        """按 source + 精确毫秒时窗查多条(用于异常检测热路径,沿 D8.5 修复).
+
+        与 list_by_source 的关键差异:
+            - list_by_source 用 transaction_date (date 类型) 过滤,适合日报/月报
+            - list_by_source_in_time_window 用 imported_at_ms (int 类型) 过滤,
+              适合"过去 N 分钟/小时"精确时窗(异常检测)
+
+        Args:
+            source: 业务源标识('wechat' / 'alipay' 等)
+            since_ms: 起始 Unix epoch ms(含)
+            until_ms: 结束 Unix epoch ms(含),None 表示不限(直到当前)
+            limit: 返回上限,默认 200(D8.2 frequency 阈值 5 笔 × 余量)
+
+        Returns:
+            按 imported_at_ms DESC 排序的 Transaction 列表
+
+        Raises:
+            TypeError: source 非 str
+            ValueError: since_ms / until_ms / limit 严判失败(类型 / 范围 / since_ms > until_ms)
+
+        D4.7.3 教训应用:
+            - type() is bool 检查在 isinstance 前(ms 字段拒 int 子类)
+            - since_ms / until_ms 必传 int(非 bool) >= 0
+            - since_ms <= until_ms 强约束(空时窗返 [] 即可,不需要报错)
+        """
+        # 1. source 严判(沿 list_by_source 同款)
+        source = self._validate_source(source)
+        # 2. ms 严判(沿 D4.7.3 v1.0.4 P2-2 范本)
+        if type(since_ms) is bool or not isinstance(since_ms, int) or since_ms < 0:
+            raise ValueError(
+                f"since_ms 必须是原生 int(非 bool) >= 0, "
+                f"实际 type={type(since_ms).__name__}, value={since_ms!r}"
+            )
+        if until_ms is not None and (
+            type(until_ms) is bool
+            or not isinstance(until_ms, int)
+            or until_ms < 0
+        ):
+            raise ValueError(
+                f"until_ms 必须是原生 int(非 bool) >= 0 或 None, "
+                f"实际 type={type(until_ms).__name__}, value={until_ms!r}"
+            )
+        # 3. since_ms <= until_ms(若 until_ms 传了)
+        if until_ms is not None and since_ms > until_ms:
+            raise ValueError(
+                f"since_ms ({since_ms}) > until_ms ({until_ms}),空时窗应传 since_ms==until_ms 或 until_ms=None"
+            )
+        # 4. limit 严判(沿 list_by_source)
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 10000:
+            raise ValueError(
+                f"limit 必须是 [1, 10000] 的 int(非 bool),"
+                f"实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        with self._session_factory() as session:
+            stmt = select(Transaction).where(
+                Transaction.source == source,
+                Transaction.imported_at_ms >= since_ms,
+            )
+            if until_ms is not None:
+                stmt = stmt.where(Transaction.imported_at_ms <= until_ms)
+            stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
     def find_candidates_by_fingerprint(
         self,
         fingerprint: str,

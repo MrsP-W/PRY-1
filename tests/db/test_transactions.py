@@ -503,3 +503,84 @@ def test_list_by_counterparty_validates_arguments(store) -> None:
     # limit 非 int → ValueError(不是 TypeError,沿 list_by_source 同款)
     with pytest.raises(ValueError, match="limit 必须是"):
         store.list_by_counterparty("星巴克", limit="100")  # type: ignore[arg-type]
+
+
+# ===== Segment 11 (v0.2 D8.5.1): list_by_source_in_time_window(2 cases)=====
+
+
+def test_list_by_source_in_time_window_filters_by_ms_precisely(store) -> None:
+    """Case 30 (D8.5.1) — list_by_source_in_time_window 精确毫秒时窗过滤(沿 D8.5 修复).
+
+    关键场景:微信 2024-05-12 14:30 / 5/13 09:15 / 5/14 18:45 / 5/15 20:00 / 5/16 12:30
+    5 笔相邻日,跨日但单日 1 笔。精确时窗 1 小时应只查到 0-1 笔,不误报 frequency。
+    """
+    fixtures = [
+        # (ext_id, imported_at_ms 占位 — 用 int 表达,后续精确)
+        ("ms-window-001", 1_715_000_000_000),  # 2024-05-12 14:30 UTC ms
+        ("ms-window-002", 1_715_000_000_000 + 8 * 3600 * 1000),  # +8h
+        ("ms-window-003", 1_715_000_000_000 + 24 * 3600 * 1000),  # +1d
+        ("ms-window-004", 1_715_000_000_000 + 48 * 3600 * 1000),  # +2d
+        ("ms-window-005", 1_715_000_000_000 + 72 * 3600 * 1000),  # +3d
+    ]
+    base_ms = fixtures[0][1]
+    for ext_id, ms in fixtures:
+        # 用 hash(ext_id) 转 hex 取前 32 位(纯小写 hex,沿 D6.2 范本)
+        fp = format(hash(ext_id) & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF, "032x")
+        store.insert(
+            source="wechat",
+            external_transaction_id=ext_id,
+            transaction_date=date(2024, 5, 12),
+            amount=Decimal("30.00"),
+            counterparty="测试商家",
+            normalized_fingerprint=fp,
+            raw_row_json="{}",
+            status="categorized",
+            imported_at_ms=ms,
+        )
+
+    # 时窗 = 1 小时,起点 = 第一笔 ms
+    rows = store.list_by_source_in_time_window(
+        "wechat",
+        since_ms=base_ms,
+        until_ms=base_ms + 3600 * 1000,  # 1 小时后
+        limit=200,
+    )
+    # 期望: 1 笔(只有 base_ms 那一笔落在 1h 时窗内)
+    assert len(rows) == 1
+    assert rows[0].external_transaction_id == "ms-window-001"
+
+    # 时窗 = 3 天,起点 = base_ms,无 until(直到当前)
+    rows = store.list_by_source_in_time_window(
+        "wechat",
+        since_ms=base_ms - 1,
+        limit=200,
+    )
+    # 期望: 5 笔全查到
+    assert len(rows) == 5
+
+
+def test_list_by_source_in_time_window_validates_arguments(store) -> None:
+    """Case 31 (D8.5.1) — list_by_source_in_time_window 严判 since_ms / until_ms / limit."""
+    # source 非 str → 严判失败(沿 _validate_source)
+    with pytest.raises(ValueError, match="source 必填"):
+        store.list_by_source_in_time_window("", since_ms=0)
+    # since_ms bool → ValueError(D4.7.3 v1.0.4 P2-2 范本:type() is bool)
+    with pytest.raises(ValueError, match="since_ms 必须是原生 int"):
+        store.list_by_source_in_time_window("wechat", since_ms=True)  # type: ignore[arg-type]
+    # since_ms < 0 → ValueError
+    with pytest.raises(ValueError, match="since_ms 必须是原生 int"):
+        store.list_by_source_in_time_window("wechat", since_ms=-1)
+    # until_ms bool → ValueError
+    with pytest.raises(ValueError, match="until_ms 必须是原生 int"):
+        store.list_by_source_in_time_window("wechat", since_ms=0, until_ms=True)  # type: ignore[arg-type]
+    # until_ms < 0 → ValueError
+    with pytest.raises(ValueError, match="until_ms 必须是原生 int"):
+        store.list_by_source_in_time_window("wechat", since_ms=0, until_ms=-1)
+    # since_ms > until_ms → ValueError(空时窗)
+    with pytest.raises(ValueError, match="空时窗"):
+        store.list_by_source_in_time_window("wechat", since_ms=1000, until_ms=500)
+    # limit 越界 → ValueError
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_source_in_time_window("wechat", since_ms=0, limit=0)
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_source_in_time_window("wechat", since_ms=0, limit=10001)
