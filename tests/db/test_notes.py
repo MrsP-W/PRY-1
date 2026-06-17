@@ -85,8 +85,11 @@ def valid_note_params() -> dict:
 # ===== 1. Note ORM 模型(3 tests)=====
 
 
-def test_note_orm_has_10_columns() -> None:
-    """1.1 Note ORM 必含 10 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms)."""
+def test_note_orm_has_11_columns() -> None:
+    """1.1 Note ORM 必含 11 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms/sync_status)。
+
+    v0.2.1 #4 增量(2026-06-17): 加 sync_status 列(5 状态枚举,默认 'NEW')。
+    """
     from my_ai_employee.db.notes import Note
 
     expected = {
@@ -100,6 +103,7 @@ def test_note_orm_has_10_columns() -> None:
         "tags",
         "synced_at_ms",
         "updated_at_ms",
+        "sync_status",
     }
     actual = {col.name for col in Note.__table__.columns}
     assert actual == expected, f"列不匹配:expected={expected}, actual={actual}"

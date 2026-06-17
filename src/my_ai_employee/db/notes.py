@@ -85,11 +85,11 @@ class NoteDuplicateError(Exception):
         self.original_error = original_error
 
 
-# ===== Note ORM(10 字段)=====
+# ===== Note ORM(11 字段, v0.2.1 #4 加 sync_status)=====
 
 
 class Note(Base):
-    """Apple Notes 主表(mirror 0008 alembic migration)。
+    """Apple Notes 主表(mirror 0008 alembic migration + 0012 sync_status)。
 
     字段注解:
         - id:                INTEGER PK AUTOINCREMENT
@@ -102,12 +102,29 @@ class Note(Base):
         - tags:              TEXT NULL
         - synced_at_ms:      INTEGER NOT NULL
         - updated_at_ms:     INTEGER NOT NULL
+        - sync_status:       TEXT NOT NULL DEFAULT 'NEW'  # v0.2.1 #4 状态机字段
+
+    sync_status 状态机(沿 [[v0.2.1-candidates-2026-06-17]] §5.2):
+        - NEW(初始入库,默认)
+        - STRUCTURED(LLM 结构化完成,NoteStructurerService 成功路径写入)
+        - PRIVATE_SKIP(私人笔记业务阻断,沿 D9.6 范本)
+        - FAILED(LLM 失败,可重试)
+        - ARCHIVED(用户归档,终态)
+
+    状态转换守卫(NoteStore.mark_* 4 方法):
+        - NEW → STRUCTURED    (mark_structured)
+        - NEW → PRIVATE_SKIP  (mark_private_skip)
+        - NEW → FAILED        (mark_failed)
+        - FAILED → STRUCTURED (mark_structured,重试成功)
+        - STRUCTURED → ARCHIVED (mark_archived)
+        - 其他转换: ValueError(沿 D6.6 P2 修复范本)
 
     约束:
         - UNIQUE(apple_note_id)
     索引:
         - idx_notes_folder_synced(folder, synced_at_ms DESC)
         - idx_notes_updated(updated_at_ms DESC)
+        - idx_notes_sync_status(sync_status)  # v0.2.1 #4 新增(按状态过滤热路径)
     """
 
     __tablename__ = "notes"
@@ -124,19 +141,56 @@ class Note(Base):
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)
     synced_at_ms: Mapped[int] = mapped_column(Integer, nullable=False)
     updated_at_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+    # v0.2.1 #4 状态机字段(5 状态枚举白名单)
+    sync_status: Mapped[str] = mapped_column(
+        Text, nullable=False, default="NEW", server_default="NEW"
+    )
 
     # 约束 + 索引(D3.2 雷区 #8: DESC 索引用 sa.text 包裹)
     __table_args__ = (
         UniqueConstraint("apple_note_id", name="uq_notes_apple_note_id"),
         Index("idx_notes_folder_synced", "folder", text("synced_at_ms DESC")),
         Index("idx_notes_updated", text("updated_at_ms DESC")),
+        Index("idx_notes_sync_status", "sync_status"),  # v0.2.1 #4 新增
     )
 
     def __repr__(self) -> str:
         return (
             f"<Note id={self.id} apple_note_id={self.apple_note_id!r} "
-            f"folder={self.folder!r} title={self.title!r}>"
+            f"folder={self.folder!r} title={self.title!r} sync_status={self.sync_status!r}>"
         )
+
+
+# ===== 状态机枚举常量(v0.2.1 #4 沿 [[v0.2.1-candidates-2026-06-17]] §5.2)=====
+
+# 5 状态枚举白名单(D6.6 P2 修复范本:状态机守卫拒绝非法转换)
+SYNC_STATUS_NEW: str = "NEW"
+SYNC_STATUS_STRUCTURED: str = "STRUCTURED"
+SYNC_STATUS_PRIVATE_SKIP: str = "PRIVATE_SKIP"
+SYNC_STATUS_FAILED: str = "FAILED"
+SYNC_STATUS_ARCHIVED: str = "ARCHIVED"
+
+# 合法状态白名单(用于状态机守卫严判)
+_VALID_SYNC_STATUSES: frozenset[str] = frozenset(
+    {
+        SYNC_STATUS_NEW,
+        SYNC_STATUS_STRUCTURED,
+        SYNC_STATUS_PRIVATE_SKIP,
+        SYNC_STATUS_FAILED,
+        SYNC_STATUS_ARCHIVED,
+    }
+)
+
+# 合法状态转换表(D6.6 P2 状态机守卫)
+_VALID_TRANSITIONS: dict[str, frozenset[str]] = {
+    SYNC_STATUS_NEW: frozenset(
+        {SYNC_STATUS_STRUCTURED, SYNC_STATUS_PRIVATE_SKIP, SYNC_STATUS_FAILED}
+    ),
+    SYNC_STATUS_STRUCTURED: frozenset({SYNC_STATUS_ARCHIVED}),
+    SYNC_STATUS_PRIVATE_SKIP: frozenset(),  # 终态
+    SYNC_STATUS_FAILED: frozenset({SYNC_STATUS_STRUCTURED}),  # 重试成功
+    SYNC_STATUS_ARCHIVED: frozenset(),  # 终态
+}
 
 
 # ===== NoteStore(沿 D6.4 TransactionStore 范本)=====
@@ -506,9 +560,108 @@ class NoteStore:
                 raise ValueError(f"apple_note_id={apple_note_id!r} 不存在, 无法 mark_structured")
             db_note.tags = ",".join(cleaned)
             db_note.synced_at_ms = now_ms
+            # v0.2.1 #4: 同步写 sync_status='STRUCTURED'(状态机守卫 NEW/FAILED → STRUCTURED)
+            self._check_state_transition(db_note.sync_status, SYNC_STATUS_STRUCTURED)
+            db_note.sync_status = SYNC_STATUS_STRUCTURED
             session.commit()
             session.refresh(db_note)
             return db_note
+
+    # ===== v0.2.1 #4 状态机守卫 + 4 新方法 =====
+
+    @staticmethod
+    def _check_state_transition(current: str, target: str) -> None:
+        """v0.2.1 #4 状态机守卫(沿 D6.6 P2 修复范本):拒绝非法状态转换。"""
+        if not isinstance(current, str) or current not in _VALID_SYNC_STATUSES:
+            raise ValueError(
+                f"当前 sync_status 非法, 必 ∈ {sorted(_VALID_SYNC_STATUSES)}, 实际 {current!r}"
+            )
+        if not isinstance(target, str) or target not in _VALID_SYNC_STATUSES:
+            raise ValueError(
+                f"目标 sync_status 非法, 必 ∈ {sorted(_VALID_SYNC_STATUSES)}, 实际 {target!r}"
+            )
+        valid_targets = _VALID_TRANSITIONS[current]
+        if target not in valid_targets:
+            raise ValueError(
+                f"状态机守卫拒绝非法转换: {current!r} → {target!r},"
+                f" 合法转换: {sorted(valid_targets) or ['(终态)']}"
+            )
+
+    def mark_private_skip(self, apple_note_id: str) -> Note:
+        """v0.2.1 #4 状态机推进 — sync_status='PRIVATE_SKIP'(私人笔记业务阻断,终态)。"""
+        apple_note_id = self._validate_apple_note_id(apple_note_id)
+        now_ms = int(time.time() * 1000)
+        with self._sf() as session:
+            stmt = select(Note).where(Note.apple_note_id == apple_note_id)
+            db_note = session.execute(stmt).scalar_one_or_none()
+            if db_note is None:
+                raise ValueError(f"apple_note_id={apple_note_id!r} 不存在, 无法 mark_private_skip")
+            self._check_state_transition(db_note.sync_status, SYNC_STATUS_PRIVATE_SKIP)
+            db_note.synced_at_ms = now_ms
+            db_note.sync_status = SYNC_STATUS_PRIVATE_SKIP
+            session.commit()
+            session.refresh(db_note)
+            return db_note
+
+    def mark_failed(self, apple_note_id: str, *, error_class: str) -> Note:
+        """v0.2.1 #4 状态机推进 — sync_status='FAILED'(LLM/DB 失败,可重试)。"""
+        apple_note_id = self._validate_apple_note_id(apple_note_id)
+        if not isinstance(error_class, str):
+            raise ValueError(
+                f"error_class 必须是 str, 实际 type={type(error_class).__name__},"
+                f" value={error_class!r}"
+            )
+        cleaned_error_class = error_class.strip()
+        if not cleaned_error_class:
+            raise ValueError(f"error_class 必填且必须非空字符串(非纯空白), 实际 {error_class!r}")
+        now_ms = int(time.time() * 1000)
+        with self._sf() as session:
+            stmt = select(Note).where(Note.apple_note_id == apple_note_id)
+            db_note = session.execute(stmt).scalar_one_or_none()
+            if db_note is None:
+                raise ValueError(f"apple_note_id={apple_note_id!r} 不存在, 无法 mark_failed")
+            self._check_state_transition(db_note.sync_status, SYNC_STATUS_FAILED)
+            db_note.synced_at_ms = now_ms
+            db_note.sync_status = SYNC_STATUS_FAILED
+            session.commit()
+            session.refresh(db_note)
+            return db_note
+
+    def mark_archived(self, apple_note_id: str) -> Note:
+        """v0.2.1 #4 状态机推进 — sync_status='ARCHIVED'(用户归档,终态)。"""
+        apple_note_id = self._validate_apple_note_id(apple_note_id)
+        now_ms = int(time.time() * 1000)
+        with self._sf() as session:
+            stmt = select(Note).where(Note.apple_note_id == apple_note_id)
+            db_note = session.execute(stmt).scalar_one_or_none()
+            if db_note is None:
+                raise ValueError(f"apple_note_id={apple_note_id!r} 不存在, 无法 mark_archived")
+            self._check_state_transition(db_note.sync_status, SYNC_STATUS_ARCHIVED)
+            db_note.synced_at_ms = now_ms
+            db_note.sync_status = SYNC_STATUS_ARCHIVED
+            session.commit()
+            session.refresh(db_note)
+            return db_note
+
+    def list_by_sync_status(self, sync_status: str, *, limit: int = 100) -> list[Note]:
+        """v0.2.1 #4 状态机过滤查询 — 按 sync_status 列过滤 Note 列表(按 synced_at_ms DESC)。"""
+        if not isinstance(sync_status, str) or sync_status not in _VALID_SYNC_STATUSES:
+            raise ValueError(
+                f"sync_status 必 ∈ {sorted(_VALID_SYNC_STATUSES)}, 实际 {sync_status!r}"
+            )
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 10000:
+            raise ValueError(
+                f"limit 必须是 [1, 10000] 的 int(非 bool),"
+                f" 实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        with self._sf() as session:
+            stmt = (
+                select(Note)
+                .where(Note.sync_status == sync_status)
+                .order_by(Note.synced_at_ms.desc())
+                .limit(limit)
+            )
+            return list(session.execute(stmt).scalars().all())
 
 
 # ===== 模块导出 =====
@@ -518,4 +671,10 @@ __all__ = [
     "Note",
     "NoteStore",
     "NoteDuplicateError",
+    # v0.2.1 #4 状态机常量
+    "SYNC_STATUS_NEW",
+    "SYNC_STATUS_STRUCTURED",
+    "SYNC_STATUS_PRIVATE_SKIP",
+    "SYNC_STATUS_FAILED",
+    "SYNC_STATUS_ARCHIVED",
 ]

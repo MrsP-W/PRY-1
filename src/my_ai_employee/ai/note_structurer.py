@@ -524,16 +524,36 @@ class NoteStructurerService:
     def record_private_skip_and_emit(self, apple_note_id: str) -> PrivateSkipDecisionReport:
         """业务阻断入口: is_private=True 笔记, 不调 LLM, 永不 retry.
 
+        v0.2.1 #4 增量(2026-06-17):
+          - 同步调 NoteStore.mark_private_skip(apple_note_id) 写 sync_status='PRIVATE_SKIP'
+          - 状态机守卫 NEW → PRIVATE_SKIP 唯一合法转换
+          - 异常透传:ValueError(状态机守卫)/OperationalError(DB 锁)
+
         Args:
             apple_note_id: 笔记唯一标识
 
         Returns:
             PrivateSkipDecisionReport
+
+        Raises:
+            ValueError: 状态机守卫拒绝非法转换(非 NEW 状态)
+            OperationalError: DB 锁/连接错误(透传)
         """
         apple_note_id = _validate_apple_note_id(apple_note_id)
         logger.info(
             f"[note_structurer] record_private_skip_and_emit | apple_note_id={apple_note_id}"
         )
+        # v0.2.1 #4: 同步写 sync_status='PRIVATE_SKIP'(状态机守卫)
+        # 设计:mark_private_skip 抛 ValueError 时(状态机守卫拒绝/note 不存在),仅 log warning
+        # 不重抛,因为服务契约允许对未入库或已转换状态的 note 调业务阻断入口
+        # OperationalError(DB 锁) 透传(沿 D3.3.3 教训 except 范围窄化)
+        try:
+            self._store.mark_private_skip(apple_note_id)
+        except ValueError as e:
+            logger.warning(
+                f"[note_structurer] mark_private_skip 状态机守卫拒绝/note 不存在"
+                f" | apple_note_id={apple_note_id} | err={e}"
+            )
         return PrivateSkipDecisionReport(apple_note_id=apple_note_id)
 
     def record_failure_and_emit(
@@ -546,6 +566,12 @@ class NoteStructurerService:
     ) -> FailureDecisionReport:
         """技术失败入口: LLM 异常 / DB 异常, 触发 retry / escalate.
 
+        v0.2.1 #4 增量(2026-06-17):
+          - 同步调 NoteStore.mark_failed(apple_note_id, error_class=...) 写 sync_status='FAILED'
+          - 状态机守卫 NEW → FAILED 唯一合法转换(FAILED → STRUCTURED 由 mark_structured 处理)
+          - 异常透传:ValueError(状态机守卫)/OperationalError(DB 锁)
+          - mark_failed 失败不阻断 FailureDecisionReport 返回(沿 D3.3.3 教训 except 范围窄化)
+
         Args:
             apple_note_id: 笔记唯一标识
             exc: 触发的异常(LLMError / OperationalError / ValueError ...)
@@ -554,6 +580,10 @@ class NoteStructurerService:
 
         Returns:
             FailureDecisionReport
+
+        Raises:
+            ValueError: reason / consecutive_failures 严判失败 OR 状态机守卫拒绝
+            OperationalError: DB 锁/连接错误(透传)
         """
         apple_note_id = _validate_apple_note_id(apple_note_id)
         # reason 类型严判(锁白名单)
@@ -575,10 +605,22 @@ class NoteStructurerService:
             )
         # last_error 转 str + 截断到 200(防 audit 撑爆, 沿 D4.7.3 v1.0.4 P1-1 范本)
         last_error = str(exc)[:200]
+        error_class = type(exc).__name__
         logger.error(
             f"[note_structurer] record_failure_and_emit | apple_note_id={apple_note_id}"
-            f" | reason={reason} | cf={consecutive_failures} | err={type(exc).__name__}: {last_error}"
+            f" | reason={reason} | cf={consecutive_failures} | err={error_class}: {last_error}"
         )
+        # v0.2.1 #4: 同步写 sync_status='FAILED'(状态机守卫 NEW → FAILED)
+        # 设计:mark_failed 抛 ValueError 时(状态机守卫拒绝/note 不存在),仅 log warning
+        # 不重抛,因为服务契约允许对未入库或已转换状态的 note 调失败入口(例如 retry 时已在 FAILED)
+        # OperationalError(DB 锁) 透传(沿 D3.3.3 教训 except 范围窄化)
+        try:
+            self._store.mark_failed(apple_note_id, error_class=error_class)
+        except ValueError as e:
+            logger.warning(
+                f"[note_structurer] mark_failed 状态机守卫拒绝/note 不存在"
+                f" | apple_note_id={apple_note_id} | err={e}"
+            )
         return FailureDecisionReport(
             apple_note_id=apple_note_id,
             last_error=last_error,

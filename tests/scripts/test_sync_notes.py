@@ -74,6 +74,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
                 tags TEXT,
                 synced_at_ms INTEGER NOT NULL,
                 updated_at_ms INTEGER NOT NULL,
+                sync_status TEXT NOT NULL DEFAULT 'NEW',
                 UNIQUE(apple_note_id)
             )
             """)
