@@ -49,6 +49,7 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make monthly-report$(RESET) D10.2 — 数字生活月报生成(沿 D5.6.5 4 退出码范本)"
 	@echo "  $(GREEN)make validate-monthly$(RESET) D10.2 — 校验月报模板必含占位符"
 	@echo "  $(GREEN)make spike-b5-quartz$(RESET) v0.2 B-5 — ⌥⌘N Quartz CGEvent tap S7 真链路 spike"
+	@echo "  $(GREEN)make spike-d8-anomaly$(RESET) v0.2 D8.4 — S11 智能财务异常检测 spike(AnomalyDetector 真链路)"
 	@echo "  $(GREEN)make mypy$(RESET)     9 质量门 — mypy 类型检查（严格模式）"
 	@echo "  $(GREEN)make ruff$(RESET)     9 质量门 — ruff lint 检查"
 	@echo "  $(GREEN)make format$(RESET)   9 质量门 — ruff format 检查(--check 模式)"
@@ -201,6 +202,11 @@ validate-monthly: ## D10.2 — 校验月报模板必含占位符(10 占位符)
 spike-b5-quartz: ## v0.2 B-5 — ⌥⌘N Quartz CGEvent tap S7 真链路 spike(沿 D9.5 spike 范本)
 	@echo "$(BLUE)🧪 v0.2 B-5 S7 ⌥⌘N Quartz CGEvent tap spike$(RESET)"
 	@$(PYTHON) -m scripts.spike_b5_quartz --n 30
+
+.PHONY: spike-d8-anomaly
+spike-d8-anomaly: ## v0.2 D8.4 — S11 智能财务异常检测真链路 spike(35 baseline + 1 ¥888 异常笔)
+	@echo "$(BLUE)🧪 v0.2 D8.4 S11 AnomalyDetector spike$(RESET)"
+	@$(PYTHON) -m scripts.spike_d8_anomaly --db-path /tmp/spike_d8_$(shell date +%Y%m%d_%H%M%S).db
 
 # ===== 9 质量门补齐(v0.2 B-5 + D8 实施前置)=====
 
