@@ -88,6 +88,11 @@ class EventType(enum.StrEnum):
     POLICY_DECISION_MADE = "policy.decision.made"
     POLICY_DECISION_DEGRADED = "policy.decision.degraded"
 
+    # Note structuring (D9.4 + v0.2.2 P0 L2 跨源候选)
+    NOTE_STRUCTURED_L2_CANDIDATE = (
+        "note.structured.l2_candidate"  # v0.2.2 P0 接入:UI 层 1-click 确认定位用
+    )
+
 
 class EventStatus(enum.StrEnum):
     """事件状态 — 7 枚举 (g004 不变量 2).

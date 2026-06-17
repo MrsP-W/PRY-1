@@ -488,3 +488,175 @@ class TestParseResponse:
         )
         assert category == "PERSONAL"
         assert tags == ["日记", "感想", "晨间"]
+
+
+# ===== 10. v0.2.2 P0 — _emit_event 携带 L2 跨源候选字段(3 tests)====
+
+
+class FakeEventStore:
+    """Fake EventStore(沿 D4.7.3 范本 duck type),记录 insert 调用供测试断言.
+
+    v0.2.2 P0 接入测试专用:验证 _emit_event 携带 needs_confirm + candidate_match_id
+    """
+
+    def __init__(self) -> None:
+        self.events: list[dict[str, Any]] = []
+
+    def insert(
+        self,
+        *,
+        event: Any,
+        status: Any,
+        source: str,
+        subject_id: str,
+        extra: dict[str, Any],
+    ) -> None:
+        self.events.append(
+            {
+                "event": event,
+                "status": status,
+                "source": source,
+                "subject_id": subject_id,
+                "extra": extra,
+            }
+        )
+
+
+class TestEmitL2CandidateFields:
+    """v0.2.2 P0 接入: _emit_event payload 携带 L2 跨源候选字段.
+
+    沿 v0.2.1+ L2 跨源写入(b751820):
+        - NoteStore.insert 已自动派生 needs_confirm + candidate_match_id
+        - structurer 的 _emit_event 需把这 2 字段塞 payload,UI 层 1-click
+          确认才能定位具体哪些 note 是跨源候选
+    """
+
+    def test_emit_payload_includes_l2_fields_for_l2_candidate(self, store: NoteStore) -> None:
+        """10.1 L2 候选 note(structure_and_emit 成功): payload 携带 needs_confirm=1 + candidate_match_id.
+
+        验证 3 段:
+            1. 插入 note1(首次 → needs_confirm=0)
+            2. 插入 note2(同 fingerprint → needs_confirm=1, candidate_match_id=note1.id)
+            3. structure_and_emit(note2) 成功,emit event payload 含 needs_confirm=1
+               + candidate_match_id=note1.id
+        """
+        from my_ai_employee.events.models import EventStatus, EventType  # noqa: PLC0415
+
+        # 1) 首次写入 — needs_confirm=0
+        note1 = _insert_note(
+            store,
+            apple_note_id="x-coredata://l2/note-001",
+            title="L2 同标题笔记",
+        )
+        assert note1.needs_confirm == 0
+        assert note1.candidate_match_id is None
+
+        # 2) 同 fingerprint 二次写入(同 title + 同 updated_at_ms)→ needs_confirm=1
+        note2 = store.insert(
+            apple_note_id="x-coredata://l2/note-002",
+            folder="Notes",
+            title="L2 同标题笔记",  # 同 title
+            body="测试正文",
+            updated_at_ms=1700000000000,  # 同日期
+        )
+        assert note2.needs_confirm == 1
+        assert note2.candidate_match_id == note1.id
+
+        # 3) structure_and_emit note2 → 验证 emit payload 携带 L2 字段
+        llm = FakeLLMRouter(content='{"category": "TODO", "tags": ["a", "b", "c", "d"]}')
+        fake_event_store = FakeEventStore()
+        svc = NoteStructurerService(store=store, llm_provider=llm, event_store=fake_event_store)
+
+        result = svc.structure_and_emit("x-coredata://l2/note-002")
+
+        assert isinstance(result, StructuredNote)
+        # emit 1 个 success event
+        assert len(fake_event_store.events) == 1
+        ev = fake_event_store.events[0]
+        assert ev["event"] == EventType.NOTE_STRUCTURED_L2_CANDIDATE
+        assert ev["status"] == EventStatus.SUCCEEDED
+        assert ev["source"] == "note_structurer"
+        assert ev["subject_id"] == "x-coredata://l2/note-002"
+        # 关键:v0.2.2 P0 payload 携带 L2 字段
+        assert ev["extra"]["needs_confirm"] == 1
+        assert ev["extra"]["candidate_match_id"] == note1.id
+        # 沿用 D9.4 success payload 字段
+        assert ev["extra"]["category"] == "TODO"
+        assert ev["extra"]["tags_count"] == 4
+
+    def test_emit_payload_includes_l2_zero_for_no_candidate(self, store: NoteStore) -> None:
+        """10.2 非 L2 候选 note(structure_and_emit 成功): payload 携带 needs_confirm=0 + candidate_match_id=None.
+
+        验证 2 段:
+            1. 单条 note(无 L2 候选)→ needs_confirm=0
+            2. structure_and_emit → emit payload needs_confirm=0, candidate_match_id=None
+        """
+        from my_ai_employee.events.models import EventStatus, EventType  # noqa: PLC0415
+
+        note1 = _insert_note(
+            store,
+            apple_note_id="x-coredata://l2/note-003",
+            title="唯一笔记",
+        )
+        assert note1.needs_confirm == 0
+
+        llm = FakeLLMRouter(content='{"category": "PERSONAL", "tags": ["x", "y", "z"]}')
+        fake_event_store = FakeEventStore()
+        svc = NoteStructurerService(store=store, llm_provider=llm, event_store=fake_event_store)
+
+        result = svc.structure_and_emit("x-coredata://l2/note-003")
+
+        assert isinstance(result, StructuredNote)
+        assert len(fake_event_store.events) == 1
+        ev = fake_event_store.events[0]
+        assert ev["event"] == EventType.NOTE_STRUCTURED_L2_CANDIDATE
+        assert ev["status"] == EventStatus.SUCCEEDED
+        # 关键:无 L2 候选时 payload needs_confirm=0, candidate_match_id=None
+        assert ev["extra"]["needs_confirm"] == 0
+        assert ev["extra"]["candidate_match_id"] is None
+
+    def test_emit_payload_includes_l2_fields_for_private_skip(self, store: NoteStore) -> None:
+        """10.3 业务阻断(is_private=True)也携带 L2 字段.
+
+        验证: 二次写入同 fingerprint + is_private=True → structure_and_emit 走业务阻断路径
+              emit payload 仍携带 needs_confirm=1 + candidate_match_id=earliest.id
+        """
+        from my_ai_employee.events.models import EventStatus, EventType  # noqa: PLC0415
+
+        # 1) 首次写入(非 private)
+        note1 = _insert_note(
+            store,
+            apple_note_id="x-coredata://l2/note-004",
+            title="业务阻断 L2 测试",
+        )
+
+        # 2) 二次写入(同 fingerprint + is_private=True)→ needs_confirm=1
+        note2 = store.insert(
+            apple_note_id="x-coredata://l2/note-005",
+            folder="Notes",
+            title="业务阻断 L2 测试",
+            body="",
+            updated_at_ms=1700000000000,
+            is_private=True,
+        )
+        assert note2.needs_confirm == 1
+        assert note2.candidate_match_id == note1.id
+
+        # 3) structure_and_emit note2 → 业务阻断,emit payload 仍携带 L2 字段
+        llm = FakeLLMRouter(content='{"category": "TODO", "tags": ["a", "b", "c", "d"]}')
+        fake_event_store = FakeEventStore()
+        svc = NoteStructurerService(store=store, llm_provider=llm, event_store=fake_event_store)
+
+        result = svc.structure_and_emit("x-coredata://l2/note-005")
+
+        assert isinstance(result, PrivateSkipDecisionReport)
+        # 业务阻断也 emit(沿 D9.4 _emit_event 复用 LLM_CALL_STARTED 范本)
+        assert len(fake_event_store.events) == 1
+        ev = fake_event_store.events[0]
+        assert ev["event"] == EventType.NOTE_STRUCTURED_L2_CANDIDATE
+        # 业务阻断 status=FAILED(沿 v0.2.2 升级:outcome 映射 SUCCEEDED if success else FAILED)
+        assert ev["status"] == EventStatus.FAILED
+        # 关键:业务阻断 payload 也携带 L2 字段
+        assert ev["extra"]["reason"] == "is_private"
+        assert ev["extra"]["needs_confirm"] == 1
+        assert ev["extra"]["candidate_match_id"] == note1.id

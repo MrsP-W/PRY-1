@@ -98,13 +98,13 @@ class TestMetadataRegistration:
 
 
 class TestEnums:
-    def test_event_type_has_13_values(self) -> None:
-        """EventType 13 枚举 (4 LLM + 3 MCP + 2 email + 2 draft + 2 policy).
+    def test_event_type_has_14_values(self) -> None:
+        """EventType 14 枚举 (4 LLM + 3 MCP + 2 email + 2 draft + 2 policy + 1 note).
 
-        D4.4 新增 2 policy 决策事件: policy.decision.made / policy.decision.degraded.
+        v0.2.2 P0 新增 1 note 事件: note.structured.l2_candidate(UI 层 1-click 确认定位用).
         """
         values = [e.value for e in EventType]
-        assert len(values) == 13
+        assert len(values) == 14
         # g004 风格命名(2+ 段, 主要 3 段; 4 段如 email.classify.failed 允许子动作细分)
         assert all("." in v for v in values)
         assert all(v.count(".") >= 2 for v in values)

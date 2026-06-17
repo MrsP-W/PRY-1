@@ -378,6 +378,9 @@ class NoteStructurerService:
         """可选落 events(沿 D4.7.3 Heartbeat 范本: 失败不抛, 仅 logger).
 
         设计: D9.4 阶段 events 落库是可选增强, 失败不阻塞业务流.
+        v0.2.2 P0 增量(2026-06-17): 改用 EventType.NOTE_STRUCTURED_L2_CANDIDATE
+          (替代 D9.4 临时的 LLM_CALL_STARTED 复用), UI 层 list_by_needs_confirm
+          可直接消费该事件流定位 1-click 确认候选.
         """
         if self._event_store is None:
             return
@@ -385,7 +388,7 @@ class NoteStructurerService:
             from my_ai_employee.events.models import EventStatus, EventType  # noqa: I001
 
             self._event_store.insert(
-                event=EventType.LLM_CALL_STARTED,  # 复用 LLM_CALL 系列, 后续可加 NOTE_STRUCTURED
+                event=EventType.NOTE_STRUCTURED_L2_CANDIDATE,
                 status=EventStatus.SUCCEEDED if outcome == "success" else EventStatus.FAILED,
                 source="note_structurer",
                 subject_id=apple_note_id,
@@ -443,10 +446,19 @@ class NoteStructurerService:
                 f" apple_note_id={apple_note_id}"
             )
             report = self.record_private_skip_and_emit(apple_note_id)
+            # v0.2.2 P0: 业务阻断事件 payload 携带 L2 跨源候选字段(沿 v0.2.1+ L2 范本)
             self._emit_event(
                 apple_note_id=apple_note_id,
                 outcome="business_blocked",
-                payload={"reason": "is_private"},
+                payload={
+                    "reason": "is_private",
+                    "needs_confirm": int(note.needs_confirm),
+                    "candidate_match_id": (
+                        int(note.candidate_match_id)
+                        if note.candidate_match_id is not None
+                        else None
+                    ),
+                },
             )
             return report
 
@@ -499,7 +511,11 @@ class NoteStructurerService:
             )
             return self.record_failure_and_emit(apple_note_id, e, reason="db_failure")
 
-        # 7. 落 events(可选)
+        # 7. 落 events(可选) — v0.2.2 P0: payload 携带 L2 跨源候选字段
+        # 沿 v0.2.1+ L2 跨源写入(b751820):needs_confirm + candidate_match_id
+        # 已在 NoteStore.insert 阶段派生并锁定,mark_structured 不重写,
+        # 此处直接读 note 对象的派生结果塞 payload,UI 层可基于
+        # needs_confirm=1 的事件直接定位 1-click 确认候选
         self._emit_event(
             apple_note_id=apple_note_id,
             outcome="success",
@@ -508,6 +524,10 @@ class NoteStructurerService:
                 "tags_count": len(tags),
                 "model_full_id": response.model_full_id,
                 "latency_ms": response.latency_ms,
+                "needs_confirm": int(note.needs_confirm),
+                "candidate_match_id": (
+                    int(note.candidate_match_id) if note.candidate_match_id is not None else None
+                ),
             },
         )
 
