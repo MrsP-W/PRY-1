@@ -179,10 +179,11 @@ class NotesMenuBarApp(_RumpsAppBase):
         # 调 rumps.App.__init__ 启动 NSApp 主循环
         super().__init__("Notes", title=self._format_title(self._notes_count))
 
-        # 注册 5 菜单项(rumps 范本:list[str] 形式注册)
+        # 注册 6 菜单项(rumps 范本:list[str] 形式注册,D8.3 加"⚠️ 异常告警")
         self.menu: list[Any] = [
             "立即同步",
             "打开 Notes",
+            "⚠️ 异常告警 (0)",
             "授权引导",
             None,  # 分隔符
             "退出",
@@ -263,6 +264,56 @@ class NotesMenuBarApp(_RumpsAppBase):
             text=True,
             timeout=10,
         )
+
+    # ===== D8.3 异常告警菜单项(不弹通知,用户主动查询)=====
+
+    @_clicked_decorator("⚠️ 异常告警")
+    def _on_anomaly_alert(self, _sender: Any) -> None:
+        """点击"⚠️ 异常告警" — 弹窗显示本月异常列表(D8.3 接入 RuleBasedAnomalyDetector).
+
+        设计决策(沿 D8 docs 评估决策 #5):
+            - 用户主动查询 vs 被动打扰(只接入"已确认"异常不弹每笔)
+            - Stub 阶段:返回空 list,弹窗提示"暂无异常"
+            - D10 后:替换为真实 ExpenseServiceImpl,接 AnomalyDetector 真实链路
+        """
+        try:
+            anomalies = self._service.get_recent_anomalies(limit=10)
+        except Exception as e:  # noqa: BLE001 — Stub 异常不能让菜单崩
+            _notification_func(
+                "⚠️ 异常告警",
+                "获取异常列表失败",
+                f"{type(e).__name__}: {str(e)[:100]}",
+            )
+            return
+        if not anomalies:
+            _notification_func(
+                "⚠️ 异常告警",
+                "暂无异常",
+                "本月无金额 / 频率 / 重复扣款 / 商家画像漂移异常",
+            )
+            return
+        body = "\n".join(
+            f"• {a.get('date', '?')} | {a.get('counterparty', '?')} | "
+            f"¥{a.get('amount', '?')} | {a.get('kinds', '?')}"
+            for a in anomalies
+        )
+        _notification_func(
+            f"⚠️ 异常告警 ({len(anomalies)} 笔)",
+            "本月检测到以下异常:",
+            body[:200],
+        )
+
+    def _refresh_anomaly_count(self) -> None:
+        """刷新异常告警菜单项 badge (D8.3 stub 阶段 0, D10 后真实计数)."""
+        try:
+            count = self._service.get_anomaly_count()
+        except Exception:  # noqa: BLE001 — 静默降级,不影响主流程
+            return
+        # 找到异常告警菜单项更新 title
+        for item in self.menu:
+            title = getattr(item, "title", None)
+            if isinstance(title, str) and title.startswith("⚠️ 异常告警"):
+                item.title = f"⚠️ 异常告警 ({count})"
 
     # ===== D9.5 ⌥⌘N 全局快捷键(双进程范本主入口)=====
 

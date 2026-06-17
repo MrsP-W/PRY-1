@@ -141,15 +141,48 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
     else:
         category_breakdown = "_(当月无支出)_"
 
-    # 异常高亮(单笔 > 1000 元 + 偏离均值 3σ — 沿 week2-mvp.md L175 D8 风格,简化版)
-    anomalies = [r for r in rows if abs(r.amount) > Decimal("1000")]
-    if anomalies:
-        lines = ["⚠️ **大额交易** (单笔 > ¥1000)", ""]
-        for r in anomalies[:5]:  # 最多列 5 笔
-            lines.append(
-                f"- {r.transaction_date} | {r.counterparty or '?'} | ¥{r.amount} | {r.category or '?'}"
-            )
-        anomaly_highlights = "\n".join(lines)
+    # 异常高亮(v0.2 D8.3:接入 RuleBasedAnomalyDetector,替换原 >¥1000 简化版)
+    # 异常告警为业务信号,非阻塞:Detector 抛 OperationalError → fallback "无异常"(沿 D4.7.3 v1.0.1)
+    from sqlalchemy.orm import sessionmaker as _sessionmaker
+
+    from my_ai_employee.core.anomaly_detector import RuleBasedAnomalyDetector
+    from my_ai_employee.db.merchant_profile import MerchantProfileStore
+    from my_ai_employee.db.transactions import TransactionStore
+
+    _sf = _sessionmaker(bind=session.get_bind(), expire_on_commit=False)
+    _tx_store = TransactionStore(_sf)
+    _profile_store = MerchantProfileStore(_sf, transaction_store=_tx_store)
+    _detector = RuleBasedAnomalyDetector(
+        transaction_store=_tx_store,
+        merchant_profile_store=_profile_store,
+    )
+
+    anomaly_lines: list[str] = []
+    try:
+        for r in rows:
+            results = _detector.detect_all(r)
+            if results:
+                kinds = ", ".join(sorted({res.kind for res in results}))
+                anomaly_lines.append(
+                    f"- {r.transaction_date} | {r.counterparty or '?'} | "
+                    f"¥{r.amount} | 异常={kinds} | {r.category or '?'}"
+                )
+    except Exception as _e:  # noqa: BLE001 — Detector 异常不能让月报崩
+        # 异常告警为业务信号,非阻塞(沿 D4.7.3 v1.0.1 范本:业务阻断 vs 技术失败分离)
+        anomaly_lines = [f"_(异常检测暂不可用: {type(_e).__name__})_"]
+
+    if anomaly_lines:
+        anomaly_highlights = "\n".join(
+            [
+                "⚠️ **异常交易** (D8.3 智能检测 — 规则基础 + 商家画像增强)",
+                "",
+                "检测到以下异常:",
+                "",
+                *anomaly_lines[:10],
+                "",
+                "> 注:异常检测为业务信号,非阻塞;真异常 vs 业务异常分离(沿 D4.7.3 v1.0.1 范本)",
+            ]
+        )
     else:
         anomaly_highlights = "✅ 无异常"
 
