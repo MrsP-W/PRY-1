@@ -33,6 +33,7 @@ D7 兼容 5 扩展点(沿 plan §7):
 from __future__ import annotations
 
 import re
+from datetime import date, datetime
 from typing import Any
 
 import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # D3.3.2 教训: 双层 except 防 SQLCipher dialect 不包装 dbapi 异常
@@ -401,11 +402,163 @@ def mark_l3_needs_confirm(
     # 注意:不 commit — 调用方(D6.5 TransactionAdapter)统一 commit(沿 D4.8.4 范本)
 
 
+# ===== v0.2.2 #3 L3 模糊匹配 ±1 day 候选查询 =====
+
+# 日期容错范围上限(7 天 = 跨周末最大窗口,沿 v0.2.1-candidates §6 候选 #5 描述)
+_L3_MAX_DATE_TOLERANCE_DAYS = 7
+# 候选数上限(防候选集爆炸,沿 find_l2_candidates 范本 limit=5)
+_L3_DEFAULT_LIMIT = 5
+
+
+def find_l3_fuzzy_candidates(
+    session: Session,
+    transaction_date: date,
+    counterparty: str,
+    *,
+    date_tolerance_days: int = 1,
+    exclude_tx_id: int | None = None,
+    source_filter: str | None = None,
+    limit: int = _L3_DEFAULT_LIMIT,
+) -> list[dict[str, Any]]:
+    """L3 模糊匹配 — 商家名归一化匹配 + 日期 ±N day 容错(v0.2.2 #3 启动候选 #3).
+
+    业务语义:当 L2 指纹不命中时(同商家但日期 ±1 day 偏差),用归一化商家名 +
+    日期窗口做模糊匹配,返回候选 transactions.id 列表。
+
+    设计要点(沿 [[v0.2.1-candidates-2026-06-17]] §6 候选 #5):
+        1. **绝不**自动 delete/update 候选(防"同金额不同交易"误合并)
+        2. 只返回候选 ID 列表,等调用方调 mark_l3_needs_confirm
+        3. **严格归一化匹配**(复用 _normalize_counterparty_value):不做 fuzzy_equals
+           (误匹配 > 漏匹配,1-click 信任基础)
+        4. 日期容错范围:默认 ±1 day,允许 0-7 范围(防跨周末)
+        5. 候选集按 id ASC 排序(沿 L2 范本,选最早 id 作为 candidate_match_id)
+
+    性能考量:
+        - **没有 transaction_date 索引**(沿 D6 现状)→ 全表扫 + 内存 filter
+        - 个人记账场景 transactions 表 < 10000 条 → 内存 filter 毫秒级
+        - 未来可加 idx_transactions_date 优化,但本轮不加(避免 migration 链)
+
+    Args:
+        session: SQLAlchemy Session
+        transaction_date: 交易日期(date 对象,非 datetime)
+        counterparty: 商家名(原始字符串,内部做归一化)
+        date_tolerance_days: 日期容错天数(默认 1,允许 0-7 范围)
+        exclude_tx_id: 排除的 transactions.id(写入时排除自身,防自命中)
+        source_filter: 限定 source(默认查所有 source 跨源候选)
+        limit: 最多返回候选数(默认 5,防候选集爆炸)
+
+    Returns:
+        候选 list[dict],每条含 id / source / external_transaction_id / amount / counterparty
+        按 id ASC 排序(选最小 ID 作为 candidate_match_id)
+
+    Raises:
+        TypeError: 入参类型非法
+        ValueError: 入参格式非法(空字符串 / 范围非法)
+        sqlalchemy.exc.OperationalError: DB 锁/连接失败 — 透传给 Adapter 走技术失败入口
+    """
+    # 1. 严判入参(沿工厂层严判范本)
+    if not isinstance(transaction_date, date) or isinstance(transaction_date, datetime):
+        raise TypeError(
+            f"transaction_date 必须是 date(非 datetime),"
+            f"实际 type={type(transaction_date).__name__}, value={transaction_date!r}"
+        )
+    if not isinstance(counterparty, str) or not counterparty.strip():
+        raise ValueError(f"counterparty 必填且必须非空字符串,实际 value={counterparty!r}")
+    if type(date_tolerance_days) is bool or not isinstance(date_tolerance_days, int):
+        raise TypeError(
+            f"date_tolerance_days 必须是 int(非 bool),"
+            f"实际 type={type(date_tolerance_days).__name__}, value={date_tolerance_days!r}"
+        )
+    if date_tolerance_days < 0 or date_tolerance_days > _L3_MAX_DATE_TOLERANCE_DAYS:
+        raise ValueError(
+            f"date_tolerance_days 必须在 [0, {_L3_MAX_DATE_TOLERANCE_DAYS}],"
+            f"实际 value={date_tolerance_days!r}"
+        )
+    if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 100:
+        raise ValueError(
+            f"limit 必须是 [1, 100] 的 int(非 bool),"
+            f"实际 type={type(limit).__name__}, value={limit!r}"
+        )
+    if exclude_tx_id is not None and (
+        type(exclude_tx_id) is bool or not isinstance(exclude_tx_id, int) or exclude_tx_id < 1
+    ):
+        raise ValueError(
+            f"exclude_tx_id 必须是正 int(非 bool)(允许 None),"
+            f"实际 type={type(exclude_tx_id).__name__}, value={exclude_tx_id!r}"
+        )
+    if source_filter is not None:
+        _validate_source(source_filter)
+
+    # 2. 归一化商家名(沿 _normalize_counterparty_value 范本)
+    from my_ai_employee.core.fingerprint import _normalize_counterparty_value
+
+    normalized_cp = _normalize_counterparty_value(counterparty)
+
+    # 3. 圈定日期窗口(±N day,沿 timedelta 范本)
+    from datetime import timedelta  # noqa: PLC0415  # 仅此处使用
+
+    date_min = transaction_date - timedelta(days=date_tolerance_days)
+    date_max = transaction_date + timedelta(days=date_tolerance_days)
+
+    # 4. 查日期范围(D6 现状无 transaction_date 索引,全表扫)
+    from my_ai_employee.db.transactions import Transaction
+
+    stmt = select(
+        Transaction.id,
+        Transaction.source,
+        Transaction.external_transaction_id,
+        Transaction.amount,
+        Transaction.counterparty,
+        Transaction.transaction_date,
+    ).where(
+        Transaction.transaction_date >= date_min,
+        Transaction.transaction_date <= date_max,
+    )
+    if source_filter is not None:
+        stmt = stmt.where(Transaction.source == source_filter)
+
+    # 5. 内存过滤:商家名归一化匹配 + 排除自身
+    rows = session.execute(stmt).fetchall()
+    matched: list[dict[str, Any]] = []
+    for row in rows:
+        row_id = int(row[0])
+        row_source = str(row[1])
+        row_ext_id = str(row[2])
+        row_amount = row[3]
+        row_counterparty = str(row[4])
+        row_date = row[5]
+        if exclude_tx_id is not None and row_id == exclude_tx_id:
+            continue
+        # 归一化候选方商家名(复用 _normalize_counterparty_value,失败容忍)
+        try:
+            row_normalized_cp = _normalize_counterparty_value(row_counterparty)
+        except (ValueError, TypeError):
+            # 候选方 counterparty 异常(全模糊符等)→ 跳过
+            continue
+        if row_normalized_cp != normalized_cp:
+            continue
+        matched.append(
+            {
+                "id": row_id,
+                "source": row_source,
+                "external_transaction_id": row_ext_id,
+                "amount": str(row_amount),  # Numeric → str 保持精度
+                "counterparty": row_counterparty,
+                "transaction_date": row_date.isoformat(),
+            }
+        )
+
+    # 6. 按 id ASC 排序 + LIMIT(沿 L2 范本)
+    matched.sort(key=lambda r: r["id"])
+    return matched[:limit]
+
+
 __all__ = [
     "TransactionDuplicateError",
     "TransactionFingerprintCollisionError",
     "check_l1_duplicate",
     "check_l1_duplicate_strict",
     "find_l2_candidates",
+    "find_l3_fuzzy_candidates",
     "mark_l3_needs_confirm",
 ]

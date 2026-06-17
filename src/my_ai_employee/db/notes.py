@@ -451,6 +451,21 @@ class NoteStore:
                 needs_confirm = 1
                 candidate_match_id = earliest_candidate_id
 
+        # 2.6 v0.2.2 #3 L3 模糊匹配 ±1 day fallback(仅当 L2 未命中时触发)
+        # 当 L2 fingerprint 不命中但同日/±1 天的归一化 title 命中已有 note 时
+        # 视作"同一笔记的轻微标题变化"候选,标记 needs_confirm=1
+        # 沿 [[v0.2.1-candidates-2026-06-17]] §6 候选 #5 L3 模糊匹配
+        if needs_confirm == 0:
+            with self._sf() as session:
+                fuzzy_candidates = self._find_l3_fuzzy_in_session(
+                    session,
+                    title=title,
+                    updated_at_ms=updated_at_ms,
+                )
+                if fuzzy_candidates:
+                    needs_confirm = 1
+                    candidate_match_id = fuzzy_candidates[0]
+
         # 3. 落库(D3.3.3 教训: except 范围窄化,只接 IntegrityError)
         try:
             with self._sf() as session:
@@ -790,6 +805,110 @@ class NoteStore:
                 stmt = stmt.where(Note.id != exclude_note_id)
             stmt = stmt.order_by(Note.id.asc()).limit(limit)
             return list(session.execute(stmt).scalars().all())
+
+    def _find_l3_fuzzy_in_session(
+        self,
+        session: Session,
+        *,
+        title: str,
+        updated_at_ms: int,
+        date_tolerance_days: int = 1,
+        limit: int = 5,
+    ) -> list[int]:
+        """v0.2.2 #3 L3 模糊匹配 — title 归一化匹配 + updated_at_date ±1 day 容错.
+
+        业务语义:当 L2 fingerprint 不命中时(同日/±1 天的归一化 title 命中已有 note),
+        视为"同一笔记的轻微标题变化"候选,返回候选 note.id 列表(按 id ASC)。
+
+        设计要点(沿 [[v0.2.1-candidates-2026-06-17]] §6 候选 #5):
+            1. **L3 归一化比 L2 更激进**:strip + lower + 去模糊符 * + 去所有空白
+               (复用 _normalize_counterparty_value 范本,因为 _normalize_note_title_value
+               只 strip+lower,不能容忍用户笔记里的"星巴克*"脱敏写法)
+            2. updated_at_ms → date 转换(沿 _normalize_note_updated_at_date 范本)
+            3. 日期窗口: ±N day(默认 1,沿 v0.2.1-candidates §6)
+            4. **严格归一化匹配**:不做 substring/fuzzy_equals
+               (误匹配 > 漏匹配,1-click 信任基础)
+            5. 绝不 delete/update 候选(沿 D6.2 防误合并 5 重点)
+
+        性能考量:
+            - 没有 updated_at_ms 索引 + title 归一化字段 → 全表扫 + 内存 filter
+            - 笔记数 < 10000 → 内存 filter 毫秒级
+            - 未来可加 idx_notes_updated_at 优化,但本轮不加(避免 migration 链)
+
+        Args:
+            session: SQLAlchemy Session(外部传入,与调用方共用事务)
+            title: 笔记标题(原始字符串,内部做归一化)
+            updated_at_ms: 笔记修改时间戳(Unix epoch ms)
+            date_tolerance_days: 日期容错天数(默认 1)
+            limit: 最多返回候选数(默认 5)
+
+        Returns:
+            候选 note.id 列表(按 id ASC 排序)
+        """
+        from datetime import UTC, timedelta
+        from datetime import datetime as _dt
+
+        from my_ai_employee.core.fingerprint import (
+            _FUZZY_PATTERN,
+            _WHITESPACE_PATTERN,
+            _normalize_note_updated_at_date,
+        )
+
+        def _normalize_l3_title(value: str) -> str | None:
+            """L3 专用 title 归一化:strip + lower + 去模糊符 * + 去所有空白.
+
+            复用 _normalize_counterparty_value 范本,因为 note 用户会写"星巴克*"
+            脱敏,L2 fp 不等但 L3 应能命中。
+
+            返回 None 表示归一化后为空(全模糊符/空白)→ L3 无可匹配目标。
+            """
+            if not isinstance(value, str):
+                raise TypeError(
+                    f"title 必须是 str,实际 type={type(value).__name__}, value={value!r}"
+                )
+            s = _FUZZY_PATTERN.sub("", value)
+            s = s.strip().lower()
+            s = _WHITESPACE_PATTERN.sub("", s)
+            if not s:
+                return None
+            return s
+
+        # 1. 归一化 title + 计算日期窗口
+        normalized_title = _normalize_l3_title(title)
+        if normalized_title is None:
+            # 归一化后为空(空 title / 全模糊符 / 全空白)→ L3 无可匹配目标
+            return []
+        updated_date_str = _normalize_note_updated_at_date(updated_at_ms)
+        updated_date = _dt.strptime(updated_date_str, "%Y-%m-%d").date()
+        date_min = updated_date - timedelta(days=date_tolerance_days)
+        date_max = updated_date + timedelta(days=date_tolerance_days)
+
+        # 2. 查 updated_at_ms 范围(全表扫,无专用索引)
+        # 转毫秒级窗口:date → ms(00:00:00 UTC 当日 → 23:59:59.999 UTC)
+        ms_min = int(_dt.combine(date_min, _dt.min.time(), tzinfo=UTC).timestamp() * 1000)
+        ms_max = int(_dt.combine(date_max, _dt.max.time(), tzinfo=UTC).timestamp() * 1000)
+
+        rows = session.execute(
+            select(Note.id, Note.title, Note.updated_at_ms).where(
+                Note.updated_at_ms >= ms_min,
+                Note.updated_at_ms <= ms_max,
+            )
+        ).fetchall()
+
+        # 3. 内存过滤:title 归一化相等(防"星巴克" vs "星巴克咖啡" 误匹配)
+        matched: list[int] = []
+        for row in rows:
+            row_id = int(row[0])
+            row_title = str(row[1])
+            try:
+                row_normalized = _normalize_l3_title(row_title)
+            except (ValueError, TypeError):
+                continue
+            if row_normalized == normalized_title:
+                matched.append(row_id)
+
+        matched.sort()
+        return matched[:limit]
 
     @staticmethod
     def _validate_fingerprint(fingerprint: str) -> str:
