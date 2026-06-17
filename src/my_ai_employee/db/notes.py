@@ -104,6 +104,8 @@ class Note(Base):
         - updated_at_ms:     INTEGER NOT NULL
         - sync_status:       TEXT NOT NULL DEFAULT 'NEW'  # v0.2.1 #4 状态机字段
         - normalized_fingerprint: TEXT NULL  # v0.2.1 #5 L2 跨源指纹字段
+        - needs_confirm:     INTEGER NOT NULL DEFAULT 0  # v0.2.1+ L2 跨源写入字段
+        - candidate_match_id: INTEGER NULL  # v0.2.1+ L2 跨源候选 FK(self-reference to notes.id)
 
     sync_status 状态机(沿 [[v0.2.1-candidates-2026-06-17]] §5.2):
         - NEW(初始入库,默认)
@@ -133,6 +135,7 @@ class Note(Base):
         - idx_notes_updated(updated_at_ms DESC)
         - idx_notes_sync_status(sync_status)  # v0.2.1 #4 新增
         - idx_notes_fingerprint(normalized_fingerprint)  # v0.2.1 #5 新增(L2 跨源候选)
+        - idx_notes_needs_confirm(needs_confirm)  # v0.2.1+ 新增(L2 跨源写入待确认列表)
     """
 
     __tablename__ = "notes"
@@ -155,6 +158,19 @@ class Note(Base):
     )
     # v0.2.1 #5 L2 跨源指纹字段(NULL 表示未派生)
     normalized_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # v0.2.1+ L2 跨源写入字段(D9.6 留口业务落地)
+    # needs_confirm: BOOLEAN 走 Integer(0/1)严判(沿 D3.2 雷区 #2)
+    needs_confirm: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    # candidate_match_id: 候选最早 note.id(纯 Integer 字段,无 FK,沿 0013 范本)
+    # 引用一致性由应用层 NoteStore.insert 派生时校验(select Note.id 查)
+    candidate_match_id: Mapped[int | None] = mapped_column(
+        Integer,
+        nullable=True,
+        default=None,
+        server_default=None,
+    )
 
     # 约束 + 索引(D3.2 雷区 #8: DESC 索引用 sa.text 包裹)
     __table_args__ = (
@@ -163,13 +179,15 @@ class Note(Base):
         Index("idx_notes_updated", text("updated_at_ms DESC")),
         Index("idx_notes_sync_status", "sync_status"),  # v0.2.1 #4 新增
         Index("idx_notes_fingerprint", "normalized_fingerprint"),  # v0.2.1 #5 新增
+        Index("idx_notes_needs_confirm", "needs_confirm"),  # v0.2.1+ 新增
     )
 
     def __repr__(self) -> str:
         return (
             f"<Note id={self.id} apple_note_id={self.apple_note_id!r} "
             f"folder={self.folder!r} title={self.title!r} "
-            f"sync_status={self.sync_status!r} fingerprint={self.normalized_fingerprint!r}>"
+            f"sync_status={self.sync_status!r} fingerprint={self.normalized_fingerprint!r} "
+            f"needs_confirm={self.needs_confirm} candidate_match_id={self.candidate_match_id}>"
         )
 
 
@@ -415,6 +433,24 @@ class NoteStore:
             updated_at_ms=updated_at_ms,
         )
 
+        # 2.5 v0.2.1+ L2 跨源写入(D9.6 留口业务落地)
+        # 自动检查 L2 跨源候选:同 fingerprint 的已有 note
+        # 若有 → needs_confirm=True + candidate_match_id=最早候选 id
+        # 沿 D6.4 transactions L2 范本
+        needs_confirm = 0
+        candidate_match_id = None
+        with self._sf() as session:
+            candidates_stmt = (
+                select(Note.id)
+                .where(Note.normalized_fingerprint == normalized_fingerprint)
+                .order_by(Note.id.asc())
+                .limit(1)
+            )
+            earliest_candidate_id = session.execute(candidates_stmt).scalar_one_or_none()
+            if earliest_candidate_id is not None:
+                needs_confirm = 1
+                candidate_match_id = earliest_candidate_id
+
         # 3. 落库(D3.3.3 教训: except 范围窄化,只接 IntegrityError)
         try:
             with self._sf() as session:
@@ -429,6 +465,8 @@ class NoteStore:
                     synced_at_ms=synced_at_ms,
                     updated_at_ms=updated_at_ms,
                     normalized_fingerprint=normalized_fingerprint,
+                    needs_confirm=needs_confirm,
+                    candidate_match_id=candidate_match_id,
                 )
                 session.add(note)
                 session.commit()
@@ -686,6 +724,29 @@ class NoteStore:
             stmt = (
                 select(Note)
                 .where(Note.sync_status == sync_status)
+                .order_by(Note.synced_at_ms.desc())
+                .limit(limit)
+            )
+            return list(session.execute(stmt).scalars().all())
+
+    def list_by_needs_confirm(self, *, limit: int = 100) -> list[Note]:
+        """v0.2.1+ L2 跨源待确认列表 — 按 needs_confirm=1 过滤 Note 列表(按 synced_at_ms DESC).
+
+        业务语义(沿 D6.4 transactions L2 范本):
+            - 1-click 确认列表(用户逐条决定是合并候选还是独立保留)
+            - 月报统计:本月新增 L2 候选数
+
+        范本:list_by_sync_status(v0.2.1 #4)。
+        """
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 10000:
+            raise ValueError(
+                f"limit 必须是 [1, 10000] 的 int(非 bool),"
+                f" 实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        with self._sf() as session:
+            stmt = (
+                select(Note)
+                .where(Note.needs_confirm == 1)
                 .order_by(Note.synced_at_ms.desc())
                 .limit(limit)
             )

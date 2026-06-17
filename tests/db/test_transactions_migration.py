@@ -221,10 +221,10 @@ def test_alembic_upgrade_downgrade_upgrade_idempotent(
             assert "transactions" in tables
             # notes 表(D9.1)也建了
             assert "notes" in tables
-            # alembic_version = head(v0.2 D8.1 = 0013_note_fingerprint)
+            # alembic_version = head(v0.2.1+ = 0014_note_l2_cross_source)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0013_note_fingerprint"
+            assert version[0] == "0014_note_l2_cross_source"
     finally:
         db.close()
 
