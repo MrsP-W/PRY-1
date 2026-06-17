@@ -104,10 +104,13 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 # ===== Metadata / 6 个 Model 注册 =====
 
 
-def test_eleven_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 11 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist, mirror schema.sql)。"""
+def test_twelve_models_registered_in_metadata() -> None:
+    """Base.metadata 注册了 12 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile, mirror schema.sql)。"""
     from my_ai_employee.db.blacklist import (
         RecipientBlacklist,  # noqa: F401  # 触发 recipient_blacklist 表注册(B4.1)
+    )
+    from my_ai_employee.db.merchant_profile import (
+        MerchantProfile,  # noqa: F401  # 触发 merchant_profile 表注册(D8.1)
     )
 
     tables = list_tables()
@@ -124,6 +127,7 @@ def test_eleven_models_registered_in_metadata() -> None:
             "transactions",
             "notes",
             "recipient_blacklist",
+            "merchant_profile",
         ]
     )
 

@@ -132,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0010_recipient_blacklist(v0.2 B4.1 推到 0010)。
+    """alembic_version 表记录当前 head revision = 0011_merchant_profile(v0.2 D8.1 推到 0011)。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -142,6 +142,7 @@ def test_alembic_version_records_current_revision(
       - D9.1 加 0008_notes(head 推到 0008)
       - v0.2 B2.1 加 0009_sla_due_at(head 推到 0009)
       - v0.2 B4.1 加 0010_recipient_blacklist(head 推到 0010)
+      - v0.2 D8.1 加 0011_merchant_profile(head 推到 0011)
     """
     from alembic import command
 
@@ -153,7 +154,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0010_recipient_blacklist"
+        assert version[0] == "0011_merchant_profile"
     finally:
         db.close()
 
@@ -281,6 +282,9 @@ def test_orm_metadata_tables_match_alembic_tables(
     from my_ai_employee.db.blacklist import (
         RecipientBlacklist,  # noqa: F401  # recipient_blacklist 表 (B4.1)
     )
+    from my_ai_employee.db.merchant_profile import (
+        MerchantProfile,  # noqa: F401  # merchant_profile 表 (D8.1)
+    )
     from my_ai_employee.db.notes import Note  # noqa: F401  # notes 表 (D9.1)
     from my_ai_employee.db.transactions import Transaction  # noqa: F401  # transactions 表
 
@@ -383,10 +387,10 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             assert ddl is not None
             assert "UNIQUE(fingerprint)" in ddl[0]
             assert "UNIQUE(event, source, subject_id, fingerprint)" not in ddl[0]
-            # 3b) alembic_version 已记录 0010(v0.2 B4.1 head)
+            # 3b) alembic_version 已记录 0011(v0.2 D8.1 head)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0010_recipient_blacklist"
+            assert version[0] == "0011_merchant_profile"
     finally:
         db.close()
 
@@ -420,7 +424,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0010_recipient_blacklist"
+            assert version[0] == "0011_merchant_profile"
     finally:
         db.close()
 
