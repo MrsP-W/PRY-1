@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.1.0 tag 已落、v0.2 实施链推进中**(2026-06-17 复核)。`git tag v0.1.0` 锚定 commit `2af775f` 不动；按用户 6/16 晚指令，本轮不封口 v0.1.0、不跑 6/23 kickstart + seal 脚本、不打 v0.2.0 tag。D1-D7 + D9 Apple Notes + D10 Agent/月报/launchd + 6/16 A/B/C/D 真实 spike 已收口；v0.2 B1/B2/B4 已实化，B-5 已从 pynput 切到 Quartz CGEvent tap，D8 已完成规则异常检测 + 商家画像 + 月报/菜单栏接入 + S11 e2e，D8.5 已完成半真实账单误报修复(new_merchant 拆为 cold_start signal + frequency 精确毫秒时窗)，D8 W3 扩样本已跑到 1000 笔(cold_start 48% → 12%，真异常误报率维持 0%)。**W3 沿 faker 路径收口**(2026-06-17 晚):三阶段验证完整(30/102/1000 笔),真账单 spike 因用户未导出 CSV + 端午连休 6/19-22 前夕推迟到 2026-06-23+ W3 后半段时间窗,不再追加更高量级 faker spike。v0.2.1 #4/#5/#3 已落地(NoteStore 状态机化 + NoteStore L2/L3 跨源去重 + ExpenseServiceImpl 实化)。Outlook/Gmail SMTP provider 仍为 docs-only 评估，未实施代码。当前 `make test` **2064 passed / 1 skipped / coverage 89.21%**，9 质量门 9/9 全绿。详见 [reports/v0.2-d8-1000-spike-2026-06-17.md](reports/v0.2-d8-1000-spike-2026-06-17.md) / [reports/v0.2-d8-real-faker-spike-2026-06-17.md](reports/v0.2-d8-real-faker-spike-2026-06-17.md) / [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [reports/v0.1-real-spike-b-real-2026-06-16.md](reports/v0.1-real-spike-b-real-2026-06-16.md) / [docs/architecture.md](docs/architecture.md)。
+> **状态**：🎯 **v0.1.0 tag 已落、v0.2 实施链推进中**(2026-06-17 复核)。`git tag v0.1.0` 锚定 commit `2af775f` 不动；按用户 6/16 晚指令，本轮不封口 v0.1.0、不跑 6/23 kickstart + seal 脚本、不打 v0.2.0 tag。D1-D7 + D9 Apple Notes + D10 Agent/月报/launchd + 6/16 A/B/C/D 真实 spike 已收口；v0.2 B1/B2/B4 已实化，B-5 已从 pynput 切到 Quartz CGEvent tap，D8 已完成规则异常检测 + 商家画像 + 月报/菜单栏接入 + S11 e2e，D8.5 已完成半真实账单误报修复(new_merchant 拆为 cold_start signal + frequency 精确毫秒时窗)，D8 W3 扩样本已跑到 1000 笔(cold_start 48% → 12%，真异常误报率维持 0%)。**W3 沿 faker 路径收口**(2026-06-17 晚):三阶段验证完整(30/102/1000 笔),真账单 spike 因用户未导出 CSV + 端午连休 6/19-22 前夕推迟到 2026-06-23+ W3 后半段时间窗,不再追加更高量级 faker spike。v0.2.1 #4/#5/#3/#2 已落地(NoteStore 状态机化 + NoteStore L2/L3 跨源去重 + ExpenseServiceImpl 实化 + 真账单 spike 端到端准备)。Outlook/Gmail SMTP provider 仍为 docs-only 评估，未实施代码。当前 `make test` **2077 passed / 1 skipped / coverage 89.21%**，9 质量门 9/9 全绿。详见 [reports/v0.2-d8-1000-spike-2026-06-17.md](reports/v0.2-d8-1000-spike-2026-06-17.md) / [reports/v0.2-d8-real-faker-spike-2026-06-17.md](reports/v0.2-d8-real-faker-spike-2026-06-17.md) / [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) / [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) / [reports/v0.1-real-spike-b-real-2026-06-16.md](reports/v0.1-real-spike-b-real-2026-06-16.md) / [docs/architecture.md](docs/architecture.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2064 passed / 1 skipped,覆盖率 89.21%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(2077 passed / 1 skipped,覆盖率 89.21%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2064 passed / 1 skipped,覆盖率 89.21%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(2077 passed / 1 skipped,覆盖率 89.21%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -190,6 +190,7 @@ make help
 | **v0.2.1 #4** NoteStore 状态机化(sync_status 5 状态 NEW/STRUCTURED/PRIVATE_SKIP/FAILED/ARCHIVED + 状态机守卫 + 13 tests) | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2.1 #5** NoteStore L2/L3 跨源去重(normalized_fingerprint title+folder+updated_at_date SHA-256 + find_candidates_by_fingerprint + 11 tests) | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2.1 #3** ExpenseServiceStub 实化(ExpenseServiceImpl 7 方法 + NoteStore/AnomalyDetector + 5 分钟缓存 + 12 tests) | ✅ 6/17 落地 | 2026-06-17 |
+| **v0.2.1 #2** 真账单 spike 端到端(评估 + spike_real_bill.py 4 重防误发骨架 + 报告模板 + 13 tests,等用户 CSV) | ✅ 6/17 准备就绪 | 2026-06-17 |
 
 ---
 
@@ -204,7 +205,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%**(2026-06-17 实测,9 质量门 9/9 全绿) |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%** → v0.2.1 #2 **2077 passed / 1 skipped / 89.21%**(2026-06-17 实测,9 质量门 9/9 全绿) |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本)→ D10.3 launchd_install.sh 部署(5 源判定 + ~/bin/)+ 每月 1 号 09:00 月报触发 |
 
 ---
@@ -263,6 +264,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-17(v0.2.1 #5+#3 复核)。`git tag v0.1.0` 仍在 commit `2af775f` 不动(v0.1.0 不封口)；README 不再记录精确 HEAD hash，避免 post-tag docs/status commit 后继续漂移，真实 HEAD 以 `git rev-parse --short HEAD` 为准。v0.2 B-5 + D8 实施链已落:Makefile 9 门补齐 + pyobjc-framework-Quartz + clipboard_listener pynput→Quartz + 11 tests + spike 30 笔；MerchantProfile ORM 8 列 + alembic 0011 + TransactionStore.list_by_counterparty；RuleBasedAnomalyDetector + AnomalyResult 6 类异常 + 12 tests；月报 `{anomaly_highlights}` 接入 + 菜单栏"⚠️ 异常告警"菜单项 + ExpenseService 方法；S11 真链路 spike 35 baseline + 1 ¥888 + e2e 3 cases；D8.5 半真实账单 spike 发现误报率 100% 后修复为 0% 真异常误报(new_merchant 拆为 cold_start signal,frequency 改精确毫秒时窗)；W3 扩样本 102 → 1000 笔后 cold_start 业务信号率收敛 48% → 12%，真异常误报率维持 0%；v0.2.1 #4 NoteStore 状态机化已落(sync_status 5 状态 + 状态机守卫 + 13 tests)；v0.2.1 #5 NoteStore L2/L3 跨源去重已落(normalized_fingerprint + find_candidates_by_fingerprint + 11 tests)；v0.2.1 #3 ExpenseServiceImpl 已落(7 方法 + NoteStore/AnomalyDetector + 5 分钟缓存 + 12 tests)。当前 `make test` **2064 passed / 1 skipped / 89.21%**，`mypy src tests` / `ruff check` / `ruff format --check .` / `alembic upgrade head --sql` / `uv build` / `make lint` / `coverage fail_under=80` 9 质量门 9/9 全绿。沿 D8 docs 评估决策 #1 + #2:选方案 A (规则基础) + C (商家画像增强)组合,不选 B (LLM 因违反 CLAUDE.md 数据不出本机铁律 + 月成本 ¥10 + 隐私风险);阈值硬编码(SIGMA_THRESHOLD=3.0 / HOURLY_TX_THRESHOLD=5 / DUPLICATE_FINGERPRINT_THRESHOLD=2 / MIN_HISTORY_FOR_SIGMA=30)放常量方便复用。沿 B-5 docs 评估决策:选方案 B(Quartz 直接绑定,沿 pyobjc-framework-Quartz≥10.3 CGEvent tap),保留 pynput 依赖(沿 D5.5.5 教训"删依赖慎之又慎"),D9.6 业务层 3 入口降级路径不撤。**下一棒**:v0.2.1 #1 或 #2 候选评估,或 W3 真实账单样本(微信 + 支付宝各 1 个真实导入)；Outlook/Gmail provider 仍需单独决策。
+**最后更新**：2026-06-17(v0.2.1 #2 复核)。`git tag v0.1.0` 仍在 commit `2af775f` 不动(v0.1.0 不封口)；README 不再记录精确 HEAD hash，避免 post-tag docs/status commit 后继续漂移，真实 HEAD 以 `git rev-parse --short HEAD` 为准。v0.2 B-5 + D8 实施链已落:Makefile 9 门补齐 + pyobjc-framework-Quartz + clipboard_listener pynput→Quartz + 11 tests + spike 30 笔；MerchantProfile ORM 8 列 + alembic 0011 + TransactionStore.list_by_counterparty；RuleBasedAnomalyDetector + AnomalyResult 6 类异常 + 12 tests；月报 `{anomaly_highlights}` 接入 + 菜单栏"⚠️ 异常告警"菜单项 + ExpenseService 方法；S11 真链路 spike 35 baseline + 1 ¥888 + e2e 3 cases；D8.5 半真实账单 spike 发现误报率 100% 后修复为 0% 真异常误报(new_merchant 拆为 cold_start signal,frequency 改精确毫秒时窗)；W3 扩样本 102 → 1000 笔后 cold_start 业务信号率收敛 48% → 12%，真异常误报率维持 0%；v0.2.1 #4 NoteStore 状态机化已落(sync_status 5 状态 + 状态机守卫 + 13 tests)；v0.2.1 #5 NoteStore L2/L3 跨源去重已落(normalized_fingerprint + find_candidates_by_fingerprint + 11 tests)；v0.2.1 #3 ExpenseServiceImpl 已落(7 方法 + NoteStore/AnomalyDetector + 5 分钟缓存 + 12 tests)；v0.2.1 #2 真账单 spike 端到端已准备就绪(spike_real_bill.py 4 重防误发 + import CLI 扩展 + 报告模板 + 13 tests,等用户 CSV)。当前 `make test` **2077 passed / 1 skipped / 89.21%**，`mypy src tests` / `ruff check` / `ruff format --check .` / `alembic upgrade head --sql` / `uv build` / `make lint` / `coverage fail_under=80` 9 质量门 9/9 全绿。沿 D8 docs 评估决策 #1 + #2:选方案 A (规则基础) + C (商家画像增强)组合,不选 B (LLM 因违反 CLAUDE.md 数据不出本机铁律 + 月成本 ¥10 + 隐私风险);阈值硬编码(SIGMA_THRESHOLD=3.0 / HOURLY_TX_THRESHOLD=5 / DUPLICATE_FINGERPRINT_THRESHOLD=2 / MIN_HISTORY_FOR_SIGMA=30)放常量方便复用。沿 B-5 docs 评估决策:选方案 B(Quartz 直接绑定,沿 pyobjc-framework-Quartz≥10.3 CGEvent tap),保留 pynput 依赖(沿 D5.5.5 教训"删依赖慎之又慎"),D9.6 业务层 3 入口降级路径不撤。**下一棒**:v0.2.1 #1 候选评估,或 W3 真实账单样本(微信 + 支付宝各 1 个真实导入)；Outlook/Gmail provider 仍需单独决策。
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY

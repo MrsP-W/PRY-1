@@ -131,20 +131,18 @@ def _validate_env(source: str) -> int:
     Returns:
         0 = 通过 / 1 = 失败
     """
-    if source in ("wechat", "both"):
-        if os.environ.get(_ENV_WECHAT) != "1":
-            print(
-                f"❌ {_ENV_WECHAT}=1 env 门控未设\n   沿 D6.6 4 重防误发范本,真实账单必须显式确认",
-                file=sys.stderr,
-            )
-            return EXIT_PARSE_FAIL
-    if source in ("alipay", "both"):
-        if os.environ.get(_ENV_ALIPAY) != "1":
-            print(
-                f"❌ {_ENV_ALIPAY}=1 env 门控未设\n   沿 D6.6 4 重防误发范本,真实账单必须显式确认",
-                file=sys.stderr,
-            )
-            return EXIT_PARSE_FAIL
+    if source in ("wechat", "both") and os.environ.get(_ENV_WECHAT) != "1":
+        print(
+            f"❌ {_ENV_WECHAT}=1 env 门控未设\n   沿 D6.6 4 重防误发范本,真实账单必须显式确认",
+            file=sys.stderr,
+        )
+        return EXIT_PARSE_FAIL
+    if source in ("alipay", "both") and os.environ.get(_ENV_ALIPAY) != "1":
+        print(
+            f"❌ {_ENV_ALIPAY}=1 env 门控未设\n   沿 D6.6 4 重防误发范本,真实账单必须显式确认",
+            file=sys.stderr,
+        )
+        return EXIT_PARSE_FAIL
     return EXIT_OK
 
 

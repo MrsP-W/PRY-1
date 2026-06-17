@@ -75,10 +75,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # v0.2.1 #2 真账单 spike 4 重防误发参数校验(沿 D6.6 范本)
     if os.environ.get("ALIPAY_REAL_IMPORT") == "1":
-        _REQUIRED_CONFIRM = "yes-i-understand-this-imports-real-bill"
-        if args.confirm != _REQUIRED_CONFIRM:
+        required_confirm = "yes-i-understand-this-imports-real-bill"
+        if args.confirm != required_confirm:
             print(
-                f"❌ ALIPAY_REAL_IMPORT=1 时 --confirm 必须为 {_REQUIRED_CONFIRM!r}",
+                f"❌ ALIPAY_REAL_IMPORT=1 时 --confirm 必须为 {required_confirm!r}",
                 file=sys.stderr,
             )
             return 1
