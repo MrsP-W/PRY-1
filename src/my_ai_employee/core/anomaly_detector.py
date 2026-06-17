@@ -35,7 +35,6 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 from typing import TYPE_CHECKING, Any, Literal
 
@@ -82,6 +81,10 @@ class AnomalyResult:
     tx: Transaction
     context: dict[str, Any] = field(default_factory=dict)
     detected_at_ms: int = 0
+    # D8.5.2 新增: 信号 vs 异常区分标志
+    # True = 业务信号(冷启动 new_merchant),不计入"真异常"
+    # False = 真异常(默认, 5 类)
+    is_signal: bool = False
 
     def __post_init__(self) -> None:
         """双层防御:数据类层级字段严判(沿 D4.7.3 v1.0.4 P1-1 范本)."""
@@ -117,6 +120,12 @@ class AnomalyResult:
             raise ValueError(
                 f"detected_at_ms 必须是原生 int(非 bool) >= 0, "
                 f"实际 type={type(self.detected_at_ms).__name__}, value={self.detected_at_ms!r}"
+            )
+        # 5. is_signal 必 bool(D8.5.2 新增, type() is bool 严判避免 int 子类陷阱)
+        if type(self.is_signal) is not bool:
+            raise TypeError(
+                f"is_signal 必须是原生 bool(非 int 子类),"
+                f"实际 type={type(self.is_signal).__name__}, value={self.is_signal!r}"
             )
 
 
@@ -247,16 +256,19 @@ class RuleBasedAnomalyDetector:
         """
         now_ms = tx.imported_at_ms or _now_ms()
         hour_ago = now_ms - 3600 * 1000
-        # since = hour_ago 前 1 天(确保覆盖完整 1 小时)
-        since_date = (datetime.fromtimestamp(hour_ago / 1000) - timedelta(days=1)).date()
-        recent = self._tx_store.list_by_source(tx.source, since=since_date, limit=200)
-        recent_in_hour = [r for r in recent if r.imported_at_ms >= hour_ago]
-        if len(recent_in_hour) > self._hourly:
+        # 修复(D8.5):改调精确毫秒时窗接口(原 list_by_source 用 date 过滤导致跨天误报)
+        recent = self._tx_store.list_by_source_in_time_window(
+            tx.source,
+            since_ms=hour_ago,
+            until_ms=now_ms,
+            limit=200,
+        )
+        if len(recent) > self._hourly:
             return AnomalyResult(
                 kind="frequency_5tx_per_hour",
                 tx=tx,
                 context={
-                    "count": len(recent_in_hour),
+                    "count": len(recent),
                     "window": "1h",
                     "threshold": self._hourly,
                 },
@@ -316,6 +328,8 @@ class RuleBasedAnomalyDetector:
             # 没存画像 → compute_profile(冷启动 < 5 笔返 None)
             profile = self._profile_store.compute_profile(tx.counterparty)
             if profile is None:
+                # D8.5.2 修复:new_merchant 是"冷启动业务信号",不是真异常
+                # 标记 is_signal=True 让月报/菜单栏区分显示
                 results.append(
                     AnomalyResult(
                         kind="new_merchant",
@@ -326,6 +340,7 @@ class RuleBasedAnomalyDetector:
                             "threshold": 5,
                         },
                         detected_at_ms=_now_ms(),
+                        is_signal=True,
                     )
                 )
                 return results

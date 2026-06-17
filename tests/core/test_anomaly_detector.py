@@ -552,3 +552,82 @@ def test_detect_all_returns_multiple_anomalies_for_same_transaction(detector, st
 
 # ===== 阈值常量(测试用,供 assert 引用)=====
 DUPLICATE_FINGERPRINT_THRESHOLD = 2  # 来自 core.anomaly_detector
+
+
+# ===== Segment 7 (v0.2 D8.5.2): is_signal + frequency 修复验证(2 cases)=====
+
+
+def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(detector, stores) -> None:
+    """Case 13 (D8.5.2) — is_signal 字段严判 + new_merchant 自动设 True."""
+    from my_ai_employee.core.anomaly_detector import AnomalyResult
+    from my_ai_employee.db.transactions import Transaction
+
+    tx = Transaction(
+        source="wechat",
+        external_transaction_id="signal-test-001",
+        transaction_date=date(2026, 6, 14),
+        amount=Decimal("30.00"),
+        counterparty="全新商家",
+        normalized_fingerprint=_make_fp("signal-test-001"),
+        status="categorized",
+        imported_at_ms=1_700_000_000_000,
+        raw_row_json="{}",
+    )
+    # is_signal 非 bool(int)→ TypeError(D4.7.3 v1.0.5 P2-1 范本)
+    with pytest.raises(TypeError, match="is_signal 必须是原生 bool"):
+        AnomalyResult(
+            kind="new_merchant",
+            tx=tx,
+            context={},
+            detected_at_ms=0,
+            is_signal=1,  # type: ignore[arg-type]
+        )
+    # 合法 AnomalyResult 默认 is_signal=False
+    result = AnomalyResult(
+        kind="amount_3sigma", tx=tx, context={}, detected_at_ms=0
+    )
+    assert result.is_signal is False
+
+    # Detector 自动给 new_merchant 设 is_signal=True
+    results = detector.detect_merchant_profile_drift(tx)
+    assert len(results) == 1
+    assert results[0].kind == "new_merchant"
+    assert results[0].is_signal is True  # D8.5.2 修复:冷启动业务信号
+
+
+def test_detect_frequency_anomaly_uses_precise_ms_time_window(
+    detector, session_factory
+) -> None:
+    """Case 14 (D8.5.2) — detect_frequency_anomaly 改调精确毫秒时窗,跨天 5 笔不误报."""
+    from my_ai_employee.db.transactions import Transaction
+
+    base_ms = 1_715_000_000_000  # 2024-05-12 14:30 UTC ms
+    # 5 笔跨日(每天 1 笔,跨 3 天),全部 > 1 小时间隔
+    with session_factory() as session:
+        for i in range(5):
+            session.add(
+                Transaction(
+                    source="wechat",
+                    external_transaction_id=f"freq-fix-{i}",
+                    transaction_date=date(2024, 5, 12 + i),
+                    amount=Decimal("30.00"),
+                    counterparty="测试商家",
+                    category="dining",
+                    normalized_fingerprint=_make_fp(f"freq-fix-{i}"),
+                    status="categorized",
+                    imported_at_ms=base_ms + i * 86400 * 1000,  # +1 天
+                    raw_row_json="{}",
+                )
+            )
+        session.commit()
+
+        target = (
+            session.query(Transaction)
+            .filter_by(external_transaction_id="freq-fix-4")
+            .one()
+        )
+
+    # 5 笔全部跨日(> 1 小时间隔),精确时窗内只有 1 笔(自身)
+    # 不应触发 frequency_5tx_per_hour(D8.5.2 修复验证)
+    result = detector.detect_frequency_anomaly(target)
+    assert result is None  # 跨日不误报
