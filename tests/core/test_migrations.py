@@ -132,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0013_note_fingerprint(v0.2 D8.1 推到 0011)。
+    """alembic_version 表记录当前 head revision = 0014_note_l2_cross_source。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -142,7 +142,10 @@ def test_alembic_version_records_current_revision(
       - D9.1 加 0008_notes(head 推到 0008)
       - v0.2 B2.1 加 0009_sla_due_at(head 推到 0009)
       - v0.2 B4.1 加 0010_recipient_blacklist(head 推到 0010)
-      - v0.2 D8.1 加 0013_note_fingerprint(head 推到 0011)
+      - v0.2 D8.1 加 0011_merchant_profile(head 推到 0011)
+      - v0.2.1 #4 加 0012_note_sync_status(head 推到 0012)
+      - v0.2.1 #5 加 0013_note_fingerprint(head 推到 0013)
+      - v0.2.1+ 加 0014_note_l2_cross_source(head 推到 0014)
     """
     from alembic import command
 
@@ -154,7 +157,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0013_note_fingerprint"
+        assert version[0] == "0014_note_l2_cross_source"
     finally:
         db.close()
 
@@ -337,7 +340,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
         4. 验证:
            a. events 表的 UNIQUE 约束是单字段 fingerprint
            b. subject_id=NULL + 同 fingerprint 再次插入 → IntegrityError (dedupe 生效)
-           c. alembic_version = 0006_outbox_approval_provenance(D5.2 head)
+           c. alembic_version = 当前 head
     """
     from alembic import command
 
@@ -387,10 +390,10 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             assert ddl is not None
             assert "UNIQUE(fingerprint)" in ddl[0]
             assert "UNIQUE(event, source, subject_id, fingerprint)" not in ddl[0]
-            # 3b) alembic_version 已记录 0011(v0.2 D8.1 head)
+            # 3b) alembic_version 已记录当前 head
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0013_note_fingerprint"
+            assert version[0] == "0014_note_l2_cross_source"
     finally:
         db.close()
 
@@ -406,7 +409,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
     模拟场景:
         1. 跑 alembic upgrade head(D5.2 后 = 0002 + 0003 + 0004 + 0005, 走 D4.3.1 改后 0002 路径)
         2. 验证 events 表存在 + UNIQUE(fingerprint) 生效
-        3. 验证 alembic_version = 0006_outbox_approval_provenance(当前 head)
+        3. 验证 alembic_version = 当前 head
     """
     from alembic import command
 
@@ -424,7 +427,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0013_note_fingerprint"
+            assert version[0] == "0014_note_l2_cross_source"
     finally:
         db.close()
 

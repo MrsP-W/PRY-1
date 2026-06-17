@@ -27,7 +27,7 @@
     - mock Database.open 走 plain sqlite(测试环境,沿 D6.4 范本)
     - tmp_path 临时文件(避免污染 fixtures)
     - 临时 SQLite 初始化成满足 alembic_version >= '0008_notes' 校验的"伪 alembic DB"
-    - 临时 SQLite 显式建 notes 表(10 字段)让 NoteStore.insert 不抛
+    - 临时 SQLite 显式建 notes 表(14 字段)让 NoteStore.insert 不抛
 """
 
 from __future__ import annotations
@@ -76,6 +76,8 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
                 updated_at_ms INTEGER NOT NULL,
                 sync_status TEXT NOT NULL DEFAULT 'NEW',
                 normalized_fingerprint TEXT,
+                needs_confirm INTEGER NOT NULL DEFAULT 0,
+                candidate_match_id INTEGER,
                 UNIQUE(apple_note_id)
             )
             """)

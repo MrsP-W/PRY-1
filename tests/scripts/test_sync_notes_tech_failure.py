@@ -51,6 +51,10 @@ _NOTES_TABLE_DDL = """
         tags TEXT,
         synced_at_ms INTEGER NOT NULL,
         updated_at_ms INTEGER NOT NULL,
+        sync_status TEXT NOT NULL DEFAULT 'NEW',
+        normalized_fingerprint TEXT,
+        needs_confirm INTEGER NOT NULL DEFAULT 0,
+        candidate_match_id INTEGER,
         UNIQUE(apple_note_id)
     )
 """
