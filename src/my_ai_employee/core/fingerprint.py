@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import hashlib
 import re
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
 # 32 chars = 128 bit(沿 v0.1-launch-plan.md:255 锁定的 16 字节 hex)
@@ -173,6 +173,60 @@ def normalize_fingerprint(
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:_FINGERPRINT_LENGTH]
 
 
+# ===== v0.2.1 #5 NoteStore L2/L3 跨源去重 =====
+# 沿 D6.4 transactions 范本:Note 专用 fingerprint(title + folder + updated_at_date)
+# 注意:Note 没有 amount/counterparty,用 title/folder/updated_at_date 替代
+# 目标:L2 软标记同 title + 同 folder + 同日期(忽略时分秒)的跨源重复 note
+
+
+def _normalize_note_title_value(value):
+    """v0.2.1 #5 Note title 归一化(strip + lower)。
+
+    沿 transactions counterparty 归一化(同 _normalize_counterparty_value 模式)。
+    """
+    if not isinstance(value, str):
+        raise TypeError(f"title 必须是 str, 实际 type={type(value).__name__}, value={value!r}")
+    return value.strip().lower()
+
+
+def _normalize_note_folder_value(value):
+    """v0.2.1 #5 Note folder 归一化(strip + lower)。
+
+    Apple Notes 文件夹名(沿 _normalize_counterparty_value 模式)。
+    """
+    if not isinstance(value, str):
+        raise TypeError(f"folder 必须是 str, 实际 type={type(value).__name__}, value={value!r}")
+    return value.strip().lower()
+
+
+def _normalize_note_updated_at_date(updated_at_ms):
+    """v0.2.1 #5 Note updated_at_ms → YYYY-MM-DD 日期字符串。
+
+    沿 _normalize_date_value 模式(只取日期,忽略时分秒)。
+    """
+    if type(updated_at_ms) is bool or not isinstance(updated_at_ms, int) or updated_at_ms < 0:
+        raise ValueError(f"updated_at_ms 必须是正 int(非 bool), 实际 {updated_at_ms!r}")
+    dt = datetime.fromtimestamp(updated_at_ms / 1000.0, tz=UTC)
+    return dt.strftime("%Y-%m-%d")
+
+
+def normalize_note_fingerprint(
+    title,
+    folder,
+    updated_at_ms,
+):
+    """v0.2.1 #5 Note 专用 fingerprint 派生(title + folder + updated_at_date)。
+
+    沿 [[v0.2.1-candidates-2026-06-17]] §6.2 设计。
+    """
+    title_norm = _normalize_note_title_value(title)
+    folder_norm = _normalize_note_folder_value(folder)
+    date_norm = _normalize_note_updated_at_date(updated_at_ms)
+    canonical = f"{title_norm}|{folder_norm}|{date_norm}"
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:_FINGERPRINT_LENGTH]
+
+
 __all__ = [
     "normalize_fingerprint",
+    "normalize_note_fingerprint",
 ]

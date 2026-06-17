@@ -132,7 +132,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0012_note_sync_status(v0.2 D8.1 推到 0011)。
+    """alembic_version 表记录当前 head revision = 0013_note_fingerprint(v0.2 D8.1 推到 0011)。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -142,7 +142,7 @@ def test_alembic_version_records_current_revision(
       - D9.1 加 0008_notes(head 推到 0008)
       - v0.2 B2.1 加 0009_sla_due_at(head 推到 0009)
       - v0.2 B4.1 加 0010_recipient_blacklist(head 推到 0010)
-      - v0.2 D8.1 加 0012_note_sync_status(head 推到 0011)
+      - v0.2 D8.1 加 0013_note_fingerprint(head 推到 0011)
     """
     from alembic import command
 
@@ -154,7 +154,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0012_note_sync_status"
+        assert version[0] == "0013_note_fingerprint"
     finally:
         db.close()
 
@@ -390,7 +390,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录 0011(v0.2 D8.1 head)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0012_note_sync_status"
+            assert version[0] == "0013_note_fingerprint"
     finally:
         db.close()
 
@@ -424,7 +424,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0012_note_sync_status"
+            assert version[0] == "0013_note_fingerprint"
     finally:
         db.close()
 

@@ -86,7 +86,7 @@ def valid_note_params() -> dict:
 
 
 def test_note_orm_has_11_columns() -> None:
-    """1.1 Note ORM 必含 11 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms/sync_status)。
+    """1.1 Note ORM 必含 12 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms/sync_status)。
 
     v0.2.1 #4 增量(2026-06-17): 加 sync_status 列(5 状态枚举,默认 'NEW')。
     """
@@ -104,6 +104,7 @@ def test_note_orm_has_11_columns() -> None:
         "synced_at_ms",
         "updated_at_ms",
         "sync_status",
+        "normalized_fingerprint",
     }
     actual = {col.name for col in Note.__table__.columns}
     assert actual == expected, f"列不匹配:expected={expected}, actual={actual}"

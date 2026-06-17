@@ -85,11 +85,11 @@ class NoteDuplicateError(Exception):
         self.original_error = original_error
 
 
-# ===== Note ORM(11 字段, v0.2.1 #4 加 sync_status)=====
+# ===== Note ORM(12 字段, v0.2.1 #4 sync_status + #5 normalized_fingerprint)=====
 
 
 class Note(Base):
-    """Apple Notes 主表(mirror 0008 alembic migration + 0012 sync_status)。
+    """Apple Notes 主表(mirror 0008 + 0012 sync_status + 0013 normalized_fingerprint)。
 
     字段注解:
         - id:                INTEGER PK AUTOINCREMENT
@@ -103,6 +103,7 @@ class Note(Base):
         - synced_at_ms:      INTEGER NOT NULL
         - updated_at_ms:     INTEGER NOT NULL
         - sync_status:       TEXT NOT NULL DEFAULT 'NEW'  # v0.2.1 #4 状态机字段
+        - normalized_fingerprint: TEXT NULL  # v0.2.1 #5 L2 跨源指纹字段
 
     sync_status 状态机(沿 [[v0.2.1-candidates-2026-06-17]] §5.2):
         - NEW(初始入库,默认)
@@ -119,12 +120,19 @@ class Note(Base):
         - STRUCTURED → ARCHIVED (mark_archived)
         - 其他转换: ValueError(沿 D6.6 P2 修复范本)
 
+    normalized_fingerprint 字段语义(v0.2.1 #5 沿 D6.4 transactions 范本):
+        - 32 chars SHA-256 hex(沿 core/fingerprint.py:135 normalize_fingerprint 范本)
+        - 派生公式: SHA256(normalize(title) + "|" + normalize(folder) + "|" + YYYY-MM-DD(updated_at_ms))[:32]
+        - NULL 表示未派生(旧 notes 条目,异步 job 补全;新条目 NoteStore.insert 同步派生)
+        - L2 跨源候选查询(NoteStore.find_candidates_by_fingerprint 软标记,无 UNIQUE)
+
     约束:
         - UNIQUE(apple_note_id)
     索引:
         - idx_notes_folder_synced(folder, synced_at_ms DESC)
         - idx_notes_updated(updated_at_ms DESC)
-        - idx_notes_sync_status(sync_status)  # v0.2.1 #4 新增(按状态过滤热路径)
+        - idx_notes_sync_status(sync_status)  # v0.2.1 #4 新增
+        - idx_notes_fingerprint(normalized_fingerprint)  # v0.2.1 #5 新增(L2 跨源候选)
     """
 
     __tablename__ = "notes"
@@ -145,6 +153,8 @@ class Note(Base):
     sync_status: Mapped[str] = mapped_column(
         Text, nullable=False, default="NEW", server_default="NEW"
     )
+    # v0.2.1 #5 L2 跨源指纹字段(NULL 表示未派生)
+    normalized_fingerprint: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # 约束 + 索引(D3.2 雷区 #8: DESC 索引用 sa.text 包裹)
     __table_args__ = (
@@ -152,12 +162,14 @@ class Note(Base):
         Index("idx_notes_folder_synced", "folder", text("synced_at_ms DESC")),
         Index("idx_notes_updated", text("updated_at_ms DESC")),
         Index("idx_notes_sync_status", "sync_status"),  # v0.2.1 #4 新增
+        Index("idx_notes_fingerprint", "normalized_fingerprint"),  # v0.2.1 #5 新增
     )
 
     def __repr__(self) -> str:
         return (
             f"<Note id={self.id} apple_note_id={self.apple_note_id!r} "
-            f"folder={self.folder!r} title={self.title!r} sync_status={self.sync_status!r}>"
+            f"folder={self.folder!r} title={self.title!r} "
+            f"sync_status={self.sync_status!r} fingerprint={self.normalized_fingerprint!r}>"
         )
 
 
@@ -355,6 +367,11 @@ class NoteStore:
     ) -> Note:
         """插入一条 note(D9.1 入库入口 — L1 UNIQUE 业务阻断).
 
+        v0.2.1 #5 增量(2026-06-17):
+          - 自动派生 normalized_fingerprint(title + folder + updated_at_date)
+            沿 D6.4 transactions 范本(SHA-256 前 32 chars)
+          - 写库时同步写入 normalized_fingerprint 字段(L2 跨源候选查询热路径)
+
         Args:
             apple_note_id: Apple ID(L1 硬约束)
             folder: 文件夹名(默认 "Notes")
@@ -367,7 +384,7 @@ class NoteStore:
             synced_at_ms: 同步时间戳(默认 = 当前时间)
 
         Returns:
-            新插入的 Note(已 refresh,id/synced_at_ms 都可读)
+            新插入的 Note(已 refresh,id/synced_at_ms/normalized_fingerprint 都可读)
 
         Raises:
             NoteDuplicateError: UNIQUE(apple_note_id) 冲突(L1 业务阻断入口)
@@ -388,7 +405,17 @@ class NoteStore:
         else:
             synced_at_ms = self._validate_ms(synced_at_ms, "synced_at_ms")
 
-        # 2. 落库(D3.3.3 教训: except 范围窄化,只接 IntegrityError)
+        # 2. v0.2.1 #5 自动派生 L2 normalized_fingerprint
+        # 沿 D6.4 transactions 范本(title + folder + updated_at_date)
+        from my_ai_employee.core.fingerprint import normalize_note_fingerprint
+
+        normalized_fingerprint = normalize_note_fingerprint(
+            title=title,
+            folder=folder,
+            updated_at_ms=updated_at_ms,
+        )
+
+        # 3. 落库(D3.3.3 教训: except 范围窄化,只接 IntegrityError)
         try:
             with self._sf() as session:
                 note = Note(
@@ -401,6 +428,7 @@ class NoteStore:
                     tags=tags,
                     synced_at_ms=synced_at_ms,
                     updated_at_ms=updated_at_ms,
+                    normalized_fingerprint=normalized_fingerprint,
                 )
                 session.add(note)
                 session.commit()
@@ -662,6 +690,63 @@ class NoteStore:
                 .limit(limit)
             )
             return list(session.execute(stmt).scalars().all())
+
+    def find_candidates_by_fingerprint(
+        self,
+        fingerprint: str,
+        *,
+        exclude_note_id: int | None = None,
+        folder_filter: str | None = None,
+        limit: int = 5,
+    ) -> list[Note]:
+        """v0.2.1 #5 L2 跨源 normalized_fingerprint 候选查询(软标记,无 UNIQUE)。
+
+        沿 D6.4 TransactionStore.find_candidates_by_fingerprint 范本。
+        业务语义:同 title + 同 folder + 同日期(忽略时分秒)的跨源重复 note 候选。
+        """
+        fingerprint = self._validate_fingerprint(fingerprint)
+        if exclude_note_id is not None and (
+            type(exclude_note_id) is bool
+            or not isinstance(exclude_note_id, int)
+            or exclude_note_id < 1
+        ):
+            raise ValueError(
+                f"exclude_note_id 必须是正 int(非 bool)(允许 None),"
+                f"实际 type={type(exclude_note_id).__name__}, value={exclude_note_id!r}"
+            )
+        if folder_filter is not None:
+            folder_filter = self._validate_folder(folder_filter)
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 100:
+            raise ValueError(
+                f"limit 必须是 [1, 100] 的 int(非 bool),"
+                f"实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        with self._sf() as session:
+            stmt = select(Note).where(Note.normalized_fingerprint == fingerprint)
+            if folder_filter is not None:
+                stmt = stmt.where(Note.folder == folder_filter)
+            if exclude_note_id is not None:
+                stmt = stmt.where(Note.id != exclude_note_id)
+            stmt = stmt.order_by(Note.id.asc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
+    @staticmethod
+    def _validate_fingerprint(fingerprint: str) -> str:
+        """严判 fingerprint 必为 32 chars SHA-256 hex(L2 跨源指纹查询入参)。"""
+        if not isinstance(fingerprint, str):
+            raise TypeError(
+                f"fingerprint 必须是 str, 实际 type={type(fingerprint).__name__},"
+                f" value={fingerprint!r}"
+            )
+        stripped = fingerprint.strip()
+        if len(stripped) != 32:
+            raise ValueError(
+                f"fingerprint 必须是 32 chars SHA-256 hex, 实际 {len(stripped)} chars,"
+                f" value={fingerprint!r}"
+            )
+        if not all(c in "0123456789abcdef" for c in stripped.lower()):
+            raise ValueError(f"fingerprint 必须只含 [0-9a-f] hex 字符, 实际 {fingerprint!r}")
+        return stripped
 
 
 # ===== 模块导出 =====
