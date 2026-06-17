@@ -583,9 +583,7 @@ def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(detector,
             is_signal=1,  # type: ignore[arg-type]
         )
     # 合法 AnomalyResult 默认 is_signal=False
-    result = AnomalyResult(
-        kind="amount_3sigma", tx=tx, context={}, detected_at_ms=0
-    )
+    result = AnomalyResult(kind="amount_3sigma", tx=tx, context={}, detected_at_ms=0)
     assert result.is_signal is False
 
     # Detector 自动给 new_merchant 设 is_signal=True
@@ -595,9 +593,7 @@ def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(detector,
     assert results[0].is_signal is True  # D8.5.2 修复:冷启动业务信号
 
 
-def test_detect_frequency_anomaly_uses_precise_ms_time_window(
-    detector, session_factory
-) -> None:
+def test_detect_frequency_anomaly_uses_precise_ms_time_window(detector, session_factory) -> None:
     """Case 14 (D8.5.2) — detect_frequency_anomaly 改调精确毫秒时窗,跨天 5 笔不误报."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -621,11 +617,7 @@ def test_detect_frequency_anomaly_uses_precise_ms_time_window(
             )
         session.commit()
 
-        target = (
-            session.query(Transaction)
-            .filter_by(external_transaction_id="freq-fix-4")
-            .one()
-        )
+        target = session.query(Transaction).filter_by(external_transaction_id="freq-fix-4").one()
 
     # 5 笔全部跨日(> 1 小时间隔),精确时窗内只有 1 笔(自身)
     # 不应触发 frequency_5tx_per_hour(D8.5.2 修复验证)

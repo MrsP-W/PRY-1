@@ -747,9 +747,7 @@ class TransactionStore:
                 f"实际 type={type(since_ms).__name__}, value={since_ms!r}"
             )
         if until_ms is not None and (
-            type(until_ms) is bool
-            or not isinstance(until_ms, int)
-            or until_ms < 0
+            type(until_ms) is bool or not isinstance(until_ms, int) or until_ms < 0
         ):
             raise ValueError(
                 f"until_ms 必须是原生 int(非 bool) >= 0 或 None, "
