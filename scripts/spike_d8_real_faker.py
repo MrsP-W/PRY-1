@@ -202,12 +202,10 @@ def run_spike(fixtures_root: Path) -> int:
     """
     # 1. 加载 6 个 CSV × 5 行 = 30 笔
     wechat_csvs = [
-        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv"
-        for year in (2024, 2025, 2026)
+        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv" for year in (2024, 2025, 2026)
     ]
     alipay_csvs = [
-        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv"
-        for year in (2024, 2025, 2026)
+        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv" for year in (2024, 2025, 2026)
     ]
 
     for p in wechat_csvs + alipay_csvs:
@@ -297,9 +295,7 @@ def run_spike(fixtures_root: Path) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="v0.2 D8 周验证 — 半真实账单样本误报率 spike"
-    )
+    parser = argparse.ArgumentParser(description="v0.2 D8 周验证 — 半真实账单样本误报率 spike")
     parser.add_argument(
         "--fixtures-root",
         type=Path,
