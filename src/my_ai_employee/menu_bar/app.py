@@ -56,6 +56,10 @@ from my_ai_employee.menu_bar.expense_service import (
     ExpenseService,
     ExpenseServiceStub,
 )
+from my_ai_employee.menu_bar.note_confirm_service import (
+    NoteConfirmService,
+    NoteConfirmServiceStub,
+)
 from my_ai_employee.menu_bar.tcc import TCCPermissionError
 
 # rumps.App 基类提取为模块级变量(测试可 monkeypatch 替换,避免 NSApp 拉起)
@@ -100,6 +104,67 @@ def _validate_expense_service(obj: object) -> None:
         raise TypeError(
             f"expense_service 必须实现 ExpenseService 5 方法接口,实际 type={type(obj).__name__}"
         )
+
+
+# NoteConfirmService 3 方法签名(注入校验用,沿 v0.2.2 候选 #2 范本)
+_NOTE_CONFIRM_SERVICE_METHODS: tuple[str, ...] = (
+    "get_pending_confirm_count",
+    "list_pending_confirm",
+    "confirm_note",
+)
+
+
+def _validate_note_confirm_service(obj: object) -> None:
+    """严判 obj 满足 NoteConfirmService 接口(3 方法齐全).
+
+    Args:
+        obj: 任意对象(None / NoteConfirmServiceStub 实例 / duck-typed 实现)
+
+    Raises:
+        TypeError: obj 非 None 也非 NoteConfirmServiceStub,且缺任一方法
+    """
+    if obj is None or isinstance(obj, NoteConfirmServiceStub):
+        return
+    if not all(hasattr(obj, m) for m in _NOTE_CONFIRM_SERVICE_METHODS):
+        raise TypeError(
+            f"note_confirm_service 必须实现 NoteConfirmService 3 方法接口,"
+            f" 实际 type={type(obj).__name__}"
+        )
+
+
+def _update_menu_badge(menu: Any, prefix: str, new_title: str) -> None:
+    """更新菜单栏 badge — 支持 list 和 rumps.Menu 2 种形态(沿 v0.2.2 #2 范本).
+
+    设计决策(2026-06-17 锁定):
+        - rumps.Menu 内部是 OrderedDict[str, MenuItem],iter 出来是 str(title),
+          menu.items() 返回 (str, MenuItem) tuple 对
+        - 形态 1: list[str] (test fake_rumps 环境) — 直接 menu[idx] = new_title
+        - 形态 2: rumps.Menu (真实 NSApp 环境) — 改 menu_item.title
+          (OrderedDict key 保持不变, NSMenu 自动同步)
+
+    Args:
+        menu: self.menu 对象(list 或 rumps.Menu)
+        prefix: 旧 title 前缀(用于匹配)
+        new_title: 新 title(完整字符串,非前缀)
+    """
+    # 形态 1: 普通 list[str](test fake_rumps 环境)
+    if isinstance(menu, list):
+        for idx, item in enumerate(menu):
+            if isinstance(item, str) and item.startswith(prefix):
+                menu[idx] = new_title
+        return
+    # 形态 2: rumps.Menu(真实 NSApp 环境)— 内部 OrderedDict
+    # menu.items() 返回 (str_title, MenuItem) tuple 对(沿 OrderedDict API)
+    try:
+        items_method = getattr(menu, "items", None)
+        if not callable(items_method):
+            return
+        for title, menu_item in items_method():
+            if isinstance(title, str) and title.startswith(prefix) and hasattr(menu_item, "title"):
+                menu_item.title = new_title
+    except (TypeError, AttributeError):
+        # 防御性 fallback: 啥都不做(避免崩菜单栏)
+        pass
 
 
 def _build_default_capture_service() -> ClipboardCaptureService:
@@ -148,6 +213,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         *,
         expense_service: ExpenseService | None = None,
         capture_service: ClipboardCaptureService | None = None,
+        note_confirm_service: NoteConfirmService | None = None,
     ) -> None:
         """初始化菜单栏 App.
 
@@ -156,13 +222,22 @@ class NotesMenuBarApp(_RumpsAppBase):
             capture_service: 剪贴板捕获服务(D9.6.1 沿 D4.7.3 v1.0.6 注入,None 时
                               用 _build_default_capture_service 懒构造,test fixture
                               必须显式注入以避免真读剪贴板 / 连 DB)
+            note_confirm_service: 1-click 确认服务(v0.2.2 候选 #2 接入,None 时用
+                              NoteConfirmServiceStub 默认单例)
         """
         # 严判 expense_service(沿 D4.7.3 公共 helper 范本,避免嵌套 if)
         _validate_expense_service(expense_service)
+        # 严判 note_confirm_service(沿 v0.2.2 候选 #2 范本)
+        _validate_note_confirm_service(note_confirm_service)
 
         # 状态先记下,super().__init__() 之前不能调任何 rumps 回调
         self._service: ExpenseService = expense_service or ExpenseServiceStub.get_default_stub()
         self._notes_count: int = self._service.get_total_notes_count()
+
+        # v0.2.2 候选 #2 — 1-click 确认服务(沿 D4.7.3 v1.0.6 default_singleton 范本)
+        self._note_confirm_service: NoteConfirmService = (
+            note_confirm_service or NoteConfirmServiceStub.get_default_stub()
+        )
 
         # ⌥⌘N 全局快捷键子进程(D9.5 双进程范本)
         # Queue 必须在子进程 start 之前创建(子进程会推到这)
@@ -179,11 +254,14 @@ class NotesMenuBarApp(_RumpsAppBase):
         # 调 rumps.App.__init__ 启动 NSApp 主循环
         super().__init__("Notes", title=self._format_title(self._notes_count))
 
-        # 注册 6 菜单项(rumps 范本:list[str] 形式注册,D8.3 加"⚠️ 异常告警")
+        # 注册 8 菜单项(rumps 范本:list[str] 形式注册,D8.3 加"⚠️ 异常告警",
+        # v0.2.2 候选 #2 加"📥 待确认" + "📥 确认第 1 条")
         self.menu: list[Any] = [
             "立即同步",
             "打开 Notes",
             "⚠️ 异常告警 (0)",
+            "📥 待确认 (0)",
+            "📥 确认第 1 条",
             "授权引导",
             None,  # 分隔符
             "退出",
@@ -314,6 +392,108 @@ class NotesMenuBarApp(_RumpsAppBase):
             title = getattr(item, "title", None)
             if isinstance(title, str) and title.startswith("⚠️ 异常告警"):
                 item.title = f"⚠️ 异常告警 ({count})"
+
+    # ===== v0.2.2 候选 #2 1-click 确认 UI(沿 D8.3 异常告警范本)=====
+
+    @_clicked_decorator("📥 待确认")
+    def _on_show_pending_confirm(self, _sender: Any) -> None:
+        """点击"📥 待确认" — 弹窗显示 L2 跨源候选待确认列表(v0.2.2 候选 #2 接入).
+
+        业务语义(沿 D6.4 transactions L2 范本):
+            - 拉 needs_confirm=1 的 note 列表(最多 10 条)
+            - 空列表 → 弹"暂无待确认"占位(沿 D8.3 _on_anomaly_alert 范本)
+            - 非空 → 弹窗显示 apple_note_id / title / folder / synced_at 字段
+        """
+        try:
+            pending = self._note_confirm_service.list_pending_confirm(limit=10)
+        except Exception as e:  # noqa: BLE001 — Stub 异常不能让菜单崩
+            _notification_func(
+                "📥 待确认",
+                "获取待确认列表失败",
+                f"{type(e).__name__}: {str(e)[:100]}",
+            )
+            return
+        if not pending:
+            _notification_func(
+                "📥 待确认",
+                "暂无待确认",
+                "无 L2 跨源候选(needs_confirm=0 全部已处理)",
+            )
+            return
+        body = "\n".join(
+            f"• {p.get('title', '?')} | {p.get('folder', '?')} | "
+            f"synced_at={p.get('synced_at_ms', '?')}"
+            for p in pending
+        )
+        # 1-click 提示: 用户可直接关闭弹窗后点"确认第 1 条"做 1-click 归档
+        # (rumps.notification 是只读弹窗, 不支持按钮; 真 1-click 由 _on_confirm_first 触发)
+        _notification_func(
+            f"📥 待确认 ({len(pending)} 条)",
+            "L2 跨源候选(顶部 1 条待 1-click 确认)",
+            body[:200],
+        )
+
+    def _refresh_pending_confirm_count(self) -> None:
+        """刷新待确认菜单项 badge (v0.2.2 候选 #2, 沿 _refresh_anomaly_count 范本).
+
+        修复(v0.2.2 #2): 真实 rumps 环境下 self.menu 是 rumps.Menu 对象,项是
+        tuple(str_title, MenuItem) 形式. 范本 _refresh_anomaly_count 用
+        getattr(item, "title", None) 找不到(tuple 无 .title), 改用
+        rumps_menu_helper 同时支持:
+        - 普通 list[str] (test fake_rumps 环境, app._RumpsAppBase = _FakeRumpsApp)
+        - rumps.Menu 项 (真实 NSApp 环境, app._RumpsAppBase = rumps.App)
+        """
+        try:
+            count = self._note_confirm_service.get_pending_confirm_count()
+        except Exception:  # noqa: BLE001 — 静默降级,不影响主流程
+            return
+        new_title = f"📥 待确认 ({count})"
+        _update_menu_badge(self.menu, "📥 待确认", new_title)
+
+    @_clicked_decorator("📥 确认第 1 条")
+    def _on_confirm_first(self, _sender: Any) -> None:
+        """点击"📥 确认第 1 条" — 1-click 确认 top 1 待确认 note(v0.2.2 候选 #2).
+
+        业务语义(沿 D6.4 transactions L2 范本):
+            - 拉 list(limit=1)取 top 1
+            - 空 → 弹"暂无待确认"
+            - 非空 → confirm_note(apple_note_id) → NoteStore.mark_archived
+            - 刷新 badge + 弹 notification 反馈结果
+        """
+        try:
+            pending = self._note_confirm_service.list_pending_confirm(limit=1)
+        except Exception as e:  # noqa: BLE001 — Stub 异常不能让菜单崩
+            _notification_func(
+                "📥 1-click 确认",
+                "获取待确认列表失败",
+                f"{type(e).__name__}: {str(e)[:100]}",
+            )
+            return
+        if not pending:
+            _notification_func(
+                "📥 1-click 确认",
+                "暂无待确认",
+                "无需 1-click 确认(needs_confirm=0 全部已处理)",
+            )
+            return
+        top = pending[0]
+        apple_note_id = top.get("apple_note_id", "")
+        try:
+            self._note_confirm_service.confirm_note(apple_note_id)
+        except Exception as e:  # noqa: BLE001 — confirm 失败需明确反馈
+            _notification_func(
+                "📥 1-click 确认失败",
+                top.get("title", "?"),
+                f"{type(e).__name__}: {str(e)[:200]}",
+            )
+            return
+        # 成功: 刷新 badge + 反馈
+        self._refresh_pending_confirm_count()
+        _notification_func(
+            "📥 1-click 确认成功",
+            top.get("title", "?"),
+            f"已归档: apple_note_id={apple_note_id[:32]}",
+        )
 
     # ===== D9.5 ⌥⌘N 全局快捷键(双进程范本主入口)=====
 

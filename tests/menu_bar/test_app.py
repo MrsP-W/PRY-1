@@ -39,6 +39,34 @@ class _FakeMenuItem:
         self.title = title
 
 
+def _assert_menu_badge_updated(menu: Any, prefix: str, expected_count: str) -> bool:
+    """验证 menu badge 已更新 — 同时支持 list[str] 和 rumps.Menu 2 种形态(沿 v0.2.2 #2 范本).
+
+    Args:
+        menu: app.menu 对象(可能是 list[str] 或 rumps.Menu)
+        prefix: title 前缀(必含"📥 待确认"等 badge 关键词)
+        expected_count: 期望的 count 字符串(如 "3", "1")
+
+    Returns:
+        bool: True = 找到且更新, False = 未找到或未更新
+    """
+    expected_title = f"{prefix} ({expected_count})"
+    # 形态 1: list[str](test fake_rumps 环境)— 直接比对 str
+    if isinstance(menu, list):
+        return any(isinstance(item, str) and item == expected_title for item in menu)
+    # 形态 2: rumps.Menu(真实 NSApp)— iter 出来是 str keys,必须查 MenuItem.title
+    try:
+        return any(
+            isinstance(title, str)
+            and title.startswith(prefix)
+            and hasattr(menu_item, "title")
+            and menu_item.title == expected_title
+            for title, menu_item in menu.items()
+        )
+    except (TypeError, AttributeError):
+        return False
+
+
 @pytest.fixture
 def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
     """monkeypatch rumps.App 为 _FakeRumpsApp(隔离 NSApp 拉起)."""
@@ -387,3 +415,298 @@ def test_poll_hotkey_queue_tcc_denied_triggers_notification(
     call_args_list = app_module._notification_func.call_args_list
     found = any("未授权" in str(call) for call in call_args_list)
     assert found, f"未找到 未授权 notification, 实际调用列表: {call_args_list}"
+
+
+# ===== v0.2.2 候选 #2 — NoteConfirmService 1-click 确认 UI 测试 =====
+# 沿 D8.3 _refresh_anomaly_count 范本 + D9.3 _on_anomaly_alert 范本
+# T13-T20 共 8 cases
+
+
+# ===== T13. 默认 NoteConfirmServiceStub 注入 =====
+
+
+def test_app_uses_default_note_confirm_stub(fake_rumps: None) -> None:
+    """v0.2.2 #2:T13 NotesMenuBarApp 不传 note_confirm_service → 默认 Stub 注入."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceStub
+
+    app = NotesMenuBarApp()
+    assert isinstance(app._note_confirm_service, NoteConfirmServiceStub)
+    # Stub 默认返回 0
+    assert app._note_confirm_service.get_pending_confirm_count() == 0
+
+
+# ===== T14. 自定义 note_confirm_service 注入 =====
+
+
+def test_app_accepts_custom_note_confirm_service(fake_rumps: None) -> None:
+    """v0.2.2 #2:T14 NotesMenuBarApp 接受 duck-typed note_confirm_service 注入.
+
+    沿 T2 _CustomService 范本: 3 方法契约满足即可, 类型不强制 isinstance(NoteConfirmServiceStub).
+    """
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    class _CustomConfirmService:
+        """Duck-typed 实现 — 不继承 NoteConfirmServiceStub."""
+
+        def __init__(self) -> None:
+            self.confirm_calls: list[str] = []
+
+        def get_pending_confirm_count(self) -> int:
+            return 7
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return [
+                {
+                    "apple_note_id": f"id-{i}",
+                    "title": f"Note {i}",
+                    "folder": "工作",
+                    "synced_at_ms": 1_780_000_000_000,
+                    "candidate_match_id": None,
+                    "needs_confirm": 1,
+                }
+                for i in range(min(limit, 3))
+            ]
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            self.confirm_calls.append(apple_note_id)
+
+    custom = _CustomConfirmService()
+    app = NotesMenuBarApp(note_confirm_service=custom)  # type: ignore[arg-type]
+    assert app._note_confirm_service is custom
+    assert app._note_confirm_service.get_pending_confirm_count() == 7
+
+
+# ===== T15. 严判 note_confirm_service 必须实现 3 方法契约 =====
+
+
+def test_app_invalid_note_confirm_service_raises(fake_rumps: None) -> None:
+    """v0.2.2 #2:T15 缺任一方法 → TypeError(沿 D4.7.3 公共 helper 范本)."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    class _IncompleteConfirmService:
+        def get_pending_confirm_count(self) -> int:
+            return 0
+
+        # 缺 list_pending_confirm + confirm_note
+
+    with pytest.raises(TypeError, match="note_confirm_service 必须实现"):
+        NotesMenuBarApp(note_confirm_service=_IncompleteConfirmService())  # type: ignore[arg-type]
+
+
+# ===== T16. 新菜单项注册 "📥 待确认" + "📥 确认第 1 条" =====
+
+
+def test_app_pending_confirm_menu_items_registered(fake_rumps: None) -> None:
+    """v0.2.2 #2:T16 menu 含 '📥 待确认' + '📥 确认第 1 条' 2 新菜单项."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    app = NotesMenuBarApp()
+    menu_strs = [str(m) for m in app.menu]
+    assert any("📥 待确认" in s for s in menu_strs), f"menu 缺 '📥 待确认', 实际 {menu_strs}"
+    assert any("📥 确认第 1 条" in s for s in menu_strs), (
+        f"menu 缺 '📥 确认第 1 条', 实际 {menu_strs}"
+    )
+
+
+# ===== T17. _refresh_pending_confirm_count 刷新 badge =====
+
+
+def test_refresh_pending_confirm_count_updates_badge(fake_rumps: None) -> None:
+    """v0.2.2 #2:T17 调 _refresh_pending_confirm_count → 菜单项 '📥 待确认 (N)' 更新.
+
+    沿 T? _refresh_anomaly_count 范本(直接注入自定义 service 替换 menu item).
+    修复(v0.2.2 #2): app.menu 项是 str, 直接用 isinstance(item, str) + startswith 比较.
+    """
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    class _StubConfirmService:
+        def get_pending_confirm_count(self) -> int:
+            return 3
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            return None
+
+    app = NotesMenuBarApp(note_confirm_service=_StubConfirmService())  # type: ignore[arg-type]
+    # 触发刷新
+    app._refresh_pending_confirm_count()
+
+    # 验证 menu 中"📥 待确认" 项更新到 (3)
+    # 修复(v0.2.2 #2): rumps.Menu(真实 NSApp)iter 出来是 str keys,改 MenuItem.title 不会改 keys;
+    # 必须同时检查 list[str] 形态(替换 str)和 MenuItem 形态(改 .title)
+    found = _assert_menu_badge_updated(app.menu, "📥 待确认", "3")
+    assert found, "未找到 '📥 待确认' 菜单项"
+
+
+# ===== T18. _on_show_pending_confirm 空列表 → "暂无待确认" notification =====
+
+
+def test_on_show_pending_confirm_empty_notification(fake_rumps: None) -> None:
+    """v0.2.2 #2:T18 空待确认 → notification '暂无待确认'(沿 D8.3 _on_anomaly_alert 范本)."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import app as app_module
+
+    class _EmptyConfirmService:
+        def get_pending_confirm_count(self) -> int:
+            return 0
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            return None
+
+    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())  # type: ignore[arg-type]
+    app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
+
+    app_module._notification_func.assert_called_once()
+    call_args = app_module._notification_func.call_args
+    assert call_args[0][0] == "📥 待确认"
+    assert call_args[0][1] == "暂无待确认"
+    assert "needs_confirm=0" in call_args[0][2]
+
+
+# ===== T19. _on_show_pending_confirm 非空列表 → 弹窗显示 top 10 =====
+
+
+def test_on_show_pending_confirm_non_empty_notification(fake_rumps: None) -> None:
+    """v0.2.2 #2:T19 非空待确认 → notification 弹窗显示 N 条(沿 D8.3 范本)."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import app as app_module
+
+    class _NonEmptyConfirmService:
+        def get_pending_confirm_count(self) -> int:
+            return 2
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return [
+                {
+                    "apple_note_id": "id-1",
+                    "title": "Note 1",
+                    "folder": "工作",
+                    "synced_at_ms": 1_780_000_000_000,
+                    "candidate_match_id": 10,
+                    "needs_confirm": 1,
+                },
+                {
+                    "apple_note_id": "id-2",
+                    "title": "Note 2",
+                    "folder": "生活",
+                    "synced_at_ms": 1_780_000_001_000,
+                    "candidate_match_id": None,
+                    "needs_confirm": 1,
+                },
+            ]
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            return None
+
+    app = NotesMenuBarApp(note_confirm_service=_NonEmptyConfirmService())  # type: ignore[arg-type]
+    app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
+
+    app_module._notification_func.assert_called_once()
+    call_args = app_module._notification_func.call_args
+    # 标题: 📥 待确认 (2 条)
+    assert call_args[0][0] == "📥 待确认 (2 条)"
+    # 副标题: L2 跨源候选(顶部 1 条待 1-click 确认)
+    assert "顶部 1 条" in call_args[0][1]
+    # body 含 2 条 note 标题
+    body = call_args[0][2]
+    assert "Note 1" in body
+    assert "Note 2" in body
+    assert "工作" in body
+    assert "生活" in body
+
+
+# ===== T20. _on_confirm_first 1-click 确认 top 1 + 刷新 badge + 弹成功通知 =====
+
+
+def test_on_confirm_first_success_flow(fake_rumps: None) -> None:
+    """v0.2.2 #2:T20 _on_confirm_first 成功: 调 confirm_note + 刷新 badge + 弹成功 notification."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import app as app_module
+
+    class _PendingConfirmService:
+        def __init__(self) -> None:
+            self.confirm_calls: list[str] = []
+            self._list_call_count = 0
+
+        def get_pending_confirm_count(self) -> int:
+            return 1  # badge 数字
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            self._list_call_count += 1
+            # 第一次调: _on_confirm_first 拉 top 1 → 返回 [top1]
+            # 第二次调: _refresh_pending_confirm_count 间接调 list_by_needs_confirm(走 Real)
+            # 但 Stub 不调 list_by_needs_confirm,只调 get_pending_confirm_count, 所以不需返回
+            if self._list_call_count == 1:
+                return [
+                    {
+                        "apple_note_id": "top-1",
+                        "title": "Top Note",
+                        "folder": "工作",
+                        "synced_at_ms": 1_780_000_000_000,
+                        "candidate_match_id": 99,
+                        "needs_confirm": 1,
+                    }
+                ]
+            return []
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            self.confirm_calls.append(apple_note_id)
+
+    svc = _PendingConfirmService()
+    app = NotesMenuBarApp(note_confirm_service=svc)  # type: ignore[arg-type]
+
+    # 触发 1-click 确认
+    app._on_confirm_first(_FakeMenuItem("📥 确认第 1 条"))
+
+    # 验 confirm_note 被调 1 次, 入参 "top-1"
+    assert svc.confirm_calls == ["top-1"]
+
+    # 验 _notification_func 被调(成功反馈)
+    app_module._notification_func.assert_called()
+    call_args_list = app_module._notification_func.call_args_list
+    success_call = next(
+        (c for c in call_args_list if c[0][0] == "📥 1-click 确认成功"),
+        None,
+    )
+    assert success_call is not None, f"未找到成功 notification, 实际 {call_args_list}"
+    assert success_call[0][1] == "Top Note"
+    assert "top-1" in success_call[0][2]
+
+    # 验 menu badge 已被刷新到 (1)
+    # 修复(v0.2.2 #2): rumps.Menu 形态下, iter 出来是 OrderedDict 的 str keys
+    # (改 MenuItem.title 不会改 keys); 必须用 _assert_menu_badge_updated 同时支持 2 种形态
+    found_badge = _assert_menu_badge_updated(app.menu, "📥 待确认", "1")
+    assert found_badge, "未找到 '📥 待确认' 菜单项"
+
+
+# ===== T21. _on_confirm_first 空列表 → "暂无待确认" notification =====
+
+
+def test_on_confirm_first_empty_returns_placeholder(fake_rumps: None) -> None:
+    """v0.2.2 #2:T21 空待确认 → 1-click 弹'暂无待确认'(沿 _on_show_pending_confirm 范本)."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import app as app_module
+
+    class _EmptyConfirmService:
+        def get_pending_confirm_count(self) -> int:
+            return 0
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            return None
+
+    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())  # type: ignore[arg-type]
+    app._on_confirm_first(_FakeMenuItem("📥 确认第 1 条"))
+
+    app_module._notification_func.assert_called_once()
+    call_args = app_module._notification_func.call_args
+    assert call_args[0][0] == "📥 1-click 确认"
+    assert call_args[0][1] == "暂无待确认"
