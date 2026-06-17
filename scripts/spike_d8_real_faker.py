@@ -1,20 +1,31 @@
 #!/usr/bin/env python3
-"""v0.2 D8 周验证 — 半真实账单样本误报率 spike.
+"""v0.2 D8 周验证 — 半真实账单样本误报率 spike(2026-06-17 扩到 100 笔).
 
 承接 commit 9 docs 收口后的本周验证任务(2026-06-17 用户指令 #2):
 "本周验证:D8 异常检测再跑一轮真实/半真实账单样本,观察误报率"
++ "继续扩大账单样本,观察 cold_start signal 是否噪音过多"
 
-样本来源:
-    - tests/fixtures/wechat_faker/{2024, 2025, 2026}_sample.csv (15 笔)
-    - tests/fixtures/alipay_faker/{2024, 2025, 2026}_sample.csv (15 笔)
-    - 共 30 笔半真实账单,覆盖 12 个月 + 2 个 source + ~10 个商家
+样本来源(W3 扩样本 — 沿 D8.5.4 修复后验证):
+    - tests/fixtures/wechat_faker/{2022, 2023, 2024, 2025, 2026}_sample.csv (50 笔)
+    - tests/fixtures/alipay_faker/{2022, 2023, 2024, 2025, 2026}_sample.csv (50 笔)
+    - 共 100 笔半真实账单,覆盖 24 个月 + 2 个 source + ~20 个商家
+
+W3 验证重点(用户指令 #2):
+    1. 真异常误报率仍 0%(D8.5.1-3 修复后)
+    2. cold_start 业务信号在更大样本下合理(不噪音)
+    3. 已知异常能 catch(¥999 amount_3sigma + 4/5 hour frequency 5 笔)
+
+设计样本验证用例:
+    - 1 笔 ¥999 异常大额(wechat_2024-05-21 + alipay_2024-05-21) → amount_3sigma
+    - 5 笔同 source 1 小时内(wechat_2026-04-05 + alipay_2026-04-05) → frequency_5tx_per_hour
+    - ~50% 商家有画像(≥5 笔)+ ~50% 商家冷启动(<5 笔) → new_merchant 信号分布
 
 验证维度:
     1. 6 类异常触发率(amount_3sigma / frequency_5tx_per_hour / duplicate_charge
        / new_merchant / amount_drift / category_drift)
     2. 性能基线(平均 ms / 笔,沿 D5.6.5 真实 1 封范本)
-    3. 真实 CSV 解析 → 业务层 → 异常检测 端到端兼容
-    4. 半真实样本(小批量)误报率评估
+    3. 真异常误报率(已知正常样本被标异常 = 0%)
+    4. cold_start 信号占比(业务信号,不算异常)
 
 4 退出码契约(沿 D5.6.5 + D8.4 spike 范本):
     0 = 成功(spike 跑通 + 统计输出)
@@ -200,12 +211,12 @@ def run_spike(fixtures_root: Path) -> int:
     Returns:
         退出码(0/1/2/3)
     """
-    # 1. 加载 6 个 CSV × 5 行 = 30 笔
+    # 1. 加载 10 个 CSV × 10 行 = 100 笔(W3 扩样本,沿 D8.5.4 修复后验证)
     wechat_csvs = [
-        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv" for year in (2024, 2025, 2026)
+        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv" for year in (2022, 2023, 2024, 2025, 2026)
     ]
     alipay_csvs = [
-        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv" for year in (2024, 2025, 2026)
+        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv" for year in (2022, 2023, 2024, 2025, 2026)
     ]
 
     for p in wechat_csvs + alipay_csvs:
@@ -241,7 +252,7 @@ def run_spike(fixtures_root: Path) -> int:
         merchant_profile_store=profile_store,
     )
 
-    # 3. 入库 30 笔(按 imported_at_ms 升序,模拟真实时序)
+    # 3. 入库 100 笔(按 imported_at_ms 升序,模拟真实时序)
     txs_sorted = sorted(txs, key=lambda t: t.imported_at_ms)
     with sf() as session:
         for tx in txs_sorted:
