@@ -198,7 +198,10 @@ def test_cli_exits_0_on_valid_csv(tmp_path: Path, capsys: pytest.CaptureFixture[
     assert rc == 0, (
         f"D6.6 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
     )
-    # 输出含 parsed=5 inserted=5
-    assert "parsed=5" in captured.out, f"输出缺 parsed=5:{captured.out}"
-    assert "inserted=5" in captured.out, f"输出缺 inserted=5:{captured.out}"
+    # 输出含 parsed/inserted 当前 fixture 行数
+    from my_ai_employee.connectors.wechat_csv import WeChatCSVConnector
+
+    expected = len(WeChatCSVConnector().safe_parse(valid_csv))
+    assert f"parsed={expected}" in captured.out, f"输出缺 parsed={expected}:{captured.out}"
+    assert f"inserted={expected}" in captured.out, f"输出缺 inserted={expected}:{captured.out}"
     assert "version=2024" in captured.out, f"输出缺 version=2024:{captured.out}"

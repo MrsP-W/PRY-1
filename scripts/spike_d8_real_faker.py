@@ -213,10 +213,12 @@ def run_spike(fixtures_root: Path) -> int:
     """
     # 1. 加载 10 个 CSV × 10 行 = 100 笔(W3 扩样本,沿 D8.5.4 修复后验证)
     wechat_csvs = [
-        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv" for year in (2022, 2023, 2024, 2025, 2026)
+        fixtures_root / "wechat_faker" / f"wechat_{year}_sample.csv"
+        for year in (2022, 2023, 2024, 2025, 2026)
     ]
     alipay_csvs = [
-        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv" for year in (2022, 2023, 2024, 2025, 2026)
+        fixtures_root / "alipay_faker" / f"alipay_{year}_sample.csv"
+        for year in (2022, 2023, 2024, 2025, 2026)
     ]
 
     for p in wechat_csvs + alipay_csvs:

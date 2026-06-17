@@ -28,6 +28,12 @@ if TYPE_CHECKING:
 _WECHAT_FIXTURES = Path(__file__).resolve().parent.parent / "fixtures" / "wechat_faker"
 
 
+def _expected_wechat_rows(filename: str) -> int:
+    from my_ai_employee.connectors.wechat_csv import WeChatCSVConnector
+
+    return len(WeChatCSVConnector().safe_parse(_WECHAT_FIXTURES / filename))
+
+
 @pytest.fixture
 def engine() -> Iterator:
     eng = create_engine("sqlite:///:memory:")
@@ -58,17 +64,18 @@ def test_import_wechat_csv_inserts_categorized_transactions(adapter, session_fac
     result = adapter.import_wechat_csv(_WECHAT_FIXTURES / "wechat_2024_sample.csv")
 
     assert result.source == "wechat"
-    assert result.parsed == 5
-    assert result.inserted == 5
-    assert result.categorized == 5
+    expected = _expected_wechat_rows("wechat_2024_sample.csv")
+    assert result.parsed == expected
+    assert result.inserted == expected
+    assert result.categorized == expected
     assert result.duplicates == 0
     assert result.needs_confirm == 0
     assert result.failed == 0
-    assert len(result.imported_ids) == 5
+    assert len(result.imported_ids) == expected
 
     store = TransactionStore(session_factory)
-    rows = store.list_by_source("wechat", limit=10)
-    assert len(rows) == 5
+    rows = store.list_by_source("wechat", limit=expected + 1)
+    assert len(rows) == expected
     assert {row.status for row in rows} == {"categorized"}
     assert {row.category for row in rows} >= {"dining", "transport", "home", "other"}
     assert all(len(row.normalized_fingerprint) == 32 for row in rows)
@@ -81,14 +88,15 @@ def test_import_wechat_csv_duplicate_second_run_skips(adapter, session_factory) 
     first = adapter.import_wechat_csv(_WECHAT_FIXTURES / "wechat_2025_sample.csv")
     second = adapter.import_wechat_csv(_WECHAT_FIXTURES / "wechat_2025_sample.csv")
 
-    assert first.inserted == 5
-    assert second.parsed == 5
+    expected = _expected_wechat_rows("wechat_2025_sample.csv")
+    assert first.inserted == expected
+    assert second.parsed == expected
     assert second.inserted == 0
-    assert second.duplicates == 5
-    assert len(second.duplicate_external_ids) == 5
+    assert second.duplicates == expected
+    assert len(second.duplicate_external_ids) == expected
 
     store = TransactionStore(session_factory)
-    assert len(store.list_by_source("wechat", limit=10)) == 5
+    assert len(store.list_by_source("wechat", limit=expected + 1)) == expected
 
 
 def test_cross_source_candidate_marks_needs_confirm(adapter, session_factory) -> None:

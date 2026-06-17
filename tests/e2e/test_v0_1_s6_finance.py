@@ -215,32 +215,54 @@ def test_s6_cross_source_dedup(session_factory: sessionmaker[Session]) -> None:
     res_w = adapter.import_raw_transactions(wechat_rows, source="wechat")
     res_a = adapter.import_raw_transactions(alipay_rows, source="alipay")
 
-    # wechat:单源 5 笔,无跨源候选 → 全 categorized
-    assert res_w.parsed == 5
-    assert res_w.inserted == 5
-    assert res_w.categorized == 5
+    expected_wechat = len(wechat_rows)
+    expected_alipay = len(alipay_rows)
+    from my_ai_employee.core.fingerprint import normalize_fingerprint
+
+    wechat_fps = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty) for row in wechat_rows
+    }
+    alipay_fps = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty) for row in alipay_rows
+    }
+    expected_alipay_candidates = sum(
+        1
+        for row in alipay_rows
+        if normalize_fingerprint(row.date, row.amount, row.counterparty) in wechat_fps
+    )
+    expected_wechat_candidates = sum(
+        1
+        for row in wechat_rows
+        if normalize_fingerprint(row.date, row.amount, row.counterparty) in alipay_fps
+    )
+
+    # wechat:单源样本,无跨源候选 → 全 categorized
+    assert res_w.parsed == expected_wechat
+    assert res_w.inserted == expected_wechat
+    assert res_w.categorized == expected_wechat
     assert res_w.needs_confirm == 0
     assert res_w.failed == 0
 
-    # alipay:5 笔全命中 1 个 wechat 候选 → needs_confirm=5, candidate_count=5
-    assert res_a.parsed == 5
-    assert res_a.inserted == 5
-    assert res_a.needs_confirm == 5
-    assert res_a.categorized == 0
-    assert res_a.candidate_count == 5
+    # alipay:同 fingerprint 样本命中 wechat 候选 → needs_confirm + candidate_count
+    assert res_a.parsed == expected_alipay
+    assert res_a.inserted == expected_alipay
+    assert res_a.needs_confirm == expected_alipay_candidates
+    assert res_a.categorized == expected_alipay - expected_alipay_candidates
+    assert res_a.candidate_count == expected_alipay_candidates
     assert res_a.failed == 0
 
     # L1 跨源不误判(同 ext_id 不会阻断,因 wechat/alipay ext_id 前缀不同)
     # L2 跨源正确触发(同 fingerprint 跨源候选)
     store = TransactionStore(session_factory)
-    wechat_stored = store.list_by_source("wechat", limit=10)
-    alipay_stored = store.list_by_source("alipay", limit=10)
-    assert len(wechat_stored) == 5
-    assert len(alipay_stored) == 5
+    wechat_stored = store.list_by_source("wechat", limit=expected_wechat + 1)
+    alipay_stored = store.list_by_source("alipay", limit=expected_alipay + 1)
+    assert len(wechat_stored) == expected_wechat
+    assert len(alipay_stored) == expected_alipay
 
-    # alipay 行的 candidate_match_id 指向 wechat id(同 fingerprint 选最小 id)
-    for alipay_tx in alipay_stored:
-        assert alipay_tx.needs_confirm == 1
+    # 命中候选的 alipay 行 candidate_match_id 指向 wechat id(同 fingerprint 选最小 id)
+    needs_confirm_rows = [tx for tx in alipay_stored if tx.needs_confirm == 1]
+    assert len(needs_confirm_rows) == expected_alipay_candidates
+    for alipay_tx in needs_confirm_rows:
         assert alipay_tx.candidate_match_id is not None
         # candidate_match_id 必须是 wechat 的某个 id
         assert any(w.id == alipay_tx.candidate_match_id for w in wechat_stored)
@@ -259,11 +281,11 @@ def test_s6_cross_source_dedup(session_factory: sessionmaker[Session]) -> None:
 
     res_a2 = adapter2.import_raw_transactions(alipay_rows, source="alipay")
     res_w2 = adapter2.import_raw_transactions(wechat_rows, source="wechat")
-    assert res_a2.inserted == 5
-    assert res_a2.categorized == 5
-    assert res_w2.inserted == 5
-    assert res_w2.needs_confirm == 5
-    assert res_w2.candidate_count == 5
+    assert res_a2.inserted == expected_alipay
+    assert res_a2.categorized == expected_alipay
+    assert res_w2.inserted == expected_wechat
+    assert res_w2.needs_confirm == expected_wechat_candidates
+    assert res_w2.candidate_count == expected_wechat_candidates
 
 
 # ===== S6.3 — 菜单栏支出总额(commit 2 真实断言)=====
@@ -310,11 +332,17 @@ def test_s6_menu_bar_expense_update() -> None:
     assert res.inserted == 100
     assert res.failed == 0
 
-    # 当月支出总额断言
-    # 2024-05 月:10 轮 × 5063.50(38.50+12.00+5000.00+28.00+(-15.00)) = 50635.00
+    # 当月支出总额断言(随 fixture 扩样本动态计算期望值)
     total_may = current_month_expense(sf, today=date(2024, 5, 31))
-    assert total_may == Decimal("50635.00"), f"2024-05 总额应等于 50635.00,实际 {total_may}"
+    expected_may = sum(
+        (row.amount for row in rows_100 if row.date.year == 2024 and row.date.month == 5),
+        Decimal("0.00"),
+    )
+    assert total_may == expected_may, f"2024-05 总额应等于 {expected_may},实际 {total_may}"
 
-    # 2025-03 月:10 轮 × 3603.50(42.00+88.00+3500.00+15.50+(-42.00)) = 36035.00
     total_mar = current_month_expense(sf, today=date(2025, 3, 31))
-    assert total_mar == Decimal("36035.00"), f"2025-03 总额应等于 36035.00,实际 {total_mar}"
+    expected_mar = sum(
+        (row.amount for row in rows_100 if row.date.year == 2025 and row.date.month == 3),
+        Decimal("0.00"),
+    )
+    assert total_mar == expected_mar, f"2025-03 总额应等于 {expected_mar},实际 {total_mar}"

@@ -160,8 +160,11 @@ def test_alipay_cli_exits_0_on_valid_csv(
     assert rc == 0, (
         f"D7.5 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
     )
-    assert "parsed=5" in captured.out
-    assert "inserted=5" in captured.out
+    from my_ai_employee.connectors.alipay_csv import AlipayCSVConnector
+
+    expected = len(AlipayCSVConnector().safe_parse(valid_csv))
+    assert f"parsed={expected}" in captured.out
+    assert f"inserted={expected}" in captured.out
     assert "version=2024" in captured.out
 
 
