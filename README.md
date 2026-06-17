@@ -243,6 +243,7 @@ make help
 | [docs/v0.2-launch-plan.md](docs/v0.2-launch-plan.md) | v0.2 启动规划(6 子阶段预映射 + 5 决策 + 完成定义)|
 | [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 | [docs/v0.1.0-status-snapshot-2026-06-17.md](docs/v0.1.0-status-snapshot-2026-06-17.md) | **🆕 v0.1.0 tag 状态快照(释放/锁定/后期启动 3 维度复核)** |
+| [reports/v0.2.1-closure-2026-06-17.md](reports/v0.2.1-closure-2026-06-17.md) | **🆕 v0.2.1 docs 收口报告(9 commits 链 + 6 候选全部实化 + 5 关键教训 + v0.2.2+ 启动候选)** |
 
 ---
 
