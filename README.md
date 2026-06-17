@@ -187,6 +187,7 @@ make help
 | **v0.2 D8.2** RuleBasedAnomalyDetector + AnomalyResult 6 类异常(规则基础 + 商家画像) | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2 D8.3** 月报异常告警段接入 + 菜单栏"⚠️ 异常告警"菜单项 + ExpenseService 2 方法 | ✅ 6/17 落地 | 2026-06-17 |
 | **v0.2 D8.4** S11 真链路 spike(35 baseline + 1 ¥888 异常) + e2e 3 cases | ✅ 6/17 落地 | 2026-06-17 |
+| **v0.2.1 #4** NoteStore 状态机化(sync_status 5 状态 NEW/STRUCTURED/PRIVATE_SKIP/FAILED/ARCHIVED + 状态机守卫 + 13 tests) | ✅ 6/17 落地 | 2026-06-17 |
 
 ---
 
