@@ -20,6 +20,7 @@ D6.6 P1 修复(检查员驳回 4 缺陷 — 1 P1 + 3 P2):
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -47,11 +48,48 @@ def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="导入微信账单 CSV 到 transactions 表")
     parser.add_argument("--csv-path", required=True, type=Path, help="微信账单 CSV 文件路径")
     parser.add_argument("--db-path", type=Path, default=None, help="可选 DB 路径,默认主库")
+    # v0.2.1 #2 真账单 spike 4 重防误发参数(沿 D6.6 范本)
+    parser.add_argument(
+        "--max-rows",
+        type=int,
+        default=None,
+        help="限制单次导入行数(默认 None = 全量;spike 时通常 1)",
+    )
+    parser.add_argument(
+        "--confirm",
+        type=str,
+        default="",
+        help="确认文本(沿 D6.6 4 重防误发:必传 'yes-i-understand-this-imports-real-bill')",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=1,
+        help="限制总批次数(默认 1;spike 时锁定 1 防止误触发)",
+    )
     return parser
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+
+    # v0.2.1 #2 真账单 spike 4 重防误发参数校验(沿 D6.6 范本)
+    # 当 WECHAT_REAL_IMPORT=1 时,必须传 --confirm 确认文本 + --max-rows + --count
+    if os.environ.get("WECHAT_REAL_IMPORT") == "1":
+        _REQUIRED_CONFIRM = "yes-i-understand-this-imports-real-bill"
+        if args.confirm != _REQUIRED_CONFIRM:
+            print(
+                f"❌ WECHAT_REAL_IMPORT=1 时 --confirm 必须为 {_REQUIRED_CONFIRM!r}",
+                file=sys.stderr,
+            )
+            return 1
+        if args.count != 1:
+            print(
+                f"❌ WECHAT_REAL_IMPORT=1 时 --count 必须为 1(防误触发),实际 {args.count}",
+                file=sys.stderr,
+            )
+            return 1
+
     if not args.csv_path.exists():
         print(f"CSV 文件不存在: {args.csv_path}", file=sys.stderr)
         return 1
