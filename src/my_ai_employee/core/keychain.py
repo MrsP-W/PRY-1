@@ -37,6 +37,10 @@ SERVICE_IMAP_GMAIL: Final[str] = f"{SERVICE_PREFIX}.imap.gmail"
 SERVICE_SMTP_QQ: Final[str] = f"{SERVICE_PREFIX}.smtp.qq"
 SERVICE_SMTP_OUTLOOK: Final[str] = f"{SERVICE_PREFIX}.smtp.outlook"
 SERVICE_SMTP_GMAIL: Final[str] = f"{SERVICE_PREFIX}.smtp.gmail"
+# v0.2.1 #6 OAuth 2.0 抽象层新增 OAuth token service(独立 outlook/gmail,
+# 为未来 outlook/gmail SMTP 解封做准备)
+SERVICE_OAUTH_MICROSOFT: Final[str] = f"{SERVICE_PREFIX}.oauth.microsoft"
+SERVICE_OAUTH_GOOGLE: Final[str] = f"{SERVICE_PREFIX}.oauth.google"
 
 
 @dataclass
@@ -254,6 +258,83 @@ def get_smtp_password_for_provider(provider: str, email: str) -> KeychainResult:
     return get_password(_resolve_smtp_service(provider), email)
 
 
+# v0.2.1 #6 OAuth 2.0 抽象层 — OAuth token 存取(独立 outlook/gmail SMTP)
+# 设计:OAuth2Token 序列化为 JSON 字符串,整体存入 Keychain(沿 [[d5.6.5-real-send]]
+# Keychain 模式:每次写整个 token,避免部分写入导致状态不一致)
+
+
+def _resolve_oauth_service(provider: str) -> str:
+    """provider 名 → OAuth Keychain service 常量(严判白名单).
+
+    Args:
+        provider: 'microsoft' / 'google'(本轮仅这两个,后续可扩展)
+
+    Returns:
+        Keychain service 字符串
+
+    Raises:
+        ValueError: provider 不在白名单
+    """
+    if provider == "microsoft":
+        return SERVICE_OAUTH_MICROSOFT
+    if provider == "google":
+        return SERVICE_OAUTH_GOOGLE
+    raise ValueError(f"v0.2.1 #6:oauth_provider 必传 'microsoft'/'google',实际 {provider!r}")
+
+
+def set_oauth_token(provider: str, email: str, token_json: str) -> KeychainResult:
+    """存 OAuth 2.0 token(JSON 字符串,整体存入 Keychain)。
+
+    Args:
+        provider: 'microsoft' / 'google'
+        email: 用户邮箱(账号)
+        token_json: OAuth2Token.to_dict() 序列化后的 JSON 字符串
+
+    Returns:
+        KeychainResult(沿 [[d5.6.5-real-send]] 模式)
+
+    Raises:
+        ValueError: provider 不在白名单 / token_json 非 str / 非空
+    """
+    if not isinstance(token_json, str):
+        raise ValueError(f"token_json 必须是 str,实际 type={type(token_json).__name__}")
+    if not token_json.strip():
+        raise ValueError("token_json 必填且必须非空字符串")
+    return set_password(_resolve_oauth_service(provider), email, token_json)
+
+
+def get_oauth_token(provider: str, email: str) -> KeychainResult:
+    """读 OAuth 2.0 token(JSON 字符串,需 OAuth2Token.from_dict 反序列化)。
+
+    Args:
+        provider: 'microsoft' / 'google'
+        email: 用户邮箱(账号)
+
+    Returns:
+        KeychainResult(JSON 字符串在 .value 中)
+
+    Raises:
+        ValueError: provider 不在白名单
+    """
+    return get_password(_resolve_oauth_service(provider), email)
+
+
+def delete_oauth_token(provider: str, email: str) -> KeychainResult:
+    """删 OAuth 2.0 token(用户撤销授权时调)。
+
+    Args:
+        provider: 'microsoft' / 'google'
+        email: 用户邮箱(账号)
+
+    Returns:
+        KeychainResult
+
+    Raises:
+        ValueError: provider 不在白名单
+    """
+    return delete_password(_resolve_oauth_service(provider), email)
+
+
 __all__ = [
     "KeychainResult",
     "is_available",
@@ -275,4 +356,10 @@ __all__ = [
     "SERVICE_SMTP_QQ",
     "SERVICE_SMTP_OUTLOOK",
     "SERVICE_SMTP_GMAIL",
+    # v0.2.1 #6 OAuth 抽象层
+    "SERVICE_OAUTH_MICROSOFT",
+    "SERVICE_OAUTH_GOOGLE",
+    "set_oauth_token",
+    "get_oauth_token",
+    "delete_oauth_token",
 ]
