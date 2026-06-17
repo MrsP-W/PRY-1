@@ -62,6 +62,7 @@ EXIT_TECH_FAIL: int = 3
 
 # ===== MockRunner(沿 D9.5 spike 范本)=====
 
+
 class MockHotkeyRunner:
     """Mock 子进程跑通链路 — 直接推 hotkey 事件到 Queue(不真 spawn).
 
@@ -105,6 +106,7 @@ class RealQuartzRunner:
         self._n = n
         try:
             import Quartz  # type: ignore[import-not-found]
+
             self._Quartz = Quartz
         except ImportError as e:
             raise RuntimeError(f"Quartz 模块未装: {e}") from e
@@ -125,17 +127,12 @@ class RealQuartzRunner:
         try:
             for i in range(self._n):
                 # 真 CGEventPost 模拟 ⌥⌘N
-                evt = self._Quartz.CGEventCreateKeyboardEvent(
-                    None, 0x2D, True
-                )
+                evt = self._Quartz.CGEventCreateKeyboardEvent(None, 0x2D, True)
                 self._Quartz.CGEventSetFlags(
                     evt,
-                    self._Quartz.kCGEventFlagMaskAlternate
-                    | self._Quartz.kCGEventFlagMaskCommand,
+                    self._Quartz.kCGEventFlagMaskAlternate | self._Quartz.kCGEventFlagMaskCommand,
                 )
-                self._Quartz.CGEventPost(
-                    self._Quartz.kCGSessionEventTap, evt
-                )
+                self._Quartz.CGEventPost(self._Quartz.kCGSessionEventTap, evt)
                 time.sleep(0.1)  # 等子进程收事件
                 received += 1
                 if i < self._n - 1:
@@ -149,9 +146,7 @@ class RealQuartzRunner:
             )
             failed = received
             received = 0
-            failed_items.append(
-                {"combo": "<alt>+<cmd>+n", "err": str(e)}
-            )
+            failed_items.append({"combo": "<alt>+<cmd>+n", "err": str(e)})
         finally:
             proc.terminate()  # 沿 daemon=True 自动 kill 范本
             proc.join(timeout=2.0)
@@ -169,12 +164,12 @@ class RealQuartzRunner:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description=(
-            "v0.2 B-5.3 S7 ⌥⌘N Quartz CGEvent tap 真链路 spike"
-        )
+        description=("v0.2 B-5.3 S7 ⌥⌘N Quartz CGEvent tap 真链路 spike")
     )
     parser.add_argument(
-        "--n", type=int, default=30,
+        "--n",
+        type=int,
+        default=30,
         help="推 ⌥⌘N hotkey 次数(默认 30,沿 D9.5/D5.6.4 范本)",
     )
     args = parser.parse_args(argv)

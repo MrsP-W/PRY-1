@@ -47,6 +47,7 @@ def _make_fp(seed: str) -> str:
     """生成 32 chars 小写 hex fingerprint(沿 D6.2 normalize_fingerprint 派生规则)."""
     return hashlib.sha256(seed.encode()).hexdigest()[:32]
 
+
 # ===== 退出码契约 =====
 
 EXIT_OK: int = 0
