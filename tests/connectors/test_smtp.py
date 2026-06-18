@@ -26,6 +26,7 @@ from my_ai_employee.connectors.smtp import (
     InMemorySmtpTransport,
     SmtpAuthError,
     SMTPConnector,
+    SMTPProviderFactory,
     SMTPSendResult,
     SmtpTimeoutError,
     SmtpTransportError,
@@ -184,13 +185,17 @@ class TestSMTPConnectorConstruction:
         with pytest.raises(ValueError, match="未知 provider"):
             SMTPConnector(provider="invalid", email="user@example.com")
 
-    def test_outlook_provider_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="只实现 provider='qq'"):
-            SMTPConnector(provider="outlook", email="user@outlook.com")
+    def test_valid_outlook_provider(self) -> None:
+        connector = SMTPConnector(provider="outlook", email="user@outlook.com")
+        assert connector._provider == "outlook"
+        assert connector.server_host == "smtp.office365.com"
+        assert connector.source_name == "outlook"
 
-    def test_gmail_provider_not_implemented(self) -> None:
-        with pytest.raises(NotImplementedError, match="只实现 provider='qq'"):
-            SMTPConnector(provider="gmail", email="user@gmail.com")
+    def test_valid_gmail_provider(self) -> None:
+        connector = SMTPConnector(provider="gmail", email="user@gmail.com")
+        assert connector._provider == "gmail"
+        assert connector.server_host == "smtp.gmail.com"
+        assert connector.source_name == "gmail"
 
     def test_default_transport_is_none(self) -> None:
         # D5.1-fix 修复:默认 transport=None(防假成功)
@@ -305,8 +310,87 @@ class TestServerConfigs:
         assert qq_config.host == "smtp.qq.com"
         assert qq_config.port == 465
 
+    def test_outlook_config(self) -> None:
+        outlook_config = SERVER_CONFIGS["outlook"]
+        assert outlook_config.host == "smtp.office365.com"
+        assert outlook_config.port == 465
+        assert outlook_config.source_name_value == "outlook"
 
-# ===== 7. SMTPConnector transport 边界(D5.1-fix 修复,7 cases)=====
+    def test_gmail_config(self) -> None:
+        gmail_config = SERVER_CONFIGS["gmail"]
+        assert gmail_config.host == "smtp.gmail.com"
+        assert gmail_config.port == 465
+        assert gmail_config.source_name_value == "gmail"
+
+
+# ===== 7. SMTPProviderFactory(6 cases)=====
+
+
+class TestSMTPProviderFactory:
+    def test_factory_creates_qq_with_default_smtplib_transport(self) -> None:
+        connector = SMTPProviderFactory.create(provider="qq", email="user@qq.com")
+        assert connector._provider == "qq"
+        assert connector.transport is not None
+        assert connector.transport.__class__.__name__ == "SmtpLibTransport"
+
+    def test_factory_creates_outlook_with_inmemory_transport(self) -> None:
+        transport = InMemorySmtpTransport()
+        connector = SMTPProviderFactory.create(
+            provider="outlook",
+            email="user@outlook.com",
+            transport=transport,
+        )
+        assert connector._provider == "outlook"
+        assert connector.source_name == "outlook"
+        assert connector.transport is transport
+
+    def test_factory_creates_gmail_with_inmemory_transport(self) -> None:
+        transport = InMemorySmtpTransport()
+        connector = SMTPProviderFactory.create(
+            provider="gmail",
+            email="user@gmail.com",
+            transport=transport,
+        )
+        assert connector._provider == "gmail"
+        assert connector.source_name == "gmail"
+        assert connector.transport is transport
+
+    def test_factory_rejects_unknown_provider(self) -> None:
+        with pytest.raises(ValueError, match="未知 provider"):
+            SMTPProviderFactory.create(provider="invalid", email="user@example.com")
+
+    def test_factory_rejects_email_without_at(self) -> None:
+        with pytest.raises(ValueError, match="email 必须是含 @"):
+            SMTPProviderFactory.create(provider="qq", email="invalid")
+
+    def test_factory_inmemory_outlook_connects_with_provider_keychain(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from my_ai_employee.core import keychain
+
+        captured: list[tuple[str, str]] = []
+
+        def fake_get(provider: str, email: str) -> keychain.KeychainResult:
+            captured.append((provider, email))
+            return keychain.KeychainResult(ok=True, value="test-authcode")
+
+        monkeypatch.setattr(keychain, "get_smtp_password_for_provider", fake_get)
+        transport = InMemorySmtpTransport()
+        connector = SMTPProviderFactory.create(
+            provider="outlook",
+            email="user@outlook.com",
+            transport=transport,
+        )
+
+        import asyncio
+
+        asyncio.run(connector.connect())
+        assert captured == [("outlook", "user@outlook.com")]
+        assert transport.connected is True
+        assert transport.logged_in is True
+
+
+# ===== 8. SMTPConnector transport 边界(D5.1-fix 修复,7 cases)=====
 # D5.1-fix 风险 #2 缓解:默认 transport=None(不再静默 fallback 到
 # InMemorySmtpTransport),构造时 loguru.warning,首次 connect()/healthcheck()
 # 入口 is None 硬报错 → 防生产环境"假成功"。覆盖以下 7 维:
@@ -363,8 +447,8 @@ class TestSMTPConnectorTransportBoundary:
 
         monkeypatch.setattr(
             keychain,
-            "get_smtp_password",
-            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+            "get_smtp_password_for_provider",
+            lambda provider, email: keychain.KeychainResult(ok=True, value="test-authcode"),
         )
         connector = SMTPConnector(provider="qq", email="user@qq.com")
         # 2. 调 connect() → 应抛 SmtpTransportError
@@ -381,8 +465,8 @@ class TestSMTPConnectorTransportBoundary:
 
         monkeypatch.setattr(
             keychain,
-            "get_smtp_password",
-            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+            "get_smtp_password_for_provider",
+            lambda provider, email: keychain.KeychainResult(ok=True, value="test-authcode"),
         )
         connector = SMTPConnector(provider="qq", email="user@qq.com")
         import asyncio
@@ -401,8 +485,8 @@ class TestSMTPConnectorTransportBoundary:
 
         monkeypatch.setattr(
             keychain,
-            "get_smtp_password",
-            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+            "get_smtp_password_for_provider",
+            lambda provider, email: keychain.KeychainResult(ok=True, value="test-authcode"),
         )
         transport = InMemorySmtpTransport()
         connector = SMTPConnector(provider="qq", email="user@qq.com", transport=transport)
@@ -424,8 +508,8 @@ class TestSMTPConnectorTransportBoundary:
 
         monkeypatch.setattr(
             keychain,
-            "get_smtp_password",
-            lambda email: keychain.KeychainResult(ok=True, value="test-authcode"),
+            "get_smtp_password_for_provider",
+            lambda provider, email: keychain.KeychainResult(ok=True, value="test-authcode"),
         )
 
         # Mock smtplib.SMTP_SSL — 不真连 QQ 服务器

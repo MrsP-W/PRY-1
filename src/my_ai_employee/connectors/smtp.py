@@ -7,9 +7,9 @@
     - **凭证**:邮箱地址 + 授权码(**不是密码**),从 macOS Keychain 读
         (与 D2 IMAP 授权码**分别**存储,因 QQ SMTP 授权码可与 IMAP 不同)
     - **服务器**:
-        - QQ:     smtp.qq.com:465 (SSL)
-        - Outlook: smtp.office365.com:465 (D5.1 仅占位,OAuth 2.0 推后)
-        - Gmail:  smtp.gmail.com:465 (D5.1 仅占位,OAuth 2.0 推后)
+        - QQ:      smtp.qq.com:465 (SSL)
+        - Outlook: smtp.office365.com:465 (provider 工厂已解封,真实 OAuth 发送仍走门控)
+        - Gmail:   smtp.gmail.com:465 (provider 工厂已解封,真实 OAuth 发送仍走门控)
     - **Transport 抽象**:`SMTPTransport` Protocol + 生产 `SmtpLibTransport` + 测试 `InMemorySmtpTransport`
         沿 D4.7.3 教训:`is None` 不用 `or` 保留 falsey 替身
     - **D5.1 范围**:**不**真发 SMTP(契约边界),仅入库 `outbox` 表 + 凭证抽象就绪
@@ -407,6 +407,44 @@ SERVER_CONFIGS: Final[dict[str, SMTPServerConfig]] = {
 }
 
 
+# ===== SMTPProviderFactory — provider 工厂(不触发真实网络)=====
+
+
+class SMTPProviderFactory:
+    """SMTP provider 工厂 — 统一创建 QQ / Outlook / Gmail Connector。
+
+    工厂只负责装配 connector + transport,不调用 connect(),因此不会触发真实网络。
+    真实发送仍由 D5.6.5 4 重防误发门控保护。
+    """
+
+    @staticmethod
+    def create(
+        provider: str,
+        email: str,
+        *,
+        transport: SMTPTransport | None = None,
+    ) -> SMTPConnector:
+        """创建 SMTPConnector。
+
+        Args:
+            provider: qq / outlook / gmail
+            email: 发件邮箱
+            transport: 测试可注入 InMemorySmtpTransport;缺省显式使用 SmtpLibTransport
+
+        Returns:
+            已注入 transport 的 SMTPConnector
+
+        Raises:
+            ValueError: provider/email 严判失败
+        """
+        if provider not in _SMTP_PROVIDERS:
+            raise ValueError(f"未知 provider: {provider!r}(支持:{list(_SMTP_PROVIDERS)})")
+        if type(email) is not str or "@" not in email:
+            raise ValueError(f"email 必须是含 @ 的 str,实际 {email!r}")
+        actual_transport = transport if transport is not None else SmtpLibTransport()
+        return SMTPConnector(provider=provider, email=email, transport=actual_transport)
+
+
 # ===== SMTPConnector — 高层封装(独立类,D5.1 决策:不继承 BaseConnector)=====
 
 
@@ -458,12 +496,6 @@ class SMTPConnector:
     ) -> None:
         if provider not in _SMTP_PROVIDERS:
             raise ValueError(f"未知 provider: {provider!r}(支持:{list(_SMTP_PROVIDERS)})")
-        # D5.1 阶段白名单:仅 QQ 邮箱走授权码模式(与 IMAP 同步)
-        if provider != "qq":
-            raise NotImplementedError(
-                f"SMTPConnector 当前只实现 provider='qq'(D5.1 阶段)。"
-                f"provider={provider!r} 需 OAuth 2.0,留 D5.5+ 重启。"
-            )
         self._provider = provider
         self._email = email
         self._config = SERVER_CONFIGS[provider]
@@ -522,12 +554,12 @@ class SMTPConnector:
         失败抛 `SmtpAuthError`(凭据错,业务阻断)/ `SmtpTransportError`(网络错,技术失败)。
         """
         # 1. 读凭证
-        cred = keychain.get_smtp_password(self._email)
+        cred = keychain.get_smtp_password_for_provider(self._provider, self._email)
         if not cred.ok or not cred.value:
             raise SmtpAuthError(
-                f"Keychain 中找不到 {self._email} 的 SMTP 授权码:{cred.error}\n"
+                f"Keychain 中找不到 {self._provider}/{self._email} 的 SMTP 授权码:{cred.error}\n"
                 f"请先跑:python scripts/spike_set_smtp_password.py "
-                f"--provider qq --email {self._email} --set-password <authcode>"
+                f"--provider {self._provider} --email {self._email} --set-password <authcode>"
             )
         self._password = cred.value
 
@@ -719,5 +751,6 @@ __all__ = [
     "SmtpAuthError",
     "SMTPServerConfig",
     "SERVER_CONFIGS",
+    "SMTPProviderFactory",
     "SMTPConnector",
 ]

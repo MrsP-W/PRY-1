@@ -146,11 +146,24 @@ def _install_fake_keychain(email: str = "spike@qq.com") -> None:
             )
         return keychain.KeychainResult(ok=False, error="not found")
 
+    def fake_get_smtp_for_provider(provider: str, account: str) -> keychain.KeychainResult:
+        service = {
+            "qq": keychain.SERVICE_SMTP_QQ,
+            "outlook": keychain.SERVICE_SMTP_OUTLOOK,
+            "gmail": keychain.SERVICE_SMTP_GMAIL,
+        }.get(provider)
+        if service is None:
+            raise ValueError(f"未知 SMTP provider: {provider!r}")
+        if (service, account) in _FAKE_KEYCHAIN:
+            return keychain.KeychainResult(ok=True, value=_FAKE_KEYCHAIN[(service, account)])
+        return keychain.KeychainResult(ok=False, error="not found")
+
     def fake_set_smtp(password: str) -> keychain.KeychainResult:
         _FAKE_KEYCHAIN[(keychain.SERVICE_SMTP_QQ, email)] = password
         return keychain.KeychainResult(ok=True)
 
     keychain.get_smtp_password = fake_get_smtp  # type: ignore[assignment]
+    keychain.get_smtp_password_for_provider = fake_get_smtp_for_provider  # type: ignore[assignment]
     keychain.set_smtp_password = fake_set_smtp  # type: ignore[assignment]
     # 预填授权码(让 SMTPConnector.connect() 顺利通过)
     _FAKE_KEYCHAIN[(keychain.SERVICE_SMTP_QQ, email)] = auth_code

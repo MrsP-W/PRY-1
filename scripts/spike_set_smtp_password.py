@@ -39,20 +39,24 @@ sys.path.insert(0, str(ROOT / "src"))
 from my_ai_employee.core import keychain  # noqa: E402
 
 
-def cmd_set_password(email: str, password: str) -> int:
+def cmd_set_password(provider: str, email: str, password: str) -> int:
     """写入 SMTP 授权码到 Keychain,后续 round-trip 自检。"""
     if not password:
         print("❌ 密码不能为空")
         return 1
 
     # 1. 写入
-    result = keychain.set_smtp_password(email=email, auth_code=password)
+    result = keychain.set_smtp_password_for_provider(
+        provider=provider,
+        email=email,
+        auth_code=password,
+    )
     if not result.ok:
         print(f"❌ 写入失败: {result.error}")
         return 1
 
     # 2. 立即 round-trip 自检(沿 D5.1 风险 #1 缓解动作)
-    verify = keychain.get_smtp_password(email=email)
+    verify = keychain.get_smtp_password_for_provider(provider=provider, email=email)
     if not verify.ok or not verify.value:
         print(f"❌ round-trip 自检失败: {verify.error}")
         return 1
@@ -65,37 +69,46 @@ def cmd_set_password(email: str, password: str) -> int:
         return 1
 
     # 4. 成功(只显示长度,不显示 value)
-    print(f"✅ Keychain 写入成功: email={email} (auth_code {len(password)} chars)")
+    print(
+        f"✅ Keychain 写入成功: provider={provider} email={email} "
+        f"(auth_code {len(password)} chars)"
+    )
     print("   ⚠️  安全提示: SMTP 授权码与 IMAP 授权码分别存储,任一变更不影响另一项")
     return 0
 
 
-def cmd_check(email: str) -> int:
+def cmd_check(provider: str, email: str) -> int:
     """检查 SMTP 授权码是否存在于 Keychain。"""
-    result = keychain.get_smtp_password(email=email)
+    result = keychain.get_smtp_password_for_provider(provider=provider, email=email)
     if not result.ok:
         if result.error == "not found":
-            print(f"❌ Keychain 中未找到: email={email}")
+            print(f"❌ Keychain 中未找到: provider={provider} email={email}")
             print(
                 f"   请先跑: uv run python scripts/spike_set_smtp_password.py "
-                f"--provider qq --email {email} --set-password <authcode>"
+                f"--provider {provider} --email {email} --set-password <authcode>"
             )
             return 1
         print(f"❌ Keychain 读取失败: {result.error}")
         return 1
+    if result.value is None:
+        print(f"❌ Keychain 读取成功但 value 为空: provider={provider} email={email}")
+        return 1
 
     # 成功(只显示长度,不显示 value)
-    print(f"✅ Keychain 命中: email={email} (auth_code {len(result.value)} chars)")
+    print(
+        f"✅ Keychain 命中: provider={provider} email={email} "
+        f"(auth_code {len(result.value)} chars)"
+    )
     return 0
 
 
-def cmd_delete(email: str) -> int:
+def cmd_delete(provider: str, email: str) -> int:
     """从 Keychain 删除 SMTP 授权码。"""
-    result = keychain.delete_password(keychain.SERVICE_SMTP_QQ, account=email)
+    result = keychain.delete_smtp_password_for_provider(provider=provider, email=email)
     if not result.ok:
         print(f"❌ Keychain 删除失败: {result.error}")
         return 1
-    print(f"✅ Keychain 删除成功: email={email}")
+    print(f"✅ Keychain 删除成功: provider={provider} email={email}")
     return 0
 
 
@@ -106,14 +119,10 @@ def main() -> int:
     parser.add_argument(
         "--provider",
         required=True,
-        # D5.1-fix 修复:choices 严判为 ("qq",) — outlook/gmail 不再接受
-        # 原因:原 choices 暴露 outlook/gmail 误导用户以为已实现,实际运行时
-        # NotImplementedError 抛错(D5 启动后被用户标记的 2 个代码风险之一)。
-        # 修复策略:argparse 入口硬拒收 outlook/gmail,清晰错误信息。
-        choices=("qq",),
+        choices=("qq", "outlook", "gmail"),
         help=(
-            "邮箱服务商(D5.1 仅 qq 启用授权码模式)。"
-            "outlook/gmail 当前 NotImplementedError,留 D5.5+ 重启。"
+            "邮箱服务商。qq/outlook/gmail 均可写入对应 Keychain service;"
+            "真实发送仍受 SMTP_REAL_NETWORK 与发送脚本白名单门控保护。"
         ),
     )
     parser.add_argument("--email", required=True, help="邮箱地址(作为 Keychain account 标识)")
@@ -130,11 +139,15 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.set_password is not None:
-        return cmd_set_password(email=args.email, password=args.set_password)
+        return cmd_set_password(
+            provider=args.provider,
+            email=args.email,
+            password=args.set_password,
+        )
     if args.check:
-        return cmd_check(email=args.email)
+        return cmd_check(provider=args.provider, email=args.email)
     if args.delete:
-        return cmd_delete(email=args.email)
+        return cmd_delete(provider=args.provider, email=args.email)
     parser.print_help()
     return 1
 

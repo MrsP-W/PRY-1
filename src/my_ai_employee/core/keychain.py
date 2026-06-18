@@ -258,6 +258,24 @@ def get_smtp_password_for_provider(provider: str, email: str) -> KeychainResult:
     return get_password(_resolve_smtp_service(provider), email)
 
 
+def set_smtp_password_for_provider(provider: str, email: str, auth_code: str) -> KeychainResult:
+    """按 provider 写 SMTP 授权码/应用密码.
+
+    Raises:
+        ValueError: provider 不在白名单(qq/outlook/gmail)
+    """
+    return set_password(_resolve_smtp_service(provider), email, auth_code)
+
+
+def delete_smtp_password_for_provider(provider: str, email: str) -> KeychainResult:
+    """按 provider 删除 SMTP 授权码/应用密码.
+
+    Raises:
+        ValueError: provider 不在白名单(qq/outlook/gmail)
+    """
+    return delete_password(_resolve_smtp_service(provider), email)
+
+
 # v0.2.1 #6 OAuth 2.0 抽象层 — OAuth token 存取(独立 outlook/gmail SMTP)
 # 设计:OAuth2Token 序列化为 JSON 字符串,整体存入 Keychain(沿 [[d5.6.5-real-send]]
 # Keychain 模式:每次写整个 token,避免部分写入导致状态不一致)
@@ -348,6 +366,8 @@ __all__ = [
     "set_smtp_password",
     "get_smtp_password",
     "get_smtp_password_for_provider",
+    "set_smtp_password_for_provider",
+    "delete_smtp_password_for_provider",
     "SERVICE_PREFIX",
     "SERVICE_DB",
     "SERVICE_IMAP_QQ",
