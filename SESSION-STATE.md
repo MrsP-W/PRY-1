@@ -19,7 +19,7 @@
 |------|--------|
 | v0.2.2 #5 commit 2 收口锚 | `c0f83d4 feat(oauth): v0.2.2 #5 OAuth 2.0 Phase 2 MicrosoftOAuth2(msal 接入)+ 12 unit tests` |
 | 分支 | `main` |
-| 工作区 | clean ✅ |
+| 工作区 | ⚠️ **非 clean** — 待 docs-only 校准 commit(`M CLAUDE.md` 规则同步 / `?? MODIFICATION-LOG.md` 规则文件未入库 / `M SESSION-STATE.md` 修本漂移 / `M README.md` 同步 #5 commit 2) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
 | 9/9 质量门 | 全绿(2188 passed / 1 skipped + `tests/core/test_oauth2_microsoft.py` 12 passed · 8 others) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
@@ -59,7 +59,7 @@
 | 6/18 10:30 | 周四 | **Agent Assistant 跨项目沉淀 commit `d879847`**(L2_memory 2 files / +140) | ✅ |
 | 6/18 19:00+ | 周四 | **v0.2.2 #5 commit 2/5 提前 1 天开工**(用户授权"今天 18:00+ 启动 MicrosoftOAuth2") | ✅ |
 | 6/18 19:30 | 周四 | **v0.2.2 #5 feat commit `c0f83d4`**(2 files / +804 / 12 new tests · MicrosoftOAuth2 8/8 门全绿) | ✅ |
-| 6/18 19:30 | 周四 | **v0.2.2 #5 收口 docs commit `(pending)`**(reports + SESSION-STATE · 沿 v0.2.2 范本) | ✅ |
+| 6/18 19:30 | 周四 | **v0.2.2 #5 收口 docs commit `18d1610`**(reports + SESSION-STATE · 沿 v0.2.2 范本) | ✅ |
 | 6/20 | 周六 | **v0.2.2 #5 commit 3/5** — GoogleOAuth2 实现(google-auth 接入,沿 commit 2 范本) | 🟢 |
 | 6/21 | 周日 | **v0.2.2 #5 commit 4/5** — XOAUTH2 SMTP 鉴权集成(沿 D5.6.5 4 重防误发) | 🟢 |
 | 6/22 | 周一 | **v0.2.2 #5 commit 5/5** — pyproject 加 msal+google-auth + 收口报告 | 🟢 |

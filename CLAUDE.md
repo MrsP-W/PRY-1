@@ -151,6 +151,35 @@ Step 6: 提交 commit + push
 - 截至 6/12 共 **18 个报告**（D4.x 收口沉淀）
 - 跨 D-step 关联收口写到 `memory/d4.x-...-fixes.md`（如 `memory/d4.6-v1.0.2-fixes.md` 模式）
 
+### 📝 修改总结必写（MODIFICATION-LOG · 2026-06-18 用户指令）
+
+> **每次修改完成后必须写 1 条 3 段总结**到 [`MODIFICATION-LOG.md`](MODIFICATION-LOG.md)（项目根目录，沿 SESSION-STATE.md 范本）。
+
+**3 段固定结构**（缺一段 = 链路断点）：
+
+1. **本次修改内容** — 关键 commit hash + 主题 + 改动范围（行数/files/tests）+ 链接到 reports/ 详细报告
+2. **风险点** — 已知风险 + 触发条件 + 影响范围 + B 类延后 + P1/P2/P3 待办
+3. **当前项目整体总结** — 进度数字（pytest / 8 质量门 / tag / 累计 commits）+ 下一步 + 下一棒
+
+**触发条件**（5 类必写，其余不写避免噪音）：
+
+| # | 触发 | 谁来写 |
+|---|------|--------|
+| 1 | D-step 实施 + commit 后 | 主 Agent |
+| 2 | v0.2.x 启动候选收口 | 主 Agent |
+| 3 | 关键修复（bug fix / 重构 / 阻塞解除） | @调试专家 / 主 Agent |
+| 4 | 文档重大更新（launch plan / closure / week1-2 修订） | @内容编辑员 / 主 Agent |
+| 5 | B 类决策激活（用户明确同意后） | 主 Agent |
+
+**与 SESSION-STATE.md 分工**：
+
+- `SESSION-STATE.md` = 状态导向（现在在哪）
+- `MODIFICATION-LOG.md` = 变更导向（怎么走过来的 + 路上有什么坑）
+
+**节 token 目标**：后续 AI 只读 `CLAUDE.md` + `SESSION-STATE.md` + `MODIFICATION-LOG.md` 即可掌握完整历史 + 当前状态 + 风险点，无需重读全部 reports/*.md（预计减少 70-80% token）。
+
+**维护规则**：单条 ≤ 50 行 / 不复制代码片段 / 不重复 reports/ 详细报告 / 每月 1 号 12:00+ 检查员清理 > 1 个月旧记录到 `archive/MODIFICATION-LOG-YYYY-MM.md`。
+
 ---
 
 ## 🛠️ 关键命令（[Makefile](Makefile) 是真理源，`make help` 全量）
