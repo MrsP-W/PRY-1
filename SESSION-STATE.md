@@ -1,7 +1,7 @@
-# SESSION-STATE — 端午不休息 + v0.2.2 候选 #7 关闭
+# SESSION-STATE — 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动
 
-> **最后更新**:2026-06-18 09:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭
+> **最后更新**:2026-06-18 10:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · 🟢 v0.2.2 #5 docs-only 启动
 
 ---
 
@@ -17,11 +17,11 @@
 
 | 维度 | 实际值 |
 |------|--------|
-| v0.2.2 #7 收口锚 | `68d8f18 docs(closure): v0.2.2 #7 tests/db/ FK 循环依赖 收口报告` |
+| v0.2.2 #5 docs-only 启动锚 | `b7b9ea7 docs(oauth): v0.2.2 #5 OAuth 2.0 Phase 2 docs-only 启动文档(5 commits 分解 + 13 行复用要点 + 6/19-22 端午不休息时间线)` |
 | 分支 | `main` |
 | 工作区 | clean ✅ |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | 全绿(2176 passed / 1 skipped + `tests/db/` 175 passed · 0 errors / 7 others) |
+| 9/9 质量门 | 全绿(2176 passed / 1 skipped + `tests/db/` 175 passed · 0 errors / 8 others) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ⏸️ 推迟到 6/23+(真 CSV 待用户手动导出) |
 | outlook/gmail SMTP provider | ⏸️ docs-only(等用户单独决策) |
@@ -30,6 +30,7 @@
 | **L3 模糊匹配 ±1 day** | ✅ **关闭**(feat `5de016a` + docs `de3d1f7` · 24 new tests) |
 | **菜单栏 badge 实时刷新 polling** | ✅ **关闭**(feat `d4ed573` + docs `e994c9a` · 17 new tests) |
 | **tests/db/ FK 循环依赖 57 errors 修复** | ✅ **关闭**(feat `d87b08a` + docs `68d8f18` · 0 new tests · 纯测试基础设施) |
+| **OAuth 2.0 Phase 2 docs-only 启动** | 🟢 **启动**(docs `b7b9ea7` · 1 file / +203 / 0 new tests · 主代码 4 commits 留 6/19-22 端午不休息) |
 
 ## 📅 端午不休息时间线(2026)
 
