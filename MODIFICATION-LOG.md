@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -101,6 +101,40 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-21 [v0.2.7 outlook/gmail SMTP 真实发送 spike 准备] — docs-only 收口
+
+**1. 本次修改内容**
+
+- docs-only 预演,沿 [[v0.2.5-smtp-real-send-preflight-2026-06-18]] §"启动条件 checklist 6 项" + [[v0.2.4-drift-review-mechanism-2026-06-18]] 撞坑恢复 3 步实战演练 2 + [[v0.2.6-d4.7.4-v1.0.3-deferred-2026-06-20]] §"下一棒" 候选 2
+- `docs/v0.2.7-outlook-gmail-smtp-spike-prep-2026-06-21.md` 新建(10 段 · 6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 + 撞坑恢复 3 步实战演练 2 · 不真发邮件)
+- `SESSION-STATE.md` 4 处同步(标题加 v0.2.7 + 最后更新 2026-06-21 + 状态行加 v0.2.7 + 时间线加 6/21 行 + 6/22 周一行 + 加 docs/v0.2.7 路径 + 维护者加 v0.2.7 锚定)
+- `MODIFICATION-LOG.md` 快照段加 v0.2.7 锚定 + 加本条累计记录
+- `README.md` L7 状态行加 v0.2.7 锚定 + 加 docs/v0.2.7 链接
+
+**2. 风险点**
+
+- 0 风险:本轮纯 docs-only,无代码改动 + 无真实发送 + 无 OAuth flow 跑
+- 撞坑恢复 3 步实战演练 2(沿 [[v0.2.4]] §3 机制 3):0 撞坑,无触发
+- 撞坑恢复范本累计 2 个(演练 1 = v0.2.5 preflight + 演练 2 = v0.2.7 outlook/gmail spike 准备)
+
+**3. 项目整体总结**
+
+- **起点 HEAD**:`4e9a628` docs(status): align v0.2.7 next-step handoff
+- **当前 HEAD**:沿 `git rev-parse --short HEAD` 为准(本次 docs closure commit 后)
+- **改动**:1 file / +(本文件) + 3 docs 同步(SESSION-STATE/MODIFICATION-LOG/README)
+- **6 项启动条件 checklist**(沿 [[v0.2.5]] §"启动条件"):
+  1. 用户明确授权 — ⏸️ 待授权
+  2. 凭据就绪(Outlook App Password/OAuth + Gmail OAuth)— ⏸️ 待就绪
+  3. 凭据写入 Keychain(provider-aware CLI 已就绪)— ⏸️ 待写入
+  4. provider 白名单扩展(B 类决策) — ⏸️ 用户单独决策
+  5. OutboxDispatcher 与 SMTPProviderFactory 集成(可选,1 commit docs-only 不涉及) — ⏸️ 待决策
+  6. 沿 [[d5.6.5-real-send]] 4 重防误发 — ✅ 就绪
+- **3 个启动命令范本**:Outlook App Password + Outlook OAuth + Gmail OAuth
+- **5 阶段启动流程**:用户授权 + 白名单扩展 + OAuth flow + OutboxDispatcher + 真实 spike
+- **撞坑恢复范本累计**:2 个(演练 1 = v0.2.5 + 演练 2 = v0.2.7)
+- 详细报告:[docs/v0.2.7-outlook-gmail-smtp-spike-prep-2026-06-21.md](docs/v0.2.7-outlook-gmail-smtp-spike-prep-2026-06-21.md)
+- 下一棒:6/22 周一 v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步
 
 ### 2026-06-20 [v0.2.6 D4.7.4 v1.0.3 改进项延后] — 收口
 
