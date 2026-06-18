@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)** — `0a1386c` NoteStore 状态机化 + `75f87cc` + `b751820` NoteStore L2/L3 跨源去重 + `de5de10` ExpenseServiceStub 实化 4 commit 实际早已落地,本轮 docs-only 校准 SESSION-STATE 状态漂移。
+**当前启动候选**:**v0.2.4 状态漂移审查机制已入库,下一步进入 v0.2.3+ 候选决策** — 候选 #1 outlook/gmail SMTP 真实发送 spike 准备 / 候选 #2 D8 改进项延后 / W3 真账单 spike 准备(等用户真实 CSV)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

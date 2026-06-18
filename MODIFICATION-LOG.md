@@ -93,7 +93,7 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike + 候选 #2 D8 改进项延后 + 候选 #5 状态漂移审查机制入库) |
+| **下一棒** | 6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike 准备 + 候选 #2 D8 改进项延后 + W3 真账单 spike 准备;候选 #5 状态漂移审查机制已入库) |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
@@ -104,7 +104,7 @@
 
 **1. 本次修改内容**
 
-- docs-only 整体收口 commit(待落地,沿 v0.2-closure-2026-06-18 范本)
+- docs-only 整体收口 commit 已落地(沿 v0.2-closure-2026-06-18 范本,当前 HEAD 以 `git rev-parse --short HEAD` 为准)
   - `docs/v0.2.4-drift-review-mechanism-2026-06-18.md` 新建(~280 行 · 8 段 · 撞坑史 2 类 + 撞坑分类 2 类 + 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步详细 + 11 项关键引用)
   - `SESSION-STATE.md` 4 处同步(标题加 v0.2.4 + 状态行加 v0.2.4 docs-only + 时间线加 6/18 22:30 行 + 下一棒 7 项 + 维护者行 + 关键文件指针加 v0.2.4)
   - `MODIFICATION-LOG.md` 快照段加 v0.2.4 锚定 + 加本条累计记录
