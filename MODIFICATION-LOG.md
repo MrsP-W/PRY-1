@@ -75,11 +75,11 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 22:30 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 22:45 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2220 passed / 1 skipped**(v0.2.2 #8 +10 new tests · SMTPProviderFactory 工厂 + provider-aware Keychain) |
@@ -88,6 +88,7 @@
 | **v0.2.2 #8 SMTPProviderFactory 撞坑恢复 commits** | **2 commits**(`b2cf3c5` feat 6 files / +232 -69 / 10 new tests + `51da8fd` docs closure 1 file / +66) |
 | **v0.2 launch plan 整体收口 commit(本轮 docs-only)** | **1 docs-only commit**(reports/v0.2-closure-2026-06-18.md 新建 + SESSION-STATE/MODIFICATION-LOG/README 同步 + 撞坑恢复范本沉淀)|
 | **v0.2.4 状态漂移审查机制入库 commit(本轮 docs-only)** | **1 docs-only commit**(docs/v0.2.4-drift-review-mechanism-2026-06-18.md 新建 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本 + SESSION-STATE/MODIFICATION-LOG/README 同步)|
+| **v0.2.5 SMTP 真实发送 spike preflight commit(本轮 docs-only)** | **1 docs-only commit**(docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md 新建 · 4 模块链路核对 + 5 重防防误发门控就绪 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)|
 | **v0.2.1 实际已 commit(本次校准盘点)** | 4 候选已 commit:`de5de10` + `0a1386c` + `75f87cc` + `b751820`(v0.2.1 #3 + #4 + #5 + NoteStore L2 跨源写入)|
 | **v0.2.1 累计 new tests** | 45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)|
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
@@ -99,6 +100,67 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 22:45 [v0.2.5 SMTP 真实发送 spike preflight docs-only(撞坑恢复 3 步实战演练 1)] — 收口
+
+**1. 本次修改内容**
+
+- docs-only preflight commit(待落地,沿 v0.2.4 撞坑恢复 3 步范本)
+  - `docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md` 新建(~310 行 · 11 段 · 4 模块链路核对 + 5 重防误发门控检查 + InMemory 5 封跑通 + 3 阻塞点识别 + 撞坑恢复 3 步实战演练 1 + 真实 spike 启动条件 checklist 6 项 + 启动命令范本)
+  - `SESSION-STATE.md` 4 处同步(标题加 v0.2.5 + 状态行 + 时间线加 6/18 22:45 行 + 维护者行 + 关键文件指针加 v0.2.5)
+  - `MODIFICATION-LOG.md` 快照段加 v0.2.5 锚定 + 加本条累计记录
+  - `README.md` L7 状态行加 v0.2.5 锚定 + 加 docs/v0.2.5 链接
+- 改动:**4 files / ~+350 / 0 new tests**(纯文档同步 · 沿 115fc8e + 7391fe2 + 5b4a2d8 + 688a7d6 docs-only 校准范本)
+- 详细报告:[docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md](docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md)
+- **4 模块链路核对**(本文档 §2):
+  - 模块 1:`SMTPProviderFactory`(v0.2.2 #8 工厂模式实化,`src/my_ai_employee/connectors/smtp.py:413-490`)
+  - 模块 2:`XOAUTH2` SMTP 鉴权 helper(v0.2.2 #5 commit 4,沿 RFC 7628)
+  - 模块 3:`provider-aware Keychain` CLI(v0.2.2 #8 set_smtp_password_for_provider)
+  - 模块 4:`spike_send_100` 5 重防误发门控(SMTP_REAL_NETWORK + provider 白名单 + Keychain round-trip + 强制 1 收件人 + 确认短语)
+- **5 重防误发门控**(本文档 §3):
+  - 门控 1:`SMTP_REAL_NETWORK` 环境变量门控就绪(`scripts/spike_send_100.py:81-84, 353-363`)
+  - 门控 2:`--smtp-provider {qq}` 白名单就绪(`choices=["qq"]`,outlook/gmail 凭证写入脚本未实现,B 类延后)
+  - 门控 3:`Keychain round-trip` 凭证链路就绪(`scripts/spike_send_100.py:401-413`)
+  - 门控 4:强制 1 收件人(`--max-recipients 1`)就绪
+  - 门控 5:`--confirm` 二次确认口令就绪
+- **InMemory 5 封跑通结果**(本文档 §4):
+  - `total_picked=5 sent=5 bb=0 tf=0 sk=0 sb=0 iters=1`
+  - 调度延迟 min=7.69ms / avg=7.69ms / p50=7.69ms / p95=7.69ms / max=7.69ms
+  - 报告路径:`output/spike/spike_send_100_20260618_212756.md`
+- **3 阻塞点识别**(本文档 §5):
+  - 阻塞点 1:Gmail OAuth 实际 flow 未跑(需用户 Microsoft/Google 账号 + App 注册 + 用户授权)
+  - 阻塞点 2:`--smtp-provider {qq}` 白名单限制(outlook/gmail 凭证写入脚本未实现,B 类延后)
+  - 阻塞点 3:OutboxDispatcher 与 SMTPProviderFactory 未集成(沿 D5 业务调度器当前直连 `smtp_host/smtp_port`)
+- **撞坑恢复 3 步实战演练 1 沉淀**(本文档 §6):
+  - 演练任务:本 preflight(无撞坑,沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 机制 3 范本预演)
+  - 撞坑恢复 3 步应用次数:0 次(本任务无撞坑)
+  - 撞坑史累计次数:1 次(v0.2.2 #8 SMTPProviderFactory 撞坑恢复,2026-06-18 22:00)
+
+**2. 风险点**
+
+- 🟡 **真实 SMTP 发送 spike 仍阻塞 3 项**(沿本文档 §5):
+  - Gmail OAuth 实际 flow 未跑(B 类决策延后,等用户授权 + 凭据)
+  - `--smtp-provider {qq}` 白名单限制(outlook/gmail 凭证写入脚本未实现)
+  - OutboxDispatcher 与 SMTPProviderFactory 未集成(直连 `smtp_host/smtp_port`)
+- 🟢 **撞坑恢复 3 步实战演练 1 沉淀**(无撞坑实战,验证范本可复用性)
+- 🟢 **InMemory 5 封跑通**(整套 SMTP 链路:状态机 + Dispatcher + SLA + Heartbeat + Keychain + 退避就绪)
+- 🟢 **不真发邮件**(沿用户结论 §3 · 仅 preflight,不触发真实网络)
+- **P1**: 6/19-22 端午继续推进候选 #2 D8 改进项延后(1-2 commits)+ 真实 SMTP 发送 spike 准备(等用户授权 + 凭据 + B 类决策白名单扩展)
+- **P2**: 7/1 月度复盘 — 撞坑恢复范本应用情况统计(本报告作"实战演练 1")
+- **P3**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike + outlook/gmail 真实 SMTP 发送 spike 跑通后)
+
+**3. 当前项目整体总结**(2026-06-18 22:45 锚定)
+
+- **v0.2.5 SMTP 真实发送 spike preflight**:4 模块链路核对 ✅ + 5 重防误发门控 ✅ + InMemory 5 封跑通 ✅ + 3 阻塞点识别 + 撞坑恢复 3 步实战演练 1
+- **不真发邮件**:沿用户结论 §3,仅 preflight,真实 spike 等用户授权 + 凭据 + B 类决策白名单扩展
+- **当前 pytest**:**2220 passed / 1 skipped · 88.85% coverage** ≥ 80%
+- **v0.1.0 tag**:`2af775f` 锚定不动(沿 D5.7.2 范本)
+- **端午不休息**:6/19-22 链路不停,继续推进撞坑恢复 3 步实战演练 2(D8 改进项延后)+ 真实 SMTP 发送 spike 准备
+- **6/23+ 重启项**:手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ outlook/gmail 真实 SMTP 发送 spike(沿本报告 §6 启动条件 checklist)
+- **7/1 月度复盘**:执行 [[v0.2.4-drift-review-mechanism-2026-06-18]] §4 复盘 5 项 + 写 reports/2026-07-monthly-review.md + 写 memory/inspector_plans/2026-07-01.json plan JSON
+- **8/1**:v0.2.1 release tag 锚定(W3 真账单 spike + outlook/gmail 真实 SMTP 发送 spike 跑通后)
+
+---
 
 ### 2026-06-18 22:30 [v0.2.4 状态漂移审查机制入库 docs(7/1 月度复盘准备)] — 收口
 

@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.4 状态漂移审查机制入库(7/1 月度复盘准备) + v0.2 launch plan 整体收口(填补过渡空缺) + v0.2.2 #8 SMTPProviderFactory 撞坑恢复 + v0.2.1 #3/#4/#5 docs-only 校准 + 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2-5 全部收口
+# SESSION-STATE — v0.2.5 SMTP 真实发送 spike preflight docs-only + v0.2.4 状态漂移审查机制入库(7/1 月度复盘准备) + v0.2 launch plan 整体收口(填补过渡空缺) + v0.2.2 #8 SMTPProviderFactory 撞坑恢复 + v0.2.1 #3/#4/#5 docs-only 校准 + 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2-5 全部收口
 
-> **最后更新**:2026-06-18 22:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:✅ **v0.2.4 状态漂移审查机制入库 docs(2026-06-18 端午不休息第 1 天锚定 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** · ✅ **v0.2 launch plan 整体收口 docs(2026-06-18 端午不休息第 1 天锚定 · 57 主项目 commits · 13 子阶段双链)** · ✅ v0.2.1 docs 收口 · ✅ v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests)· ✅ v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests)· ✅ v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11 tests)· ✅ v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 · ✅ v0.2.1+ NoteStore L2 跨源写入(`b751820`)· **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`) · ✅ **v0.2.2 #8 SMTPProviderFactory 撞坑恢复**(`b2cf3c5` feat + `51da8fd` docs closure · 10 new tests)
+> **最后更新**:2026-06-18 22:45 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:✅ **v0.2.5 SMTP 真实发送 spike preflight docs-only(2026-06-18 端午不休息第 1 天锚定 · 4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 不真发邮件 · 撞坑恢复 3 步实战演练 1)** · ✅ **v0.2.4 状态漂移审查机制入库 docs(2026-06-18 端午不休息第 1 天锚定 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** · ✅ **v0.2 launch plan 整体收口 docs(2026-06-18 端午不休息第 1 天锚定 · 57 主项目 commits · 13 子阶段双链)** · ✅ v0.2.1 docs 收口 · ✅ v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests)· ✅ v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests)· ✅ v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11 tests)· ✅ v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 · ✅ v0.2.1+ NoteStore L2 跨源写入(`b751820`)· **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`) · ✅ **v0.2.2 #8 SMTPProviderFactory 撞坑恢复**(`b2cf3c5` feat + `51da8fd` docs closure · 10 new tests)
 
 ---
 
@@ -86,6 +86,7 @@
 | 6/18 22:00 | 周四 | **v0.2.2 #8 docs closure commit `51da8fd`**(reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md 新建 · 收口报告) | ✅ |
 | 6/18 22:00 | 周四 | **v0.2 launch plan 整体收口 docs(本轮 docs-only)** — reports/v0.2-closure-2026-06-18.md 新建 · 13 子阶段双链锚定 · 57 主项目 commits · SESSION-STATE/MODIFICATION-LOG/README 同步 | 🟢 |
 | 6/18 22:30 | 周四 | **v0.2.4 状态漂移审查机制入库 docs(本轮 docs-only)** — docs/v0.2.4-drift-review-mechanism-2026-06-18.md 新建 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本 + SESSION-STATE/MODIFICATION-LOG/README 同步 | 🟢 |
+| 6/18 22:45 | 周四 | **v0.2.5 SMTP 真实发送 spike preflight docs-only** — docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md 新建 · 4 模块链路核对 + 5 重防误发门控就绪 + InMemory 5 封跑通(不真发)+ 撞坑恢复 3 步实战演练 1 | 🟢 |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV)+ outlook/gmail SMTP 真实发送 spike(沿 v0.2.2 #8 工厂 + OAuth/XOAUTH2 真链路) | ⏸️ |
 
@@ -147,6 +148,7 @@
 - **v0.2 launch plan 整体收口**: `我的AI员工/reports/v0.2-closure-2026-06-18.md`(13 子阶段双链锚定 · 57 主项目 commits · 撞坑恢复范本)
 - **v0.2.2 #8 SMTPProviderFactory 收口**: `我的AI员工/reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md`(撞坑恢复 commit · 10 new tests)
 - **v0.2.4 状态漂移审查机制入库**: `我的AI员工/docs/v0.2.4-drift-review-mechanism-2026-06-18.md`(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)
+- **v0.2.5 SMTP 真实发送 spike preflight**: `我的AI员工/docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md`(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1)
 - **v0.2 启动规划**: `我的AI员工/docs/v0.2-launch-plan.md`
 - **B 类决策延后**: `Agent Assistant/memory/b-class-deferral-2026-06-09.md`
 - **环境误报诊断(本轮前置)**: `Agent Assistant/memory/2026-06-18-venv-sigkill-137-false-alarm.md`
@@ -154,6 +156,6 @@
 
 ## 维护者
 
-**Mr-PRY** · 2026-06-18 端午不休息 + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(57 主项目 commits · 13 子阶段双链锚定)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd` · 10 new tests)** + **v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests) + v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests) + v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11+9 tests)docs-only 校准** + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
+**Mr-PRY** · 2026-06-18 端午不休息 + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(57 主项目 commits · 13 子阶段双链锚定)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd` · 10 new tests)** + **v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests) + v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests) + v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11+9 tests)docs-only 校准** + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
 **模型**:MiniMax-M3
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 / [[d5.7.2-docs-only-closure]] / [[b-class-deferral-2026-06-09]] / [[d5.6.3-p1-1-5-changes]] / [[d8.3-anomaly-alert]] / [[d9.3-expense-service-protocol]] / [[d6.4-transactions-l2]] / [[d9.5-double-process-pattern]] / [[2026-06-18-venv-sigkill-137-false-alarm]]
