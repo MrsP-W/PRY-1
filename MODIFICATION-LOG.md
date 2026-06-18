@@ -75,23 +75,77 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 20:00 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 20:30 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 3/5 GoogleOAuth2 收口**(主代码 commit 4/5 XOAUTH2 待 6/19+) |
-| **HEAD** | `51675fc` |
+| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 4/5 XOAUTH2 收口**(提前 3 天完成,主代码 commit 5/5 deps+收口待 6/19+) |
+| **HEAD** | `057d937` |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **pytest** | **2199 passed / 1 skipped**(+ GoogleOAuth2 11 new tests) |
-| **9/9 质量门** | ✅ 全绿(mypy 0 / ruff 0 / alembic head 0014 / uv build OK / MD lint 0 / coverage 89.13% ≥ 80%) |
-| **v0.2.2 累计 commits** | **10 commits**(P0 / #2 / #3 / #6 / #7 / #5 docs / #5 feat / #5 closure / **#5 feat commit 3 / #5 closure commit 3**)|
+| **pytest** | **2211 passed / 1 skipped**(+ XOAUTH2 12 new tests · 2199 → 2211) |
+| **9/9 质量门** | ✅ 全绿(mypy 0 / ruff 0 / alembic head 0014 / uv build OK / MD lint 0 / coverage 88.86% ≥ 80%) |
+| **v0.2.2 累计 commits** | **11 commits**(P0 / #2 / #3 / #6 / #7 / #5 docs / **#5 feat commit 2 / #5 feat commit 3 / #5 feat commit 4 / #5 closure commit 3 / #5 closure commit 4**)|
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19 周五 XOAUTH2 SMTP 鉴权集成(`auth_string` 模板 + 沿 D5.6.5 4 重防误发) |
+| **下一棒** | 6/19 周五 #5 commit 5/5 — pyproject 加 msal+google-auth+google-auth-oauthlib + 收口报告 |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 20:30 [v0.2.2 #5 commit 4/5 XOAUTH2 SMTP 鉴权集成收口] — 收口
+
+**1. 本次修改内容**
+
+- `9966ad0` feat(oauth):XOAUTH2 SMTP 鉴权集成(RFC 7628 + 4 重防误发)+ 12 unit tests(2 files / +1269)
+  - 新建 `src/my_ai_employee/connectors/xoauth2.py`(600+ 行)
+    - `build_xoauth2_auth_string()` — RFC 7628 §3.1 SASL 初始客户端响应生成(SASL/JSON 双格式)
+    - `parse_xoauth2_auth_string()` — SASL/JSON 双向解析
+    - `parse_xoauth2_failure_response()` — RFC 7628 §3.2 服务器失败响应解析
+    - `XOAUTH2Authenticator` — 4 重防误发封装:
+      1. **env 门**:`XOAUTH2_REAL_NETWORK=1` 显式 opt-in(默认关闭)
+      2. **factory 注入**:`oauth2_provider` + `oauth2_provider_factory` 二选一(双注入拒绝)
+      3. **不真发邮件**:helper 只生成 auth_string,不调 smtplib
+      4. **email 严判**:必含 @ + strip + RFC 5321 长度 320
+    - `XOAUTH2AuthString` / `XOAUTH2Failure` 数据类(`__post_init__` 双层防御)
+    - 7 异常细分(`XOAUTH2Error` 基类 + 6 子类)
+    - 复用 `OAuth2Provider` Protocol(commit 2/3 产物直接 inject)
+    - `XOAUTH2_SERVERS` 配置(microsoft STARTTLS 587 + google SSL 465)
+    - 顶层 placement(`connectors/xoauth2.py` 而非 launch doc `connectors/smtp/xoauth2.py`,避免破 14+ import 链)
+  - 新建 `tests/connectors/test_xoauth2.py`(12 cases / 4 段)
+    - 1.x build_xoauth2_auth_string(4 tests):SASL/JSON/email 严判/token 严判
+    - 2.x parse_xoauth2_auth_string(2 tests):SASL 往返/JSON 往返
+    - 3.x parse_xoauth2_failure_response(2 tests):成功/is_retryable
+    - 4.x XOAUTH2Authenticator(4 tests):构造严判/build/4 重防误发/Provider 端到端
+    - 全部 mock + 离线,无需真实 msal/google-auth/SMTP 依赖
+- `057d937` docs(closure):XOAUTH2 收口报告(1 file / +291)
+  - 收口报告:[reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md](reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md)(9 段 5 决策 6 教训)
+  - 提前 3 天完成(原计划 6/21 → 实际 6/18 20:30)
+- 详细:沿 [reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md](reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md)
+- 启动文档:[docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) §2.1 commit 4
+
+**2. 风险点**
+
+- ⚠️ **真实 XOAUTH2 SMTP 鉴权未跑**: 6/18 commit 4 未走真实网络,仅单元测试 → 6/19+ commit 5 加 dep 后可选真实 spike(沿 D5.6.5 4 重防误发)
+- ⚠️ **RFC 7628 失败响应重试逻辑未实现**: 本轮 is_retryable 仅给语义,实际重试留给上层 Adapter
+- ⚠️ **顶层 placement 偏离 launch doc**: launch doc 设计 `connectors/smtp/xoauth2.py`,实际放 `connectors/xoauth2.py`(避免破 14+ import 链),已在 SESSION-STATE + 收口报告 §1.3 标注
+- ⚠️ **deps 锁版**: `pyproject.toml` 加 `msal>=1.24` + `google-auth>=2.23` + `google-auth-oauthlib>=1.0` 必须 `uv lock` 同步(commit 5)
+- ⚠️ **B 类延后**: outlook/gmail SMTP provider 决策(单独门控,6/19-22 期间不触)
+- ⚠️ **OAuth 2.0 token 不含 user email**: `build_auth_string_via_oauth2_provider` 需 user_email 显式传入,不在内部调 Graph/userinfo(职责解耦)
+- **P1**: 6/19 commit 5 pyproject 加 3 dep 必须先跑 8/8 质量门再 commit
+- **P2**: 7/1 月度复盘评估真实 XOAUTH2 SMTP 鉴权 spike
+- **P3**: 8/1 v0.2.1 release tag 锚定 + OutlookProvider/GmailProvider 决策
+
+**3. 当前项目整体总结**
+
+- 进度:**2211 tests / 9/9 质量门 / 11 commits(v0.2.2 阶段)** / 6 启动候选全关闭 + #5 commit 4 提前 3 天完成
+- 状态:**v0.2.2 #5 commit 4/5 XOAUTH2 关闭(feat `9966ad0` + closure `057d937`),commit 5/5 deps+收口待 6/19+**
+- 风险:6 项已知风险(见上),无新风险(commit 2/3 范本 1:1 复用)
+- 下一步:6/19 周五 #5 commit 5/5 — pyproject 加 msal+google-auth+google-auth-oauthlib + 收口报告
+- 下一棒:6/19 端午前工作日 → 主 Agent 接力 deps+收口
+- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md](reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/memory/b-class-deferral-2026-06-09.md) / [d5.6.5-real-send](../../Agent%20Assistant/memory/d5.6.5-real-send.md)
+
+---
 
 ### 2026-06-18 20:00 [v0.2.2 #5 commit 3/5 GoogleOAuth2 收口] — 收口
 
