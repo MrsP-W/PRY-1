@@ -589,6 +589,98 @@ class TestEmailReviewer:
             EmailReviewer(router=MagicMock()).review_batch(())  # type: ignore[arg-type]
 
 
+class TestD474V103Fixes:
+    """D4.7.4 v1.0.3 改进项 spike 100 封暴露 3 例 FALSE_PASS 修复(2026-06-20 端午不休息第 3 天).
+
+    修复:
+    - 扩 sensitive 词表: 凭证 / API key / 密钥 / token / Bearer token / OAuth
+    - 扩 factual 触发: 价值 N / 退给你 N / 免费送 N
+
+    沿 [[d4.7.4-v1.0.3-deferred]] §"3 例失配 + 根因 + 修复方向"段。
+    """
+
+    def test_sensitive_blocks_api_key_token(self) -> None:
+        """fyi_01 失配修复: sensitive 词表补全凭证类."""
+        router = MagicMock()
+        kwargs = _review_kwargs()
+        kwargs.update(
+            {
+                "body": "请把 API key 发送给我，以便继续处理配置同步事项。",
+            }
+        )
+        result = EmailReviewer(router=router).review(**kwargs)
+        assert isinstance(result, ReviewBlockedResult)
+        assert result.reason is ReviewBlockReason.SENSITIVE_WORD_HIT
+        assert result.blocked_word == "API key"
+
+    def test_sensitive_blocks_zhengjian_token_oauth(self) -> None:
+        """v1.0.3 扩 sensitive 词表覆盖 凭证 / token / OAuth 三类同义词."""
+        router = MagicMock()
+        for hit_word, body_text in (
+            ("凭证", "请把凭证发送给我，以便继续处理事项。"),
+            ("token", "请把 access token 发送给我，以便继续处理事项。"),
+            ("Bearer token", "请把 Bearer token 发送给我，以便继续处理事项。"),
+            ("OAuth", "请完成 OAuth 验证流程。"),
+        ):
+            kwargs = _review_kwargs()
+            kwargs["body"] = body_text
+            result = EmailReviewer(router=router).review(**kwargs)
+            assert isinstance(result, ReviewBlockedResult), f"{hit_word!r} 未命中阻断"
+            assert result.reason is ReviewBlockReason.SENSITIVE_WORD_HIT
+            assert result.blocked_word == hit_word, f"{hit_word!r} 阻断词不匹配"
+
+    def test_factual_blocks_value_n_promise(self) -> None:
+        """personal_08 失配修复: factual 触发扩 价值 N / 免费送 N."""
+        router = MagicMock()
+        kwargs = _review_kwargs()
+        kwargs.update(
+            {
+                "body": "您好，价值 500 块 免费送你，请确认处理方案。",
+                "original_body_excerpt": "请尽快说明后续处理方案。",
+            }
+        )
+        result = EmailReviewer(router=router).review(**kwargs)
+        assert isinstance(result, ReviewBlockedResult)
+        assert result.reason is ReviewBlockReason.FACTUAL_CONFLICT
+
+    def test_factual_blocks_zhuan_gei_ni(self) -> None:
+        """personal_07 失配修复: factual 触发扩 退给你 N."""
+        router = MagicMock()
+        kwargs = _review_kwargs()
+        kwargs.update(
+            {
+                "body": "您好，AA 退给你 50 元，请确认处理方案。",
+                "original_body_excerpt": "请尽快说明后续处理方案。",
+            }
+        )
+        result = EmailReviewer(router=router).review(**kwargs)
+        assert isinstance(result, ReviewBlockedResult)
+        assert result.reason is ReviewBlockReason.FACTUAL_CONFLICT
+
+    def test_factual_passes_when_origin_contains_phrase(self) -> None:
+        """反向 case: 原邮件已含 价值 500 → 草稿同样出现不算冲突(防止扩枚举后误伤正常引用)."""
+        router = MagicMock()
+        router.route.return_value = _response(
+            json.dumps(
+                {
+                    "review_passed": True,
+                    "flagged_issues": [],
+                    "review_summary": "草稿事实一致。",
+                }
+            )
+        )
+        kwargs = _review_kwargs()
+        kwargs.update(
+            {
+                "body": "您好，价值 500 元 已确认，请按方案处理。",
+                "original_body_excerpt": "关于价值 500 元的方案，请说明。",
+            }
+        )
+        result = EmailReviewer(router=router).review(**kwargs)
+        assert isinstance(result, ReviewResult)
+        assert result.review_passed is True
+
+
 def test_top_level_ai_exports_reviewer_contract() -> None:
     assert ai.EmailReviewer is EmailReviewer
     assert ai.ReviewResult is ReviewResult

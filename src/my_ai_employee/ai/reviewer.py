@@ -41,8 +41,14 @@ _DEFAULT_SENSITIVE_WORDS = frozenset(
         "登录密码",
         "短信验证码",
         "API密钥",
+        "API key",
+        "密钥",
+        "token",
+        "Bearer token",
+        "OAuth",
         "访问令牌",
         "私钥",
+        "凭证",
         "内部代号",
         "客户名单",
         "薪资明细",
@@ -432,7 +438,19 @@ def _find_local_block(
     conflicts: list[str] = []
     if "已读" in body and "已读" not in original_body_excerpt:
         conflicts.append("草稿声称已读，但原邮件上下文没有对应事实")
-    for pattern in (r"赔偿\s*\d+", r"退款\s*\d+", r"补偿\s*\d+", r"赔付\s*\d+"):
+    # v1.0.3 改进项(personal_07/08 失配): 扩 7 个 factual 触发词
+    # personal_07: "AA 退给你 50" → "退给你" + 数字
+    # personal_08: "价值 500 块 免费送你" → "价值" + 数字 / "免费送" + 数字
+    factual_patterns = (
+        r"赔偿\s*\d+",
+        r"退款\s*\d+",
+        r"补偿\s*\d+",
+        r"赔付\s*\d+",
+        r"价值\s*\d+",
+        r"退给你\s*\d+",
+        r"免费送\s*\d+",
+    )
+    for pattern in factual_patterns:
         if re.search(pattern, body) and not re.search(pattern, original_body_excerpt):
             conflicts.append("草稿新增了原邮件未包含的具体金额承诺")
             break
