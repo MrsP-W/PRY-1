@@ -18,8 +18,9 @@
 | 维度 | 实际值 |
 |------|--------|
 | v0.2.2 #5 commit 5 收口锚 | `6a0549e feat(deps): v0.2.2 #5 OAuth 2.0 Phase 2 commit 5/5 pyproject 加 msal+google-auth+google-auth-oauthlib` |
+| 当前 HEAD | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | 分支 | `main` |
-| 工作区 | clean ✅(commit 5 `6a0549e` 落地后) |
+| 工作区 | clean ✅(以 `git status --short` 为准) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
 | 8/8 质量门 | 全绿(2211 passed / 1 skipped · 0 new tests · 88.86% coverage) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
