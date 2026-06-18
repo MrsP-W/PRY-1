@@ -1,7 +1,7 @@
-# SESSION-STATE — 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2 MicrosoftOAuth2 收口 + #5 commit 3 GoogleOAuth2 收口 + #5 commit 4 XOAUTH2 收口 + #5 commit 5 依赖加锁 收口
+# SESSION-STATE — v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2-5 全部收口
 
-> **最后更新**:2026-06-18 20:50 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`)
+> **最后更新**:2026-06-18 21:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:✅ v0.2.1 docs 收口 · ✅ v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests)· ✅ v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests)· ✅ v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11 tests)· ✅ v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 · ✅ v0.2.1+ NoteStore L2 跨源写入(`b751820`)· **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`)
 
 ---
 
@@ -9,7 +9,9 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成** — docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
+**当前启动候选**:**v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)** — `0a1386c` NoteStore 状态机化 + `75f87cc` + `b751820` NoteStore L2/L3 跨源去重 + `de5de10` ExpenseServiceStub 实化 4 commit 实际早已落地,本轮 docs-only 校准 SESSION-STATE 状态漂移。
+
+**v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 会话生命周期管理 + 4 阈值切分 + 4 步旧大历史处理
 
@@ -31,6 +33,11 @@
 | **L3 模糊匹配 ±1 day** | ✅ **关闭**(feat `5de016a` + docs `de3d1f7` · 24 new tests) |
 | **菜单栏 badge 实时刷新 polling** | ✅ **关闭**(feat `d4ed573` + docs `e994c9a` · 17 new tests) |
 | **tests/db/ FK 循环依赖 57 errors 修复** | ✅ **关闭**(feat `d87b08a` + docs `68d8f18` · 0 new tests · 纯测试基础设施) |
+| **v0.2.1 #4 NoteStore 状态机化** | ✅ **关闭**(feat `0a1386c` · 1 file / ~80 / 13 new tests · 5 状态 NEW/STRUCTURED/PRIVATE_SKIP/FAILED/ARCHIVED + 状态机守卫) |
+| **v0.2.1 #5 NoteStore L2/L3 跨源去重** | ✅ **关闭**(feat `75f87cc` · normalized_fingerprint SHA-256 + 11 new tests · 沿 D6 transactions 范本) |
+| **v0.2.1+ NoteStore L2 跨源写入** | ✅ **关闭**(feat `b751820` · needs_confirm + candidate_match_id + 9 new tests) |
+| **v0.2.1 #3 ExpenseServiceStub 实化** | ✅ **关闭**(feat `de5de10` · `core/expense_service.py` ~270 行 / 12 new tests · 7 方法 + 5 分钟异常缓存) |
+| **v0.2.1 #6 OAuth 2.0 抽象层 Phase 1** | ✅ **关闭**(docs-only 评估 + OAuth2Provider Protocol + Keychain token 存取 + 14 tests) |
 | **OAuth 2.0 Phase 2 docs-only 启动** | ✅ **关闭**(docs `b7b9ea7` · 1 file / +203 / 0 new tests · 5 commits 分解) |
 | **MicrosoftOAuth2 实现** | ✅ **关闭**(feat `c0f83d4` · 2 files / +804 / 12 new tests · 沿 v0.2.2 范本单日单 commit 8 门全绿) |
 | **GoogleOAuth2 实现** | ✅ **关闭**(feat `564b8db` · 2 files / +814 / 11 new tests · 沿 commit 2 范本提前 2 天完成) |
@@ -70,6 +77,11 @@
 | 6/18 20:30 | 周四 | **v0.2.2 #5 commit 4/5 feat commit `9966ad0`**(2 files / +1269 / 12 new tests · XOAUTH2 9/9 门全绿 · 顶层 placement 避免重构 + 4 重防误发) | ✅ |
 | 6/18 20:30 | 周四 | **v0.2.2 #5 commit 4/5 收口 docs commit `057d937`**(reports + MODIFICATION-LOG + SESSION-STATE · 9 段 5 决策 6 教训 · 提前 3 天完成) | ✅ |
 | 6/18 20:50 | 周四 | **v0.2.2 #5 commit 5/5 feat commit `6a0549e`**(2 files / +146 / 0 new tests · pyproject + uv.lock 加 msal+google-auth+google-auth-oauthlib · 8/8 门全绿 · 提前 4 天完成) | ✅ |
+| 6/17 13:07 | 周三 | **v0.2.1 #4 NoteStore 状态机化 feat commit `0a1386c`**(1 file / ~80 / 13 new tests · 5 状态 NEW/STRUCTURED/PRIVATE_SKIP/FAILED/ARCHIVED) | ✅ |
+| 6/17 13:34 | 周三 | **v0.2.1 #5 NoteStore L2/L3 跨源去重 feat commit `75f87cc`**(normalized_fingerprint SHA-256 + 11 new tests) | ✅ |
+| 6/17 16:57 | 周三 | **v0.2.1+ NoteStore L2 跨源写入 feat commit `b751820`**(needs_confirm + candidate_match_id + 9 new tests) | ✅ |
+| 6/17 14:00 | 周三 | **v0.2.1 #3 ExpenseServiceStub 实化 feat commit `de5de10`**(`core/expense_service.py` ~270 行 / 12 new tests · 7 方法 + 5 分钟异常缓存) | ✅ |
+| 6/18 21:30 | 周四 | **v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)** — SESSION-STATE 5 处同步 + MODIFICATION-LOG 累计 + README 同步 + reports/v0.2.1-candidates-closure-2026-06-18.md | 🟢 |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV) | ⏸️ |
 
@@ -121,6 +133,10 @@
 - **v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁收口报告**: `我的AI员工/reports/v0.2.2-p5-oauth-deps-2026-06-18.md`
 - **v0.2.2 #5 docs-only 启动文档**: `我的AI员工/docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
 - **v0.2.2 #5 Agent Assistant 跨项目沉淀**: `Agent Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
+- **v0.2.1 #3 ExpenseServiceStub 实化**: `de5de10`(12 new tests · 7 方法)
+- **v0.2.1 #4 NoteStore 状态机化**: `0a1386c`(13 new tests · 5 状态机)
+- **v0.2.1 #5 NoteStore L2/L3 跨源去重**: `75f87cc` + `b751820`(11 + 9 new tests)
+- **v0.2.1 #3/#4/#5 docs-only 校准报告**: `我的AI员工/reports/v0.2.1-candidates-closure-2026-06-18.md`
 - **v0.2.1+ L2 跨源写入**: `我的AI员工/reports/v0.2.1-l2-cross-source-write-2026-06-17.md`
 - **v0.2.1 启动候选清单**: `我的AI员工/docs/v0.2.1-candidates-2026-06-17.md`
 - **v0.2 启动规划**: `我的AI员工/docs/v0.2-launch-plan.md`
@@ -130,6 +146,6 @@
 
 ## 维护者
 
-**Mr-PRY** · 2026-06-18 端午不休息 + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
+**Mr-PRY** · 2026-06-18 端午不休息 + **v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests) + v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests) + v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11+9 tests)docs-only 校准** + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
 **模型**:MiniMax-M3
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 / [[d5.7.2-docs-only-closure]] / [[b-class-deferral-2026-06-09]] / [[d5.6.3-p1-1-5-changes]] / [[d8.3-anomaly-alert]] / [[d9.3-expense-service-protocol]] / [[d6.4-transactions-l2]] / [[d9.5-double-process-pattern]] / [[2026-06-18-venv-sigkill-137-false-alarm]]

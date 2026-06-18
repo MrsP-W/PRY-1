@@ -75,15 +75,18 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 20:50 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 21:30 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 5/5 依赖加锁 收口**(提前 4 天完成,v0.2.2 #5 Phase 2 5 commits 全部关闭) |
+| **当前阶段** | 🟢 **v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)** + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2211 passed / 1 skipped**(commit 5 0 new tests · 沿用 commit 4 测试覆盖) |
 | **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.86% ≥ 80%) |
+| **v0.2.1 docs 校准累计 commits** | **1 docs-only commit**(SESSION-STATE 5 处 + MODIFICATION-LOG + reports/v0.2.1-candidates-closure-2026-06-18.md 新建)|
+| **v0.2.1 实际已 commit(本次校准盘点)** | 4 候选已 commit:`de5de10` + `0a1386c` + `75f87cc` + `b751820`(v0.2.1 #3 + #4 + #5 + NoteStore L2 跨源写入)|
+| **v0.2.1 累计 new tests** | 45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)|
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+111**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
@@ -93,6 +96,45 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 21:30 [v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)] — 收口
+
+**1. 本次修改内容**
+
+- docs-only 校准 commit(待落地,沿 115fc8e 范本)
+  - `SESSION-STATE.md` 5 处同步(标题 + 状态行 + 启动候选 + 状态表 + 时间线 + 维护者)
+  - `MODIFICATION-LOG.md` 加本条累计记录 + 累计快照 2 处补 #3/#4/#5 锚
+  - `README.md` L7 状态行 + 里程碑表 已含 v0.2.1 #3/#4/#5 commit hash 锚定(无需再改)
+  - `reports/v0.2.1-candidates-closure-2026-06-18.md` 新建(9 段 5 决策)
+- 改动:4 files / +236 / 0 new tests(纯文档同步)
+- 详细:[reports/v0.2.1-candidates-closure-2026-06-18.md](reports/v0.2.1-candidates-closure-2026-06-18.md)
+- 漂移根因:用户决策"启动候选 #4 NoteStore 状态机化" → 摸底发现 4 候选已 commit,SESSION-STATE 未回填
+- 漂移范围:6 候选中 4 候选(de5de10 + 0a1386c + 75f87cc + b751820)已 commit,SESSION-STATE 累计只反映 v0.2.2 阶段
+
+**2. 风险点**
+
+- ⚠️ **逐阶段累计 + 不回填上一阶段已实施** = 状态漂移隐患(本次撞坑根因)
+- ⚠️ **撞坑过程暴露**:用户决策启动候选 #4 → 摸底发现 4 候选已 commit → 强制从"实施候选"切到"docs-only 校准",浪费一次决策
+- ⚠️ **6/19+ 端午继续推进时,可能再次撞同款漂移**(v0.2.2 阶段成果继续盖住 v0.2.1 阶段成果)
+- **P1**: 7/1 月度复盘 — 加"状态漂移审查机制"入库(每月 1 号 12:00+ 检查员 git log vs SESSION-STATE diff)
+- **P2**: 8/1 v0.2.1 release tag 锚定前 — 必须 git log 全量回填 SESSION-STATE 累计
+- **P3**: docs-only 校准范本沿 v0.2.2 docs-only 校准模式(115fc8e 范本)
+- 🟢 4 候选实施细节已在各自 commit 落地时详细记录,本 docs-only 校准不重复 commit message
+- 🟢 0 代码改动,0 风险(纯文档同步)
+
+**3. 当前项目整体总结**(2026-06-18 21:30 锚定)
+
+- **v0.2.1 docs 校准后**:4 候选盘点完毕(#3 de5de10 / #4 0a1386c / #5 75f87cc + b751820),SESSION-STATE 5 处同步
+- **v0.2.1 累计 new tests**:45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)
+- **v0.2.2 #5 OAuth Phase 2 5 commits 全部关闭**(沿用)
+- **当前 pytest**:**2211 passed / 1 skipped · 88.86% coverage** ≥ 80%
+- **v0.1.0 tag**:`2af775f` 锚定不动(沿 D5.7.2 范本)
+- **6/19-22 端午不休息**:链路不停,继续推进 v0.2.2+ 启动候选
+- **6/23+ 重启项**:手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ 可选真实 OAuth flow spike
+- **7/1 月度复盘**:B 类延后清单 + 状态漂移审查机制入库
+- **8/1 锚**:v0.2.1 release tag 锚定(沿 D5.7.2 范本)
+
+---
 
 ### 2026-06-18 20:50 [v0.2.2 #5 commit 5/5 OAuth 2.0 Phase 2 依赖加锁 收口] — 收口
 
