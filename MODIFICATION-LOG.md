@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -95,7 +95,7 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19-22 端午继续推进 v0.2.6+ 启动候选(推荐候选 #2 D8 改进项延后;真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV) |
+| **下一棒** | v0.2.7+ 候选决策:优先做 outlook/gmail SMTP 真实发送 spike 准备 docs-only 预演 + 6/22 v0.2 release notes 收口;真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
