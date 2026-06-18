@@ -52,6 +52,14 @@
 | 6/18 09:00 | 周四 | **v0.2.2 #7 启动**(环境诊断 + 误报 SIGKILL 137 + 复现 57 errors) | ✅ |
 | 6/18 09:30 | 周四 | **v0.2.2 #7 feat commit `d87b08a`**(1 文件 / +76 / 0 new tests) | ✅ |
 | 6/18 09:30 | 周四 | **v0.2.2 #7 收口 docs commit `68d8f18`**(reports + SESSION-STATE) | ✅ |
+| 6/18 09:30 | 周四 | **v0.2.2 #7 docs commit `7fd162c`**(SESSION-STATE 同步 #7 关闭) | ✅ |
+| 6/18 09:30-10:30 | 周四 | **v0.2.2 #5 启动**(Phase 1 摸底 + 5 commits 分解 + 13 行复用要点) | ✅ |
+| 6/18 10:00 | 周四 | **v0.2.2 #5 docs-only 启动 commit `b7b9ea7`**(1 file / +203 / 0 new tests) | ✅ |
+| 6/18 10:30 | 周四 | **Agent Assistant 跨项目沉淀 commit `d879847`**(L2_memory 2 files / +140) | ✅ |
+| 6/19 | 周五 | **v0.2.2 #5 主代码 commit 2/5** — MicrosoftOAuth2 实现(msal) | 🟢 |
+| 6/20 | 周六 | **v0.2.2 #5 主代码 commit 3/5** — GoogleOAuth2 实现(google-auth) | 🟢 |
+| 6/21 | 周日 | **v0.2.2 #5 主代码 commit 4/5** — XOAUTH2 SMTP 鉴权集成 | 🟢 |
+| 6/22 | 周一 | **v0.2.2 #5 主代码 commit 5/5** — 依赖+tests + 收口报告 | 🟢 |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV) | ⏸️ |
 
@@ -59,7 +67,7 @@
 
 1. **手动 launchctl kickstart** — 补足真触发 1 次
 2. **W3 真账单 spike 启动** — 等用户提供真实微信/支付宝 CSV
-3. **v0.2.2 启动候选 #5 启动**(OAuth 2.0 Phase 2 · 4-5 commits · 沿 [[v0.2.2-p7-fk-circular-2026-06-18]] 基础设施)
+3. **v0.2.2 启动候选 #5 docs-only 启动 1 commit 已落地**(OAuth 2.0 Phase 2 docs `b7b9ea7` · 5 commits 任务分解 + 6/19-22 端午不休息 4 天节奏 + 13 行复用要点 + 7 设计决策) — 主代码 4 commits(6/19 MicrosoftOAuth2 → 6/20 GoogleOAuth2 → 6/21 XOAUTH2 → 6/22 依赖+tests)
 4. **7/1 月度复盘** — B 类延后清单重新评估
 5. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送)
 
@@ -70,7 +78,7 @@
 - ❌ Agent Assistant 项目(7 文件夹重构 uncommitted churn,避免混合未提交变更)
 
 **可继续**:
-- ✅ v0.2.2+ 启动候选(候选 #5 OAuth Phase 2 沿 [[v0.2.2-p7-fk-circular-2026-06-18]] 基础设施)
+- ✅ v0.2.2+ 启动候选(候选 #5 OAuth Phase 2 docs-only 已启动 1 commit `b7b9ea7`,主代码 4 commits 沿 docs 6/19-22 实施)
 - ✅ 真账单 spike(等用户提供真实 CSV)
 
 ## 🆘 6/23 重启后首查项
@@ -81,7 +89,7 @@
 4. 读 `reports/v0.2.2-p3-l3-fuzzy-matching-2026-06-17.md`(v0.2.2 #3 收口 · 24 tests / 4 文件)
 5. 读 `reports/v0.2.2-p6-badge-realtime-refresh-2026-06-17.md`(v0.2.2 #6 收口 · 17 tests / 3 文件)
 6. 读 `reports/v0.2.2-p7-fk-circular-2026-06-18.md`(v0.2.2 #7 收口 · 0 tests / 1 文件 · 57→0 errors)
-7. 跑 `make test` 验证 8/8 质量门仍绿
+7. 跑 `make test` 验证 9/9 质量门仍绿
 8. 跑 `git status` 确认工作区 clean
 9. 跑 `git tag --list` 确认 v0.1.0 = 2af775f 未动
 
@@ -94,6 +102,8 @@
 - **v0.2.2 #3 收口报告**: `我的AI员工/reports/v0.2.2-p3-l3-fuzzy-matching-2026-06-17.md`
 - **v0.2.2 #6 收口报告**: `我的AI员工/reports/v0.2.2-p6-badge-realtime-refresh-2026-06-17.md`
 - **v0.2.2 #7 收口报告**: `我的AI员工/reports/v0.2.2-p7-fk-circular-2026-06-18.md`
+- **v0.2.2 #5 docs-only 启动文档**: `我的AI员工/docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
+- **v0.2.2 #5 Agent Assistant 跨项目沉淀**: `Agent Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
 - **v0.2.1+ L2 跨源写入**: `我的AI员工/reports/v0.2.1-l2-cross-source-write-2026-06-17.md`
 - **v0.2.1 启动候选清单**: `我的AI员工/docs/v0.2.1-candidates-2026-06-17.md`
 - **v0.2 启动规划**: `我的AI员工/docs/v0.2-launch-plan.md`
