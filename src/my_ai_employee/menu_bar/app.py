@@ -79,6 +79,12 @@ _PRIVACY_URL: str = "x-apple.systempreferences:com.apple.preference.security?Pri
 # 菜单栏 title 模板
 _TITLE_TEMPLATE: str = "📝 Notes ({count})"
 
+# v0.2.2 启动候选 #6 — badge 实时刷新轮询间隔(秒)
+# 沿 D5 业务调度 polling 范本(30s 平衡响应速度与性能)
+# 0 = 禁用 polling(测试可显式设 0 关闭)
+_DEFAULT_BADGE_POLL_INTERVAL_SECONDS: float = 30.0
+_BADGE_POLL_SLEEP_GRANULARITY_SECONDS: float = 1.0
+
 # ExpenseService 5 方法签名(注入校验用,沿 D4.7.3 公共常量范本)
 _EXPENSE_SERVICE_METHODS: tuple[str, ...] = (
     "get_total_notes_count",
@@ -214,6 +220,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         expense_service: ExpenseService | None = None,
         capture_service: ClipboardCaptureService | None = None,
         note_confirm_service: NoteConfirmService | None = None,
+        badge_poll_interval_seconds: float = _DEFAULT_BADGE_POLL_INTERVAL_SECONDS,
     ) -> None:
         """初始化菜单栏 App.
 
@@ -224,11 +231,30 @@ class NotesMenuBarApp(_RumpsAppBase):
                               必须显式注入以避免真读剪贴板 / 连 DB)
             note_confirm_service: 1-click 确认服务(v0.2.2 候选 #2 接入,None 时用
                               NoteConfirmServiceStub 默认单例)
+            badge_poll_interval_seconds: 实时刷新 badge 间隔(秒,v0.2.2 启动候选 #6 接入,
+                              默认 30.0;0 = 禁用 polling,test fixture 设 0.1s 加快测试)
         """
         # 严判 expense_service(沿 D4.7.3 公共 helper 范本,避免嵌套 if)
         _validate_expense_service(expense_service)
         # 严判 note_confirm_service(沿 v0.2.2 候选 #2 范本)
         _validate_note_confirm_service(note_confirm_service)
+        # 严判 badge_poll_interval_seconds(v0.2.2 启动候选 #6 沿 D4.7.3 v1.0.5 type 严判范本)
+        if (
+            type(badge_poll_interval_seconds) is bool
+            or not isinstance(badge_poll_interval_seconds, (int, float))
+            or badge_poll_interval_seconds < 0
+        ):
+            raise ValueError(
+                f"badge_poll_interval_seconds 必须是 >= 0 的 int/float(非 bool),"
+                f" 实际 type={type(badge_poll_interval_seconds).__name__},"
+                f" value={badge_poll_interval_seconds!r}"
+            )
+        # 严判 __init__ 范围(沿 D4.7.3 v1.0.5 范围约定)
+        if badge_poll_interval_seconds > 3600:
+            raise ValueError(
+                f"badge_poll_interval_seconds 必须在 [0, 3600] 内,"
+                f" 实际 value={badge_poll_interval_seconds!r}"
+            )
 
         # 状态先记下,super().__init__() 之前不能调任何 rumps 回调
         self._service: ExpenseService = expense_service or ExpenseServiceStub.get_default_stub()
@@ -253,6 +279,13 @@ class NotesMenuBarApp(_RumpsAppBase):
 
         # 调 rumps.App.__init__ 启动 NSApp 主循环
         super().__init__("Notes", title=self._format_title(self._notes_count))
+
+        # v0.2.2 启动候选 #6 — badge 实时刷新轮询(沿 D5 业务调度 polling 范本)
+        # 独立 thread 定时调 _refresh_pending_confirm_count + _refresh_anomaly_count
+        # 触发场景:外部 sync_notes / IMAP / AppleScript 等更新 needs_confirm=1 后
+        # 用户无需点击菜单, badge 自动同步数字
+        self._badge_poll_interval_seconds: float = float(badge_poll_interval_seconds)
+        self._badge_poll_thread: _threading.Thread | None = None
 
         # 注册 8 菜单项(rumps 范本:list[str] 形式注册,D8.3 加"⚠️ 异常告警",
         # v0.2.2 候选 #2 加"📥 待确认" + "📥 确认第 1 条")
@@ -382,16 +415,19 @@ class NotesMenuBarApp(_RumpsAppBase):
         )
 
     def _refresh_anomaly_count(self) -> None:
-        """刷新异常告警菜单项 badge (D8.3 stub 阶段 0, D10 后真实计数)."""
+        """刷新异常告警菜单项 badge (D8.3 stub 阶段 0, D10 后真实计数).
+
+        v0.2.2 启动候选 #6 修复: 原代码用 `getattr(item, "title", None)` 在 str 形态
+        下拿到 `str.title` 内置方法(非 None), 然后 `item.title = ...` 在 str 上
+        抛 AttributeError 静默吞掉. 改用 _update_menu_badge helper(沿 #2 范本),
+        同时支持 list[str] 和 rumps.Menu 2 种形态.
+        """
         try:
             count = self._service.get_anomaly_count()
         except Exception:  # noqa: BLE001 — 静默降级,不影响主流程
             return
-        # 找到异常告警菜单项更新 title
-        for item in self.menu:
-            title = getattr(item, "title", None)
-            if isinstance(title, str) and title.startswith("⚠️ 异常告警"):
-                item.title = f"⚠️ 异常告警 ({count})"
+        new_title = f"⚠️ 异常告警 ({count})"
+        _update_menu_badge(self.menu, "⚠️ 异常告警", new_title)
 
     # ===== v0.2.2 候选 #2 1-click 确认 UI(沿 D8.3 异常告警范本)=====
 
@@ -521,6 +557,16 @@ class NotesMenuBarApp(_RumpsAppBase):
             name="hotkey-poll",
         ).start()
 
+        # v0.2.2 启动候选 #6 — 启动 badge 实时刷新 polling(沿 D5 业务调度范本)
+        # 仅当 interval > 0 时启动(0 = 禁用, 测试场景用)
+        if self._badge_poll_interval_seconds > 0:
+            self._badge_poll_thread = _threading.Thread(
+                target=self._poll_badge_count,
+                daemon=True,
+                name="badge-poll",
+            )
+            self._badge_poll_thread.start()
+
     def _poll_hotkey_queue(self) -> None:
         """轮询 Queue 收子进程事件(沿 D5 业务调度范本).
 
@@ -545,6 +591,51 @@ class NotesMenuBarApp(_RumpsAppBase):
                     "请到 系统设置 → 隐私与安全性 → 辅助功能 授权",
                     str(event.get("reason", ""))[:200],
                 )
+
+    def _poll_badge_count(self) -> None:
+        """v0.2.2 启动候选 #6 — badge 实时刷新 polling(沿 D5 业务调度 polling 范本).
+
+        设计决策(2026-06-17 锁定):
+            - 独立 daemon thread, 与 _poll_hotkey_queue 平行
+            - 复用 _stop_hotkey_poll Event 简化退出(主进程退 → 全停)
+            - interval 默认 30s, 0 = 禁用(测试场景, 此时本方法不被启动)
+            - 优雅 sleep: 1s 粒度 + Event.wait(支持秒级响应 stop, 不死等 30s)
+            - 静默吞异常(单次失败不退出 polling, 沿 _refresh_*_count try/except 范本)
+            - 首次启动立即刷 1 次(避免刚启动 30s 后才显示正确数字)
+            - 用 time.monotonic() 精确测 elapsed(支持短 interval 测试场景如 0.1s)
+
+        触发场景:
+            - sync_notes.py 同步脚本导入新 note → needs_confirm=1
+            - IMAP 邮件接入 → note(邮件内容) 标 needs_confirm
+            - OutboxDispatcher 真实发送后 → 月报聚合 mark needs_confirm
+        """
+        interval = self._badge_poll_interval_seconds
+        # 首次启动立即刷 1 次(避免刚启动 30s 后才显示正确数字)
+        try:
+            self._refresh_pending_confirm_count()
+            self._refresh_anomaly_count()
+        except Exception:  # noqa: BLE001 — 静默, 不影响主循环
+            pass
+        # 优雅 polling: time.monotonic() 精确测 elapsed + Event.wait 支持秒级 stop 响应
+        import time as _time
+
+        last_refresh_mono = _time.monotonic()
+        # wait 粒度: min(1.0, interval) — 短 interval 测试场景(0.1s)也能响应
+        # 长 interval 生产场景(30s)1s 粒度已足
+        wait_granularity = min(_BADGE_POLL_SLEEP_GRANULARITY_SECONDS, interval)
+        while not self._stop_hotkey_poll.is_set():
+            now_mono = _time.monotonic()
+            elapsed = now_mono - last_refresh_mono
+            if elapsed >= interval:
+                try:
+                    self._refresh_pending_confirm_count()
+                    self._refresh_anomaly_count()
+                except Exception:  # noqa: BLE001 — 单次失败不退出 polling
+                    pass
+                last_refresh_mono = _time.monotonic()
+            # 短粒度 sleep + 早退(Event.set 后秒级响应)
+            if self._stop_hotkey_poll.wait(timeout=wait_granularity):
+                return  # stop event 已 set
 
     def _on_clipboard_capture(self) -> None:
         """⌥⌘N 触发后处理(D9.6.1 — ClipboardCaptureService 真链路接入).
