@@ -88,13 +88,13 @@
 | **v0.2.2 #8 SMTPProviderFactory 撞坑恢复 commits** | **2 commits**(`b2cf3c5` feat 6 files / +232 -69 / 10 new tests + `51da8fd` docs closure 1 file / +66) |
 | **v0.2 launch plan 整体收口 commit(本轮 docs-only)** | **1 docs-only commit**(reports/v0.2-closure-2026-06-18.md 新建 + SESSION-STATE/MODIFICATION-LOG/README 同步 + 撞坑恢复范本沉淀)|
 | **v0.2.4 状态漂移审查机制入库 commit(本轮 docs-only)** | **1 docs-only commit**(docs/v0.2.4-drift-review-mechanism-2026-06-18.md 新建 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本 + SESSION-STATE/MODIFICATION-LOG/README 同步)|
-| **v0.2.5 SMTP 真实发送 spike preflight commit(本轮 docs-only)** | **1 docs-only commit**(docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md 新建 · 4 模块链路核对 + 5 重防防误发门控就绪 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)|
+| **v0.2.5 SMTP 真实发送 spike preflight commits** | **2 commits**(`9dc07ca` docs-only preflight + `bd81052` InMemory 5 封报告 · 4 模块链路核对 + 5 重防误发门控就绪 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)|
 | **v0.2.1 实际已 commit(本次校准盘点)** | 4 候选已 commit:`de5de10` + `0a1386c` + `75f87cc` + `b751820`(v0.2.1 #3 + #4 + #5 + NoteStore L2 跨源写入)|
 | **v0.2.1 累计 new tests** | 45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)|
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike 准备 + 候选 #2 D8 改进项延后 + W3 真账单 spike 准备;候选 #5 状态漂移审查机制已入库) |
+| **下一棒** | 6/19-22 端午继续推进 v0.2.6+ 启动候选(推荐候选 #2 D8 改进项延后;真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV) |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
@@ -105,7 +105,7 @@
 
 **1. 本次修改内容**
 
-- docs-only preflight commit(待落地,沿 v0.2.4 撞坑恢复 3 步范本)
+- docs-only preflight commit 已落地(`9dc07ca`) + InMemory 5 封报告已落地(`bd81052`),沿 v0.2.4 撞坑恢复 3 步范本
   - `docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md` 新建(~310 行 · 11 段 · 4 模块链路核对 + 5 重防误发门控检查 + InMemory 5 封跑通 + 3 阻塞点识别 + 撞坑恢复 3 步实战演练 1 + 真实 spike 启动条件 checklist 6 项 + 启动命令范本)
   - `SESSION-STATE.md` 4 处同步(标题加 v0.2.5 + 状态行 + 时间线加 6/18 22:45 行 + 维护者行 + 关键文件指针加 v0.2.5)
   - `MODIFICATION-LOG.md` 快照段加 v0.2.5 锚定 + 加本条累计记录
