@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.5 SMTP 真实发送 spike preflight docs-only + v0.2.4 状态漂移审查机制入库(7/1 月度复盘准备) + v0.2 launch plan 整体收口(填补过渡空缺) + v0.2.2 #8 SMTPProviderFactory 撞坑恢复 + v0.2.1 #3/#4/#5 docs-only 校准 + 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2-5 全部收口
+# SESSION-STATE — v0.2.6 D4.7.4 v1.0.3 改进项延后(端午不休息第 3 天) + v0.2.5 SMTP 真实发送 spike preflight docs-only + v0.2.4 状态漂移审查机制入库(7/1 月度复盘准备) + v0.2 launch plan 整体收口(填补过渡空缺) + v0.2.2 #8 SMTPProviderFactory 撞坑恢复 + v0.2.1 #3/#4/#5 docs-only 校准 + 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2-5 全部收口
 
-> **最后更新**:2026-06-18 22:45 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:✅ **v0.2.5 SMTP 真实发送 spike preflight docs-only(2026-06-18 端午不休息第 1 天锚定 · 4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 不真发邮件 · 撞坑恢复 3 步实战演练 1)** · ✅ **v0.2.4 状态漂移审查机制入库 docs(2026-06-18 端午不休息第 1 天锚定 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** · ✅ **v0.2 launch plan 整体收口 docs(2026-06-18 端午不休息第 1 天锚定 · 57 主项目 commits · 13 子阶段双链)** · ✅ v0.2.1 docs 收口 · ✅ v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests)· ✅ v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests)· ✅ v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11 tests)· ✅ v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 · ✅ v0.2.1+ NoteStore L2 跨源写入(`b751820`)· **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`) · ✅ **v0.2.2 #8 SMTPProviderFactory 撞坑恢复**(`b2cf3c5` feat + `51da8fd` docs closure · 10 new tests)
+> **最后更新**:2026-06-20 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:✅ **v0.2.6 D4.7.4 v1.0.3 改进项延后(2026-06-20 端午不休息第 3 天锚定 · B 类自动解封 + sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** · ✅ **v0.2.5 SMTP 真实发送 spike preflight docs-only(2026-06-18 端午不休息第 1 天锚定 · 4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 不真发邮件 · 撞坑恢复 3 步实战演练 1)** · ✅ **v0.2.4 状态漂移审查机制入库 docs(2026-06-18 端午不休息第 1 天锚定 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** · ✅ **v0.2 launch plan 整体收口 docs(2026-06-18 端午不休息第 1 天锚定 · 57 主项目 commits · 13 子阶段双链)** · ✅ v0.2.1 docs 收口 · ✅ v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests)· ✅ v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests)· ✅ v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11 tests)· ✅ v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 · ✅ v0.2.1+ NoteStore L2 跨源写入(`b751820`)· **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) · ✅ v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) · ✅ v0.2.2 #5 commit 5 依赖加锁关闭(`6a0549e`) · ✅ **v0.2.2 #8 SMTPProviderFactory 撞坑恢复**(`b2cf3c5` feat + `51da8fd` docs closure · 10 new tests)
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.5 SMTP 真实发送 spike preflight 已完成,下一步进入 v0.2.6+ 候选决策** — 优先候选:候选 #2 D8 改进项延后(无需外部凭据,1-2 commits)；真实 SMTP 发送继续等用户授权 + 凭据 + B 类白名单决策；W3 真账单 spike 继续等用户真实 CSV。
+**当前启动候选**:**v0.2.6 D4.7.4 v1.0.3 改进项延后已关闭(2026-06-20)**,**下一步进入 v0.2.7+ 候选决策** — 优先候选:候选 #1 outlook/gmail SMTP 真实发送 spike 准备(沿 v0.2.5 §6 启动条件 checklist 6 项)；真实 SMTP 发送继续等用户授权 + 凭据 + B 类白名单决策；W3 真账单 spike 继续等用户真实 CSV；6/22 周一 v0.2 release notes 收口。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -88,6 +88,7 @@
 | 6/18 22:30 | 周四 | **v0.2.4 状态漂移审查机制入库 docs(本轮 docs-only)** — docs/v0.2.4-drift-review-mechanism-2026-06-18.md 新建 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本 + SESSION-STATE/MODIFICATION-LOG/README 同步 | 🟢 |
 | 6/18 22:45 | 周四 | **v0.2.5 SMTP 真实发送 spike preflight docs-only** — docs/v0.2.5-smtp-real-send-preflight-2026-06-18.md 新建 · 4 模块链路核对 + 5 重防误发门控就绪 + InMemory 5 封跑通(不真发)+ 撞坑恢复 3 步实战演练 1 | 🟢 |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
+| 6/20 | 周六 | **v0.2.6 D4.7.4 v1.0.3 改进项延后(本轮)** — `f0d8bd3` feat(reviewer) 2 files / +111 -1 / 5 new tests · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + B 类自动解封 + 8/8 质量门全绿(2225 passed / 1 skipped / 88.85% coverage) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV)+ outlook/gmail SMTP 真实发送 spike(沿 v0.2.2 #8 工厂 + OAuth/XOAUTH2 真链路) | ⏸️ |
 
 ## 📋 6/23 下一棒(用户手动触发)
@@ -95,10 +96,11 @@
 1. **手动 launchctl kickstart** — 补足真触发 1 次
 2. **W3 真账单 spike 启动** — 等用户提供真实微信/支付宝 CSV
 3. **outlook/gmail SMTP 真实发送 spike 启动** — 沿 v0.2.2 #8 工厂模式(`b2cf3c5`)+ OAuth/XOAUTH2 真链路(`9966ad0`)+ D5.6.5 4 重防误发范本
-4. **D8 改进项延后**(候选 #2 · 敏感词表 + factual 触发扩充) — 沿 [[d4.7.2-prompts-v1.0.3]] 范本
-5. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist)
-6. **7/1 月度复盘** — B 类延后清单重新评估 + 状态漂移审查机制实战 + v0.2.1 release tag 锚定策略复审
+4. ✅ **D8 改进项延后**(2026-06-20 关闭 — `f0d8bd3` feat + docs closure · 沿 [[d4.7.4-v1.0.3-deferred]] 范本 · B 类自动解封)
+5. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist) — 候选 #1 outlook/gmail SMTP 真实发送 spike 准备 docs-only 实战演练 2(6/21 周日预演)
+6. **7/1 月度复盘** — B 类延后清单重新评估(D4.7.4 v1.0.3 已实化,剩 5 候选待评估)+ 状态漂移审查机制实战 + v0.2.1 release tag 锚定策略复审
 7. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
+8. **6/22 周一** — v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步
 
 ## 🔒 端午不休息期间禁止触碰(范围收窄)
 

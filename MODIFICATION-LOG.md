@@ -75,20 +75,21 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 22:45 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-20 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **pytest** | **2220 passed / 1 skipped**(v0.2.2 #8 +10 new tests · SMTPProviderFactory 工厂 + provider-aware Keychain) |
-| **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.85% ≥ 80%) |
+| **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
+| **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.85% ≥ 80% · mypy tests 13 errors 历史 baseline) |
 | **v0.2.1 docs 校准累计 commits** | **1 docs-only commit**(SESSION-STATE 5 处 + MODIFICATION-LOG + reports/v0.2.1-candidates-closure-2026-06-18.md 新建)|
 | **v0.2.2 #8 SMTPProviderFactory 撞坑恢复 commits** | **2 commits**(`b2cf3c5` feat 6 files / +232 -69 / 10 new tests + `51da8fd` docs closure 1 file / +66) |
 | **v0.2 launch plan 整体收口 commit(本轮 docs-only)** | **1 docs-only commit**(reports/v0.2-closure-2026-06-18.md 新建 + SESSION-STATE/MODIFICATION-LOG/README 同步 + 撞坑恢复范本沉淀)|
 | **v0.2.4 状态漂移审查机制入库 commit(本轮 docs-only)** | **1 docs-only commit**(docs/v0.2.4-drift-review-mechanism-2026-06-18.md 新建 · 4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本 + SESSION-STATE/MODIFICATION-LOG/README 同步)|
 | **v0.2.5 SMTP 真实发送 spike preflight commits** | **2 commits**(`9dc07ca` docs-only preflight + `bd81052` InMemory 5 封报告 · 4 模块链路核对 + 5 重防误发门控就绪 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)|
+| **v0.2.6 D4.7.4 v1.0.3 改进项延后 commits** | **2 commits**(`f0d8bd3` feat 2 files / +111 -1 / 5 new tests + docs closure 本次) |
 | **v0.2.1 实际已 commit(本次校准盘点)** | 4 候选已 commit:`de5de10` + `0a1386c` + `75f87cc` + `b751820`(v0.2.1 #3 + #4 + #5 + NoteStore L2 跨源写入)|
 | **v0.2.1 累计 new tests** | 45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)|
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
@@ -100,6 +101,57 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-20 [v0.2.6 D4.7.4 v1.0.3 改进项延后] — 收口
+
+**1. 本次修改内容**
+
+- feat commit 已落地(`f0d8bd3`),沿 [[d4.7.4-v1.0.3-deferred]] §"实施细节" 段 + [[b-class-deferral-2026-06-09]] 自动解封
+  - `src/my_ai_employee/ai/reviewer.py` 改动 2 处:
+    - `_DEFAULT_SENSITIVE_WORDS` 21 词 → 27 词(加 API key / 密钥 / token / Bearer token / OAuth / 凭证,共 6 词新增)
+    - `_find_local_block` 4 factual 正则 → 7 factual 正则(加 价值 N / 退给你 N / 免费送 N,共 3 正则新增)
+  - `tests/ai/test_reviewer.py` 新增 `TestD474V103Fixes` class 5 个 case(3 例失配 + 1 反向不误伤 + 1 同义词扩枚举)
+  - `docs/v0.2.6-d4.7.4-v1.0.3-deferred-2026-06-20.md` 新建(10 段 · 3 例失配根因 + 2 改动详解 + 5 test 覆盖 + 8/8 质量门数据 + B 类自动解封应用)
+  - `SESSION-STATE.md` 4 处同步(标题加 v0.2.6 + 状态行加 v0.2.6 + 当前启动候选切到 v0.2.7+ + 时间线加 6/20 行 + 第 4 候选改"已关闭")
+  - `MODIFICATION-LOG.md` 快照段加 v0.2.6 锚定 + 加本条累计记录
+  - `README.md` L7 状态行加 v0.2.6 锚定 + 加 docs/v0.2.6 链接
+- 改动:**2 files / +111 -1 / 5 new tests**(feat) + **4 files docs-only**(本 docs closure)
+- 详细报告:[docs/v0.2.6-d4.7.4-v1.0.3-deferred-2026-06-20.md](docs/v0.2.6-d4.7.4-v1.0.3-deferred-2026-06-20.md)
+- **3 例失配根因**(沿 [[d4.7.4-v1.0.3-deferred]] §"3 例失配"):
+  - fyi_01: sensitive 词表缺"凭证"/"API 密钥" — 草稿发明具体凭证内容
+  - personal_07: factual 触发过严 — 草稿"AA 退给你 50"未命中"赔偿/退款/补偿/赔付"白名单
+  - personal_08: factual 触发过严 — 草稿"价值 500 块 免费送你"未命中
+- **2 改动详解**:
+  - 改动 1:`_DEFAULT_SENSITIVE_WORDS` 21→27 词(API key / 密钥 / token / Bearer token / OAuth / 凭证);匹配顺序沿 `sorted()` 取首位命中词
+  - 改动 2:`_find_local_block` 4→7 factual 正则(价值 N / 退给你 N / 免费送 N);单边触发阻断逻辑不变
+- **5 test 覆盖**(`TestD474V103Fixes`):
+  - `test_sensitive_blocks_api_key_token`(fyi_01)
+  - `test_sensitive_blocks_zhengjian_token_oauth`(fyi_01 扩 6 同义词)
+  - `test_factual_blocks_value_n_promise`(personal_08)
+  - `test_factual_blocks_zhuan_gei_ni`(personal_07)
+  - `test_factual_passes_when_origin_contains_phrase`(反向不误伤)
+
+**2. 风险点**
+
+- ✅ **B 类决策延后声明应用**:用户 2026-06-19 主动启动 D8 改进项延后 = 自动解封(沿 [[b-class-deferral-2026-06-09]] §"解封条件" 段)
+- ✅ **撞坑恢复 3 步未触发**:本次为单提交 feat + docs closure 2 commits 范本(沿 v0.2.2 范本),无并发进程冲突
+- ✅ **mypy tests 13 errors 历史 baseline**:本次 stash 对比确认 13 errors 全部 baseline 已存在,与本次改动无关
+- ✅ **不依赖外部凭据 / 真实 CSV**:沿 v0.2.5 收口"端午 4 天链路不停推进方向" 候选 2 范本
+- **P1**: 6/21 周日撞坑恢复 3 步实战演练 2(候选 #1 outlook/gmail SMTP 真实发送 spike 准备 docs-only 预演)
+- **P2**: 6/22 周一 v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步
+- **P3**: 7/1 月度复盘 — D4.7.4 v1.0.3 已实化,剩 5 B 类延后候选待评估
+- **P4**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike + outlook/gmail 真实 SMTP 发送 spike 跑通后)
+
+**3. 当前项目整体总结**(2026-06-20 锚定)
+
+- **v0.2.6 D4.7.4 v1.0.3 改进项延后**:sensitive 词表 21→27 词 ✅ + factual 触发 4→7 正则 ✅ + 5 new tests ✅ + B 类自动解封应用 ✅
+- **当前 pytest**:**2225 passed / 1 skipped · 88.85% coverage** ≥ 80%(原 2220 + 5 new)
+- **v0.1.0 tag**:`2af775f` 锚定不动(沿 D5.7.2 范本)
+- **端午不休息**:6/19-22 链路不停,v0.2.6 已关闭,下一步进入 v0.2.7+ 候选决策
+- **6/21-22 推进方向**:撞坑恢复 3 步实战演练 2(outlook/gmail SMTP 真实发送 spike 准备 docs-only)+ v0.2 release notes 收口
+- **6/23+ 重启项**:手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ outlook/gmail 真实 SMTP 发送 spike(沿 v0.2.5 §6 启动条件 checklist)
+
+---
 
 ### 2026-06-18 22:45 [v0.2.5 SMTP 真实发送 spike preflight docs-only(撞坑恢复 3 步实战演练 1)] — 收口
 
