@@ -75,23 +75,66 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 19:30 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 20:00 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 2 MicrosoftOAuth2 收口**(主代码 commit 3/5 GoogleOAuth2 待 6/19+) |
-| **HEAD** | `18d1610` |
+| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 3/5 GoogleOAuth2 收口**(主代码 commit 4/5 XOAUTH2 待 6/19+) |
+| **HEAD** | `51675fc` |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **pytest** | **2188 passed / 1 skipped**(+ MicrosoftOAuth2 12 new tests) |
-| **8/8 质量门** | ✅ 全绿(mypy 0 / ruff 0 / alembic head 0014 / uv build OK / MD lint 0) |
-| **v0.2.2 累计 commits** | **8 commits**(P0 / #2 / #3 / #6 / #7 / #5 docs / #5 feat / #5 closure) |
+| **pytest** | **2199 passed / 1 skipped**(+ GoogleOAuth2 11 new tests) |
+| **9/9 质量门** | ✅ 全绿(mypy 0 / ruff 0 / alembic head 0014 / uv build OK / MD lint 0 / coverage 89.13% ≥ 80%) |
+| **v0.2.2 累计 commits** | **10 commits**(P0 / #2 / #3 / #6 / #7 / #5 docs / #5 feat / #5 closure / **#5 feat commit 3 / #5 closure commit 3**)|
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19 周五 GoogleOAuth2 实现(google-auth 接入 + 8-10 unit tests,沿 commit 2 范本) |
+| **下一棒** | 6/19 周五 XOAUTH2 SMTP 鉴权集成(`auth_string` 模板 + 沿 D5.6.5 4 重防误发) |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 20:00 [v0.2.2 #5 commit 3/5 GoogleOAuth2 收口] — 收口
+
+**1. 本次修改内容**
+
+- `564b8db` feat(oauth):GoogleOAuth2(google-auth 接入)+ 11 unit tests(2 files / +814)
+  - 新建 `src/my_ai_employee/core/oauth2_google.py`(490 行)
+    - 显式继承 `OAuth2Provider` Protocol(沿 Phase 1 抽象层 + D4.7.3 v1.0.6 公共 API 自防御)
+    - 6 严判 helper:`_validate_oauth2_config` / `_validate_state` / `_validate_default_scopes` / `_validate_code` / `_validate_refresh_token_value` / `_google_auth_result_to_token`
+    - `google_auth_client_factory` 工厂注入(测试 mock / 生产真实 google_auth_oauthlib 解耦)
+    - 函数内 `import google_auth_oauthlib`(6/19 暂不引入 dep,6/22 commit 5 加)
+    - `OAuth2TokenExchangeError/RefreshError` 简化为 message 透传(沿 commit 2 范本)
+    - **Google 特色 3 字段**:`access_type=offline` + `prompt=consent` + `include_granted_scopes=true`(Google 颁发 refresh_token 的硬性条件)
+  - 新建 `tests/core/test_oauth2_google.py`(324 行 / 11 cases / 4 段)
+    - 1.x URL 构造(5 tests)/ 2.x exchange_code(2 tests)/ 3.x refresh_token(2 tests)/ 4.x 严判 + Protocol 合规(2 tests)
+    - 全部 mock + 离线,无需真实 google_auth_oauthlib 依赖
+- `51675fc` docs(closure):GoogleOAuth2 收口报告 + SESSION-STATE 同步(1 file / +281)
+  - 收口报告:[reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md)(9 段 5 决策 5 教训)
+  - 提前 2 天完成(原计划 6/20 → 实际 6/18 20:00)
+- 详细:沿 [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md)
+- 启动文档:[docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) §2.2 commit 3
+
+**2. 风险点**
+
+- ⚠️ **6/19 commit 4 XOAUTH2 鉴权字符串**: `auth_string = f"user={email}\x01auth=Bearer {token}\x01\x01"` 沿 RFC 7628 易踩 \x01 边界
+- ⚠️ **google-auth 真实 OAuth flow 未跑**: 6/19 commit 3 未引入 dep,仅单元测试(mock)→ 6/22 commit 5 加 dep 后可选真实 OAuth 验证
+- ⚠️ **Google 特色字段不可省**: `access_type=offline` + `prompt=consent` 是 Google refresh_token 颁发的硬性条件,缺一即丢失长期鉴权能力
+- ⚠️ **deps 锁版**: `pyproject.toml` 加 `google-auth-oauthlib>=1.0` + `google-auth>=2.23` 必须 `uv lock` 同步(commit 5)
+- ⚠️ **B 类延后**: outlook/gmail SMTP provider 决策(单独门控,6/19-22 期间不触)
+- **P1**: 6/19 XOAUTH2 必须先跑 8/8 质量门再 commit(沿 v0.2.2 范本)
+- **P2**: 6/22 commit 5 收口报告必须含"真实 google-auth OAuth flow 跑通"(沿 P2 改进项)
+- **P3**: 7/1 月度复盘重新评估 GmailProvider 决策
+
+**3. 当前项目整体总结**
+
+- 进度:**2199 tests / 9/9 质量门 / 10 commits(v0.2.2 阶段)** / 6 启动候选全关闭
+- 状态:**v0.2.2 #5 commit 3/5 GoogleOAuth2 关闭(feat `564b8db` + closure `51675fc`),commit 4/5 XOAUTH2 待 6/19+**
+- 风险:5 项已知风险(见上),无新风险(commit 2 范本 1:1 复用)
+- 下一步:6/19 周五 XOAUTH2 SMTP 鉴权集成(`auth_string` 模板 + 沿 D5.6.5 4 重防误发)
+- 下一棒:6/19 端午前工作日末段 → 主 Agent 接力 XOAUTH2
+- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md](reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/memory/b-class-deferral-2026-06-09.md)
+
+---
 
 ### 2026-06-18 19:30 [v0.2.2 #5 commit 2 MicrosoftOAuth2 收口] — 收口
 
@@ -195,5 +238,5 @@
 
 ---
 
-> **累计**:3 条 / 2026-06-18(MicrosoftOAuth2 收口 + 规则初始化 + OAuth #5 docs)
+> **累计**:4 条 / 2026-06-18(GoogleOAuth2 收口 + MicrosoftOAuth2 收口 + 规则初始化 + OAuth #5 docs)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)

@@ -1,7 +1,7 @@
-# SESSION-STATE — 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2 MicrosoftOAuth2 收口
+# SESSION-STATE — 端午不休息 + v0.2.2 候选 #7 关闭 + #5 docs-only 启动 + #5 commit 2 MicrosoftOAuth2 收口 + #5 commit 3 GoogleOAuth2 收口
 
-> **最后更新**:2026-06-18 19:30 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`)
+> **最后更新**:2026-06-18 20:00 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:✅ v0.2.1 docs 收口 · **端午不休息** · ✅ v0.2.2 P0 关闭 · ✅ v0.2.2 #2 关闭 · ✅ v0.2.2 #3 关闭 · ✅ v0.2.2 #6 关闭 · ✅ v0.2.2 #7 关闭 · ✅ v0.2.2 #5 docs-only 启动(`b7b9ea7`) · ✅ v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) · ✅ v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`)
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.2 候选 #5 OAuth 2.0 Phase 2 commit 3/5** — GoogleOAuth2 实现(google-auth 接入,沿 commit 2 范本)。
+**当前启动候选**:**v0.2.2 候选 #5 OAuth 2.0 Phase 2 commit 4/5** — XOAUTH2 SMTP 鉴权集成(`auth_string` 模板 + 沿 D5.6.5 4 重防误发)。
 
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 会话生命周期管理 + 4 阈值切分 + 4 步旧大历史处理
 
@@ -21,7 +21,7 @@
 | 分支 | `main` |
 | 工作区 | clean ✅(校准 commit `115fc8e` 落地后) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 9/9 质量门 | 全绿(2188 passed / 1 skipped + `tests/core/test_oauth2_microsoft.py` 12 passed · 8 others) |
+| 9/9 质量门 | 全绿(2199 passed / 1 skipped + `tests/core/test_oauth2_google.py` 11 passed · 9 others) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ⏸️ 推迟到 6/23+(真 CSV 待用户手动导出) |
 | outlook/gmail SMTP provider | ⏸️ docs-only(等用户单独决策) |
@@ -32,6 +32,7 @@
 | **tests/db/ FK 循环依赖 57 errors 修复** | ✅ **关闭**(feat `d87b08a` + docs `68d8f18` · 0 new tests · 纯测试基础设施) |
 | **OAuth 2.0 Phase 2 docs-only 启动** | ✅ **关闭**(docs `b7b9ea7` · 1 file / +203 / 0 new tests · 5 commits 分解) |
 | **MicrosoftOAuth2 实现** | ✅ **关闭**(feat `c0f83d4` · 2 files / +804 / 12 new tests · 沿 v0.2.2 范本单日单 commit 8 门全绿) |
+| **GoogleOAuth2 实现** | ✅ **关闭**(feat `564b8db` · 2 files / +814 / 11 new tests · 沿 commit 2 范本提前 2 天完成) |
 
 ## 📅 端午不休息时间线(2026)
 
@@ -61,9 +62,10 @@
 | 6/18 19:30 | 周四 | **v0.2.2 #5 feat commit `c0f83d4`**(2 files / +804 / 12 new tests · MicrosoftOAuth2 8/8 门全绿) | ✅ |
 | 6/18 19:30 | 周四 | **v0.2.2 #5 收口 docs commit `18d1610`**(reports + SESSION-STATE · 沿 v0.2.2 范本) | ✅ |
 | 6/18 19:30+ | 周四 | **v0.2.2 #5 docs-only 校准 commit `115fc8e`**(修 3 漂移 + MODIFICATION-LOG 规则入库 · 4 files / +236 -6 · 8/8 门全绿) | ✅ |
-| 6/20 | 周六 | **v0.2.2 #5 commit 3/5** — GoogleOAuth2 实现(google-auth 接入,沿 commit 2 范本) | 🟢 |
-| 6/21 | 周日 | **v0.2.2 #5 commit 4/5** — XOAUTH2 SMTP 鉴权集成(沿 D5.6.5 4 重防误发) | 🟢 |
-| 6/22 | 周一 | **v0.2.2 #5 commit 5/5** — pyproject 加 msal+google-auth + 收口报告 | 🟢 |
+| 6/18 20:00 | 周四 | **v0.2.2 #5 commit 3/5 feat commit `564b8db`**(2 files / +814 / 11 new tests · GoogleOAuth2 9/9 门全绿 · 提前 2 天完成) | ✅ |
+| 6/18 20:00 | 周四 | **v0.2.2 #5 commit 3/5 收口 docs commit `51675fc`**(reports + SESSION-STATE · 沿 v0.2.2 范本) | ✅ |
+| 6/19 | 周五 | **v0.2.2 #5 commit 4/5** — XOAUTH2 SMTP 鉴权集成(沿 D5.6.5 4 重防误发) | 🟢 |
+| 6/20 | 周六 | **v0.2.2 #5 commit 5/5** — pyproject 加 msal+google-auth + 收口报告 | 🟢 |
 | 6/19-22 | 端午 4 天 | **继续推进**(链路不停) | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike(等真 CSV) | ⏸️ |
 
@@ -109,6 +111,7 @@
 - **v0.2.2 #6 收口报告**: `我的AI员工/reports/v0.2.2-p6-badge-realtime-refresh-2026-06-17.md`
 - **v0.2.2 #7 收口报告**: `我的AI员工/reports/v0.2.2-p7-fk-circular-2026-06-18.md`
 - **v0.2.2 #5 commit 2 MicrosoftOAuth2 收口报告**: `我的AI员工/reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md`
+- **v0.2.2 #5 commit 3 GoogleOAuth2 收口报告**: `我的AI员工/reports/v0.2.2-p5-oauth-google-2026-06-18.md`
 - **v0.2.2 #5 docs-only 启动文档**: `我的AI员工/docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
 - **v0.2.2 #5 Agent Assistant 跨项目沉淀**: `Agent Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
 - **v0.2.1+ L2 跨源写入**: `我的AI员工/reports/v0.2.1-l2-cross-source-write-2026-06-17.md`
@@ -120,6 +123,6 @@
 
 ## 维护者
 
-**Mr-PRY** · 2026-06-18 端午不休息 + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`)
+**Mr-PRY** · 2026-06-18 端午不休息 + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`)
 **模型**:MiniMax-M3
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 / [[d5.7.2-docs-only-closure]] / [[b-class-deferral-2026-06-09]] / [[d5.6.3-p1-1-5-changes]] / [[d8.3-anomaly-alert]] / [[d9.3-expense-service-protocol]] / [[d6.4-transactions-l2]] / [[d9.5-double-process-pattern]] / [[2026-06-18-venv-sigkill-137-false-alarm]]
