@@ -75,27 +75,101 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 21:30 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 22:00 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)** + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **pytest** | **2211 passed / 1 skipped**(commit 5 0 new tests · 沿用 commit 4 测试覆盖) |
-| **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.86% ≥ 80%) |
+| **pytest** | **2220 passed / 1 skipped**(v0.2.2 #8 +10 new tests · SMTPProviderFactory 工厂 + provider-aware Keychain) |
+| **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.85% ≥ 80%) |
 | **v0.2.1 docs 校准累计 commits** | **1 docs-only commit**(SESSION-STATE 5 处 + MODIFICATION-LOG + reports/v0.2.1-candidates-closure-2026-06-18.md 新建)|
+| **v0.2.2 #8 SMTPProviderFactory 撞坑恢复 commits** | **2 commits**(`b2cf3c5` feat 6 files / +232 -69 / 10 new tests + `51da8fd` docs closure 1 file / +66) |
+| **v0.2 launch plan 整体收口 commit(本轮 docs-only)** | **1 docs-only commit**(reports/v0.2-closure-2026-06-18.md 新建 + SESSION-STATE/MODIFICATION-LOG/README 同步 + 撞坑恢复范本沉淀)|
 | **v0.2.1 实际已 commit(本次校准盘点)** | 4 候选已 commit:`de5de10` + `0a1386c` + `75f87cc` + `b751820`(v0.2.1 #3 + #4 + #5 + NoteStore L2 跨源写入)|
 | **v0.2.1 累计 new tests** | 45(#3 12 + #4 13 + #5 11 + NoteStore L2 9)|
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
-| **v0.2.2 累计 new tests** | **+111**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0) |
+| **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19-22 端午继续推进 v0.2.2+ 启动候选 |
-| **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送) |
+| **下一棒** | 6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike + 候选 #2 D8 改进项延后 + 候选 #5 状态漂移审查机制入库) |
+| **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 22:00 [v0.2 launch plan 整体收口 docs(填补过渡空缺)] — 收口
+
+**1. 本次修改内容**
+
+- docs-only 整体收口 commit(待落地)
+  - `reports/v0.2-closure-2026-06-18.md` 新建(~350 行 · 11 段 · 5 决策 + 5 教训 + 撞坑恢复范本)
+  - `SESSION-STATE.md` 标题 + 状态行 + outlook/gmail 部分实化 + 时间线 3 行(6/18 22:00 v0.2.2 #8 feat + docs closure + v0.2-closure)+ 下一棒 7 项 + 维护者行 + 关键文件指针 2 行
+  - `MODIFICATION-LOG.md` 快照段 + 加本条累计记录
+  - `README.md` L7 状态行(v0.2.2 #8 部分实化锚 + v0.2-closure 锚 + reports/v0.2-closure 链接)
+- 改动:**4 files / ~+400 / 0 new tests**(纯文档同步 · 沿 115fc8e + 7391fe2 docs-only 校准范本)
+- 详细报告:[reports/v0.2-closure-2026-06-18.md](reports/v0.2-closure-2026-06-18.md)
+- **撞坑恢复**:本轮摸底 v0.2 6 子阶段 commit 期间,并发进程(另一 Claude Code 会话)实施 v0.2.2 #8 SMTPProviderFactory 收口(8 files + 1 收口报告)未 commit;用户授权我代 commit 2 commits(`b2cf3c5` feat + `51da8fd` docs closure),完整保留并发工作。
+
+**2. 风险点**
+
+- 🟡 **撞坑恢复范本沉淀**:并发进程冲突时,撞坑处理 3 步(撤回自己基于旧状态写的 docs-only 报告 → 验证并发进程工作通过 8/8 质量门 → 用户授权代 commit 2 commits)。建议:**7/1 月度复盘**加"并发进程冲突撞坑恢复"机制入库
+- 🟢 **v0.2 整体收口不封口 tag**:v0.1.0 tag `2af775f` 锚定不动 + 不打 v0.2.0 tag + 不打 v0.2.1 release tag(留 W3 真账单 spike + outlook/gmail 真实 SMTP 发送 spike 后)
+- ⚠️ **outlook/gmail SMTP provider 部分实化** = 工厂模式 + connector 解封 + provider-aware Keychain CLI(10 new tests),**真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控**。完整 outlook/gmail 真实发送 spike 沿 OAuth/XOAUTH2 真链路 + D5.6.5 4 重防误发范本执行
+- ⚠️ **D8 W3 faker 三阶段验证 vs 真账单 spike** 沿 faker 路径收口(30/102/1000 笔),真账单 spike 因用户未导出 CSV + 端午连休推迟到 6/23+
+- **P1**: 6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike 准备 / 候选 #2 D8 改进项延后)
+- **P2**: 7/1 月度复盘 — B 类延后清单重新评估 + 状态漂移审查机制入库 + 并发进程冲突撞坑恢复机制入库
+- **P3**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通,沿 D5.7.2 范本)
+- 🟢 docs-only 整体收口 = 0 代码改动 + 0 new tests + 4 文件同步,无技术风险
+
+**3. 当前项目整体总结**(2026-06-18 22:00 锚定)
+
+- **v0.2 整体收口**:57 主项目 commits · 13 子阶段双链锚定(5/6 + 1/6 部分实化 + 7/7)
+- **v0.2 launch plan §6 6 子阶段**(B1/B2/B4/B-5/D8 + outlook/gmail)全部实化或部分实化
+- **v0.2.2 7 子阶段**(P0/#2/#3/#5/#6/#7/#8)全部收口,其中 #5 OAuth Phase 2 提前 4 天完成,#8 SMTPProviderFactory 撞坑恢复 commit
+- **撞坑恢复范本沉淀**:并发进程冲突时,撞坑处理 3 步范本(撤回 docs-only → 验证质量门 → 用户授权代 commit)
+- **当前 pytest**:**2220 passed / 1 skipped · 88.85% coverage** ≥ 80%(v0.2.2 #8 +10 new tests 后)
+- **v0.1.0 tag**:`2af775f` 锚定不动(沿 D5.7.2 范本)
+- **6/19-22 端午不休息**:链路不停,继续推进 v0.2.3+ 启动候选
+- **6/23+ 重启项**:手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ outlook/gmail 真实 SMTP 发送 spike
+- **7/1 月度复盘**:B 类延后清单 + 状态漂移审查机制 + 并发进程冲突撞坑恢复机制
+- **8/1**:v0.2.1 release tag 锚定(W3 真账单 spike + outlook/gmail 真实 SMTP 发送 spike 跑通后)
+
+---
+
+### 2026-06-18 22:00 [v0.2.2 #8 SMTPProviderFactory 撞坑恢复(并发进程实施 + 用户授权代 commit)] — 收口
+
+**1. 本次修改内容**
+
+- 撞坑恢复 commit(并发进程实施 + 用户授权我代 commit)
+  - `b2cf3c5` feat(smtp): SMTPProviderFactory 工厂模式实化(6 files / +232 -69 / 10 new tests · QQ/Outlook/Gmail connector + provider-aware Keychain)
+  - `51da8fd` docs(closure): SMTPProviderFactory 收口报告(reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md 新建 · 1 file / +66)
+- 改动:**7 files / +298 -69 / 10 new tests**(2 commits 沿 v0.2.2 范本 feat + docs closure)
+- 详细报告:[reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md](reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md)
+- **撞坑根因**:摸底 v0.2 6 子阶段 commit 期间(我跑 git log),并发进程(另一 Claude Code 会话)实施 v0.2.2 #8 SMTPProviderFactory 收口(8 files + 1 收口报告)未 commit
+- **撞坑恢复**:用户授权我代 commit 2 commits(撤回 README/SESSION-STATE 留 v0.2-closure 一起改 → commit feat 6 files → commit docs closure 1 file)
+
+**2. 风险点**
+
+- 🟡 **撞坑恢复范本 = 并发进程冲突时,撞坑处理 3 步**(撤回自己基于旧状态写的 docs-only 报告 → 验证并发进程工作通过 8/8 质量门 → 用户授权代 commit)。本案例作范本沉淀
+- 🟡 **outlook/gmail SMTP provider 真实发送未默认解锁**:spike_send_100.py --real 仍只允许 --smtp-provider qq(避免 provider 工厂解封后误触真实 Outlook/Gmail);后续真实发送应单独走 OAuth/XOAUTH2 真链路 spike + 沿 D5.6.5 4 重防误发
+- 🟢 **真实网络门控保持**:SMTP_REAL_NETWORK env + 确认短语 + 单收件人 + provider 白名单 + Keychain round-trip 5 重保护
+- 🟢 **撞坑工作 100% 保留**:并发进程的所有修改(代码 + 测试 + 文档)全部 commit,无任何丢失
+- **P1**: 6/19-22 端午继续推进 outlook/gmail 真实发送 spike(候选 #1)
+- **P2**: 7/1 月度复盘 — 并发进程冲突撞坑恢复机制入库(每月 1 号 12:00+ 检查员 git log vs working tree diff)
+- 🟢 0 代码缺陷风险(并发进程工作 8/8 质量门验证通过)
+
+**3. 当前项目整体总结**(2026-06-18 22:00 锚定)
+
+- **v0.2.2 #8 SMTPProviderFactory**:SMTPProviderFactory.create(provider, email) 工厂模式实化 + QQ/Outlook/Gmail connector 解封 + provider-aware Keychain CLI
+- **撞坑恢复范本沉淀**:并发进程冲突 → 撤回 docs-only → 验证质量门 → 用户授权代 commit
+- **outlook/gmail SMTP provider 状态**:`⏸️ docs-only` → **`🟡 部分实化`**(工厂模式 + connector 解封,真实发送仍受门控)
+- **当前 pytest**:**2220 passed / 1 skipped · 88.85% coverage**(v0.2.2 #8 +10 new tests 后)
+- **v0.1.0 tag**:`2af775f` 锚定不动
+- **下一棒**:6/19-22 端午继续推进 v0.2.3+ 启动候选(候选 #1 outlook/gmail SMTP 真实发送 spike 准备)
+
+---
 
 ### 2026-06-18 21:30 [v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)] — 收口
 
