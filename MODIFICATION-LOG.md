@@ -75,23 +75,59 @@
 
 ---
 
-## 📊 当前项目整体状态(快照 · 2026-06-18 20:30 锚定)
+## 📊 当前项目整体状态(快照 · 2026-06-18 20:50 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 4/5 XOAUTH2 收口**(提前 3 天完成,主代码 commit 5/5 deps+收口待 6/19+) |
-| **HEAD** | `057d937` |
+| **当前阶段** | 🟢 **v0.2.2 #5 OAuth Phase 2 commit 5/5 依赖加锁 收口**(提前 4 天完成,v0.2.2 #5 Phase 2 5 commits 全部关闭) |
+| **HEAD** | `6a0549e` |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **pytest** | **2211 passed / 1 skipped**(+ XOAUTH2 12 new tests · 2199 → 2211) |
-| **9/9 质量门** | ✅ 全绿(mypy 0 / ruff 0 / alembic head 0014 / uv build OK / MD lint 0 / coverage 88.86% ≥ 80%) |
-| **v0.2.2 累计 commits** | **11 commits**(P0 / #2 / #3 / #6 / #7 / #5 docs / **#5 feat commit 2 / #5 feat commit 3 / #5 feat commit 4 / #5 closure commit 3 / #5 closure commit 4**)|
+| **pytest** | **2211 passed / 1 skipped**(commit 5 0 new tests · 沿用 commit 4 测试覆盖) |
+| **8/8 质量门** | ✅ 全绿(ruff check / ruff format / mypy src / alembic --sql / pytest / uv build / MD lint / coverage 88.86% ≥ 80%) |
+| **v0.2.2 #5 Phase 2 累计 commits** | **6 commits**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs 待)|
+| **v0.2.2 累计 new tests** | **+111**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | 6/19 周五 #5 commit 5/5 — pyproject 加 msal+google-auth+google-auth-oauthlib + 收口报告 |
+| **下一棒** | 6/19-22 端午继续推进 v0.2.2+ 启动候选 |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + 至少 1 commit 真实 SMTP 发送) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-18 20:50 [v0.2.2 #5 commit 5/5 OAuth 2.0 Phase 2 依赖加锁 收口] — 收口
+
+**1. 本次修改内容**
+
+- `6a0549e` feat(deps):pyproject 加 msal+google-auth+google-auth-oauthlib(2 files / +146)
+  - `pyproject.toml` dependencies 段加 3 依赖:`msal>=1.24` / `google-auth>=2.23` / `google-auth-oauthlib>=1.0`
+  - `uv.lock` 锁版:msal v1.37.0 / google-auth v2.55.0 / google-auth-oauthlib v1.4.0(纯 Python wheel,0 系统依赖)
+  - 选 `dependencies` 而非 `optional-dependencies.oauth`(沿 launch plan §5.5 — outlook/gmail SMTP 必需非可选)
+  - 8/8 质量门全绿(pytest 2211 passed / 1 skipped · coverage 88.86% · mypy 0 / ruff 0 / alembic OK / uv build OK / MD lint 0)
+  - 0 new tests(沿用 commit 2/3/4 mock 测试)
+  - 详细报告:[reports/v0.2.2-p5-oauth-deps-2026-06-18.md](reports/v0.2.2-p5-oauth-deps-2026-06-18.md)
+- 提前 4 天完成(原计划 6/22 周一 → 实际 6/18 周四 20:50)
+- v0.2.2 #5 Phase 2 5 commits 全部关闭(docs `b7b9ea7` + commit 2-4 主代码 + commit 5 dep)
+
+**2. 风险点**
+
+- 🚨 **msal / google-auth 实际 OAuth flow 未跑**:commit 5 仅加依赖,真实 OAuth 流程未跑(需用户 Microsoft/Google 账号 + App 注册 + 用户授权,无法 CI 自动化)。缓解:6/23+ 用户手动 spike(沿 D5.6.5 4 重防误发)
+- 🚨 **outlook/gmail SMTP provider 未实化**:本轮只加 dep,Provider 留 v0.3+。B 类决策延后,等用户单独启动(单独门控,6/19-22 期间不触)
+- 🟡 **msal / google-auth 升级次版本可能破 API**:虽 uv.lock 锁精确版本,dev/CI/prod 一致,但用户手动 `uv lock --upgrade` 可能引入不兼容升级。建议:沿用 `>=` 下限 + uv.lock 锁版,不要锁精确版本
+- 🟡 **msal[cache] / OS token cache 决策**:本项目用 Keychain 持久化(Phase 1 落地),不依赖 OS token cache。代价:每次重启需重新 OAuth(但 Keychain 持久化让 access_token 自动可用)
+- 🟢 **依赖图简洁**:3 依赖 + 6 传递依赖(google-auth 自动解 `cryptography` / `pyjwt` 等),0 native 扩展,macOS / Linux / Windows 表现一致
+- 🟢 **本轮撞 pwd 错位乌龙**:摸底时误把 Agent Assistant 仓库当 我的AI员工,跑出"灾难性诊断",深诊断 3 件套(reflog/fsck/worktree)发现根因。教训:**新会话第一动作必跑 `pwd` + `git rev-parse --show-toplevel` 确认仓库身份**
+
+**3. 项目整体总结**(2026-06-18 20:50 锚定)
+
+- **v0.2.2 #5 OAuth 2.0 Phase 2 完成**:5 commits 收口(docs-only 启动 + commit 2 MicrosoftOAuth2 + commit 3 GoogleOAuth2 + commit 4 XOAUTH2 + commit 5 依赖加锁)
+- **累计 +111 new tests**:P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12
+- **当前 pytest**:**2211 passed / 1 skipped · 88.86% coverage** ≥ 80%
+- **HEAD 链**:`6a0549e` ← `b5a8c6d` ← `7ad498a` ← `057d937` ← `9966ad0` ← `af4c092` ← `51675fc` ← `564b8db` ← `aae7694` ← `e1236ef` ← `115fc8e` ← `b7b9ea7` ← `9f85f42` ← ...
+- **v0.1.0 tag**:`2af775f` 锚定不动(沿 D5.7.2 范本)
+- **6/19-22 端午不休息**:链路不停,继续推进 v0.2.2+ 启动候选
+- **6/23+ 重启项**:手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ 可选真实 OAuth flow spike
+- **7/1 月度复盘**:B 类延后清单重新评估
+- **8/1 锚**:v0.2.1 release tag 锚定(沿 D5.7.2 范本)
 
 ### 2026-06-18 20:30 [v0.2.2 #5 commit 4/5 XOAUTH2 SMTP 鉴权集成收口] — 收口
 
