@@ -47,6 +47,14 @@ dependencies = [
     "pynput>=1.7.7",                  # 全局快捷键监听（D9.5 ⌥⌘N,macOS TCC 需辅助功能授权,v0.2 B-5 保留作业务层兜底不删,沿 D5.5.5 删依赖慎之又慎）
     "pyperclip>=1.8.2",               # 剪贴板读取（D9.6.1 ⌥⌘N 触发后 pyperclip.paste）
     "httpx>=0.27",
+    # v0.2.2 #5 OAuth 2.0 Phase 2(commit 5/5,2026-06-18 收口)
+    # msal — Microsoft Identity Platform OAuth 2.0 客户端(outlook SMTP OAuth 必需)
+    # google-auth — Google Auth Library(gmail SMTP OAuth 必需,Gmail 自 2024 强制 OAuth)
+    # google-auth-oauthlib — Google OAuth 2.0 flow(authorization_code + refresh_token)
+    # 沿 v0.2.2 #5 launch plan §2.1 commit 5;复用于 commit 2/3/4 实现的 OAuth2Provider 抽象层
+    "msal>=1.24",                     # Microsoft Identity Platform(msal ConfidentialClientApplication + PKCE flow)
+    "google-auth>=2.23",              # Google Auth Library(Credentials + RequestMetadata)
+    "google-auth-oauthlib>=1.0",      # Google OAuth 2.0 flow(google-auth-oauthlib >= 1.0 OAuth 2.0 授权)
 ]
 
 # D1.1.1 修复：把 [project.urls] 移到 [project.optional-dependencies] 之前，
