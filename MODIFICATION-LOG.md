@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -95,12 +95,46 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | v0.2.8+ 候选决策:优先做 6/22 v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步;真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV |
+| **下一棒** | v0.2.9+ 候选决策:真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV;6/23 全链路重启 |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-22 [v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步] — docs-only 收口
+
+**1. 本次修改内容**
+
+- docs-only 收口,沿 [[v0.2-launch-plan]] 端午不休息版 + [[v0.2-closure-2026-06-18]] v0.2 launch plan 整体收口 + [[v0.2.7-outlook-gmail-smtp-spike-prep-2026-06-21]] §"下一棒" 候选 + [[d5.7.2-docs-only-closure]] v0.2.1 release tag 锚定策略范本
+- `docs/v0.2-release-notes-2026-06-22.md` 新建(15 段 · v0.2 周期 285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage + 7 子阶段落地链路完整化 + 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向)
+- `SESSION-STATE.md` 5 处同步(标题加 v0.2.8 + 最后更新 2026-06-22 + 状态行加 v0.2.8 + 当前启动候选切到 v0.2.9+ + 时间线加 6/22 行 + 加 docs/v0.2-release-notes 路径 + 维护者加 v0.2.8 锚定)
+- `MODIFICATION-LOG.md` 快照段加 v0.2.8 锚定 + 加本条累计记录
+- `README.md` L7 状态行加 v0.2.8 锚定 + 加 docs/v0.2-release-notes 链接
+
+**2. 风险点**
+
+- 0 风险:本轮纯 docs-only,无代码改动 + 无真实发送 + 无 OAuth flow 跑
+- 撞坑恢复 3 步未触发(无并发进程冲突,本任务为 docs-only)
+- 撞坑恢复范本累计 2 个(演练 1 = v0.2.5 + 演练 2 = v0.2.7)
+
+**3. 项目整体总结**
+
+- **起点 HEAD**:`a1c3ea4` docs(status): align v0.2.8 next-step planning
+- **当前 HEAD**:沿 `git rev-parse --short HEAD` 为准(本次 docs closure commit 后)
+- **改动**:1 file / +(本文件) + 3 docs 同步(SESSION-STATE/MODIFICATION-LOG/README)
+- **v0.2 周期数字快照**(2026-06-08 - 2026-06-22 · 14 天):
+  - 285 commits(主项目 ~225 + Agent Assistant ~10 + docs-only ~50)
+  - 80 feat commits(主项目代码实施)
+  - 126 new tests(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + #8 10 + v0.2.6 D4.7.4 v1.0.3 改进项 5)
+  - 2225 passed / 1 skipped / 88.85% coverage(沿 v0.2.6 锚定 baseline)
+  - 8/8 质量门全绿(mypy tests 13 errors 历史 baseline)
+- **7 子阶段落地链路完整化**:v0.2.1 #3/#4/#5/#6 + v0.2.2 P0/#2/#3/#6/#7/#5/#8 + v0.2.4 drift review + v0.2.5 SMTP preflight + v0.2.6 D4.7.4 改进项延后 + v0.2.7 outlook/gmail spike 准备 + v0.2.8 release notes(本轮)
+- **8 大特性用户视角**:多 Agent 邮件 + OAuth 2.0 + SMTP Provider + 笔记与菜单栏 + NoteStore + 财务服务 + 测试基础设施 + 状态漂移审查机制
+- **v0.2.1 release tag 锚定策略**:沿 [[d5.7.2-docs-only-closure]] 范本 + 8/1 锚定 + 8 项前置条件 + B 类延后清单 5 项 7/1 评估方向
+- **阻塞项 5 项**:3 SMTP 阻塞(provider 白名单 + OAuth flow + OutboxDispatcher 集成)+ 2 真实链路阻塞(W3 真账单 spike + v0.1.0 tag 锚定)
+- 详细报告:[docs/v0.2-release-notes-2026-06-22.md](docs/v0.2-release-notes-2026-06-22.md)
+- 下一棒:6/23 全链路重启 + W3 真账单 spike + outlook/gmail SMTP 真实 spike + 7/1 月度复盘 + 8/1 v0.2.1 release tag 锚定
 
 ### 2026-06-21 [v0.2.7 outlook/gmail SMTP 真实发送 spike 准备] — docs-only 收口
 
