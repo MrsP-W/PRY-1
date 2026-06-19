@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3 · 不真跑 spike · 等用户真实微信/支付宝 CSV)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -95,12 +95,48 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | v0.2.9+ 候选决策:真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV;6/23 全链路重启 |
+| **下一棒** | v0.2.10+ 候选决策:真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV;6/23 全链路重启 |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-22 [v0.2.9 W3 真账单 spike docs-only 准备] — docs-only 收口
+
+**1. 本次修改内容**
+
+- docs-only 预演,沿 [[v0.2-release-notes-2026-06-22]] §"下一棒" 候选 6 + [[v0.2.7-outlook-gmail-smtp-spike-prep-2026-06-21]] §"撞坑恢复 3 步实战演练 2" + [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 机制 3
+- `docs/v0.2.9-w3-real-bill-spike-prep-2026-06-22.md` 新建(12 段 · 6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 + 撞坑恢复 3 步实战演练 3 · 不真跑 spike)
+- `SESSION-STATE.md` 5 处同步(标题加 v0.2.9 + 状态行加 v0.2.9 + 当前启动候选切到 v0.2.10+ + 时间线加 6/22 v0.2.9 行 + 加 docs/v0.2.9 路径 + 维护者加 v0.2.9 锚定)
+- `MODIFICATION-LOG.md` 快照段加 v0.2.9 锚定 + 加本条累计记录
+- `README.md` L7 状态行加 v0.2.9 锚定 + 加 docs/v0.2.9 链接
+
+**2. 风险点**
+
+- 0 风险:本轮纯 docs-only,无代码改动 + 无真实导入 + 无 OAuth flow 跑
+- 撞坑恢复 3 步实战演练 3(沿 [[v0.2.4]] §3 机制 3):0 撞坑,无触发
+- 撞坑恢复范本累计 3 个(演练 1 = v0.2.5 SMTP preflight + 演练 2 = v0.2.7 outlook/gmail SMTP spike 准备 + 演练 3 = v0.2.9 W3 真账单 spike 准备 · 本次)
+
+**3. 项目整体总结**
+
+- **起点 HEAD**:`dda2dc1` docs(closure): v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only
+- **当前 HEAD**:沿 `git rev-parse --short HEAD` 为准(本次 docs closure commit 后)
+- **改动**:1 file / +(本文件) + 3 docs 同步(SESSION-STATE/MODIFICATION-LOG/README)
+- **6 项启动条件 checklist**(沿 [[docs/微信账单导出教程]] 8 步 + [[docs/支付宝账单导出教程]] 5 步):
+  1. 用户明确授权 — ⏸️ 待授权
+  2. 真实微信/支付宝 CSV 已导出(用户手动)— ⏸️ 待导出
+  3. CSV 解析器就绪(D6.1,6 版本:2024/2025/2026 × 微信/支付宝)— 🟡 2024/2025 已就绪,2026 待用户真实样本补 parser
+  4. fingerprint + 3 层去重模型就绪(沿 D6.2) — ✅ 就绪(28 tests / 1612 passed)
+  5. categorizer + merchants 500 + 状态机就绪(沿 D6.3) — ✅ 就绪
+  6. 沿 D6.6 4 重防误发(WECHAT_REAL_IMPORT=1 + 强制 1 批 + 确认口令 + 列名嗅探) — ✅ 就绪
+- **4 重风险门控**:`WECHAT_REAL_IMPORT=1` env 门控 + 强制 1 批 `--count 30` + 二次确认口令 + CSV 文件名校验 + 列名嗅探
+- **3 个启动命令范本**:微信账单 CSV 30 笔 + 支付宝账单 CSV 30 笔 + 混合账单 50 笔(微信 30 + 支付宝 20)
+- **5 阶段启动流程**:用户授权 + CSV 导出 + CSV 解析器验证 + fingerprint + categorizer + 真实 spike 跑通
+- **撞坑恢复范本累计**:3 个实战演练(均 0 撞坑触发)
+- **W3 faker 三阶段验证基线**(沿 [[v0.2-d8-real-faker-spike-2026-06-17]] D8.5.4 修复后):30 笔 / 102 笔 / 1000 笔 · 真异常误报率 0% 维持 · 性能 0.5-0.7ms / 笔 · cold_start 信号率 100% → 48% → 12% 收敛
+- 详细报告:[docs/v0.2.9-w3-real-bill-spike-prep-2026-06-22.md](docs/v0.2.9-w3-real-bill-spike-prep-2026-06-22.md)
+- 下一棒:6/23 全链路重启 + W3 真账单 spike 启动(等用户提供真实微信/支付宝 CSV)+ outlook/gmail SMTP 真实 spike 启动 + 7/1 月度复盘 + 8/1 v0.2.1 release tag 锚定
 
 ### 2026-06-22 [v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步] — docs-only 收口
 
