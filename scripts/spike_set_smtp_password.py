@@ -70,8 +70,7 @@ def cmd_set_password(provider: str, email: str, password: str) -> int:
 
     # 4. 成功(只显示长度,不显示 value)
     print(
-        f"✅ Keychain 写入成功: provider={provider} email={email} "
-        f"(auth_code {len(password)} chars)"
+        f"✅ Keychain 写入成功: provider={provider} email={email} (auth_code {len(password)} chars)"
     )
     print("   ⚠️  安全提示: SMTP 授权码与 IMAP 授权码分别存储,任一变更不影响另一项")
     return 0
@@ -96,8 +95,7 @@ def cmd_check(provider: str, email: str) -> int:
 
     # 成功(只显示长度,不显示 value)
     print(
-        f"✅ Keychain 命中: provider={provider} email={email} "
-        f"(auth_code {len(result.value)} chars)"
+        f"✅ Keychain 命中: provider={provider} email={email} (auth_code {len(result.value)} chars)"
     )
     return 0
 
