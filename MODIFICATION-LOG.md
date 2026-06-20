@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + mkdir data/ ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿用 baseline · 撞坑恢复 3 步实战演练 6 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4 · 不真发邮件 · 不真导入账单 · 不移动 v0.1.0 tag)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3 · 不真跑 spike · 等用户真实微信/支付宝 CSV)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.13 6/23 全链路重启实战手册 docs-only(7 阶段实战手册(每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛) + 16 类撞坑汇总 · 撞坑恢复 3 步实战演练 7 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + mkdir data/ ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿用 baseline · 撞坑恢复 3 步实战演练 6 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4 · 不真发邮件 · 不真导入账单 · 不移动 v0.1.0 tag)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3 · 不真跑 spike · 等用户真实微信/支付宝 CSV)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -95,12 +95,43 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | v0.2.13+ 候选决策:6/23 周二全链路重启(跑 v0.2.10 + v0.2.11 + v0.2.12 §"7 阶段 checklist"实战);真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV |
+| **下一棒** | v0.2.14+ 候选决策:6/23 周二全链路重启(跑 v0.2.10 + v0.2.11 + v0.2.12 + v0.2.13 §"7 阶段实战手册");真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-20 [v0.2.13 6/23 全链路重启实战手册 docs-only] — 撞坑恢复 3 步实战演练 7
+
+**1. 本次修改内容**
+
+- docs-only 实战手册整合,沿 [[v0.2.10-full-restart-checklist-2026-06-22]] + [[v0.2.11-7-stage-dry-run-2026-06-20]] + [[v0.2.12-6-23-restart-prep-2026-06-20]] 3 个阶段 checklist 整合成"6/23 全链路重启实战手册"
+- `docs/v0.2.13-6-23-restart-playbook-2026-06-20.md` 新建(13 段 · 7 阶段实战手册 + 16 类撞坑汇总 + 撞坑恢复 3 步实战演练 7)
+  - 7 阶段实战手册:阶段 1 环境准备 + 阶段 2 8/8 质量门 baseline + 阶段 3 launchd kickstart + 阶段 4 菜单栏启动 + 阶段 5 Apple Notes 同步 + 阶段 6 W3 真账单 spike + 阶段 7 outlook/gmail SMTP 真实 spike
+  - 每阶段含:触发条件 + 精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛
+  - 16 类撞坑汇总:环境 + uv + SIGKILL 137 + pytest + launchd + TCC + AppleScript + W3 + SMTP + OAuth + 发件拒绝
+- `SESSION-STATE.md` 5 处同步(标题加 v0.2.13 + 状态行加 v0.2.13 + 当前启动候选切到 v0.2.14+ + 时间线加 6/20 v0.2.13 行 + 加 docs/v0.2.13 路径 + 维护者加 v0.2.13 锚定)
+- `MODIFICATION-LOG.md` 快照段加 v0.2.13 锚定 + 加本条累计记录
+- `README.md` L7 状态行加 v0.2.13 锚定 + 加 docs/v0.2.13 链接
+
+**2. 风险点**
+
+- 0 风险:本轮纯 docs-only 实战手册整合,无代码改动 + 无真实发送 + 无真实导入 + 无 OAuth flow 跑 + 无 launchd 实战 kickstart + 无菜单栏实战启动
+- SIGKILL 137 误报:沿 [[2026-06-18-venv-sigkill-137-false-alarm]] 范本(实战手册阶段 2 已明确应对步骤)
+- 撞坑恢复 3 步实战演练 7(沿 [[v0.2.4]] §3 机制 3):0 撞坑,无触发
+
+**3. 项目整体总结**
+
+- **起点 HEAD**:`a734c22` docs(closure): v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化 + 撞坑恢复 3 步实战演练 6
+- **当前 HEAD**:沿 `git rev-parse --short HEAD` 为准(本次 docs closure commit 后)
+- **改动**:1 file / +(本文件) + 3 docs 同步(SESSION-STATE/MODIFICATION-LOG/README)
+- **7 阶段实战手册**:每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛(沿 v0.2.10 + v0.2.11 + v0.2.12 整合)
+- **16 类撞坑汇总**:覆盖环境 + uv + SIGKILL 137 + pytest + launchd + TCC + AppleScript + W3 + SMTP + OAuth + 发件拒绝(撞坑处理范本汇总)
+- **撞坑恢复范本累计**:7 个实战演练(演练 1-7 · 均 0 撞坑触发 + 1 次 SIGKILL 137 误报已处理)
+- **撞坑史累计**:2 类(撞坑恢复 v0.2.2 #8 SMTPProviderFactory + SIGKILL 137 误报)
+- 详细报告:[docs/v0.2.13-6-23-restart-playbook-2026-06-20.md](docs/v0.2.13-6-23-restart-playbook-2026-06-20.md)
+- 下一棒:6/23 周二全链路重启(跑 v0.2.10 + v0.2.11 + v0.2.12 + v0.2.13 §"7 阶段实战手册")+ 7/1 月度复盘 + 8/1 v0.2.1 release tag 锚定
 
 ### 2026-06-20 [v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化] — 撞坑恢复 3 步实战演练 6
 
