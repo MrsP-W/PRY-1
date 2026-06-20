@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2211 passed / 1 skipped,覆盖率 88.86%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(2225 passed / 1 skipped,覆盖率 88.85%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2211 passed / 1 skipped,覆盖率 88.86%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(2225 passed / 1 skipped,覆盖率 88.85%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -286,6 +286,6 @@ make help
 
 ---
 
-**最后更新**：2026-06-18 21:30(**v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复)落地** + v0.2.2 #5 commit 5 依赖加锁收口)。`git tag v0.1.0` 仍在 commit `2af775f` 不动(v0.1.0 不封口)；README 不再记录精确 HEAD hash，避免 post-tag docs/status commit 后继续漂移，真实 HEAD 以 `git rev-parse --short HEAD` 为准。v0.2 B-5 + D8 实施链已落:Makefile 9 门补齐 + pyobjc-framework-Quartz + clipboard_listener pynput→Quartz + 11 tests + spike 30 笔；D8 规则异常检测 + 商家画像 + 月报/菜单栏接入 + S11 e2e 已落；D8.5 半真实账单误报修复已落；W3 faker 三阶段验证完整。**v0.2.1 docs 校准盘点 4 候选已 commit**:`de5de10` ExpenseServiceStub 实化 + `0a1386c` NoteStore 状态机化 + `75f87cc` + `b751820` NoteStore L2/L3 跨源去重 / NoteStore L2 跨源写入 + v0.2.1 #2 真账单 spike 准备就绪 + v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 docs-only 评估。v0.2.2 #1/#2/#3/#6/#7 已落；v0.2.2 #5 OAuth Phase 2 docs-only + MicrosoftOAuth2 + GoogleOAuth2 + XOAUTH2 SMTP 鉴权集成 + 依赖加锁已落(commit `b7b9ea7` / `c0f83d4` / `564b8db` / `9966ad0` / `6a0549e`)。当前 `make test` **2211 passed / 1 skipped / 88.86%**，`mypy src tests` / `ruff check` / `ruff format --check .` / `alembic upgrade head --sql` / `uv build` / `make lint` / `coverage fail_under=80` 9/9 质量门全绿。Outlook/Gmail SMTP provider 仍为 docs-only 评估,未实施代码。**下一棒**:6/19-22 端午 4 天链路不停,继续推进 v0.2.2+ 启动候选(候选 #2 真账单 spike 等真 CSV / 候选 #1 outlook/gmail SMTP 单独决策)；6/23+ 手动 launchctl kickstart + W3 真账单 spike(等真 CSV)+ 可选真实 OAuth flow spike。
+**最后更新**：2026-06-20(**v0.2.13 全链路重启实战手册 docs-only 收口** + README 状态漂移校准)。`git tag v0.1.0` 仍在 commit `2af775f` 不动(v0.1.0 不封口)；README 不再记录精确 HEAD hash，避免 post-tag docs/status commit 后继续漂移，真实 HEAD 以 `git rev-parse --short HEAD` 为准。v0.2 B-5 + D8 实施链已落:Makefile 9 门补齐 + pyobjc-framework-Quartz + clipboard_listener pynput→Quartz + 11 tests + spike 30 笔；D8 规则异常检测 + 商家画像 + 月报/菜单栏接入 + S11 e2e 已落；D8.5 半真实账单误报修复已落；W3 faker 三阶段验证完整。**v0.2.1 docs 校准盘点 4 候选已 commit**:`de5de10` ExpenseServiceStub 实化 + `0a1386c` NoteStore 状态机化 + `75f87cc` + `b751820` NoteStore L2/L3 跨源去重 / NoteStore L2 跨源写入 + v0.2.1 #2 真账单 spike 准备就绪 + v0.2.1 #6 OAuth 2.0 抽象层 Phase 1 docs-only 评估。v0.2.2 #1/#2/#3/#6/#7 已落；v0.2.2 #5 OAuth Phase 2 docs-only + MicrosoftOAuth2 + GoogleOAuth2 + XOAUTH2 SMTP 鉴权集成 + 依赖加锁已落(commit `b7b9ea7` / `c0f83d4` / `564b8db` / `9966ad0` / `6a0549e`)。当前 `make test` **2225 passed / 1 skipped / 88.85%**(2026-06-20 实测)，`mypy src` / `ruff check` / `ruff format --check` / `alembic upgrade head --sql` / `uv build` / `make lint` / `coverage fail_under=80` 8/8 质量门全绿。Outlook/Gmail SMTP provider 仍为 docs-only 评估,未实施代码。**下一棒**:6/23+ 全链路重启实战(7 阶段手册 · 撞坑恢复 3 步实战演练 7 · 不真发邮件/不真导入账单/不真 kickstart launchd)+ W3 真账单 spike(等真 CSV)+ 可选真实 OAuth flow spike。
 **当前模型**：MiniMax-M3
 **维护者**：Mr-PRY
