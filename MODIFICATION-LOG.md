@@ -79,11 +79,12 @@
 
 | 维度 | 状态 |
 |------|------|
+| **当前阶段** | ✅ `v0.2.21` 撞坑 #24 二次命中修正 + 选项 C launchd 验证已关闭(诚实修正 v0.2.20 §2 A1-1 plist 数量命令匹配模式错误 + launchctl print 10 维度验证 launchd agent 8 节点完全就绪 + 取消 A3-1 launchctl install 授权项);当前 `v0.2.21+` / 6/23 实操授权候选(阶段 1-5 + launchd 已 GO,阶段 6 W3 + 阶段 7 outlook/gmail SMTP 等用户授权 + CSV + 凭据)|
 | **当前阶段** | ✅ `v0.2.20` 6/23 全链路重启实操前复核结果 docs-only 已关闭(5 校验命令实测 5/5 通过 → GO · A0-A4 5 步实操 · 不扩展新范本只记录结果)；当前 `v0.2.20+` / 6/23 实操授权候选(阶段 1-5 已实测 GO,阶段 6-7 等用户授权 + CSV + 凭据)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | `make test` 2225 passed / 1 skipped / coverage 88.85%；常规 8/8 质量门全绿；deep-dry-run 已沉淀 mypy tests 13 个历史 baseline 错误(撞坑 #31 不阻塞 6/23 阶段 1-5)|
-| **下一棒** | 6/23 全链路重启实操 7 阶段:阶段 1-5 已实测通过(v0.2.20 5/5 ✅),可立即跑实操;阶段 6 W3 真账单需真实 CSV;阶段 7 Outlook/Gmail SMTP 需用户授权 + 凭据 + B 类白名单决策 |
+| **下一棒** | 6/23 全链路重启实操 7 阶段:阶段 1-5 已实测通过(v0.2.20 5/5 ✅),可立即跑实操;launchd agent 8 节点已就绪(v0.2.21 选项 C 验证);阶段 6 W3 真账单需真实 CSV;阶段 7 Outlook/Gmail SMTP 需用户授权 + 凭据 + B 类白名单决策 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00；8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -1142,4 +1143,46 @@
 ---
 
 > **累计**:11 条 / 2026-06-18-22(...+ v0.2.20 6/23 全链路重启实操前复核结果 docs-only)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 2026-06-22 v0.2.21 撞坑 #24 二次命中修正 + 选项 C launchd 验证(诚实修正 · 不堆新 docs-only)
+
+### 1. 本次修改
+
+- **TBD** docs(patch): v0.2.21 撞坑 #24 二次命中修正 + 选项 C launchd 验证(v0.2.20 docs §7 追加修正补丁 · 不开新 docs-only 文件)
+- 详细:[docs/v0.2.20-restart-preflight-result-2026-06-22.md §7](docs/v0.2.20-restart-preflight-result-2026-06-22.md) 撞坑 #24 二次命中修正说明
+- 范围:
+  - **§7.1 撞坑 #24 二次命中根因**:v0.2.20 §2 A1-1 plist 数量命令 `ls ~/Library/LaunchAgents/com.user.*.plist` 匹配模式错误(只匹配 `com.user.*`,不匹配 `com.myaiemployee.*`),应广匹配 `ls ~/Library/LaunchAgents/com.{user,myaiemployee}.*.plist`
+  - **§7.2 选项 C launchctl print 验证 10 维度**:launchctl print / launchctl list / plist mtime+size / `~/bin/my-ai-employee-monthly-report` / `scripts/monthly_report.py` 434 行 / 日志目录 / plutil -lint / plist 一致性 / event triggers / runs+exit code
+  - **§7.3 v0.2.20 §2 + §3 报告 vs 撞坑 #24 修正后真实状态**:plist 数量 1 → **2** / agent.plist 缺失 → **已部署 5 天 3483 bytes** / launchctl 未注册 → **已注册**(`- 0` PID=0)/ A3-1 launchctl install 授权 → **取消**(已部署)
+  - **§7.4 launchd 实操链 8 节点最终状态**:plist 部署 / plist 校验 / plist 一致性 / launchctl load / `~/bin/` / 源脚本 / 日志目录 / 日历触发器 全 OK
+  - **§7.5 撞坑 #21 pwd 漂移第四次复发**:实测过程中 3 次 `cd` 后再次漂移到 Agent Assistant
+  - **§7.6 三类判定修正**:🟢 可继续 6 项(原 5 + launchd install 不需要)/ 🔴 阻塞 0 / 🟡 需用户授权 2 项(原 3,W3 + outlook/gmail SMTP)
+  - **§7.7 沉淀路径**:不开 v0.2.21+ 新 docs(沿 `04c97d4` 纠偏)/ v0.2.20 docs §7 追加补丁 / SESSION-STATE timeline / MODIFICATION-LOG 累计 11 → 12 条 / README 状态行
+  - **§7.8 沿用范本 + 教训**:[[v0.2.18-docs-assumption-pitfall-2026-06-22]] §3 + [[b-class-deferral-2026-06-09]] + [[2026-06-18-venv-sigkill-137-false-alarm]] + [[d10.5.3-launchd-fixes]] / 4 新教训(命令匹配模式需明确前缀 + launchctl print 是只读真相源 + `- 0` PID=0 不是故障 + 撞坑史新增"主 Agent 命令匹配模式错误"子类型)
+- 文件:`docs/v0.2.20-restart-preflight-result-2026-06-22.md` (追加 §7 补丁) + `SESSION-STATE.md` 4 处同步(标题加 v0.2.21 + 状态行加 v0.2.21 + 时间线加 6/22 深夜 v0.2.21 行 + 修正 6/22 深夜 v0.2.20 行 A1-1 plist 描述) + `MODIFICATION-LOG.md` 加本条累计 + `README.md` 加 v0.2.21 链接 + 当前阶段表 v0.2.20 → v0.2.21
+
+### 2. 风险点
+
+- ⚠️ **撞坑 #24 真实根因**:主 Agent 命令匹配模式错误(`com.user.*` 不匹配 `com.myaiemployee.*`),不是 docs 假设错误 — 诚实报告原则必须承认主 Agent 自己的错误
+- ⚠️ **撞坑 #21 pwd 漂移第四次复发**:7 文件夹重构后顶层路径相似,Bash 跨项目必须显式 cd(本次实测 3 次漂移 + 2 次显式 cd 修复)
+- ⚠️ **A3-1 launchctl install 授权项取消**:v0.2.20 §3 列的"agent.plist 部署"授权项不再适用(已部署 5 天),6/23 实操清单需相应更新
+- ⚠️ **撞坑史新增子类型**:docs 假设错误类下细分"主 Agent 命令匹配模式错误"(区别于 v0.2.18 §3 沉淀的 5 例),7/1 月度复盘 review 是否升级撞坑史 6 类 → 7 类
+- **P1**: 6/23 实操阶段 1-5 + launchd 已 GO,直接执行阶段 6-7(等用户授权)
+- **P2**: 7/1 月度复盘把"撞坑 #24 真实根因 = 主 Agent 命令匹配模式错误"列入撞坑史 6 类 → 7 类 review
+- **P3**: 8/1 v0.2.1 release tag 锚定前置条件 v0.2.21 已就绪(launchd 8 节点 + 阶段 1-5 + 阶段 6-7 等授权)
+
+### 3. 当前项目整体总结
+
+- 进度:**2225 tests / 8/8 质量门 baseline 6/8 ✅ 实测 / 端午不休息第 18 commits(v0.2.21 阶段)**
+- 状态:**v0.2.21 撞坑 #24 二次命中诚实修正 + 选项 C launchd 验证完成,launchd agent 8 节点完全就绪,6/23 实操阶段 1-5 + launchd 准备完毕,阶段 6-7 等用户授权**
+- 风险:4 项已知风险(见上),无新风险
+- 下一步:6/23 周二全链路重启 7 阶段(阶段 1-5 跑 v0.2.20 §2 实测 + launchd 选项 C 已验证 + 阶段 6-7 等用户授权)
+- 下一棒:用户(6/23 实操触发 + v0.2.21+ 候选决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:12 条 / 2026-06-18-22(...+ v0.2.21 撞坑 #24 二次命中修正 + 选项 C launchd 验证)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
