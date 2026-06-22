@@ -978,3 +978,53 @@
 
 > **累计**:7 条 / 2026-06-18-20(GoogleOAuth2 收口 + MicrosoftOAuth2 收口 + 规则初始化 + OAuth #5 docs + v0.2.14 E+A 实操就绪验证首次落地 · 撞坑恢复 3 步实战演练 8 + v0.2.15 A 候选 6/23 实操就绪最后冲刺 · 撞坑恢复 3 步实战演练 9 + v0.2.16 7/1 月度复盘准备)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 2026-06-22 v0.2.17 6/23 实操就绪最后冲刺 docs-only + 撞坑恢复 3 步实战演练 10
+
+### 1. 本次修改
+
+- `TBD` docs(closure): v0.2.17 6/23 实操就绪最后冲刺 docs-only(5 阶段重验证实测就绪 + 6 类新撞坑真触发真恢复 · 撞坑恢复 3 步实战演练 10)
+- 详细:[docs/v0.2.17-6-23-readiness-final-sprint-2026-06-22.md](docs/v0.2.17-6-23-readiness-final-sprint-2026-06-22.md) 10 段
+- 5 阶段重验证实测就绪:
+  - 阶段 1:agent.plist OK(3483 bytes / plutil -lint 通过 / launchctl list PID=0 未运行)
+  - 阶段 2:menu_bar/ 5 文件 976 行(clipboard_capture 324 + clipboard_listener 187 + expense_service 129 + note_confirm_service 213 + tcc 123)
+  - 阶段 3:跨 4 目录 5 文件 2315 行(connectors/apple_notes 498 + db/notes 945 + ai/note_structurer 712 + adapters/apple_notes init 10 + html_cleaner 150)
+  - 阶段 4:uv run alembic --sql 0014 DDL 完整(0014_note_l2_cross_source 升级成功)
+  - 阶段 5:pytest 2225 passed / 1 skipped / 88.85% / 33.51s(30.86s → 33.51s 正常波动)
+- 6 类新撞坑真触发 + 真恢复(撞坑恢复 3 步实战演练 10):
+  - 撞坑 #21 复发:pwd 漂移(Bash 跨项目 pwd 漂移到 Agent Assistant → cd 修正)
+  - 撞坑 #24 🆕:plist 假设数量错误(假设 3 plist 实际只 1 个 → 降级应对:6/23 只需 agent.plist)
+  - 撞坑 #25 🆕:SIGKILL 137 误报类(.venv/bin/alembic framework 签名失效 → 沿 [[2026-06-18-venv-sigkill-137-false-alarm]] 范本 uv run 绕开)
+  - 撞坑 #26 🆕:连写错误复发(myaiemployee → my_ai_employee 下划线 → 沿撞坑 #22 范本 ls src/ 验证)
+  - 撞坑 #27 🆕:菜单栏路径假设错误(假设顶层 → 实际 menu_bar/ 子目录 → find 验证)
+  - 撞坑 #28 🆕:Notes 路径假设错误(假设 notes/ 子目录 → 实际跨 4 目录 5 文件 → find 验证)
+- 撞坑史 5 类 → 6 类(新增 docs 假设错误类)
+- 撞坑恢复范本累计 9 → 10 个
+- 8/8 质量门 baseline 6/8 ✅ 实测沿 v0.2.15 + 1/8 ⏸️(uv build)+ 1/8 🟢(pytest 2225 沿 baseline)
+- 6/23 启动前最后窗口 docs-only 收口 · 阶段 6-7 等用户授权 + 真实 CSV + Outlook/Gmail 凭据 + B 类白名单扩展
+
+### 2. 风险点
+
+- ⚠️ **6/23 启动真实风险**(沿 [[v0.2.13-6-23-restart-playbook-2026-06-20]] 7 阶段实战手册):
+  - **阶段 6 W3 真账单 spike**:等用户提供真实微信/支付宝 CSV(不造"真账单"结论)
+  - **阶段 7 outlook/gmail SMTP 真实 spike**:等用户授权 + Outlook/Gmail 凭据 + B 类白名单扩展(不真发邮件)
+  - **launchd 拉起**:可选,沿 [[d10.5.4-launchd-kickstart-and-seal]] 4 退出码范本(不真 kickstart)
+- ⚠️ **docs 假设错误类撞坑累积**:本次 v0.2.17 暴露 5 个 docs 假设错误(#24-#28),7/1 月度复盘需要 review docs 编写规范,加"实测验证"硬性要求
+- **P1**: 6/23 阶段 6-7 必须真实跑通(不沿用 docs 数据),用户授权后立即跑
+- **P2**: 7/1 月度复盘把"docs 假设错误类"加进撞坑史 6 类 → 7 类
+- **P3**: 8/1 v0.2.1 release tag 锚定前置条件 v0.2.17 已就绪(W3 + outlook/gmail 真实 spike 跑通即可)
+
+### 3. 当前项目整体总结
+
+- 进度:**2225 tests / 8/8 质量门 baseline 6/8 ✅ 实测 / 端午不休息第 14 commits(v0.2.17 阶段)**
+- 状态:**v0.2.17 6/23 实操就绪最后冲刺 docs-only 收口,5 阶段实测就绪,6 类新撞坑沉淀,6/23 启动准备完毕**
+- 风险:3 项已知风险(见上),无新风险
+- 下一步:6/23 周二全链路重启 7 阶段(阶段 1-5 docs-only 就绪,阶段 6-7 等用户授权)
+- 下一棒:用户(6/23 授权)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:8 条 / 2026-06-18-22(...+ v0.2.17 6/23 实操就绪最后冲刺 · 撞坑恢复 3 步实战演练 10)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
