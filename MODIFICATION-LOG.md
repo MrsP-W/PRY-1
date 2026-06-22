@@ -80,7 +80,7 @@
 | 维度 | 状态 |
 |------|------|
 | **当前阶段** | ✅ `v0.2.21` 撞坑 #24 二次命中修正 + 选项 C launchd 验证已关闭(诚实修正 v0.2.20 §2 A1-1 plist 数量命令匹配模式错误 + launchctl print 10 维度验证 launchd agent 8 节点完全就绪 + 取消 A3-1 launchctl install 授权项);当前 `v0.2.21+` / 6/23 实操授权候选(阶段 1-5 + launchd 已 GO,阶段 6 W3 + 阶段 7 outlook/gmail SMTP 等用户授权 + CSV + 凭据)|
-| **当前阶段** | ✅ `v0.2.20` 6/23 全链路重启实操前复核结果 docs-only 已关闭(5 校验命令实测 5/5 通过 → GO · A0-A4 5 步实操 · 不扩展新范本只记录结果)；当前 `v0.2.20+` / 6/23 实操授权候选(阶段 1-5 已实测 GO,阶段 6-7 等用户授权 + CSV + 凭据)|
+| **上一阶段** | ✅ `v0.2.20` 6/23 全链路重启实操前复核结果 docs-only 已关闭(5 校验命令实测 5/5 通过 → GO · A0-A4 5 步实操 · 不扩展新范本只记录结果)；已由 `v0.2.21` 修正 launchd plist 匹配口径 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | `make test` 2225 passed / 1 skipped / coverage 88.85%；常规 8/8 质量门全绿；deep-dry-run 已沉淀 mypy tests 13 个历史 baseline 错误(撞坑 #31 不阻塞 6/23 阶段 1-5)|
