@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | 🟢 **v0.2.15 A 候选 6/23 实操就绪最后冲刺 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · A 冲刺 6/20 当天完成不等 6/21 + 5 步骤全部完成 + 撞坑 #19 classifier 误判 + #20 classifier 双重混淆 + #21 pwd 漂移 + #22 grep 连写错误 四类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 6/8 ✅ 实测(从 v0.2.14 5/8 推到 6/8 · pytest 2225 passed / 1 skipped / 88.85% coverage / 30.86s)+ 阶段 1-5 实测就绪(阶段 6-7 等用户授权)· 撞坑恢复 3 步实战演练 9(范本累计 8 → 9 个 · 范本类型累计 4 → 5 类)· 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.14 E+A 实操就绪验证首次落地 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · E+A 用户决策落地 + 撞坑 #1 SQLCIPHER_KEY + #16.5 ruff format + #18 ruff PATH 三类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 5/8 ✅ 实测 + 2/8 ⏸️ 沿 v0.2.13 baseline + 1/8 🟢 collect 漂移 + 撞坑恢复 3 步实战演练 8(范本累计 7 → 8 个) · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.13 6/23 全链路重启实战手册 docs-only(7 阶段实战手册(每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛) + 16 类撞坑汇总 · 撞坑恢复 3 步实战演练 7 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + mkdir data/ ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿用 baseline · 撞坑恢复 3 步实战演练 6 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4 · 不真发邮件 · 不真导入账单 · 不移动 v0.1.0 tag)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3 · 不真跑 spike · 等用户真实微信/支付宝 CSV)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
+| **当前阶段** | 🟢 **v0.2.16 7/1 月度复盘准备 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · 5 复盘项全部预先 docs 化 + 提前 11 天 docs-only 准备避免 7/1 当天突击 · 沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 + §4 + [[b-class-deferral-2026-06-09]] 范本)** + **v0.2.15 A 候选 6/23 实操就绪最后冲刺 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · A 冲刺 6/20 当天完成不等 6/21 + 5 步骤全部完成 + 撞坑 #19 classifier 误判 + #20 classifier 双重混淆 + #21 pwd 漂移 + #22 grep 连写错误 四类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 6/8 ✅ 实测(从 v0.2.14 5/8 推到 6/8 · pytest 2225 passed / 1 skipped / 88.85% coverage / 30.86s)+ 阶段 1-5 实测就绪(阶段 6-7 等用户授权)· 撞坑恢复 3 步实战演练 9(范本累计 8 → 9 个 · 范本类型累计 4 → 5 类)· 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.14 E+A 实操就绪验证首次落地 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · E+A 用户决策落地 + 撞坑 #1 SQLCIPHER_KEY + #16.5 ruff format + #18 ruff PATH 三类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 5/8 ✅ 实测 + 2/8 ⏸️ 沿 v0.2.13 baseline + 1/8 🟢 collect 漂移 + 撞坑恢复 3 步实战演练 8(范本累计 7 → 8 个) · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.13 6/23 全链路重启实战手册 docs-only(7 阶段实战手册(每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛) + 16 类撞坑汇总 · 撞坑恢复 3 步实战演练 7 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + mkdir data/ ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿用 baseline · 撞坑恢复 3 步实战演练 6 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4 · 不真发邮件 · 不真导入账单 · 不移动 v0.1.0 tag)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3 · 不真跑 spike · 等用户真实微信/支付宝 CSV)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 2225 passed / 88.85% coverage / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 不真发邮件 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2 · 不真发邮件)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(B 类自动解封 · sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1 · 不真发邮件)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(填补过渡空缺 · 57 主项目 commits · 13 子阶段双链)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd`)** + v0.2.1 #3/#4/#5 docs-only 校准(状态漂移修复) + v0.2.2 #5 OAuth Phase 2 commit 5/5 收口 |
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **pytest** | **2225 passed / 1 skipped**(v0.2.6 +5 new tests · sensitive 词表 21→27 + factual 触发 4→7) |
@@ -95,12 +95,48 @@
 | **v0.2.2 #5 Phase 2 累计 commits** | **12 commits + 本次状态纠偏**(docs `b7b9ea7` + commit 2 feat `c0f83d4` + commit 2 docs `18d1610` + docs-only 校准 `115fc8e` + commit 3 feat `564b8db` + commit 3 docs `51675fc` + commit 4 feat `9966ad0` + commit 4 docs `057d937` + commit 4 sync `7ad498a` + commit 4 sync README `b5a8c6d` + **commit 5 feat `6a0549e`** + commit 5 docs `e7c1da5`)|
 | **v0.2.2 累计 new tests** | **+121**(P0 3 + #2 32 + #3 24 + #6 17 + #7 0 + #5 commit 2 12 + #5 commit 3 11 + #5 commit 4 12 + commit 5 0 + **#8 SMTPProviderFactory 10**) |
 | **端午不休息** | 🟢 6/19-22 链路不停(沿 6/17 决策) |
-| **下一棒** | v0.2.16+ 候选决策:6/23 周二全链路重启(阶段 1-5 已实测就绪 · 只需跑阶段 6-7 W3 真账单 + outlook/gmail SMTP);真实 SMTP 发送等用户授权 + 凭据 + B 类白名单决策;W3 真账单 spike 等真实 CSV |
+| **下一棒** | v0.2.17+ 候选决策:6/23 周二全链路重启实操 7 阶段(阶段 1-5 已实测就绪 · 只需跑 6-7 W3 + outlook/gmail SMTP);7/1 月度复盘 12:00 启动 → 17:00 收官(5 复盘项已预先 docs 化,见 v0.2.16);8/1 v0.2.1 release tag 锚定(沿 D5.7.2 范本) |
 | **8/1 锚** | v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通) |
 
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-20 [v0.2.16 7/1 月度复盘准备 docs-only] — 收口
+
+**1. 本次修改内容**
+
+- docs-only 7/1 月度复盘准备,沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 机制 3 + §4 7/1 月度复盘 checklist 5 项 + [[b-class-deferral-2026-06-09]] B 类决策延后声明
+- 5 复盘项全部预先 docs 化(2026-06-20 23:15 启动 · 提前 11 天 docs-only 准备避免 7/1 当天突击):
+  - **复盘项 1 B 类延后清单 5 项重新评估**:B1 outlook/gmail SMTP 白名单扩展(7/1 评估:是否扩展到真实 1 封 spike?)+ B2 D4.7.4 v1.0.3 改进项(已 v0.2.6 自动解封 `f0d8bd3`)+ B3 v0.2.1 release tag 8/1 锚定(B2 + B5 前置条件)+ B4 8 范本沉淀(已实化)+ B5 outlook/gmail SMTP 真实 spike(等 6/23 实操)
+  - **复盘项 2 撞坑恢复范本 9 个 + 撞坑史 5 类**:范本 v0.2.5-v0.2.15 累计 9 个 + 撞坑史 5 类(撞坑恢复 + SIGKILL 137 + ruff PATH + classifier 双重混淆 + pwd 漂移)
+  - **复盘项 3 SIGKILL 137 误报 67% 误报率**:6/18-20 共 6 次观测(触发 4 次 + 未触发 2 次 = 67% 误报率),沿 [[2026-06-18-venv-sigkill-137-false-alarm]] 范本不重试策略
+  - **复盘项 4 v0.2.1 release tag 8 项前置条件 6/8 ✅**:撞坑 #5 W3 + #6 outlook/gmail spike 跑通待 6/23 实操后评估
+  - **复盘项 5 状态漂移审查机制实战 5/5 = 100% 修复**:沿 [[v0.2.4]] §3 机制 3 实战演练 5 次
+- `docs/v0.2.16-7-1-monthly-review-prep-2026-06-20.md` 新建(13 段 · 5 复盘项全部预先 docs 化 + 7/1 复盘 12:00 启动 → 17:00 收官执行计划 + 7/1 数据快照 6 维度)
+- `SESSION-STATE.md` 5 处同步(标题加 v0.2.16 + 状态行加 v0.2.16 + 当前启动候选切到 v0.2.17+ + 时间线加 6/20 v0.2.16 行 + 加 docs/v0.2.16 路径)
+- `MODIFICATION-LOG.md` 快照段加 v0.2.16 锚定 + 加本条累计记录(本条)
+- `README.md` L7 状态行加 v0.2.16 锚定 + 加 docs/v0.2.16 链接
+
+**2. 风险点**
+
+- 🟢 **0 风险**:本轮纯 docs-only 7/1 月度复盘准备,无代码改动 + 无真实发送 + 无真实导入 + 无 OAuth flow 跑 + 无 launchd 实战 kickstart + 无菜单栏实战启动
+- 🟡 **7/1 月度复盘必须跑 5 复盘项**:本次仅预先 docs 化,7/1 12:00 需实际跑(沿 [[v0.2.4]] §3 + §4 范本)
+- 🟡 **6/23 实操结果影响 7/1 复盘**:B3 v0.2.1 release tag 锚定 + B5 outlook/gmail SMTP 真实 spike 评估依赖 6/23 实操结果
+- ⚠️ **B 类延后清单 5 项需逐项评估**:不能批量激活或批量继续延后,必须逐项输出三态决策(激活/继续延后/取消)
+- ⚠️ **v0.1.0 tag 锚定不动**:`2af775f` 继续(沿 D5.7.2 范本)
+- ⚠️ **v0.2.0/v0.2.1 tag 不打**:留作 8/1 锚定策略
+
+**3. 当前项目整体总结**
+
+- **起点 HEAD**:`6bd5b75` v0.2.15 A 候选 6/23 实操就绪最后冲刺 + 撞坑恢复 3 步实战演练 9
+- **当前 HEAD**:沿 `git rev-parse --short HEAD` 为准(本次 docs closure commit 后)
+- **改动**:1 file 新建(docs/v0.2.16-...md)+ 3 docs 同步(SESSION-STATE 5 处 + MODIFICATION-LOG 1 条累计 + README L7)
+- **5 复盘项全部预先 docs 化**:B 类延后 5 项 + 范本 9 个 + SIGKILL 137 67% 误报率 + 8 项前置条件 6/8 ✅ + 漂移审查 5/5 修复
+- **撞坑恢复范本累计**:9 个(本轮不增加)
+- **7/1 月度复盘数据快照**:6 维度(范本 9 + 撞坑史 5 + SIGKILL 67% + 前置条件 6/8 + 漂移 5/5 + B 类 5 项)
+- **详细报告**:[docs/v0.2.16-7-1-monthly-review-prep-2026-06-20.md](docs/v0.2.16-7-1-monthly-review-prep-2026-06-20.md)
+- **下一棒**:6/23 周二全链路重启实操 7 阶段(阶段 1-5 已实测就绪,只需跑 6-7)+ 7/1 月度复盘(5 复盘项 12:00 启动 → 17:00 收官)+ 8/1 v0.2.1 release tag 锚定(沿 D5.7.2 范本)
 
 ### 2026-06-20 [v0.2.15 A 候选 6/23 实操就绪最后冲刺 + 撞坑恢复 3 步实战演练 9] — 收口
 
@@ -940,5 +976,5 @@
 
 ---
 
-> **累计**:6 条 / 2026-06-18-20(GoogleOAuth2 收口 + MicrosoftOAuth2 收口 + 规则初始化 + OAuth #5 docs + v0.2.14 E+A 实操就绪验证首次落地 · 撞坑恢复 3 步实战演练 8 + v0.2.15 A 候选 6/23 实操就绪最后冲刺 · 撞坑恢复 3 步实战演练 9)
+> **累计**:7 条 / 2026-06-18-20(GoogleOAuth2 收口 + MicrosoftOAuth2 收口 + 规则初始化 + OAuth #5 docs + v0.2.14 E+A 实操就绪验证首次落地 · 撞坑恢复 3 步实战演练 8 + v0.2.15 A 候选 6/23 实操就绪最后冲刺 · 撞坑恢复 3 步实战演练 9 + v0.2.16 7/1 月度复盘准备)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
