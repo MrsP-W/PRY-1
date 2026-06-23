@@ -75,8 +75,14 @@ class _FakeDatabase:
         pass
 
 
-def _run_alipay_cli(csv_path: Path, db_path: Path) -> int:
-    """跑 import_alipay.main,mock Database + make_sqlalchemy_engine."""
+def _run_alipay_cli(csv_path: Path, db_path: Path, *, max_rows: int | None = None) -> int:
+    """跑 import_alipay.main,mock Database + make_sqlalchemy_engine。
+
+    Args:
+        csv_path: 支付宝账单 CSV 路径
+        db_path: 临时 sqlite 路径
+        max_rows: 透传 CLI --max-rows(默认 None = 全量)
+    """
     from sqlalchemy import create_engine
 
     from scripts import import_alipay  # noqa: PLC0415
@@ -84,12 +90,16 @@ def _run_alipay_cli(csv_path: Path, db_path: Path) -> int:
     fake_db = _FakeDatabase(db_path)
     plain_engine = create_engine(f"sqlite:///{db_path}")
 
+    args = ["--csv-path", str(csv_path), "--db-path", str(db_path)]
+    if max_rows is not None:
+        args += ["--max-rows", str(max_rows)]
+
     with (
         patch.object(import_alipay, "Database") as mock_db_class,
         patch.object(import_alipay, "make_sqlalchemy_engine", return_value=plain_engine),
     ):
         mock_db_class.open.return_value = fake_db
-        return import_alipay.main(["--csv-path", str(csv_path), "--db-path", str(db_path)])
+        return import_alipay.main(args)
 
 
 # ===== C1. 文件不存在 =====
@@ -166,6 +176,30 @@ def test_alipay_cli_exits_0_on_valid_csv(
     assert f"parsed={expected}" in captured.out
     assert f"inserted={expected}" in captured.out
     assert "version=2024" in captured.out
+
+
+# ===== C7. --max-rows 1 真账单 spike 4 重防误发(2026-06-23 检查员 P0 修复)=====
+
+
+def test_alipay_cli_max_rows_1_limits_to_1_row(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """v0.2.1 #2 真账单 spike 4 重防误发:--max-rows 1 严格只导入 1 行。
+
+    修复历史(检查员 6/22 检查报告 P0):
+        CLI 接收 --max-rows 但没有透传 adapter,真账单 spike 时仍全量导入。
+        本测试断言:--max-rows 1 → parsed=1 inserted=1。
+    """
+    db = tmp_path / "maxrows.db"
+    _make_pretend_alembic_db(db)
+    valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
+    rc = _run_alipay_cli(valid_csv, db, max_rows=1)
+    captured = capsys.readouterr()
+    assert rc == 0, (
+        f"--max-rows 1 应 exit 0(限制成功),实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
+    )
+    assert "parsed=1" in captured.out, f"--max-rows 1 应 parsed=1,实际输出:{captured.out}"
+    assert "inserted=1" in captured.out, f"--max-rows 1 应 inserted=1,实际输出:{captured.out}"
 
 
 # ===== C6. import_all 默认 dry-run + 4 重防误发 =====

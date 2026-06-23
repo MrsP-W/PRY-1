@@ -21,6 +21,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLIST_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.agent.plist"
 INSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_install.sh"
 UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
+KICKSTART_SEAL_SH = PROJECT_ROOT / "scripts" / "launchd_kickstart_and_seal.sh"
 
 
 # ===== A. plist XML 良构 =====
@@ -201,3 +202,70 @@ def test_c5_uninstall_sh_supports_purge_bin():
     text = UNINSTALL_SH.read_text(encoding="utf-8")
     assert "--purge-bin" in text, "uninstall.sh 必支持 --purge-bin 选项"
     assert "rm -f" in text, "uninstall.sh 必用 rm -f 删除"
+
+
+# ===== D. launchd_kickstart_and_seal.sh 契约(2026-06-23 检查员 P0 修复)=====
+
+
+def test_d1_kickstart_seal_sh_exists():
+    """D1. launchd_kickstart_and_seal.sh 必存."""
+    assert KICKSTART_SEAL_SH.exists(), f"kickstart_seal.sh 必存: {KICKSTART_SEAL_SH}"
+
+
+def test_d2_kickstart_seal_sh_has_bash_shebang():
+    """D2. kickstart_seal.sh 必以 #!/usr/bin/env bash 开头."""
+    first_line = KICKSTART_SEAL_SH.read_text(encoding="utf-8").splitlines()[0]
+    assert first_line.startswith("#!") and "bash" in first_line, (
+        f"kickstart_seal.sh 必以 bash shebang 开头,实际 {first_line!r}"
+    )
+
+
+def test_d3_kickstart_seal_sh_has_set_euo_pipefail():
+    """D3. kickstart_seal.sh 必启用 set -euo pipefail(严格模式)."""
+    text = KICKSTART_SEAL_SH.read_text(encoding="utf-8")
+    assert "set -euo pipefail" in text, "kickstart_seal.sh 必启用 set -euo pipefail"
+
+
+def test_d4_kickstart_seal_sh_uses_plutil_for_label_check():
+    """D4. kickstart_seal.sh 必用 plutil 验 Label(沿 4 重防误发 重 1)."""
+    text = KICKSTART_SEAL_SH.read_text(encoding="utf-8")
+    assert "plutil" in text, "kickstart_seal.sh 必用 plutil 验 Label"
+    assert "Label" in text, "kickstart_seal.sh 必含 Label 字段校验"
+
+
+def test_d5_kickstart_seal_sh_uses_launchctl_kickstart():
+    """D5. kickstart_seal.sh 必调 launchctl kickstart(沿选 C 方案 Step 2)."""
+    text = KICKSTART_SEAL_SH.read_text(encoding="utf-8")
+    assert "launchctl kickstart" in text, "kickstart_seal.sh 必调 launchctl kickstart"
+
+
+def test_d6_kickstart_seal_sh_references_v010_tag_as_plain_text():
+    """D6. kickstart_seal.sh 必用纯文本引用 v0.1.0 tag(2af775f),不写 ${2af775f} 等会被 bash 当变量展开。
+
+    修复历史(检查员 6/22 检查报告 P0):
+        原 L194 写 `tag ${2af775f}` → bash 会把 ${2af775f} 当变量求值,运行期报 `bad substitution`。
+        修法:用纯文本 `2af775f` 或定义常量再引用。
+        本测试断言:扫描所有 `${...}` 引用,只允许 `${VARNAME}` 形式(VARNAME 以字母/下划线开头),
+        拒收 `${数字...}` 这种 bash 解释为 bad substitution 的形式。
+    """
+    text = KICKSTART_SEAL_SH.read_text(encoding="utf-8")
+    # 匹配所有 ${...} 引用(不贪婪,匹配到第一个 } 即可)
+    matches = re.findall(r"\$\{([^}]+)\}", text)
+    assert matches, "kickstart_seal.sh 必有 ${...} 引用(本测试才有意义)"
+    for varname in matches:
+        # varname 必以字母/下划线开头(合法变量名)
+        # 数字开头会被 bash 当成 positional param 求值,触发 bad substitution
+        assert re.match(r"^[A-Za-z_]", varname), (
+            f"kickstart_seal.sh 含 bad substitution 陷阱: ${{{varname}}} "
+            f"(varname 不能以数字开头,会被 bash 当 positional param 求值,运行期报 bad substitution。"
+            f"修法:用纯文本 commit hash / 定义常量再引用)"
+        )
+
+
+def test_d7_kickstart_seal_sh_has_release_notes_flip():
+    """D7. kickstart_seal.sh 必含 release notes flip 段(沿选 C 方案 Step 5)."""
+    text = KICKSTART_SEAL_SH.read_text(encoding="utf-8")
+    assert "release notes" in text.lower() or "v0.1-release-notes" in text, (
+        "kickstart_seal.sh 必含 release notes flip 段"
+    )
+    assert "sed -i" in text, "kickstart_seal.sh 必用 sed -i 改 release notes"

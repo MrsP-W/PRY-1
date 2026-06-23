@@ -102,29 +102,55 @@ class TransactionAdapter:
         self._wechat_connector = wechat_connector or WeChatCSVConnector()
         self._alipay_connector = alipay_connector or AlipayCSVConnector()
 
-    def import_wechat_csv(self, path: Path) -> TransactionImportResult:
-        """解析并导入微信 CSV 文件."""
+    def import_wechat_csv(
+        self, path: Path, *, max_rows: int | None = None
+    ) -> TransactionImportResult:
+        """解析并导入微信 CSV 文件.
+
+        Args:
+            path: 微信账单 CSV 路径(已 sniff 版本,必传)
+            max_rows: 限制单次导入行数(到达即 break);None = 全量(默认)
+
+        v0.2.1 #2 真账单 spike 4 重防误发范本:spike 时通常传 1。
+        """
 
         if not isinstance(path, Path):
             raise TypeError(f"path 必须是 Path,实际 {type(path).__name__}")
+        if max_rows is not None and max_rows <= 0:
+            raise ValueError(f"max_rows 必须为正整数,实际 {max_rows}")
         rows = self._wechat_connector.safe_parse(path)
-        return self.import_raw_transactions(rows, source="wechat")
+        return self.import_raw_transactions(rows, source="wechat", max_rows=max_rows)
 
-    def import_alipay_csv(self, path: Path) -> TransactionImportResult:
-        """解析并导入支付宝 CSV 文件(D7.4 跨源共用)."""
+    def import_alipay_csv(
+        self, path: Path, *, max_rows: int | None = None
+    ) -> TransactionImportResult:
+        """解析并导入支付宝 CSV 文件(D7.4 跨源共用).
+
+        Args:
+            path: 支付宝账单 CSV 路径(已 sniff 版本,必传)
+            max_rows: 限制单次导入行数(到达即 break);None = 全量(默认)
+        """
 
         if not isinstance(path, Path):
             raise TypeError(f"path 必须是 Path,实际 {type(path).__name__}")
+        if max_rows is not None and max_rows <= 0:
+            raise ValueError(f"max_rows 必须为正整数,实际 {max_rows}")
         rows = self._alipay_connector.safe_parse(path)
-        return self.import_raw_transactions(rows, source="alipay")
+        return self.import_raw_transactions(rows, source="alipay", max_rows=max_rows)
 
     def import_raw_transactions(
         self,
         rows: Iterable[RawTransaction],
         *,
         source: str,
+        max_rows: int | None = None,
     ) -> TransactionImportResult:
         """导入解析层交易列表,供 D6 微信和 D7 支付宝共用同一管线.
+
+        Args:
+            rows: 解析层产物
+            source: 'wechat' / 'alipay'
+            max_rows: 限制单次导入行数(到达即 break);None = 全量(默认)
 
         D6.6 P2 修复:
             - 原子化 insert + 状态机推进(单事务)
@@ -133,6 +159,9 @@ class TransactionAdapter:
             - 技术失败(OperationalError / DataError / InterfaceError)→ 透传,不捕获
               (沿 D3.3.3 教训,OperationalError 必透传)
             - 多候选:记录 candidate_count + candidate_ids(测试锁定:选最小 id 是有意设计)
+
+        v0.2.1 #2 真账单 spike 4 重防误发:max_rows=None(默认)走全量;
+        spike 时传 max_rows=1 限制为 1 行(配合 --confirm + --count 锁 1)。
         """
 
         parsed = 0
@@ -148,6 +177,10 @@ class TransactionAdapter:
         candidate_ids: list[int] = []
 
         for raw in rows:
+            # v0.2.1 #2 真账单 spike 4 重防误发:max_rows 到达即 break(不继续)
+            # 优先在循环最前判:已 parsed 数量 + 1 == max_rows 时不进入本轮
+            if max_rows is not None and parsed >= max_rows:
+                break
             parsed += 1
             if self._store.by_external_id(source, raw.external_transaction_id) is not None:
                 duplicates += 1

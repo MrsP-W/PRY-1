@@ -121,7 +121,9 @@ def main(argv: list[str] | None = None) -> int:
         adapter = TransactionAdapter(sessionmaker(bind=engine))
 
         try:
-            result = adapter.import_alipay_csv(args.csv_path)
+            # v0.2.1 #2 真账单 spike 4 重防误发:--max-rows 透传 adapter
+            # CLI 默认 max_rows=None = 全量;ALIPAY_REAL_IMPORT=1 + --max-rows 1 限 1 行
+            result = adapter.import_alipay_csv(args.csv_path, max_rows=args.max_rows)
         except OperationalError as e:
             print(f"数据库技术失败(DB 锁或连接错误): {e}", file=sys.stderr)
             return 3
