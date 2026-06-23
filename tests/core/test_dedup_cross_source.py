@@ -264,7 +264,7 @@ def test_l3_mark_cross_source_candidate(session_factory) -> None:
 
 
 # ===== v0.2.28 L2 fingerprint sign-lock 专项测试(2026-06-23) =====
-# 沿 v0.2.27 真实账单 spike 暴露的 267 对偶然跨源 L2 命中风险:
+# 沿 v0.2.27 真实账单 spike 暴露的反向符号误判风险:
 #   normalize_fingerprint(date, abs(amount), counterparty) 升级为
 #   normalize_fingerprint(date, amount_with_sign, counterparty, *, sign=±1)
 #   - sign=+1(支出):微信 `付` / 支付宝 `支` 共用
@@ -289,10 +289,10 @@ def test_fingerprint_sign_lock_same_sign_cross_source_match() -> None:
 
 
 def test_fingerprint_sign_lock_different_sign_cross_source_no_match() -> None:
-    """v0.2.28 Case 2 — 跨源 sign 不一致 → 不命中(消除 267 对偶然跨源).
+    """v0.2.28 Case 2 — 跨源 sign 不一致 → 不命中(消除反向符号误判).
 
     场景:微信(收入 -38.50)↔ 支付宝(支出 +38.50) — 同 (date, abs(amount), counterparty) 但 sign 不同。
-    关键:消除 v0.2.27 spike 暴露的偶然跨源 L2 命中风险(267 对额外命中)。
+    关键:消除 sign 不一致时的偶然跨源 L2 命中风险。
     """
     from my_ai_employee.core.fingerprint import normalize_fingerprint
 
@@ -379,12 +379,12 @@ def test_fingerprint_sign_lock_amount_sign_independent() -> None:
     )
 
 
-def test_fingerprint_sign_lock_realistic_eliminates_coincidental_cross_source() -> None:
-    """v0.2.28 Case 6 — 真实账单场景验证 sign-lock 消除偶然跨源 L2 命中.
+def test_fingerprint_sign_lock_realistic_eliminates_opposite_sign_collision() -> None:
+    """v0.2.28 Case 6 — 真实账单场景验证 sign-lock 消除反向符号碰撞.
 
-    沿 v0.2.27 spike_w3_realistic_faker.py 的 100 对构造跨源 + 267 对偶然跨源:
+    沿 v0.2.27 spike_w3_realistic_faker.py 的构造跨源 + 反向符号误判风险:
     - 构造跨源(lock sign=±1):sign-lock 后仍命中 100 对
-    - 偶然跨源(sign 不一致):sign-lock 后**不命中**(消除 267 对)
+    - 偶然跨源(sign 不一致):sign-lock 后**不命中**
     """
     from my_ai_employee.core.fingerprint import normalize_fingerprint
 
@@ -411,5 +411,5 @@ def test_fingerprint_sign_lock_realistic_eliminates_coincidental_cross_source() 
         sign=+1,  # 支出方向
     )
     assert fp_coincidental_wechat != fp_coincidental_alipay, (
-        "v0.2.28 偶然跨源(sign 不一致)应不命中 — 消除 v0.2.27 暴露的 267 对风险"
+        "v0.2.28 偶然跨源(sign 不一致)应不命中 — 消除反向符号误判风险"
     )

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.2.28 L2 fingerprint sign-lock 修复已收口**(2026-06-23 · 报告锚待 commit · 纯修复性升级)。v0.2.25 P0 二修 + v0.2.26 虚拟 spike + v0.2.27 真实 spike + **v0.2.28 L2 sign-lock 修复**全链路验证通过:`normalize_fingerprint` 加可选 `sign: int | None = None` 参数,transaction_adapter.py:192 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`),消除 v0.2.27 暴露的 267 对偶然跨源 L2 命中风险(剩余 367 候选是真实业务碰撞,需用户 review)。9/9 质量门全绿(2240 passed / 88.77% coverage),D6.2 + D7.2 + D6.6 已有测试零破坏,5 处现有 case 升级 `sign=+1` 与业务对齐。当前进入 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1/v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。详见 [docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md](docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md)。
+> **状态**：🎯 **v0.2.28 L2 fingerprint sign-lock 修复已收口**(2026-06-23 · 报告锚 `36d07ce` · 纯修复性升级)。v0.2.25 P0 二修 + v0.2.26 虚拟 spike + v0.2.27 真实格式 spike + **v0.2.28 L2 sign-lock 修复**全链路验证通过:`normalize_fingerprint` 加可选 `sign: int | None = None` 参数,transaction_adapter.py:192 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`),已消除反向符号误判风险；v0.2.27 对照重跑 `candidate_count=367` 未减少,说明剩余候选是同日同金额同商户同方向的合理业务碰撞,需用户 review。9/9 质量门全绿(2240 passed / 88.77% coverage),D6.2 + D7.2 + D6.6 已有测试零破坏,5 处现有 case 升级 `sign=+1` 与业务对齐。当前进入 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1/v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。详见 [docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md](docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md)。
 
 ---
 

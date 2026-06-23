@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.28 L2 fingerprint sign-lock 修复已收口(2026-06-23 · 报告锚待 commit · 当前 W3 真账单授权等待态)
+# SESSION-STATE — v0.2.28 L2 fingerprint sign-lock 修复已收口(2026-06-23 · 报告锚 36d07ce · 当前 W3 真账单授权等待态)
 
 > **最后更新**:2026-06-23 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.28 L2 fingerprint sign-lock 修复已收口**(6/23 · `normalize_fingerprint` 加可选 `sign: int | None = None` 参数 + `transaction_adapter.py:192` 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`)· 消除 v0.2.27 暴露的 267 对偶然跨源 L2 命中风险(实际剩余 367 候选是真实业务碰撞,需用户 review)· 9/9 质量门全绿(2240 passed / 88.77% coverage)· D6.2 + D7.2 + D6.6 已有测试零破坏· 6 个 sign-lock 专项 case + 5 处现有 case 升级 `sign=+1` 与业务对齐· 撞坑 #42 sign 与 amount 矛盾过度严判 + 撞坑 #43 现有测试与新业务对齐 + 撞坑 #44 ruff F841 隐藏修复· 纯修复性升级 0 业务改动)。当前 `v0.2.28 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock 修复四通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单/ 6/23 P1-1 mypy tests 13 errors 收口(可选推进)。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1` tag、不打 `v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。
+> **状态**:✅ **v0.2.28 L2 fingerprint sign-lock 修复已收口**(6/23 · `normalize_fingerprint` 加可选 `sign: int | None = None` 参数 + `transaction_adapter.py:192` 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`)· 已消除反向符号误判风险；v0.2.27 对照重跑 `candidate_count=367` 未减少,说明剩余候选是同日同金额同商户同方向的合理业务碰撞,需用户 review · 9/9 质量门全绿(2240 passed / 88.77% coverage)· D6.2 + D7.2 + D6.6 已有测试零破坏· 6 个 sign-lock 专项 case + 5 处现有 case 升级 `sign=+1` 与业务对齐· 撞坑 #42 sign 与 amount 矛盾过度严判 + 撞坑 #43 现有测试与新业务对齐 + 撞坑 #44 ruff F841 隐藏修复· 纯修复性升级 0 业务改动)。当前 `v0.2.28 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock 修复四通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单/ 6/23 P1-1 mypy tests 13 errors 收口(可选推进)。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1` tag、不打 `v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.27 W3 真实格式账单 spike 2345 行已关闭(2026-06-23)**,**下一步进入 W3 真账单授权等待态** — 真账单 spike 需要用户提供真实微信/支付宝 CSV,并仅以 `--max-rows 1` 小样本验证；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
+**当前启动候选**:**v0.2.28 L2 fingerprint sign-lock 修复已关闭(2026-06-23 · 报告锚 `36d07ce`)**,**下一步进入 W3 真账单授权等待态** — 真账单 spike 需要用户提供真实微信/支付宝 CSV,并仅以 `--max-rows 1` 小样本验证；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
