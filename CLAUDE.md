@@ -15,19 +15,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
 **当前阶段**：**D5.7.2 docs 收口最后一致性修正 真正锁定**（D5.1-D5.7.2 ✅ 全部完成,B3 真正解封,真实 1 封 SMTP 端到端实测通过,sent=1/1.27s；D5.7.1 + **D5.7.2** 检查员驳回 5 缺陷(docs 最后一次一致性修正)全部修复:P1 D5 验收报告覆盖率表实测重生成(90.4%→90.2%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径 + P2-5 DoD 证据补全；**D5 业务调度器完全锁定,不再开 D5.7.3,直接进入 v0.1 发布规划**）。
 
-### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 5 软链 + 2 专属）
+### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 
 | 触发词 | 角色类型 | 职责 | D-step 用法 |
 |--------|---------|------|-------------|
-| `@教练员` | 🔴 软链 | Claude Code 技巧沉淀 | D-step 收官 → 沉淀 1 条 |
-| `@检查员` | 🔴 软链 | 质量门 + 9/9 质量检查 | D-step 收官前必跑 |
-| `@调试专家` | 🔴 软链 | Bug 排查 + 链路诊断 | D-step 阻塞时 |
-| `@回顾员` | 🔴 软链 | 复盘 + 团队评分 | D-step 锁定时 |
-| `@内容编辑员` | 🔴 软链 | 排版/草稿/PPT | D4 邮件草稿 + 文档沉淀 |
+| `@教练员` | 📄 普通 | Claude Code 技巧沉淀 | D-step 收官 → 沉淀 1 条 |
+| `@检查员` | 📄 普通 | 质量门 + 9/9 质量检查 | D-step 收官前必跑 |
+| `@调试专家` | 📄 普通 | Bug 排查 + 链路诊断 | D-step 阻塞时 |
+| `@回顾员` | 📄 普通 | 复盘 + 团队评分 | D-step 锁定时 |
+| `@内容编辑员` | 📄 普通 | 排版/草稿/PPT | D4 邮件草稿 + 文档沉淀 |
 | `@管家` | 🟡 专属 | 全天候数字员工视角 | D4.x/D5.x/D6+ 视角检查 |
 | `@审计员` | 🟡 专属 | LLM/数据流/权限审计 | 涉及数据流 D-step 必配套 |
 
-> **软链路径**：`src/my_ai_employee/agents/教练员.md` → `../../../../Agent Assistant/agents/教练员.md`（Agent Assistant 角色更新自动生效）。
+> **D5.5.3 P0 修复(2026-06-12)**：所有角色文件从软链 → 实际文件复制(5 软链 1903 行 uv build OK + 14 files commits `7e9bca0`),防 uv build FileNotFoundError。**沿用测试**:`tests/agents/test_agent_layer.py::test_no_legacy_symlinks_in_agents_dir` 断言 agents/*.md 不是软链。**不要重建软链**(2026-06-23 撞坑 #34 误判修复方向已回滚)。
 
 ---
 

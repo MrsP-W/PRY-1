@@ -1,7 +1,7 @@
 # D4 智能层 — claw-code 参考映射表
 
 > **项目内 mapping**（D4 启动检查清单第 2 项要求）
-> **触发规则**:参考 [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md)（D4 智能层启动后每 D-step 必先参考,D4 4 路径并行启动 5 步决策法）
+> **触发规则**:参考 [L2_memory/_cross-project/d4-4path-parallel-launch.md](../../Agent%20Assistant/L2_memory/_cross-project/d4-4path-parallel-launch.md)（D4 智能层启动后每 D-step 必先参考,D4 4 路径并行启动 5 步决策法）
 > **2026-06-08 创建 · 2026-06-08 D4.2 完成时更新**
 > **快照基线**:claw-code 6/7 已拉过 12 个文件,后续有变更需 re-fetch
 
@@ -569,7 +569,7 @@ claw-code 仓库无"邮件草稿审阅"或"草稿质量评分"模块。**D4.7.4 
 **最后更新**:2026-06-11 早晨(**D4.7.4 v1.0.2 业务层三入口真正锁定**:v1.0 → v1.0.1 → **v1.0.2** / D4.7.4 业务层 213 / 全量 1240 tests / 8 质量门 8/8 全绿 / `policy/integration.py` 91.1% 覆盖 / D4.7.3 25 教训全应用)
 **维护者**:Mr-PRY
 **关联**:
-- [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射(D4.7.3+D4.7.4+D4.8 关联规则)
+- [L2_memory/_cross-project/d4-4path-parallel-launch.md](../../Agent%20Assistant/L2_memory/_cross-project/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射(D4.7.3+D4.7.4+D4.8 关联规则)
 - [memory/tools_status.md](../../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法
 - [reports/D4.7.4-草稿审阅.md](../reports/D4.7.4-草稿审阅.md) — D4.7.4 v1.0.2 详细段(同项目内,无需跨目录)
 - [memory/d4.6-v1.0.2-fixes.md](../../Agent%20Assistant/memory/d4.6-v1.0.2-fixes.md) — D4.6 v1.0.2 业务语义修复 4 教训
@@ -899,17 +899,17 @@ claw-code 仓库无"邮件 SMTP 发送"模块,但与 D5 业务调度器高度相
 **最后更新**:2026-06-14 晚间(**D5.6.5.1 收口 + D5.7 docs 收口 8 件套** mapping 段:6 契约锁定 + 16 子任务全部 ✅ + 8 质量门全绿 + 真实 1 封 SMTP 端到端 + 14 commits 收口链 + 14 项关键修复沉淀)
 **维护者**:Mr-PRY
 **关联**:
-- [memory/d5-business-scheduler-launch.md](../../Agent%20Assistant/memory/d5-business-scheduler-launch.md) — D5 业务调度器 14 commits 收口链 + 真实 1 封 SMTP 范本
-- [memory/d5.6.5-real-send.md](../../Agent%20Assistant/memory/d5.6.5-real-send.md) — D5.6.5 真实 1 封 SMTP 端到端实测
-- [memory/d5.6.5.1-fixes.md](../../Agent%20Assistant/memory/d5.6.5.1-fixes.md) — D5.6.5.1 检查员驳回 5 缺陷修复
-- [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射 + 4 路径并行启动 5 步决策法(2026-06-14 第二轮复检修正:原 `D4-claw-code-auto-reference.md` 不存在,改为实际存在文件)
+- [L2_memory/_cross-project/d5-business-scheduler-launch.md](../../Agent%20Assistant/L2_memory/_cross-project/d5-business-scheduler-launch.md) — D5 业务调度器 14 commits 收口链 + 真实 1 封 SMTP 范本
+- [L2_memory/_cross-project/d5.6.5-real-send.md](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.5-real-send.md) — D5.6.5 真实 1 封 SMTP 端到端实测
+- [L2_memory/_cross-project/d5.6.5.1-fixes.md](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.5.1-fixes.md) — D5.6.5.1 检查员驳回 5 缺陷修复
+- [L2_memory/_cross-project/d4-4path-parallel-launch.md](../../Agent%20Assistant/L2_memory/_cross-project/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射 + 4 路径并行启动 5 步决策法(2026-06-14 第二轮复检修正:原 `D4-claw-code-auto-reference.md` 不存在,改为实际存在文件)
 - `memory/d4.7.3-drafter-adapter-v1.0.6.md` — D4.7.3 25 教训沉淀源头(实际位于全局 `~/.claude/projects/.../memory/`,本项目级 memory 未同步副本)
 - `memory/d4.8-草稿入库.md` — D4.8 v1.0.1 收口链(契约 5:不真发 SMTP,D5+ 调度器接管)(实际位于全局 memory,本项目级未同步副本)
 - `memory/d4.7.4-docs-closure.md` — D4.7.4 v1.0.2 docs-only 收口范本(实际位于全局 memory,本项目级未同步副本)
 - `memory/d5-redirect-smtp-only.md` — D5 启动方向纠正(稳固优先)(实际位于全局 memory,本项目级未同步副本)
 - [reports/D5-业务调度器.md](../reports/D5-业务调度器.md) — D5 业务调度器 8 段结构报告(本 D5.7 commit 新建)
 - [reports/D5.6.5-real-send-1.md](../reports/D5.6.5-real-send-1.md) — D5.6.5 真实 1 封 SMTP 端到端报告
-- [memory/d5.6.4-4th-round-fixes.md](../../Agent%20Assistant/memory/d5.6.4-4th-round-fixes.md) — D5.6.4 4th round 5 缺陷修复
+- [L2_memory/_cross-project/d5.6.4-4th-round-fixes.md](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.4-4th-round-fixes.md) — D5.6.4 4th round 5 缺陷修复
 - `memory/d5.5.5-p1-p2-p3-fixes.md` — D5.5.5 2 commits 收口(实际位于全局 memory,本项目级未同步副本)
 - `memory/d5.5.4-p1-p3-fixes.md` — D5.5.4 P1/P3 修复(实际位于全局 memory,本项目级未同步副本)
 - `memory/d5.5.3-p0-p1-p2-fixes.md` — D5.5.3 P0/P1/P2 修复(实际位于全局 memory,本项目级未同步副本)
@@ -920,7 +920,7 @@ claw-code 仓库无"邮件 SMTP 发送"模块,但与 D5 业务调度器高度相
 - [week1-mvp.md §D4.8 L841-925](week1-mvp.md) — D4.8 详细计划(5 契约 + 12 子任务,B3/B5 解封项已清理)
 **维护者**:Mr-PRY
 **关联**:
-- [memory/d4-4path-parallel-launch.md](../../Agent%20Assistant/memory/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射 + 4 路径并行启动 5 步决策法
+- [L2_memory/_cross-project/d4-4path-parallel-launch.md](../../Agent%20Assistant/L2_memory/_cross-project/d4-4path-parallel-launch.md) — D4 启动前必读 7 子主题预映射 + 4 路径并行启动 5 步决策法
 - [reports/D4.8-草稿入库.md](../reports/D4.8-草稿入库.md) — D4.8 v1.0.1 报告(8 质量门 + 5 契约 + 25 教训 + B 类延后)
 - [output/spike/spike_outbox_100_20260611_221105.md](../output/spike/spike_outbox_100_20260611_221105.md) — D4.8.11 spike 100 封入库报告
 - [memory/tools_status.md](../../Agent%20Assistant/memory/tools_status.md) — gh api 旁路 GFW 用法

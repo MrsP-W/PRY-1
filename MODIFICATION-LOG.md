@@ -38,7 +38,7 @@
 
 **2. 风险点**(Risk · 防后续踩坑)
 - 已知风险 + 触发条件 + 影响范围
-- B 类延后(沿 Agent Assistant/memory/b-class-deferral-2026-06-09.md)
+- B 类延后(沿 Agent Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md)
 - 待办 / 改进项(按 P1/P2/P3 排序)
 
 **3. 当前项目整体总结**(Status Snapshot)
@@ -839,7 +839,7 @@
 - 风险:6 项已知风险(见上),无新风险(commit 2/3 范本 1:1 复用)
 - 下一步:6/19 周五 #5 commit 5/5 — pyproject 加 msal+google-auth+google-auth-oauthlib + 收口报告
 - 下一棒:6/19 端午前工作日 → 主 Agent 接力 deps+收口
-- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md](reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/memory/b-class-deferral-2026-06-09.md) / [d5.6.5-real-send](../../Agent%20Assistant/memory/d5.6.5-real-send.md)
+- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md](reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md) / [d5.6.5-real-send](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.5-real-send.md)
 
 ---
 
@@ -882,7 +882,7 @@
 - 风险:5 项已知风险(见上),无新风险(commit 2 范本 1:1 复用)
 - 下一步:6/19 周五 XOAUTH2 SMTP 鉴权集成(`auth_string` 模板 + 沿 D5.6.5 4 重防误发)
 - 下一棒:6/19 端午前工作日末段 → 主 Agent 接力 XOAUTH2
-- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md](reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/memory/b-class-deferral-2026-06-09.md)
+- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-google-2026-06-18.md](reports/v0.2.2-p5-oauth-google-2026-06-18.md) / [reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md](reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md)
 
 ---
 
@@ -924,7 +924,7 @@
 - 风险:5 项已知风险(见上),docs 漂移本轮已修,无新风险
 - 下一步:6/19 周五 GoogleOAuth2 实现(google-auth 接入 + 8-10 unit tests,沿 commit 2 范本)
 - 下一棒:6/19 端午前工作日末段 → 主 Agent 接力 GoogleOAuth2
-- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md](reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/memory/b-class-deferral-2026-06-09.md)
+- 沿用范本:[SESSION-STATE.md](SESSION-STATE.md) / [reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md](reports/v0.2.2-p5-oauth-microsoft-2026-06-18.md) / [docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) / [b-class-deferral-2026-06-09](../../Agent%20Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md)
 
 ---
 
@@ -934,7 +934,7 @@
 
 - 新建 `MODIFICATION-LOG.md`(本文件 · 根目录 · 沿 SESSION-STATE.md 范本)
 - 在 `CLAUDE.md` 加规则指向(D-step 收官标准动作第 7 步)
-- 在 `Agent Assistant/memory/MEMORY.md` 加跨项目沉淀索引(沿 6/17 v0.2.2 #5 范本)
+- 在 `Agent Assistant/L2_memory/MEMORY.md` 加跨项目沉淀索引(沿 6/17 v0.2.2 #5 范本)
 - 改动:3 files / 预估 +250 / 0 / 0 new tests(纯文档机制)
 
 **2. 风险点**
@@ -952,7 +952,7 @@
 - 风险:无技术风险(纯文档机制)
 - 下一步:6/19 周五 MicrosoftOAuth2 实现(msal)+ 6/20 GoogleOAuth2 + 6/21 XOAUTH2 + 6/22 收口报告
 - 下一棒:6/19 端午前工作日末段 → 主 Agent 接力 MicrosoftOAuth2
-- 沿用范本:`SESSION-STATE.md`(状态导向)/ `reports/D*.md`(详细历史)/ `Agent Assistant/memory/b-class-deferral-2026-06-09.md`(B 类延后)
+- 沿用范本:`SESSION-STATE.md`(状态导向)/ `reports/D*.md`(详细历史)/ `Agent Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md`(B 类延后)
 
 ---
 
@@ -964,7 +964,7 @@
 - 详细:[reports/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](reports/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) 9 段 8 表 250 行
 - 5 commits 任务分解:docs 启动(本 commit)+ MicrosoftOAuth2(6/19)+ GoogleOAuth2(6/20)+ XOAUTH2(6/21)+ deps+tests(6/22)+ 收口报告
 - 13 行复用要点速查表(沿 v0.2.2 范本)+ 7 条关键设计决策 + 5 项风险评估
-- 跨项目沉淀:[Agent Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](Agent%20Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) commit `d879847`(L2_memory 2 files / +140)
+- 跨项目沉淀:[Agent Assistant/L2_memory/_cross-project/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md](Agent%20Assistant/L2_memory/_cross-project/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md) commit `d879847`(L2_memory 2 files / +140)
 
 **2. 风险点**
 

@@ -1078,7 +1078,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 5. `CLAUDE.md` L7 当前阶段翻到 D5.6.5.1
 6. `docs/d4-claw-code-mapping.md` §11 D5 业务调度器 mapping 段(7 段结构范本)
 7. `reports/D5-业务调度器.md` 8 段结构报告
-8. 跨项目 memory:`Agent Assistant/memory/d5-business-scheduler-launch.md` + `MEMORY.md` 索引 + 全局 memory
+8. 跨项目 memory:`Agent Assistant/L2_memory/_cross-project/d5-business-scheduler-launch.md` + `MEMORY.md` 索引 + 全局 memory
 
 **D5.7.1 检查员驳回 5 缺陷修复真正锁定**(本段下方将增补):
 
@@ -1149,7 +1149,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 **1 commit**:`6ac8d9b` 真实 1 封 SMTP 端到端实测
 
-**详细**:[reports/D5.6.5-real-send-1.md](../reports/D5.6.5-real-send-1.md) + [memory/d5.6.5-real-send.md](../../Agent%20Assistant/memory/d5.6.5-real-send.md)
+**详细**:[reports/D5.6.5-real-send-1.md](../reports/D5.6.5-real-send-1.md) + [L2_memory/_cross-project/d5.6.5-real-send.md](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.5-real-send.md)
 
 ---
 
@@ -1172,7 +1172,7 @@ NORMAL:  threshold=4hour,   warning=2hour
 
 **5 教训**:测试绝不允许连真实外部世界 / 真实凭据脱敏固化动作 / dataclass 必配套 return / 文档状态行必随实测翻 / SMTP 服务器接受 ≠ 真实送达
 
-**详细**:[memory/d5.6.5.1-fixes.md](../../Agent%20Assistant/memory/d5.6.5.1-fixes.md)(跨项目 memory)
+**详细**:[L2_memory/_cross-project/d5.6.5.1-fixes.md](../../Agent%20Assistant/L2_memory/_cross-project/d5.6.5.1-fixes.md)(跨项目 memory)
 
 ---
 

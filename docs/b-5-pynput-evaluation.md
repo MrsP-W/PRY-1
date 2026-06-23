@@ -21,7 +21,7 @@
 
 **Spike B 6/16 实测**:
 > "macOS Sequoia 即使 Accessibility 授权 pynput 仍不接收"
-> 详见 `Agent Assistant/memory/v0.1-real-spike-b-real-2026-06-16.md`
+> 详见 `Agent Assistant/L2_memory/_cross-project/v0.1-real-spike-b-real-2026-06-16.md`
 
 **降级路径已落地(D9.6 P1-1)**:
 - README L7 状态行明确: **"S7 ⌥⌘N 触发链路降级 → 业务层以 spike 30 笔 faker 验证 insert 链路代偿"**

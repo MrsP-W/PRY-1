@@ -157,7 +157,7 @@
 - **v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成收口报告**: `我的AI员工/reports/v0.2.2-p5-oauth-xoauth2-2026-06-18.md`
 - **v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁收口报告**: `我的AI员工/reports/v0.2.2-p5-oauth-deps-2026-06-18.md`
 - **v0.2.2 #5 docs-only 启动文档**: `我的AI员工/docs/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
-- **v0.2.2 #5 Agent Assistant 跨项目沉淀**: `Agent Assistant/memory/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
+- **v0.2.2 #5 Agent Assistant 跨项目沉淀**: `Agent Assistant/L2_memory/_cross-project/v0.2.2-p5-oauth-phase2-launch-2026-06-18.md`
 - **v0.2.1 #3 ExpenseServiceStub 实化**: `de5de10`(12 new tests · 7 方法)
 - **v0.2.1 #4 NoteStore 状态机化**: `0a1386c`(13 new tests · 5 状态机)
 - **v0.2.1 #5 NoteStore L2/L3 跨源去重**: `75f87cc` + `b751820`(11 + 9 new tests)
@@ -179,8 +179,8 @@
 - **v0.2.15 A 候选 6/23 实操就绪最后冲刺**: `我的AI员工/docs/v0.2.15-A-sprint-restart-readiness-2026-06-20.md`(A 冲刺 6/20 当天完成不等 6/21 + 5 步骤全部完成 + 撞坑 #19 classifier 误判 + #20 classifier 双重混淆 + #21 pwd 漂移 + #22 grep 连写错误 四类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 6/8 ✅ 实测(从 5/8 推到 6/8)+ 阶段 1-5 实测就绪 · 撞坑恢复 3 步实战演练 9 · 范本累计 9 个 · 范本类型累计 5 类)
 - **v0.2.16 7/1 月度复盘准备**: `我的AI员工/docs/v0.2.16-7-1-monthly-review-prep-2026-06-20.md`(5 复盘项全部预先 docs 化 + 7/1 12:00 启动 → 17:00 收官 + 提前 11 天 docs-only 准备避免当天突击 · 沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 + §4 + [[b-class-deferral-2026-06-09]] 范本)
 - **v0.2 启动规划**: `我的AI员工/docs/v0.2-launch-plan.md`
-- **B 类决策延后**: `Agent Assistant/memory/b-class-deferral-2026-06-09.md`
-- **环境误报诊断(本轮前置)**: `Agent Assistant/memory/2026-06-18-venv-sigkill-137-false-alarm.md`
+- **B 类决策延后**: `Agent Assistant/L2_memory/_core/b-class-deferral-2026-06-09.md`
+- **环境误报诊断(本轮前置)**: `Agent Assistant/L2_memory/_core/2026-06-18-venv-sigkill-137-false-alarm.md`
 - **6 重防误发范本(D6.6)**: `Agent Assistant/memory/2026-06-14-4-error-fixes.md`
 
 ## 维护者
