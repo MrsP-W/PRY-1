@@ -1228,3 +1228,46 @@
 
 > **累计**:13 条 / 2026-06-18-22(...+ v0.2.22 W3 真账单 faker dry-run)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 2026-06-23 v0.2.25 P0 二修 docs 收口(检查员 6/22 检查报告 P0 修复 + 9/9 门全绿)
+
+### 1. 本次修改
+
+- `cc22000 fix(p0)`: 真账单 --max-rows 透传 adapter + launchd seal bash bad substitution
+- 范围(2 个 P0 修复):
+  - **P0-1 `--max-rows` 真透传 adapter**(沿 v0.2.1 #2 真账单 spike 4 重防误发范本):
+    - `src/my_ai_employee/core/transaction_adapter.py`:`import_wechat_csv` / `import_alipay_csv` / `import_raw_transactions` 新增 `max_rows: int | None = None` 参数;循环最前判 `parsed >= max_rows` 即 break;`max_rows <= 0` 抛 `ValueError`
+    - `scripts/import_wechat.py` + `scripts/import_alipay.py`:CLI 透传 `args.max_rows` 到 adapter
+    - `tests/scripts/test_import_wechat_cli.py` + `tests/scripts/test_import_alipay_cli.py`:新增 C7 测试 `--max-rows 1` 严格只导入 1 行(实测 fixture 2 行,只导入 1 行 → rc=0 / parsed=1 / inserted=1)
+  - **P0-2 launchd seal bash bad substitution**:
+    - `scripts/launchd_kickstart_and_seal.sh` L194:`tag ${2af775f}` → 纯文本 `tag 2af775f`(沿 L197 范本)
+    - `tests/scripts/test_launchd_install.py`:新增 D 段 7 cases(D1-D7),D6 重点 lint 守护 — regex 扫描所有 `${...}` 引用,只允许 `${VARNAME}` 形式(VARNAME 以字母/下划线开头),拒收 `${数字...}` 这种 bash 解释为 bad substitution 的形式
+- 撞坑登记:#35 launchd 脚本 shell expansion 陷阱(`tag ${2af775f}` bash 解释为 `${2af775f}` 变量求值 → 报 bad substitution · 修法:纯文本 git hash / 定义 `V010_TAG="2af775f"` 常量再引用 · 防坑:任何"看起来像变量引用"的 git hash / commit short SHA / version number 都用纯文本)
+- 文件:`README.md` 顶部状态加 v0.2.25 段 + `SESSION-STATE.md` 顶部状态加 v0.2.25 + 状态行翻 6/23 + `MODIFICATION-LOG.md` 加本条累计 + `Agent Assistant/memory/cc22000-p0-fixes-2026-06-23.md` 跨项目沉淀
+
+### 2. 风险点
+
+- ⚠️ **9/9 质量门 1 个新增依赖 — 微信/支付宝 CLI 测试覆盖从 7 → 8 cases(C1-C7)**:真账单 spike 时若 CSV 字段名变更,先看测试断言
+- ⚠️ **撞坑 #35 launchd 脚本 shell expansion 陷阱**:任何 commit hash 引用必须纯文本,后续 launchd_seal.sh 加 release commit 引用时也要小心
+- ⚠️ **`--max-rows 1` 真账单 spike 仍依赖用户 4 重防误发手输**:`--confirm yes-i-understand-this-imports-real-bill` + `WECHAT_REAL_IMPORT=1` + `--max-rows 1` + `--count 1`(命令错误时仍会绕过)
+- ⚠️ **mypy tests 13 errors 已知技术债**(沿 v0.2.23 撞坑 #31):本次 P0 修复未触及
+- ⚠️ **2026 解析器待用户真实样本补充**(沿 v0.2.22):本次 P0 修复未触及
+- ⚠️ **integration.py 4125 行拆分**(B 类):本次未触及,延后到「我的AI员工」完成后
+- **P1**: 6/23 W3 真账单 spike(等用户真实 CSV 路径) · mypy tests 13 errors 收口(可选推进)
+- **P2**: 7/1 月度复盘 review 撞坑 #35 + 撞坑 #31 + 2026 解析器 + integration.py 拆分 B 类决策
+- **P3**: 8/1 v0.2.1 release tag 锚定(前置条件 v0.2.25 已就绪)
+
+### 3. 当前项目整体总结
+
+- 进度:**2234 tests + 1 skipped / 9/9 质量门 6/8 实测 ✅ / cc22000 fix(p0) / 工作树 clean**
+- 状态:**v0.2.25 P0 二修 docs 收口已收口,真账单 spike 已具备代码能力(等用户真实 CSV 路径 + 4 重防误发),launchd seal bad substitution 已修复**
+- 风险:6 项已知风险(见上),无新风险
+- 下一步:6/23 周二全链路重启(阶段 6 W3 等真实 CSV;阶段 7 outlook/gmail SMTP 等用户授权/凭据/B 类白名单)
+- 下一棒:用户(6/23 实操触发 + W3 真实 CSV 或 outlook/gmail 授权决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:14 条 / 2026-06-18-23(...+ v0.2.25 P0 二修 docs 收口)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
