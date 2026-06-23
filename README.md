@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.2.29 交易候选 review/export 机制已收口**(2026-06-23 · 小修复)。承接 v0.2.28 L2 sign-lock 后剩余 `candidate_count=367` 需人工 review 的事实,新增 `TransactionStore.list_by_needs_confirm()` 只读热路径 + `scripts/export_transaction_candidates.py` JSONL/CSV 导出脚本,可把 `needs_confirm=1` 的新交易与候选交易成对导出,不导入账单、不修改数据库、不自动合并。验证:36 passed / ruff 0 / CLI help ok。当前仍是 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证；若暂无 CSV,下一步可用导出脚本 review 现有候选。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.29-transaction-candidate-export-2026-06-23.md](docs/v0.2.29-transaction-candidate-export-2026-06-23.md)。
+> **状态**：🎯 **v0.2.29 交易候选 review/export 机制已收口**(2026-06-23 · 小修复)。承接 v0.2.28 L2 sign-lock 后剩余 `candidate_count=367` 需人工 review 的事实,新增 `TransactionStore.list_by_needs_confirm()` 只读热路径 + `scripts/export_transaction_candidates.py` JSONL/CSV 导出脚本,可把 `needs_confirm=1` 的新交易与候选交易成对导出,不导入账单、不修改数据库、不自动合并；导出的 `reports/transaction-candidates*.csv/jsonl` 已加入 `.gitignore`,默认本地 review 不入库。验证:38 passed / ruff 0 / mypy 0 / CLI help ok。当前仍是 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证；若暂无 CSV,下一步可用导出脚本 review 现有候选。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.29-transaction-candidate-export-2026-06-23.md](docs/v0.2.29-transaction-candidate-export-2026-06-23.md)。
 
 ---
 

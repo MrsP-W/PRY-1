@@ -79,12 +79,12 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.29` 交易候选 review/export 机制已关闭(`TransactionStore.list_by_needs_confirm` + `scripts/export_transaction_candidates.py` JSONL/CSV · 承接 v0.2.28 剩余 `candidate_count=367` 需人工 review · 只读导出,不导入/不改库/不自动合并 · 36 passed + ruff 0 + CLI help ok);当前进入 W3 真账单授权等待态(等用户真实微信/支付宝 CSV,只跑 `--max-rows 1`)|
+| **当前阶段** | ✅ `v0.2.29` 交易候选 review/export 机制已关闭(`TransactionStore.list_by_needs_confirm` + `scripts/export_transaction_candidates.py` JSONL/CSV · 承接 v0.2.28 剩余 `candidate_count=367` 需人工 review · 只读导出,不导入/不改库/不自动合并 · 导出 CSV/JSONL 已 `.gitignore` 保护 · 38 passed + ruff 0 + mypy 0 + CLI help ok);当前进入 W3 真账单授权等待态(等用户真实微信/支付宝 CSV,只跑 `--max-rows 1`)|
 | **上一阶段** | ✅ `v0.2.28` L2 fingerprint sign-lock 修复已关闭(commit `36d07ce` · `normalize_fingerprint(..., sign=±1)` + `transaction_adapter.py:192` 显式派生 sign · 已消除反向符号误判风险 · v0.2.27 对照重跑 `candidate_count=367` 未减少,说明剩余候选是同日同金额同商户同方向的合理业务碰撞,需用户 review · 2240 passed / 1 skipped / 88.77% coverage · 纯修复性升级)|
 | **上上一阶段** | ✅ `v0.2.27` W3 真实格式账单 spike 2345 行端到端报告已关闭(commit `d1503ad` · 微信 1200 + 支付宝 1145 = 2345 行 · 真实 2024 字段 + UTF-8 BOM 100% 解析 · needs_confirm=367 = candidate_count=367 · 100 构造跨源 + 267 同方向业务候选 · categorized=1978 / duplicates=0 / failed=0 · 1.62s / 1449 rows/s · 纯 spike + docs,0 src/tests 改动)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.29 聚焦验证:36 passed / ruff 0 / CLI help ok；v0.2.28 全量质量门:2240 passed / 1 skipped / 88.77% coverage / mypy src+tests 0 / ruff 0 / alembic sql 0 / build ok / MD lint 0 |
+| **质量基线** | v0.2.29 聚焦验证:38 passed / ruff 0 / mypy 0 / CLI help ok；v0.2.28 全量质量门:2240 passed / 1 skipped / 88.77% coverage / mypy src+tests 0 / ruff 0 / alembic sql 0 / build ok / MD lint 0 |
 | **下一棒** | W3 真账单 spike(等用户真实 CSV,只导 `--max-rows 1`) → 或先导出 `needs_confirm=1` 候选人工 review → 7/1 月度复盘 review v0.2.27 + v0.2.28 + v0.2.29 三类报告 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00；8/1 v0.2.1 release tag 锚定评估 |
 

@@ -81,6 +81,19 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _validate_cli_args(args: argparse.Namespace) -> None:
+    """CLI 入参预检,失败时返回可读错误而非 DB 打开后的 traceback."""
+    if type(args.limit) is bool or not isinstance(args.limit, int) or args.limit < 1:
+        raise ValueError(f"--limit 必须是 >= 1 的 int,实际 {args.limit!r}")
+    if args.limit > 10000:
+        raise ValueError(f"--limit 必须 <= 10000,实际 {args.limit!r}")
+    if args.source is not None:
+        source = args.source.strip()
+        if not source:
+            raise ValueError("--source 必须是非空字符串")
+        args.source = source
+
+
 def _scalar(value: Any) -> Any:
     """把 DB 标量转成 JSON/CSV 稳定值."""
     if isinstance(value, Decimal):
@@ -153,6 +166,12 @@ def _write_rows(rows: list[dict[str, Any]], *, output_format: str, output_path: 
 
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
+    try:
+        _validate_cli_args(args)
+    except ValueError as e:
+        print(f"参数错误: {e}", file=sys.stderr)
+        return 1
+
     db = Database.open(db_path=args.db_path)
     try:
         engine = make_sqlalchemy_engine(db)

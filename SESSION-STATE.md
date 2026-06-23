@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.29 交易候选 review/export 机制已收口(2026-06-23 · 当前 W3 真账单授权等待态)
 
 > **最后更新**:2026-06-23 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.29 交易候选 review/export 机制已收口**(6/23 · `TransactionStore.list_by_needs_confirm(limit, source_filter)` + `scripts/export_transaction_candidates.py` JSONL/CSV 导出 · 承接 v0.2.28 对照重跑 `candidate_count=367` 未减少,把待确认候选转成可人工 review 的只读产物 · 不导入账单 / 不修改 DB / 不自动合并 · 36 passed / ruff 0 / CLI help ok)。当前 `v0.2.29 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock + candidate export 五通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:✅ **v0.2.29 交易候选 review/export 机制已收口**(6/23 · `TransactionStore.list_by_needs_confirm(limit, source_filter)` + `scripts/export_transaction_candidates.py` JSONL/CSV 导出 · 承接 v0.2.28 对照重跑 `candidate_count=367` 未减少,把待确认候选转成可人工 review 的只读产物 · 不导入账单 / 不修改 DB / 不自动合并 · 导出 CSV/JSONL 已 `.gitignore` 保护 · 38 passed / ruff 0 / mypy 0 / CLI help ok)。当前 `v0.2.29 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock + candidate export 五通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 

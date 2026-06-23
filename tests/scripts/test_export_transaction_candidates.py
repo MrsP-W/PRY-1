@@ -123,3 +123,31 @@ def test_write_rows_jsonl_stdout(monkeypatch) -> None:
     _write_rows([{"tx_id": 1}], output_format="jsonl", output_path=None)
 
     assert json.loads(buf.getvalue()) == {"tx_id": 1}
+
+
+def test_validate_cli_args_rejects_bad_limit_and_blank_source() -> None:
+    """CLI 参数预检先于 DB 打开,避免用户传错参数时出现 traceback."""
+    from argparse import Namespace
+
+    import pytest
+
+    from scripts.export_transaction_candidates import _validate_cli_args
+
+    with pytest.raises(ValueError, match="--limit"):
+        _validate_cli_args(Namespace(limit=0, source=None))
+    with pytest.raises(ValueError, match="--limit"):
+        _validate_cli_args(Namespace(limit=10001, source=None))
+    with pytest.raises(ValueError, match="--source"):
+        _validate_cli_args(Namespace(limit=1, source="   "))
+
+
+def test_validate_cli_args_strips_source() -> None:
+    """source 预检会 strip,后续 Store 层继续做 pattern 严判."""
+    from argparse import Namespace
+
+    from scripts.export_transaction_candidates import _validate_cli_args
+
+    args = Namespace(limit=10, source=" alipay ")
+    _validate_cli_args(args)
+
+    assert args.source == "alipay"
