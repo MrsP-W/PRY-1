@@ -79,12 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.22` W3 真账单 faker dry-run 已关闭(无副作用实操 · 5 维度验证:微信 2022-2025 4/5 通过 + 支付宝 2022-2025 4/5 通过 + fingerprint L2 跨源候选 3 对命中 + categorizer 9 商家归类 + merchants 654 条均匀分布 · 撞坑 = 2026 解析器 NotImplementedError 待用户真实样本补充);当前 `v0.2.22+` / 6/23 实操授权候选(阶段 1-5 + launchd + W3 dry-run 已 GO,阶段 6 W3 等真实 CSV + 阶段 7 outlook/gmail SMTP 等授权 + 凭据 + B 类白名单)|
-| **上一阶段** | ✅ `v0.2.21` 撞坑 #24 二次命中修正 + 选项 C launchd 验证已关闭(诚实修正 v0.2.20 §2 A1-1 plist 数量命令匹配模式错误 + launchctl print 10 维度验证 launchd agent 8 节点完全就绪 + 取消 A3-1 launchctl install 授权项);当前 `v0.2.21+` / 6/23 实操授权候选(阶段 1-5 + launchd 已 GO,阶段 6 W3 + 阶段 7 outlook/gmail SMTP 等用户授权 + CSV + 凭据)|
+| **当前阶段** | ✅ `v0.2.24` dirty docs 收口已关闭(commit `a37c5ed` 43 files / 101 insertions / 101 deletions · 撞坑 #33 软链 target 相对路径深度(3 层 vs 4 层)算错 + 撞坑 #34 误判软链重建反向(D5.5.3 P0 修复已表明软链 → 实际文件是项目既定方向) + 109 处 P0 跨项目断链批量修复(`Agent Assistant/memory/xxx.md` → `L2_memory/[_core|_cross-project]/xxx.md` 47 文件名映射) + 31 处 NOT FOUND 登记技术债(用户 A4 决策 · 不堆 docs-only 后) + CLAUDE.md L18-36 段重写:从'5 软链 + 2 专属' → '7 普通文件 · 沿 D5.5.3 P0 修复' + src/my_ai_employee/agents/*.md 断链修复副产品 4 files);当前 `v0.2.24+` / 工作树 clean / 6/23 实操授权候选(阶段 1-5 + launchd + W3 dry-run 已 GO · 阶段 6 W3 等真实 CSV · 阶段 7 outlook/gmail SMTP 等授权 + 凭据 + B 类白名单)|
+| **上一阶段** | ✅ `v0.2.23` 撞坑 #31 + 9/9 门口径对齐 + 门盲区登记技术债已关闭(commit `5920776` 1 file / +16 -6 · CLAUDE.md L197 `make typecheck` → `make mypy` + 8 处 8/8 → 9/9 + 9/9 质量门表加第 9 行 coverage + 撞坑 #31 mypy 门盲区 13 errors 登记为已知技术债 + 7/1 月度复盘 review 是否收紧门 · 0 src/tests 改动 · 不堆 docs-only)|
+| **上上一阶段** | ✅ `v0.2.22` W3 真账单 faker dry-run 已关闭(无副作用实操 · 5 维度验证:微信 2022-2025 4/5 通过 + 支付宝 2022-2025 4/5 通过 + fingerprint L2 跨源候选 3 对命中 + categorizer 9 商家归类 + merchants 654 条均匀分布 · 撞坑 = 2026 解析器 NotImplementedError 待用户真实样本补充);当前 `v0.2.22+` / 6/23 实操授权候选(阶段 1-5 + launchd + W3 dry-run 已 GO,阶段 6 W3 等真实 CSV + 阶段 7 outlook/gmail SMTP 等授权 + 凭据 + B 类白名单)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | `make test` 2225 passed / 1 skipped / coverage 88.85%；常规 8/8 质量门全绿；deep-dry-run 已沉淀 mypy tests 13 个历史 baseline 错误(撞坑 #31 不阻塞 6/23 阶段 1-5)|
-| **下一棒** | 6/23 全链路重启实操 7 阶段:阶段 1-5 + launchd + W3 dry-run 已 GO;阶段 6 W3 等真实 CSV(沿 v0.2.22 dry-run 链路);阶段 7 Outlook/Gmail SMTP 需用户授权 + 凭据 + B 类白名单决策 |
+| **下一棒** | 6/23 实操 7 阶段授权候选(等用户真实 CSV/授权/凭据/白名单) → 7/1 月度复盘 12:00 启动 → 17:00 收官 → 8/1 v0.2.1 release tag 锚定评估;撞坑史累计 = 6 类(撞坑恢复 + SIGKILL 137 + ruff PATH + classifier 双重混淆 + pwd 漂移 + **docs 假设错误类含 #33 软链 4 层深度 + #34 软链重建反向**);撞坑史新增 v0.2.24:撞坑 #33(软链 target 4 层 vs 3 层) + 撞坑 #34(误判软链重建反向 → 沿 D5.5.3 P0 修复软链 → 实际文件是项目既定方向) |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00；8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
