@@ -79,12 +79,12 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.21` 撞坑 #24 二次命中修正 + 选项 C launchd 验证已关闭(诚实修正 v0.2.20 §2 A1-1 plist 数量命令匹配模式错误 + launchctl print 10 维度验证 launchd agent 8 节点完全就绪 + 取消 A3-1 launchctl install 授权项);当前 `v0.2.21+` / 6/23 实操授权候选(阶段 1-5 + launchd 已 GO,阶段 6 W3 + 阶段 7 outlook/gmail SMTP 等用户授权 + CSV + 凭据)|
-| **上一阶段** | ✅ `v0.2.20` 6/23 全链路重启实操前复核结果 docs-only 已关闭(5 校验命令实测 5/5 通过 → GO · A0-A4 5 步实操 · 不扩展新范本只记录结果)；已由 `v0.2.21` 修正 launchd plist 匹配口径 |
+| **当前阶段** | ✅ `v0.2.22` W3 真账单 faker dry-run 已关闭(无副作用实操 · 5 维度验证:微信 2022-2025 4/5 通过 + 支付宝 2022-2025 4/5 通过 + fingerprint L2 跨源候选 3 对命中 + categorizer 9 商家归类 + merchants 654 条均匀分布 · 撞坑 = 2026 解析器 NotImplementedError 待用户真实样本补充);当前 `v0.2.22+` / 6/23 实操授权候选(阶段 1-5 + launchd + W3 dry-run 已 GO,阶段 6 W3 等真实 CSV + 阶段 7 outlook/gmail SMTP 等授权 + 凭据 + B 类白名单)|
+| **上一阶段** | ✅ `v0.2.21` 撞坑 #24 二次命中修正 + 选项 C launchd 验证已关闭(诚实修正 v0.2.20 §2 A1-1 plist 数量命令匹配模式错误 + launchctl print 10 维度验证 launchd agent 8 节点完全就绪 + 取消 A3-1 launchctl install 授权项);当前 `v0.2.21+` / 6/23 实操授权候选(阶段 1-5 + launchd 已 GO,阶段 6 W3 + 阶段 7 outlook/gmail SMTP 等用户授权 + CSV + 凭据)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | `make test` 2225 passed / 1 skipped / coverage 88.85%；常规 8/8 质量门全绿；deep-dry-run 已沉淀 mypy tests 13 个历史 baseline 错误(撞坑 #31 不阻塞 6/23 阶段 1-5)|
-| **下一棒** | 6/23 全链路重启实操 7 阶段:阶段 1-5 已实测通过(v0.2.20 5/5 ✅),可立即跑实操;launchd agent 8 节点已就绪(v0.2.21 选项 C 验证);阶段 6 W3 真账单需真实 CSV;阶段 7 Outlook/Gmail SMTP 需用户授权 + 凭据 + B 类白名单决策 |
+| **下一棒** | 6/23 全链路重启实操 7 阶段:阶段 1-5 + launchd + W3 dry-run 已 GO;阶段 6 W3 等真实 CSV(沿 v0.2.22 dry-run 链路);阶段 7 Outlook/Gmail SMTP 需用户授权 + 凭据 + B 类白名单决策 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00；8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -1185,4 +1185,45 @@
 ---
 
 > **累计**:12 条 / 2026-06-18-22(...+ v0.2.21 撞坑 #24 二次命中修正 + 选项 C launchd 验证)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 2026-06-22 v0.2.22 W3 真账单 faker dry-run(无副作用实操 · 不堆 docs-only · 不造真账单结论)
+
+### 1. 本次修改
+
+- docs(status): v0.2.22 W3 真账单 faker dry-run(用户推荐 W3 授权口 / 5 维度验证 / 撞坑识别 = 2026 解析器待真实样本)
+- 范围(5 维度 dry-run,无 DB 写操作):
+  - **D-1 微信 faker 解析 4/5 通过**:wechat_2022/2023/2024 → version=2024,10 笔/版本,parse 全 OK · wechat_2025 → version=2025,10 笔 OK · wechat_2026 → 撞坑 NotImplementedError("2026 微信账单 CSV 字段待用户真实样本补充,D6.1 InMemory 模拟先推")
+  - **D-2 支付宝 faker 解析 4/5 通过**:alipay_2022/2023/2024 → version=2024,10 笔/版本 OK · alipay_2025 → version=2025,10 笔 OK · alipay_2026 → 撞坑 NotImplementedError("2026 支付宝账单 CSV 字段待用户真实样本补充,D7.1 InMemory 模拟先推")
+  - **D-3 fingerprint L2 跨源候选 3 对全命中**:wechat_2024 + alipay_2024 同日同金额同商家 → 同 fp(fp=`2586c12c2eb3ba3ff6b9...` 星巴克 + `eadd66e82e6a29527cae...` 美团外卖 + `100845848aa28ba2d84e...` 工资发放)
+  - **D-4 categorizer 9 商家全部归类 + merchants 654 条**:5 分类均匀分布(transport 122 + home 121 + other 151 + dining 128 + shopping 132)/ 9 测试 cp 全部归类正确(dining × 3 + transport + home + other × 4)
+  - **D-5 撞坑 #21 pwd 漂移第五次复发 + RawTransaction 字段名差异**:本次实测跨项目 Bash 3 次显式 cd / RawTransaction 字段是 `date` 不是 `transaction_date`(沿 D7.1 跨源共用 RawTransaction)
+- 撞坑识别:
+  - **2026 解析器待用户真实样本补充**(D6.1 InMemory 已覆盖,真实样本决策 B 类延后)
+  - **RawTransaction 字段名是 `date` 而非 `transaction_date`**(沿 D7.1 跨源共用 RawTransaction 范本,D6.5 transaction_adapter 注释修正)
+- 文件:`SESSION-STATE.md` 4 处同步(标题加 v0.2.22 + 状态行加 v0.2.22 + 当前启动候选切到 v0.2.22+ + 时间线加 6/22 深夜 v0.2.22 行) + `MODIFICATION-LOG.md` 加本条累计 + `README.md` 加 v0.2.22 链接 + 当前阶段表 v0.2.21 → v0.2.22
+
+### 2. 风险点
+
+- ⚠️ **2026 解析器待用户真实样本补充**:D6.1 wechat 2026 + D7.1 alipay 2026 都是 NotImplementedError,真实样本决策 B 类延后(沿 [[b-class-deferral-2026-06-09]])
+- ⚠️ **RawTransaction 字段名混淆**:`date` vs `transaction_date` — D6.5 transaction_adapter 注释需修正,7/1 月度复盘 review
+- ⚠️ **撞坑 #21 pwd 漂移第五次复发**:7 文件夹重构后顶层路径相似,跨项目 Bash 必须显式 cd(本轮 3 次显式 cd 修复)
+- ⚠️ **merchants 654 条但 docs/v0.1-launch-plan.md 说 500**:实际 654 条去重,plan docs 说 500 不准确,7/1 月度复盘 review 是否更新 docs
+- **P1**: 6/23 实操阶段 1-5 + launchd + W3 dry-run 已 GO,阶段 6 W3 等真实 CSV
+- **P2**: 7/1 月度复盘 review 2026 解析器待补 + merchants 654 vs 500 docs 不一致 + RawTransaction 字段名混淆
+- **P3**: 8/1 v0.2.1 release tag 锚定前置条件 v0.2.22 已就绪(W3 解析链路 4/5 验证 + L2 跨源命中 + categorizer + merchants)
+
+### 3. 当前项目整体总结
+
+- 进度:**2225 tests / 8/8 质量门 baseline 6/8 ✅ 实测 / 端午不休息第 19 commits(v0.2.22 阶段)**
+- 状态:**v0.2.22 W3 真账单 faker dry-run 收口,5 维度验证通过 + 2026 解析器撞坑识别 + fingerprint L2 跨源命中 + categorizer 全归类 + merchants 654 条均匀分布,6/23 实操阶段 1-5 + launchd + W3 dry-run 准备完毕**
+- 风险:4 项已知风险(见上),无新风险
+- 下一步:6/23 周二全链路重启 7 阶段(阶段 1-5 + launchd + W3 dry-run 已 GO + 阶段 6 W3 等真实 CSV + 阶段 7 outlook/gmail SMTP 等授权)
+- 下一棒:用户(6/23 实操触发 + W3 真实 CSV 或 outlook/gmail 授权决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:13 条 / 2026-06-18-22(...+ v0.2.22 W3 真账单 faker dry-run)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
