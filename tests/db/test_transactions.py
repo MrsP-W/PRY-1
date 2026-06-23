@@ -353,6 +353,72 @@ def test_list_by_source_since_date_filter(store, valid_tx_params: dict) -> None:
     assert "old_001" not in ext_ids
 
 
+# ===== Segment 6.5: list_by_needs_confirm(v0.2.29 review/export)=====
+
+
+def test_list_by_needs_confirm_returns_pending_only_ordered_and_filterable(
+    store, valid_tx_params: dict
+) -> None:
+    """Case 21.5 — 只返回 needs_confirm=1,按 imported_at_ms DESC,可 source 过滤."""
+    candidate = store.insert(
+        **{
+            **valid_tx_params,
+            "external_transaction_id": "candidate-wechat",
+            "imported_at_ms": 1000,
+        }
+    )
+
+    store.insert(
+        **{
+            **valid_tx_params,
+            "source": "alipay",
+            "external_transaction_id": "pending-old",
+            "needs_confirm": True,
+            "candidate_match_id": candidate.id,
+            "imported_at_ms": 2000,
+        }
+    )
+    newest = store.insert(
+        **{
+            **valid_tx_params,
+            "source": "alipay",
+            "external_transaction_id": "pending-new",
+            "needs_confirm": True,
+            "candidate_match_id": candidate.id,
+            "imported_at_ms": 3000,
+        }
+    )
+    store.insert(
+        **{
+            **valid_tx_params,
+            "source": "wechat",
+            "external_transaction_id": "not-pending",
+            "needs_confirm": False,
+            "imported_at_ms": 4000,
+        }
+    )
+
+    rows = store.list_by_needs_confirm()
+    assert [r.external_transaction_id for r in rows] == ["pending-new", "pending-old"]
+    assert rows[0].id == newest.id
+
+    rows = store.list_by_needs_confirm(source_filter="alipay", limit=1)
+    assert len(rows) == 1
+    assert rows[0].external_transaction_id == "pending-new"
+
+
+def test_list_by_needs_confirm_validates_arguments(store) -> None:
+    """Case 21.6 — list_by_needs_confirm 严判 limit/source_filter."""
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_needs_confirm(limit=0)
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_needs_confirm(limit=10001)
+    with pytest.raises(ValueError, match="limit 必须是"):
+        store.list_by_needs_confirm(limit=True)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="source 必填"):
+        store.list_by_needs_confirm(source_filter="")
+
+
 # ===== Segment 7: find_candidates_by_fingerprint(2 tests)====
 
 

@@ -774,6 +774,41 @@ class TransactionStore:
             stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
             return list(session.execute(stmt).scalars().all())
 
+    def list_by_needs_confirm(
+        self,
+        *,
+        limit: int = 100,
+        source_filter: str | None = None,
+    ) -> list[Transaction]:
+        """列出 L2 跨源待人工确认交易(只读 review/export 热路径).
+
+        业务语义:
+            - W3 真账单 spike 后,把 needs_confirm=1 的候选导出给用户 review
+            - 不修改 status / needs_confirm / candidate_match_id,只读查询
+            - 按 imported_at_ms DESC 排序,优先处理最新导入的真实账单候选
+
+        Args:
+            limit: 返回上限 [1, 10000]
+            source_filter: 可选限定新交易 source,如 "wechat" / "alipay"
+
+        Returns:
+            needs_confirm=1 的 Transaction 列表
+        """
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 10000:
+            raise ValueError(
+                f"limit 必须是 [1, 10000] 的 int(非 bool),"
+                f"实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        if source_filter is not None:
+            source_filter = self._validate_source(source_filter)
+
+        with self._session_factory() as session:
+            stmt = select(Transaction).where(Transaction.needs_confirm == 1)
+            if source_filter is not None:
+                stmt = stmt.where(Transaction.source == source_filter)
+            stmt = stmt.order_by(Transaction.imported_at_ms.desc()).limit(limit)
+            return list(session.execute(stmt).scalars().all())
+
     def find_candidates_by_fingerprint(
         self,
         fingerprint: str,

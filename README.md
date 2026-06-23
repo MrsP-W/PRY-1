@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.2.28 L2 fingerprint sign-lock 修复已收口**(2026-06-23 · 报告锚 `36d07ce` · 纯修复性升级)。v0.2.25 P0 二修 + v0.2.26 虚拟 spike + v0.2.27 真实格式 spike + **v0.2.28 L2 sign-lock 修复**全链路验证通过:`normalize_fingerprint` 加可选 `sign: int | None = None` 参数,transaction_adapter.py:192 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`),已消除反向符号误判风险；v0.2.27 对照重跑 `candidate_count=367` 未减少,说明剩余候选是同日同金额同商户同方向的合理业务碰撞,需用户 review。9/9 质量门全绿(2240 passed / 88.77% coverage),D6.2 + D7.2 + D6.6 已有测试零破坏,5 处现有 case 升级 `sign=+1` 与业务对齐。当前进入 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1/v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。详见 [docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md](docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md)。
+> **状态**：🎯 **v0.2.29 交易候选 review/export 机制已收口**(2026-06-23 · 小修复)。承接 v0.2.28 L2 sign-lock 后剩余 `candidate_count=367` 需人工 review 的事实,新增 `TransactionStore.list_by_needs_confirm()` 只读热路径 + `scripts/export_transaction_candidates.py` JSONL/CSV 导出脚本,可把 `needs_confirm=1` 的新交易与候选交易成对导出,不导入账单、不修改数据库、不自动合并。验证:36 passed / ruff 0 / CLI help ok。当前仍是 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证；若暂无 CSV,下一步可用导出脚本 review 现有候选。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.29-transaction-candidate-export-2026-06-23.md](docs/v0.2.29-transaction-candidate-export-2026-06-23.md)。
 
 ---
 
