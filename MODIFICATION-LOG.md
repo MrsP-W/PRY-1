@@ -1309,3 +1309,48 @@
 
 > **累计**:15 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike 2345 行)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 16. 2026-06-23 · v0.2.27 W3 真实账单 spike 2345 行(累计 15 → 16)
+
+### 1. 本次修改
+
+- **新文件**:`docs/v0.2.27-w3-realistic-bill-spike-2026-06-23.md`(7 段报告,目标/设计/跑通结果/撞坑观察/沿用边界/产出文件/下一棒)
+  - 用户原话:"无法提供真实账单,仿造真实账单进行测试"
+  - **真实 2024 格式字段**(沿 wechat_csv.py:140-145 + alipay_csv.py:149-155)+ UTF-8 BOM + 中文列名
+  - **5 重防误发**(v0.2.27 升级:env + 文件存在 + confirm + max-rows + mode)
+  - 微信 1200/支付宝 1145 = 2345 行全跑通
+  - needs_confirm=367 = candidate_count=367 完美命中(100 构造跨源 + 267 偶然跨源 L2)
+  - 1.62s 总耗时 / 1449 rows/s 平均吞吐
+  - 撞坑 #40 `_gen_alipay_tx_id` 漏 idx 参数 + 撞坑 #41 `/tmp/` pwd 漂移 + 撞坑 #36 沿用
+- **新文件**:`/tmp/spike_w3_realistic_faker.py`(2345 行真实格式 CSV 生成器,random.seed=42)
+- **新文件**:`/tmp/spike_w3_realistic.py`(spike runner,5 重防误发)
+- **新文件**:`/tmp/spike_w3_realistic_wechat.csv` + `/tmp/spike_w3_realistic_alipay.csv`(真实格式 + 仿造数据)
+- **新文件**:`/tmp/spike_w3_realistic.db`(临时 SQLite,可手动删)
+- **README.md** + **SESSION-STATE.md** + **MODIFICATION-LOG.md**:顶部状态同步 v0.2.27
+
+### 2. 风险点
+
+- ⚠️ **撞坑 #40(本轮新增) `_gen_alipay_tx_id` 漏 idx 参数**:函数定义 3 参数但调用时漏 `prefix` → TypeError → 修法:统一函数签名 `def _gen_alipay_tx_id(rng, prefix, idx)`,调用处 `_gen_alipay_tx_id(rng, "alipay", rows_written)` 对齐微信范本
+- ⚠️ **撞坑 #41(本轮新增) `/tmp/` pwd 漂移**:`/tmp/` 在 macOS 是软链 → 实际 `/private/tmp/`,`uv run --project` 需要 cwd 在项目根 → 修法:沿 v0.2.26 范本 `os.chdir(PROJECT_ROOT)` 或显式 `cd /Users/wei/.../我的AI员工 && uv run python /tmp/...`
+- ⚠️ **撞坑 #36(沿用) 跨源构造必须严格 lock sign**:v0.2.26 已修,本次沿用
+- ⚠️ **偶然跨源 L2 命中偏高**:`candidate_count=367` 远超构造的 100 对,根因 `normalize_fingerprint` 用 `abs(amount)` 而非 `amount_with_sign`,真实账单场景下偶然跨源(同 (date, abs(amount), counterparty) 但 sign 不同)也被命中 → 修法候选:`normalize_fingerprint` 升级 `(date, amount_with_sign, counterparty)` → **B 类决策延后处理**(per b-class-deferral-2026-06-09.md)
+- ⚠️ **真账单 spike 仍依赖用户授权**:v0.2.27 已用真实格式字段验证 W3 链路全跑通,**真账单 spike 等用户手动导出真实 CSV** 才可启动
+- **P1**: W3 真账单 spike(等用户真实 CSV 路径)
+- **P2**: L2 fingerprint sign-lock 升级(B 类,等用户决策)
+- **P3**: 7/1 月度复盘 review v0.2.26 + v0.2.27 双 spike 报告
+- **P4**: 8/1 v0.2.1 release tag 锚定(本次真实格式 spike 验证了 W3 链路可行性 + 真实字段兼容性)
+
+### 3. 当前项目整体总结
+
+- 进度:**2345 行 W3 真实 spike 跑通 1.62s 1449 rows/s / needs_confirm=367 = candidate_count=367 完美命中 / 真实 2024 格式 + UTF-8 BOM 100% 解析 / 5 重防误发全过**
+- 状态:**v0.2.27 W3 真实账单 spike 2345 行端到端报告已收口(纯 spike + docs),真账单 spike 等用户真实 CSV**
+- 风险:6 项已知风险(见上),无新风险
+- 下一步:W3 真账单 spike(等真实 CSV) + Outlook/Gmail SMTP(等授权) + P1-1 mypy tests 13 errors(可选) + L2 sign-lock 升级(B 类延后)
+- 下一棒:用户(W3 真 CSV 或 outlook/gmail 授权决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:16 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike 双 2345 行)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
