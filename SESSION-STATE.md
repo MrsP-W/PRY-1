@@ -1,4 +1,4 @@
-# SESSION-STATE — v0.2.27 W3 真实账单 spike 2345 行端到端报告已收口(2026-06-23 · 报告锚待 commit · 当前 W3 真账单授权等待态)
+# SESSION-STATE — v0.2.27 W3 真实账单 spike 2345 行端到端报告已收口(2026-06-23 · 报告锚 d1503ad · 当前 W3 真账单授权等待态)
 
 > **最后更新**:2026-06-23 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
 > **状态**:✅ **v0.2.27 W3 真实账单 spike 2345 行端到端报告 docs-only 已收口**(6/23 · 微信 1200 + 支付宝 1145 = 2345 行 · 真实 2024 格式字段 + UTF-8 BOM + 中文列名 100% 解析 · 5 重防误发(env/文件/confirm/max-rows/mode)全过 · needs_confirm=367 = candidate_count=367 完美命中 · 100 构造跨源 + 267 偶然跨源 L2 命中 · categorized=1978/duplicates=0/failed=0 · 1.62s 总耗时 · 1449 rows/s 平均吞吐 · 撞坑 #40 `_gen_alipay_tx_id` 漏 idx 参数 + 撞坑 #41 `/tmp/` pwd 漂移再触发 · 撞坑 #36 跨源 lock sign 沿用 · 纯 spike + docs)。当前 `v0.2.27 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike 三通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单/ 6/23 P1-1 mypy tests 13 errors 收口(可选推进)。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1` tag、不打 `v0.2.25/v0.2.26/v0.2.27` tag。
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.26 W3 虚拟账单 spike 2345 行已关闭(2026-06-23)**,**下一步进入 W3 真账单授权等待态** — 真账单 spike 需要用户提供真实微信/支付宝 CSV,并仅以 `--max-rows 1` 小样本验证；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
+**当前启动候选**:**v0.2.27 W3 真实格式账单 spike 2345 行已关闭(2026-06-23)**,**下一步进入 W3 真账单授权等待态** — 真账单 spike 需要用户提供真实微信/支付宝 CSV,并仅以 `--max-rows 1` 小样本验证；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
