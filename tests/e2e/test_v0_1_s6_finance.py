@@ -219,21 +219,40 @@ def test_s6_cross_source_dedup(session_factory: sessionmaker[Session]) -> None:
     expected_alipay = len(alipay_rows)
     from my_ai_employee.core.fingerprint import normalize_fingerprint
 
-    wechat_fps = {
-        normalize_fingerprint(row.date, row.amount, row.counterparty) for row in wechat_rows
+    wechat_fps_unused = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1)
+        for row in wechat_rows
     }
-    alipay_fps = {
-        normalize_fingerprint(row.date, row.amount, row.counterparty) for row in alipay_rows
+    del wechat_fps_unused  # noqa: F841 — 仅占位防 ruff F841,实际计算用 wechat_pos_fps
+    alipay_fps_unused = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1)
+        for row in alipay_rows
+    }
+    del alipay_fps_unused  # noqa: F841
+    # v0.2.28 L2 sign-lock:wechat/alipay rows 各自派生 sign(type=支出→+1 / 收入→-1)
+    # 计算期望命中数时,wechat_rows 中 sign=+1 的 fp 与 alipay_rows 中 sign=+1 的 fp 才会命中
+    # (sign=-1 的行不参与跨源比较,因为 sign 维度锁死)
+    wechat_pos_fps = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1)
+        for row in wechat_rows
+        if row.type == "支出"
+    }
+    alipay_pos_fps = {
+        normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1)
+        for row in alipay_rows
+        if row.type == "支出"
     }
     expected_alipay_candidates = sum(
         1
         for row in alipay_rows
-        if normalize_fingerprint(row.date, row.amount, row.counterparty) in wechat_fps
+        if row.type == "支出"
+        and normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1) in wechat_pos_fps
     )
     expected_wechat_candidates = sum(
         1
         for row in wechat_rows
-        if normalize_fingerprint(row.date, row.amount, row.counterparty) in alipay_fps
+        if row.type == "支出"
+        and normalize_fingerprint(row.date, row.amount, row.counterparty, sign=+1) in alipay_pos_fps
     )
 
     # wechat:单源样本,无跨源候选 → 全 categorized

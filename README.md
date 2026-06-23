@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.2.27 W3 真实账单 spike 2345 行端到端报告已收口**(2026-06-23 · 报告锚 `d1503ad` · 纯 spike + docs,0 src/tests 改动)。v0.2.25 P0 二修 + v0.2.26 虚拟 spike + **v0.2.27 真实格式 spike** 全链路验证通过:微信 1200/支付宝 1145 = 2345 行,UTF-8 BOM + 中文列名 + 真实 2024 字段(交易时间/交易类型/收/付/.../付款时间/交易分类/收/支/...)100% 解析,跨源 L2 命中 367 对(100 构造 + 267 偶然),5 重防误发(env/文件/confirm/max-rows/mode)全过。当前进入 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1/v0.2.25/v0.2.26/v0.2.27` tag。详见 [docs/v0.2.27-w3-realistic-bill-spike-2026-06-23.md](docs/v0.2.27-w3-realistic-bill-spike-2026-06-23.md)。
+> **状态**：🎯 **v0.2.28 L2 fingerprint sign-lock 修复已收口**(2026-06-23 · 报告锚待 commit · 纯修复性升级)。v0.2.25 P0 二修 + v0.2.26 虚拟 spike + v0.2.27 真实 spike + **v0.2.28 L2 sign-lock 修复**全链路验证通过:`normalize_fingerprint` 加可选 `sign: int | None = None` 参数,transaction_adapter.py:192 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`),消除 v0.2.27 暴露的 267 对偶然跨源 L2 命中风险(剩余 367 候选是真实业务碰撞,需用户 review)。9/9 质量门全绿(2240 passed / 88.77% coverage),D6.2 + D7.2 + D6.6 已有测试零破坏,5 处现有 case 升级 `sign=+1` 与业务对齐。当前进入 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1/v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。详见 [docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md](docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md)。
 
 ---
 

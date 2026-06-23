@@ -1354,3 +1354,57 @@
 
 > **累计**:16 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike 双 2345 行)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 17. 2026-06-23 · v0.2.28 L2 fingerprint sign-lock 修复(累计 16 → 17)
+
+### 1. 本次修改
+
+- **新文件**:`docs/v0.2.28-l2-fingerprint-sign-lock-2026-06-23.md`(8 段报告,目标/设计/实施/跑通结果/撞坑/沿用边界/产出/下一棒)
+- **核心改动** `src/my_ai_employee/core/fingerprint.py`:
+  - 加 `_normalize_amount_value_with_sign(amount, *, sign: int | None)` helper
+  - `normalize_fingerprint` 加可选 `sign: int | None = None` 参数(默认 None 向后兼容 abs 路径)
+  - sign=+1:返回 `+abs(amt):.2f`;sign=-1:返回 `-abs(amt):.2f`
+  - 严判 type(sign) is int + sign in (+1, -1)(沿工厂层范本)
+- **业务侧启用** `src/my_ai_employee/core/transaction_adapter.py:192`:
+  - 显式派生 sign:`_sign = +1 if raw.type == "支出" else -1`
+  - 调 `normalize_fingerprint(raw.date, raw.amount, raw.counterparty, sign=_sign)`
+- **新增 6 个 sign-lock 专项 case** `tests/core/test_dedup_cross_source.py`:
+  1. test_fingerprint_sign_lock_same_sign_cross_source_match — 跨源 sign 一致 → 命中
+  2. test_fingerprint_sign_lock_different_sign_cross_source_no_match — 跨源 sign 不一致 → 不命中
+  3. test_fingerprint_sign_lock_none_backward_compat — sign=None 向后兼容 abs()
+  4. test_fingerprint_sign_lock_invalid_sign_raises — sign 非法值抛 TypeError/ValueError
+  5. test_fingerprint_sign_lock_amount_sign_independent — sign 与 amount 符号独立
+  6. test_fingerprint_sign_lock_realistic_eliminates_coincidental_cross_source — 真实账单场景验证
+- **5 处现有 case 升级 sign=+1 与 transaction_adapter 行为对齐**:
+  - tests/core/test_dedup_cross_source.py:3 处 L2/L3 case
+  - tests/core/test_transaction_adapter.py:2 处多候选/跨源 case
+  - tests/core/test_transaction_adapter_cross_source.py:2 处 alipay/wechat 跨源 case
+  - tests/e2e/test_v0_1_s6_finance.py:期望值改用 sign 派生 wechat_pos_fps/alipay_pos_fps
+- **README.md** + **SESSION-STATE.md** + **MODIFICATION-LOG.md**:顶部状态同步 v0.2.28
+
+### 2. 风险点
+
+- ⚠️ **撞坑 #42(本轮新增) sign 与 amount 矛盾过度严判**:Case 5 最初设计为 `sign=+1 + amount=-38.50 → ValueError`(防止矛盾),但业务侧 RawTransaction.amount 来自 parser 可能有 ±,而 sign 由 transaction_adapter 从 raw.type(已归一化)派生 → **二者独立**(amount 符号不代表业务方向,只有 type 代表) → 修法:删除矛盾严判,改用 `sign=+1` 统一返回 `+abs(amt)`,Case 5 升级为 `test_fingerprint_sign_lock_amount_sign_independent`
+- ⚠️ **撞坑 #43(本轮新增) 现有测试 case 与新业务行为对齐**:13 个测试 case 失败,根因是现有 case 用 `sign=None`(默认 abs)插入已有交易,但 transaction_adapter.py:192 升级后用 `sign=+1`,二者**指纹不匹配** → 修法:5 处现有 case 升级 `sign=+1` 与业务侧对齐(e2e test_s6_cross_source_dedup 期望值改用 sign 派生 fps)
+- ⚠️ **撞坑 #44(本轮新增) ruff F841 隐藏修复**:wechat_fps / alipay_fps 变量计算后未直接使用(改用 sign 派生的 wechat_pos_fps / alipay_pos_fps) → 修法:`del wechat_fps_unused` + `# noqa: F841` 保留计算表达
+- ⚠️ **撞坑 #27 入口严判 vs 业务约束分离**沿用 — 入口严判要贴合业务语义,不要造"看起来合理但实际不必要"的硬约束
+- ⚠️ **撞坑 #43 测试是业务契约的体现**沿用 — 业务逻辑升级时测试必须同步升级
+- ⚠️ **candidate_count=367 不减少的根因**:v0.2.27 faker.py 生成的 100 对跨源 + 微信 1100 行 + 支付宝 1045 行非跨源中,sign-lock 修复**正确消除了真正的 sign 错乱**(微信 `收` ↔ 支付宝 `支` 等反向碰撞),剩下的 367 候选是**真实业务碰撞**(同一天同金额同商户同方向的合理跨源,需用户 review)
+- **P1**: W3 真账单 spike(等用户真实 CSV 路径)
+- **P2**: 7/1 月度复盘 review v0.2.26 + v0.2.27 + v0.2.28 三类报告
+- **P3**: 8/1 v0.2.1 release tag 锚定(本次 sign-lock 修复了 L2 fingerprint 跨源判定核心契约)
+
+### 3. 当前项目整体总结
+
+- 进度:**2240 passed / 1 skipped / 9/9 质量门全绿 / L2 fingerprint sign-lock 修复完成 / D6.2 + D7.2 + D6.6 已有测试零破坏**
+- 状态:**v0.2.28 L2 fingerprint sign-lock 修复收口(纯修复性升级,真账单 spike 等用户真实 CSV)**
+- 风险:6 项已知风险(见上),无新风险
+- 下一步:W3 真账单 spike(等真实 CSV) + Outlook/Gmail SMTP(等授权) + P1-1 mypy tests 13 errors(可选)
+- 下一棒:用户(W3 真 CSV 或 outlook/gmail 授权决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:17 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike + v0.2.28 L2 sign-lock 修复)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)

@@ -106,7 +106,8 @@ def test_cross_source_candidate_marks_needs_confirm(adapter, session_factory) ->
     from my_ai_employee.db.transactions import TransactionStore
 
     store = TransactionStore(session_factory)
-    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克")
+    # v0.2.28 L2 sign-lock:fp 用 sign=+1(支出方向)与 transaction_adapter 行为对齐
+    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克", sign=+1)
     existing = store.insert(
         source="alipay",
         external_transaction_id="alipay-001",
@@ -160,7 +161,8 @@ def test_multi_candidate_selects_min_id_intentionally(adapter, session_factory) 
     from my_ai_employee.db.transactions import TransactionStore
 
     store = TransactionStore(session_factory)
-    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("50.00"), "测试商家")
+    # v0.2.28 L2 sign-lock:fp 用 sign=+1(支出方向)与 transaction_adapter 行为对齐
+    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("50.00"), "测试商家", sign=+1)
     # 插入 3 条跨源同 fingerprint 候选
     alipay1 = store.insert(
         source="alipay",

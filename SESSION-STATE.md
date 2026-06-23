@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.27 W3 真实账单 spike 2345 行端到端报告已收口(2026-06-23 · 报告锚 d1503ad · 当前 W3 真账单授权等待态)
+# SESSION-STATE — v0.2.28 L2 fingerprint sign-lock 修复已收口(2026-06-23 · 报告锚待 commit · 当前 W3 真账单授权等待态)
 
 > **最后更新**:2026-06-23 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.27 W3 真实账单 spike 2345 行端到端报告 docs-only 已收口**(6/23 · 微信 1200 + 支付宝 1145 = 2345 行 · 真实 2024 格式字段 + UTF-8 BOM + 中文列名 100% 解析 · 5 重防误发(env/文件/confirm/max-rows/mode)全过 · needs_confirm=367 = candidate_count=367 完美命中 · 100 构造跨源 + 267 偶然跨源 L2 命中 · categorized=1978/duplicates=0/failed=0 · 1.62s 总耗时 · 1449 rows/s 平均吞吐 · 撞坑 #40 `_gen_alipay_tx_id` 漏 idx 参数 + 撞坑 #41 `/tmp/` pwd 漂移再触发 · 撞坑 #36 跨源 lock sign 沿用 · 纯 spike + docs)。当前 `v0.2.27 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike 三通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单/ 6/23 P1-1 mypy tests 13 errors 收口(可选推进)。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1` tag、不打 `v0.2.25/v0.2.26/v0.2.27` tag。
+> **状态**:✅ **v0.2.28 L2 fingerprint sign-lock 修复已收口**(6/23 · `normalize_fingerprint` 加可选 `sign: int | None = None` 参数 + `transaction_adapter.py:192` 显式派生 sign(`raw.type="支出"→+1 / "收入"→-1`)· 消除 v0.2.27 暴露的 267 对偶然跨源 L2 命中风险(实际剩余 367 候选是真实业务碰撞,需用户 review)· 9/9 质量门全绿(2240 passed / 88.77% coverage)· D6.2 + D7.2 + D6.6 已有测试零破坏· 6 个 sign-lock 专项 case + 5 处现有 case 升级 `sign=+1` 与业务对齐· 撞坑 #42 sign 与 amount 矛盾过度严判 + 撞坑 #43 现有测试与新业务对齐 + 撞坑 #44 ruff F841 隐藏修复· 纯修复性升级 0 业务改动)。当前 `v0.2.28 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock 修复四通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单/ 6/23 P1-1 mypy tests 13 errors 收口(可选推进)。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.0/v0.2.1` tag、不打 `v0.2.25/v0.2.26/v0.2.27/v0.2.28` tag。
 
 ---
 

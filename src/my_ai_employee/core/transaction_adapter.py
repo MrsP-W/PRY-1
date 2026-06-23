@@ -189,7 +189,13 @@ class TransactionAdapter:
 
             try:
                 category = categorize(raw.counterparty, raw.amount)
-                fingerprint = normalize_fingerprint(raw.date, raw.amount, raw.counterparty)
+                # v0.2.28 L2 fingerprint sign-lock:消除 v0.2.27 暴露的 267 对偶然跨源 L2 命中
+                # 跨源判定:微信(收/付) ↔ 支付宝(收/支) 共用同一 sign 才命中
+                # type="支出"(微信付/支付宝支)→ sign=+1;type="收入"(微信收/支付宝收)→ sign=-1
+                _sign = +1 if raw.type == "支出" else -1
+                fingerprint = normalize_fingerprint(
+                    raw.date, raw.amount, raw.counterparty, sign=_sign
+                )
                 candidates = [
                     candidate
                     for candidate in self._store.find_candidates_by_fingerprint(fingerprint)

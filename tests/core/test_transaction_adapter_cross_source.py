@@ -116,12 +116,15 @@ def test_cross_source_alipay_triggers_wechat_candidate(adapter, session_factory)
     """Case 3 — alipay 导入触发 wechat 已有候选:L2 命中 + needs_confirm 标记.
 
     D7 关键验证:跨源去重链路贯通(alipay → wechat 候选)。
+    v0.2.28 升级:fp_existing 用 sign=+1(支出方向),与 alipay 导入时 transaction_adapter 派生
+    的 sign=+1 一致,确保 L2 fingerprint 命中。
     """
     from my_ai_employee.core.fingerprint import normalize_fingerprint
     from my_ai_employee.db.transactions import TransactionStore
 
     store = TransactionStore(session_factory)
-    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克咖啡(国贸店)")
+    # v0.2.28 L2 sign-lock:支付宝 `支` 对应 type=支出 → sign=+1,fp_existing 必须用相同 sign
+    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克咖啡(国贸店)", sign=+1)
     existing = store.insert(
         source="wechat",
         external_transaction_id="wechat-cross-001",
@@ -170,12 +173,15 @@ def test_cross_source_wechat_triggers_alipay_candidate(adapter, session_factory)
     """Case 4 — wechat 导入触发 alipay 已有候选:L2 命中 + needs_confirm 标记.
 
     D7 关键验证:跨源去重链路贯通(wechat → alipay 候选,反方向)。
+    v0.2.28 升级:fp_existing 用 sign=+1(支出方向),与 wechat 导入时 transaction_adapter 派生
+    的 sign=+1 一致,确保 L2 fingerprint 命中。
     """
     from my_ai_employee.core.fingerprint import normalize_fingerprint
     from my_ai_employee.db.transactions import TransactionStore
 
     store = TransactionStore(session_factory)
-    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("42.00"), "麦当劳(朝阳店)")
+    # v0.2.28 L2 sign-lock:微信 `付` 对应 type=支出 → sign=+1,fp_existing 必须用相同 sign
+    fp = normalize_fingerprint(date(2026, 6, 14), Decimal("42.00"), "麦当劳(朝阳店)", sign=+1)
     existing = store.insert(
         source="alipay",
         external_transaction_id="alipay-cross-002",
