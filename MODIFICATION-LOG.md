@@ -1271,3 +1271,41 @@
 
 > **累计**:14 条 / 2026-06-18-23(...+ v0.2.25 P0 二修 docs 收口)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 2026-06-23 v0.2.26 W3 虚拟账单 spike 2345 行端到端报告(纯 spike + docs · 0 src/tests 改动)
+
+### 1. 本次修改
+
+- 触发:用户 6/23 选项"1(虚拟账单测试)2345"
+- 范围(纯 spike + docs,0 src/tests 改动):
+  - `/tmp/spike_extend_faker.py`:2345 行 CSV 生成器(微信 1200 + 支付宝 1145,24 商家 × 6 月份 + 100 对跨源 candidate pair 严格同符号 lock sign)
+  - `/tmp/spike_w3_virtual.py`:spike 端到端 runner(4 重防误发范本:env 门控 + CSV 校验 + --confirm + count=1)
+  - `/tmp/spike_w3_virtual_wechat.csv` + `/tmp/spike_w3_virtual_alipay.csv`:纯虚拟 CSV(不入 fixtures)
+  - `/tmp/spike_w3_virtual.db`:临时 SQLite(plain sqlite + 伪造 alembic_version='0007_transactions',沿 D6.6 P2 测试范本)
+  - `docs/v0.2.26-w3-virtual-bill-spike-2026-06-23.md`:7 段报告(目标/设计/跑通结果/撞坑观察/沿用边界/产出文件/下一棒)
+  - `README.md` + `SESSION-STATE.md` + `MODIFICATION-LOG.md`:顶部状态同步 v0.2.26
+
+### 2. 风险点
+
+- ⚠️ **撞坑 #36(本轮新增) 跨源构造必须严格同符号**:fingerprint 用 abs(amount) 仍会命中,但语义错乱会导致 categorized/needs_confirm 状态机误判 → 修法:cross-source pair lock sign=±1,微信 `付/收` ↔ 支付宝 `支/收` 共用同一 sign
+- ⚠️ **撞坑 #21(本轮再触发) pwd 漂移**:cwd=/tmp/ 时 merchants.py 找不到 fixtures → 修法:spike 脚本 `os.chdir(PROJECT_ROOT)` 兜底
+- ⚠️ **撞坑 #11(沿 v0.2.18 §3) Faker 命名**:避开 `*faker*` 命名,使用 `*virtual*` 或 `*spike*`
+- ⚠️ **真账单 spike 仍依赖用户授权**:W3 虚拟 spike 已具备 2345 行规模可行性,**真账单 spike 等用户手动导出微信/支付宝 CSV** 才可启动
+- **P1**: W3 真账单 spike(等用户真实 CSV 路径)
+- **P2**: 7/1 月度复盘 review v0.2.26 spike 报告(2345 行规模验证)
+- **P3**: 8/1 v0.2.1 release tag 锚定(本次 spike 验证了 W3 链路可行性)
+
+### 3. 当前项目整体总结
+
+- 进度:**2234 tests + 1 skipped / 9/9 质量门全绿 / W3 虚拟 spike 2345 行 跑通 1.65s 1421 rows/s / 100 对跨源完美命中**
+- 状态:**v0.2.26 W3 虚拟账单 spike 2345 行端到端报告已收口(纯 spike + docs),真账单 spike 等用户真实 CSV**
+- 风险:5 项已知风险(见上),无新风险
+- 下一步:W3 真账单 spike(等真实 CSV) + Outlook/Gmail SMTP(等授权) + P1-1 mypy tests 13 errors(可选)
+- 下一棒:用户(W3 真 CSV 或 outlook/gmail 授权决策)→ 主 Agent(6/23 实操)→ 检查员(7/1 月度复盘)
+
+---
+
+> **累计**:15 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike 2345 行)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
