@@ -20,7 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 触发词 | 角色类型 | 职责 | D-step 用法 |
 |--------|---------|------|-------------|
 | `@教练员` | 🔴 软链 | Claude Code 技巧沉淀 | D-step 收官 → 沉淀 1 条 |
-| `@检查员` | 🔴 软链 | 质量门 + 8/8 质量检查 | D-step 收官前必跑 |
+| `@检查员` | 🔴 软链 | 质量门 + 9/9 质量检查 | D-step 收官前必跑 |
 | `@调试专家` | 🔴 软链 | Bug 排查 + 链路诊断 | D-step 阻塞时 |
 | `@回顾员` | 🔴 软链 | 复盘 + 团队评分 | D-step 锁定时 |
 | `@内容编辑员` | 🔴 软链 | 排版/草稿/PPT | D4 邮件草稿 + 文档沉淀 |
@@ -48,9 +48,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ```
 Step 1: @调试专家（如有阻塞）
   ↓ 解锁
-Step 2: 实施 + 跑 8/8 质量门（见下表）
+Step 2: 实施 + 跑 9/9 质量门（见下表）
   ↓ 通过
-Step 3: @检查员 复核 8/8 质量门 + v1.0.x 收口
+Step 3: @检查员 复核 9/9 质量门 + v1.0.x 收口
   ↓ 锁定
 Step 4: @教练员 沉淀 1 条 Claude Code 技巧到 memory/（D-step 命名）
   ↓
@@ -59,7 +59,7 @@ Step 5: @回顾员 写复盘（v1.0.x 收口 + 下一版本预判）
 Step 6: 提交 commit + push
 ```
 
-### ✅ 8/8 质量门（D4.7.3 v1.0.6 收口范本）
+### ✅ 9/9 质量门（D4.7.3 v1.0.6 收口范本 · Makefile `ci` 串跑）
 
 | # | 门 | 命令 |
 |---|----|------|
@@ -71,10 +71,20 @@ Step 6: 提交 commit + push
 | 6 | alembic --sql | `uv run alembic upgrade head --sql`（exit 0 = DDL 无脏）|
 | 7 | uv build | `uv build`（验证打包可发布）|
 | 8 | MD lint | `make lint` / `npx markdownlint "**/*.md"` |
+| 9 | coverage | `make coverage`（fail_under=80 通过）|
 
-> **历史范本**：D4.7.3 v1.0.6 收官（6 轮 35+ fixes）就是这套 8 门全绿的完整实践。
+> **历史范本**：D4.7.3 v1.0.6 收官（6 轮 35+ fixes）就是这套 9 门全绿的完整实践。
 >
 > 🧬 **D4 智能层 D-step 必先参考** [docs/d4-claw-code-mapping.md](docs/d4-claw-code-mapping.md)（D4 自动参考规则：启动 D4 / D4.x / events / MCP / LLM 路由时先读对应子主题映射）
+>
+> ⚠️ **mypy 门盲区 + 撞坑 #31 已知技术债**(2026-06-23 检查报告第二轮沉淀 · 7/1 月度复盘 review):
+>
+> - `make mypy` = `mypy src tests` 联跑 → **0 errors**(宽松版 — 当前门)
+> - `uv run mypy tests/` 单独跑 → **13 errors**(严格版 — 撞坑 #31 真实状态)
+> - 根因:mypy 2.1.0 路径依赖性检查行为 — `mypy src tests` 时 src 类型 stub 已加载,部分 tests 文件 follow_imports 优化被跳过独立检查
+> - 13 errors 全是 `[no-any-return]`,SQLAlchemy `store.insert().id` 类型推断为 `Any`,helper 声明返回 `int`/`bool` 触发
+> - 决策:接受现状(宽松版门维持),登记为已知技术债,7/1 月度复盘 review 是否收紧门
+> - 修复范本(已实测):用 `cast(int, ...)` 替代 `type: ignore`,详见 v0.2.23 沿用范本
 
 ---
 
@@ -194,7 +204,7 @@ Step 6: 提交 commit + push
 | `make test-verbose` | 详细输出（-v）| 🟡 调试时 |
 | `make lint` | Markdown 格式检查 | 🔴 每次 D-step |
 | `make lint-fix` | 自动修复 MD 格式 | 🟡 收官前 |
-| `make typecheck` | mypy 严格模式 | 🔴 每次 D-step |
+| `make mypy` | mypy 严格模式（`mypy src tests` 联跑）| 🔴 每次 D-step |
 | `make venv` | 建本地 venv（Python 3.12 + uv）| 🟢 首次 |
 | `make install` | 装依赖（`uv sync --extra dev`）| 🟢 首次 |
 | `make install-npm` | 装 npm 依赖（markdownlint-cli2）| 🟢 首次 |
