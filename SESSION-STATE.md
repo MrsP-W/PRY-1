@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口(2026-06-25 · 撞坑 #55 v5.0 失败即阻塞)
+# SESSION-STATE — v0.2.43 outlook/gmail SMTP provider 白名单解封已收口(2026-06-25 · 不真发邮件)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口**(6/25 · 承接 v0.2.41 `--strict` 启用但 43 errors 不阻塞)。**修复结果**:剩余 43 errors 全清零(`attr-defined` 显式导出 / JSON TypeDecorator 精确返回 / rumps untyped decorator 局部 ignore / policy rule callable 标注 / 测试比较与 mock 类型收窄);Makefile `make mypy` 取消 `|| echo` 放行,升级为 **失败即阻塞**。**撞坑 #55 v5.0**:命令层 + 配置层 + Makefile 层 + `--strict` + CI 硬失败 = 五重锁死。**质量门**:`make mypy` 0 errors / 209 source files;`make test` 2265 passed / 1 skipped / 88.76% coverage;ruff check 0;ruff format --check 0;MD lint 0。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘/8/1 v0.2.1 release tag 锚定评估。
+> **状态**:✅ **v0.2.43 outlook/gmail SMTP provider 白名单解封已收口**(6/25 · 承接 v0.2.7 B 类延后与 v0.2.42 严格门)。**修复结果**:`scripts/spike_send_100.py --smtp-provider` 从 `{qq}` 扩展为 `{qq,outlook,gmail}`;`spike_set_smtp_password.py` 已有 provider-aware Keychain 写入/检查/删除,发送脚本现与凭据脚本能力对齐;测试从宽松“只要含 qq 即过”改为严格要求 `{qq,outlook,gmail}`。**质量门**:`make mypy` 0 errors / 209 source files;`make test` 2265 passed / 1 skipped / 88.76% coverage;ruff check 0;ruff format --check 0。边界:本轮不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:真实 SMTP spike 只剩 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 1 收件人 + 二次确认口令/7月复盘/8月 tag 评估。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口(2026-06-25,撞坑 #55 v5.0 失败即阻塞)**,**下一步候选**:outlook-gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)/ 7/1 月度复盘/8/1 v0.2.1 release tag 锚定评估。
+**当前启动候选**:**v0.2.43 outlook/gmail SMTP provider 白名单解封已收口(2026-06-25,不真发邮件)**,**下一步候选**:真实 SMTP spike(等 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 二次确认)/ 7/1 月度复盘/8/1 v0.2.1 release tag 锚定评估。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

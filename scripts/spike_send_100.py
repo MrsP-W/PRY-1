@@ -1001,16 +1001,14 @@ def main() -> None:
         "--smtp-provider",
         type=str,
         default="qq",
-        # D5.6.3 P2-3 修复:Provider 能力对齐
-        # 之前 choices=["qq", "outlook", "gmail"] 是"能力虚报"——outlook/gmail
-        # 对应的 SERVICE_SMTP_OUTLOOK / SERVICE_SMTP_GMAIL 在 core/keychain.py
-        # 已定义,但 scripts/spike_set_smtp_password.py 只支持 qq(provider 写入
-        # / 检查 / 删除 能力不对齐)。当前 D5 阶段只验证 QQ SMTP 真实链路,
-        # outlook/gmail 仍为 B 类延后(B1 类),D5 跑通后再扩。
-        choices=["qq"],
+        # v0.2.43: provider 白名单解封。
+        # spike_set_smtp_password.py 已支持 qq/outlook/gmail provider-aware
+        # Keychain 写入/检查/删除;真实发送仍受 SMTP_REAL_NETWORK +
+        # --max-recipients 1 + --confirm + count==1 + Keychain round-trip 保护。
+        choices=["qq", "outlook", "gmail"],
         help=(
             "SMTP provider 白名单(D5.6.2 P0 修复:REAL 模式必传,真读 Keychain 凭证)。"
-            "D5.6.3 P2-3 收口: 当前仅 'qq'(outlook/gmail 凭证写入脚本未实现,B 类延后)"
+            "v0.2.43 解封: qq/outlook/gmail 均可选;真实发送仍需 SMTP_REAL_NETWORK 与二次确认。"
         ),
     )
     # ===== spike 行为参数 =====

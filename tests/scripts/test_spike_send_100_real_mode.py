@@ -67,8 +67,8 @@ def test_cli_smtp_provider_in_choices() -> None:
     assert "--smtp-provider" in result.stdout, (
         f"D5.6.2:--smtp-provider 应在 --help:\n{result.stdout}"
     )
-    # choices 应包含 qq/outlook/gmail 三选项
-    assert "{qq,outlook,gmail}" in result.stdout or "qq" in result.stdout, (
+    # choices 应严格包含 qq/outlook/gmail 三选项,避免 help 只含 qq 的能力漂移。
+    assert "{qq,outlook,gmail}" in result.stdout, (
         f"D5.6.2:--smtp-provider choices 应含 qq/outlook/gmail:\n{result.stdout}"
     )
 

@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.42` mypy `--strict` 43 errors 清零 + 硬门锁死已收口(承接 `v0.2.41` 388→43;剩余 43 errors 全清零;Makefile `make mypy` 取消 `|| echo` 放行,失败即阻塞;`make mypy` **0 errors / 209 source files**;`make test` **2265 passed / 1 skipped / 88.76% coverage**;ruff check 0;ruff format --check 0;MD lint 0);**下一步候选**:outlook-gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.42 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.41` mypy `--strict` 启用 + 388 errors 大幅修复已关闭(commit `1b1d405` + docs `27b8825` · 388→43 · 43 errors 可见不阻塞)|
+| **当前阶段** | ✅ `v0.2.43` outlook/gmail SMTP provider 白名单解封已收口(`spike_send_100.py --smtp-provider {qq,outlook,gmail}`;provider-aware Keychain 写入/检查/删除能力对齐;测试严判 help 必须含 `{qq,outlook,gmail}`;不真发邮件;`make test` **2265 passed / 1 skipped / 88.76% coverage**;`make mypy` **0 errors / 209 source files**;ruff check 0;ruff format --check 0);**下一步候选**:真实 SMTP spike(等 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 二次确认)/ 7/1 月度复盘 review v0.2.25-v0.2.43 / 8/1 v0.2.1 release tag 锚定评估 |
+| **上一阶段** | ✅ `v0.2.42` mypy `--strict` 43 errors 清零 + 硬门锁死已关闭(commit `97b779b` · 43 errors→0 · Makefile 失败即阻塞)|
 | **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.42 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / MD lint **0 errors / 132 files** / **88.76% coverage** |
-| **下一棒** | outlook-gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.42 → 8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | v0.2.43 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / **88.76% coverage** |
+| **下一棒** | 真实 SMTP spike(等 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 二次确认)→ 7/1 月度复盘 review v0.2.25-v0.2.43 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.43 outlook/gmail SMTP provider 白名单解封] — 收口
+
+**1. 本次修改内容**
+
+- `scripts/spike_send_100.py --smtp-provider` 从 `{qq}` 解封为 `{qq,outlook,gmail}`。
+- `tests/scripts/test_spike_send_100_real_mode.py` 从宽松断言改为严格要求 help 输出 `{qq,outlook,gmail}`,防止能力漂移。
+- 新增 `docs/v0.2.43-smtp-provider-whitelist-2026-06-25.md`,并同步 README / SESSION-STATE / 本文件顶部快照。
+
+**2. 风险点**
+
+- 本轮只做 provider 白名单与无副作用测试,不写真实 Keychain 凭据,不设置 `SMTP_REAL_NETWORK=1`,不真发邮件。
+- 真实 SMTP spike 仍需 5 重门控:Keychain 凭据存在 + `SMTP_REAL_NETWORK=1` + `--max-recipients 1` + `--count 1` + 固定确认口令。
+- Outlook/Gmail 真实链路可能受服务商 SMTP 策略影响;如失败,按认证/端口/服务商策略分层诊断。
+
+**3. 当前项目整体总结**
+
+- `spike_send_100.py --help`:已显示 `--smtp-provider {qq,outlook,gmail}`。
+- 相关无副作用测试:76 passed(`--no-cov`)。
+- 全量质量门:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` 0 errors / 209 source files;ruff check 0;ruff format --check 0。
+- 下一棒:真实 SMTP spike 等用户提供/确认 Keychain 凭据后,按 5 重防误发命令执行。
 
 ### 2026-06-25 [v0.2.42 mypy `--strict` 43 errors 清零 + 硬门锁死] — 收口
 
