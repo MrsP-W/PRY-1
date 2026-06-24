@@ -32,6 +32,7 @@ from __future__ import annotations
 import sys
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -71,6 +72,6 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker(沿 tests/events/conftest.py:36 范本)."""
     return sessionmaker(bind=engine)

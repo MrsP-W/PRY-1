@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from alembic.config import Config as AlembicConfig
@@ -42,7 +43,7 @@ from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa:
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch):
+def fake_keychain(monkeypatch: Any) -> Any:
     """in-memory Keychain 模拟。"""
     store: dict[tuple[str, str], str] = {}
 
@@ -76,13 +77,13 @@ def alembic_cfg(tmp_db_path: Path, fake_keychain: dict) -> AlembicConfig:
 
 
 @pytest.fixture
-def patched_database_open(tmp_db_path: Path, monkeypatch):
+def patched_database_open(tmp_db_path: Path, monkeypatch: Any) -> Any:
     """monkeypatch Database.open() 用 tmp 路径。"""
     import my_ai_employee.core.db as db_module
 
     original_open = db_module.Database.open
 
-    def patched_open(db_path=None):  # type: ignore[no-untyped-def]
+    def patched_open(db_path: Any = None) -> Any:  # type: ignore[no-untyped-def]
         return original_open(db_path=tmp_db_path)
 
     monkeypatch.setattr(db_module.Database, "open", staticmethod(patched_open))

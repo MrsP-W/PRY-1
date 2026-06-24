@@ -437,7 +437,7 @@ class TestTickHeartbeat:
 class TestClassifyAndEmit:
     """classify_and_emit 主入口单元测试."""
 
-    def test_basic_flow_emit_to_store(self, store) -> None:
+    def test_basic_flow_emit_to_store(self, store: Any) -> None:
         """基本流程: 评估 + 落 1 条事件 + 推 lane + 刷 heartbeat."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(
@@ -479,7 +479,7 @@ class TestClassifyAndEmit:
         )
         assert report.event_id is None
 
-    def test_spam_triggers_blocked_lane(self, store) -> None:
+    def test_spam_triggers_blocked_lane(self, store: Any) -> None:
         """SPAM → AC[1]=False → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2).
 
         v1.0.1 修复: SPAM 业务拒绝 ≠ LLM 死了。Lane 用 business_accepted,
@@ -498,7 +498,7 @@ class TestClassifyAndEmit:
         # Heartbeat: LLM 调用成功 → HEALTHY(P1-2 修复后 transport_alive 不再耦合业务)
         assert report.liveness == Liveness.HEALTHY
 
-    def test_low_confidence_triggers_blocked_lane(self, store) -> None:
+    def test_low_confidence_triggers_blocked_lane(self, store: Any) -> None:
         """置信度 < 0.7 → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(confidence=0.5)
@@ -511,7 +511,7 @@ class TestClassifyAndEmit:
         assert entry.status == LaneStatus.BLOCKED
         assert report.liveness == Liveness.HEALTHY
 
-    def test_high_latency_triggers_blocked_lane(self, store) -> None:
+    def test_high_latency_triggers_blocked_lane(self, store: Any) -> None:
         """延迟 ≥ 5000ms → Lane=BLOCKED + Heartbeat=HEALTHY(D4.6 v1.0.1 P1-2)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(latency_ms=6000)
@@ -524,7 +524,7 @@ class TestClassifyAndEmit:
         assert entry.status == LaneStatus.BLOCKED
         assert report.liveness == Liveness.HEALTHY
 
-    def test_escalate_at_threshold_3(self, store) -> None:
+    def test_escalate_at_threshold_3(self, store: Any) -> None:
         """D4.6 v1.0.2 P1-1 修复: 失败入口走 record_classify_failure_and_emit, cf >= 3 → EscalateRequired.
 
         v1.0 旧逻辑: 成功路径 + consecutive_classify_failures=3 → EscalateRequired 误触发
@@ -542,7 +542,7 @@ class TestClassifyAndEmit:
         kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
         assert PolicyDecisionKind.ESCALATE_REQUIRED in kinds
 
-    def test_no_escalate_below_threshold(self, store) -> None:
+    def test_no_escalate_below_threshold(self, store: Any) -> None:
         """consecutive_classify_failures < 3 → 不应触发 EscalateRequired."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         a.record_classify_failure_and_emit(
@@ -555,7 +555,7 @@ class TestClassifyAndEmit:
         kinds = [d["kind"] for d in ev.event_metadata["all_decisions"]]
         assert PolicyDecisionKind.ESCALATE_REQUIRED not in kinds
 
-    def test_run_id_custom_passes_through(self, store) -> None:
+    def test_run_id_custom_passes_through(self, store: Any) -> None:
         """自定义 run_id 透传到 event_metadata + lane_entry_id."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()
@@ -614,7 +614,7 @@ class TestClassifyAndEmit:
                 run_id="r-bool-cf",
             )
 
-    def test_event_metadata_contains_business_fields(self, store) -> None:
+    def test_event_metadata_contains_business_fields(self, store: Any) -> None:
         """业务字段 (category + confidence) 写入 event_metadata 顶层."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(
@@ -636,7 +636,7 @@ class TestClassifyAndEmit:
         assert meta.get("email_id") == 42
         assert meta.get("source") == "qq"
 
-    def test_retry_available_at_cf_2(self, store) -> None:
+    def test_retry_available_at_cf_2(self, store: Any) -> None:
         """D4.6 v1.0.2 P1-1 修复: 失败入口 cf=2 → RetryAvailable.
 
         v1.0.1 引入 last_classify_failed 但允许同时传 成功 classification。
@@ -669,7 +669,7 @@ class TestD46V101AdapterFixes:
 
     # --- P1-2: transport_alive 显式参数 + 业务/传输解耦 ---
 
-    def test_transport_alive_false_triggers_transport_dead(self, store) -> None:
+    def test_transport_alive_false_triggers_transport_dead(self, store: Any) -> None:
         """P1-2 修复: transport_alive=False → Heartbeat=TRANSPORT_DEAD(与业务无关)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()  # 业务验收通过
@@ -684,7 +684,7 @@ class TestD46V101AdapterFixes:
         assert entry.status == LaneStatus.FINISHED
         assert report.liveness == Liveness.TRANSPORT_DEAD
 
-    def test_business_rejected_but_transport_alive(self, store) -> None:
+    def test_business_rejected_but_transport_alive(self, store: Any) -> None:
         """P1-2 修复: SPAM/低置信度 → Lane BLOCKED + Heartbeat HEALTHY(LLM 没死)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make(category_value="SPAM", confidence=0.95)
@@ -797,7 +797,7 @@ class TestD46V101AdapterFixes:
 
     # --- P1-3 联动: 成功路径 last_classify_failed 默认 False,不触发 retry ---
 
-    def test_successful_classify_does_not_trigger_retry(self, store) -> None:
+    def test_successful_classify_does_not_trigger_retry(self, store: Any) -> None:
         """D4.6 v1.0.2 P1-1 修复: 成功入口永不触发 retry / escalate.
 
         v1.0 旧逻辑: 成功分类 + cf=2 → RETRY_AVAILABLE 误触发
@@ -832,7 +832,7 @@ class TestD46V102AdapterFixes:
 
     # --- P1-1: 成功入口强制失败次数归零 ---
 
-    def test_success_entry_no_failure_params(self, store) -> None:
+    def test_success_entry_no_failure_params(self, store: Any) -> None:
         """P1-1 修复: classify_and_emit 签名删除 last_classify_failed / consecutive_classify_failures.
 
         v1.0.1 允许传 last_classify_failed=True + 成功 classification → 状态耦合
@@ -857,7 +857,7 @@ class TestD46V102AdapterFixes:
                 run_id="r-v102-no-last-failed",
             )
 
-    def test_success_and_failure_never_coexist(self, store) -> None:
+    def test_success_and_failure_never_coexist(self, store: Any) -> None:
         """P1-1 修复: 成功入口不触发 retry / escalate,失败入口不触发 merge."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         classification = FakeClassification.make()  # 业务通过
@@ -873,7 +873,7 @@ class TestD46V102AdapterFixes:
         assert PolicyDecisionKind.RETRY_AVAILABLE not in success_kinds
         assert PolicyDecisionKind.ESCALATE_REQUIRED not in success_kinds
 
-    def test_failure_entry_no_merge(self, store) -> None:
+    def test_failure_entry_no_merge(self, store: Any) -> None:
         """P1-1 修复: 失败入口触发 retry / escalate,但不触发 merge.
 
         旧 v1.0.1: 成功 classification + last_classify_failed=True + cf=3
@@ -894,7 +894,7 @@ class TestD46V102AdapterFixes:
         # 失败入口不能触发 merge(AC[0]=False,无业务合并意义)
         assert PolicyDecisionKind.MERGE_REQUIRED not in failure_kinds
 
-    def test_failure_entry_under_threshold_triggers_retry(self, store) -> None:
+    def test_failure_entry_under_threshold_triggers_retry(self, store: Any) -> None:
         """P1-1 修复: 失败入口 cf=1/2 → RETRY_AVAILABLE(不 escalate)."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         for cf in (1, 2):
@@ -911,7 +911,7 @@ class TestD46V102AdapterFixes:
             assert PolicyDecisionKind.RETRY_AVAILABLE in kinds
             assert PolicyDecisionKind.ESCALATE_REQUIRED not in kinds
 
-    def test_failure_entry_payload_marks_failed(self, store) -> None:
+    def test_failure_entry_payload_marks_failed(self, store: Any) -> None:
         """P1-1 修复: 失败入口 event_metadata 顶层有 failed=True + last_error."""
         a = EmailClassifierAdapter(source="qq", event_store=store)
         a.record_classify_failure_and_emit(
@@ -1125,7 +1125,7 @@ class TestD46V102SecondPassFixes:
 
     # --- P2-2: 失败报告独立数据类 ---
 
-    def test_failure_entry_returns_classify_failure_decision_report(self, store) -> None:
+    def test_failure_entry_returns_classify_failure_decision_report(self, store: Any) -> None:
         """P2-2 修复: 失败入口返回 ClassifyFailureDecisionReport(非 ClassifyDecisionReport).
 
         旧 v1.0.2: 失败入口返回 ClassifyDecisionReport(category="" + confidence=0.0),
@@ -1382,7 +1382,7 @@ class TestD46V102ThirdPassFixes:
         assert "transport_alive" in param_names
         assert "run_id" in param_names
 
-    def test_record_classify_failure_returns_failure_report(self, store) -> None:
+    def test_record_classify_failure_returns_failure_report(self, store: Any) -> None:
         """P3 修复: record_classify_failure_and_emit 返回 ClassifyFailureDecisionReport
         (旧文档写 ClassifyDecisionReport, 实际是独立失败报告类)。
         """

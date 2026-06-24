@@ -35,7 +35,7 @@ from __future__ import annotations
 import contextlib
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -96,7 +96,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch):
+def fake_keychain(monkeypatch: Any) -> Any:
     """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
@@ -116,7 +116,7 @@ def fake_keychain(monkeypatch):
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict):
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Any:
     """打开 DB + Base.metadata.create_all + yield(测试后自动 close)。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -138,7 +138,7 @@ def session_factory(db_with_schema: Database) -> sessionmaker:  # type: ignore[n
 
 
 @pytest.fixture
-def outbox_store(session_factory) -> OutboxStore:  # type: ignore[no-untyped-def]
+def outbox_store(session_factory: Any) -> OutboxStore:  # type: ignore[no-untyped-def]
     """OutboxStore 实例(注入 session_factory)。"""
     return OutboxStore(session_factory)
 
@@ -438,7 +438,7 @@ class TestDecisionReportStrongConsistency:
     """
 
     @staticmethod
-    def _build_minimum_evaluation():
+    def _build_minimum_evaluation() -> Any:
         """构造一个最小 PolicyEvaluation / Liveness 占位(用真实 PolicyEngine 跑一次)。"""
         from my_ai_employee.policy.outbox_adapter import (
             build_outbox_packet,
@@ -1119,7 +1119,7 @@ class TestTopLevelExports:
 
 
 @pytest.fixture
-def blacklist_store(session_factory) -> RecipientBlacklistStore:  # type: ignore[no-untyped-def]
+def blacklist_store(session_factory: Any) -> RecipientBlacklistStore:  # type: ignore[no-untyped-def]
     """RecipientBlacklistStore 实例(注入 session_factory)。"""
     from my_ai_employee.db.blacklist import RecipientBlacklistStore
 
@@ -1325,7 +1325,7 @@ class TestBlacklistStoreIntegration:
 
     def test_blacklist_store_session_factory_injected(
         self,
-        session_factory,
+        session_factory: Any,
     ) -> None:
         """13.8 RecipientBlacklistStore 接收 session_factory 注入(沿 D4.8.3 范本)。"""
         from my_ai_employee.db.blacklist import RecipientBlacklistStore

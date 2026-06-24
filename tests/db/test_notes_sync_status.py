@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -48,13 +48,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory):
+def store(session_factory: Any) -> Any:
     """NoteStore 实例。"""
     from my_ai_employee.db.notes import NoteStore
 
@@ -62,7 +62,7 @@ def store(session_factory):
 
 
 @pytest.fixture
-def inserted_note(store):
+def inserted_note(store: Any) -> Any:
     """典型已插入 note(apple_note_id = 'x-coredata://test/note-001')。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -77,14 +77,14 @@ def inserted_note(store):
 # ===== 1. sync_status 字段默认值 + 5 状态枚举(2 tests)=====
 
 
-def test_sync_status_default_is_new(store, inserted_note):
+def test_sync_status_default_is_new(store: Any, inserted_note: Any) -> Any:
     """1.1 插入 note 后 sync_status 默认值 = 'NEW'。"""
     note = store.find_by_apple_id(inserted_note)
     assert note is not None
     assert note.sync_status == "NEW", f"sync_status 默认应 'NEW', 实际 {note.sync_status!r}"
 
 
-def test_sync_status_constants_exported():
+def test_sync_status_constants_exported() -> Any:
     """1.2 5 状态常量从 db.notes 正确导出。"""
     from my_ai_employee.db.notes import (
         SYNC_STATUS_ARCHIVED,
@@ -104,7 +104,7 @@ def test_sync_status_constants_exported():
 # ===== 2. mark_structured 扩展同步写 sync_status='STRUCTURED'(2 tests)=====
 
 
-def test_mark_structured_writes_sync_status_structured(store, inserted_note):
+def test_mark_structured_writes_sync_status_structured(store: Any, inserted_note: Any) -> Any:
     """2.1 mark_structured 同时写 sync_status='STRUCTURED'(沿 D9.4 + v0.2.1 #4 扩展)。"""
     updated = store.mark_structured(inserted_note, ["urgent", "工作"])
     assert updated.sync_status == "STRUCTURED"
@@ -113,7 +113,7 @@ def test_mark_structured_writes_sync_status_structured(store, inserted_note):
     assert note.sync_status == "STRUCTURED"
 
 
-def test_mark_structured_failed_to_structured_retry(store, inserted_note):
+def test_mark_structured_failed_to_structured_retry(store: Any, inserted_note: Any) -> Any:
     """2.2 FAILED → STRUCTURED 重试路径(状态机守卫放行)。"""
     # 先标记失败
     store.mark_failed(inserted_note, error_class="LLMError")
@@ -127,7 +127,7 @@ def test_mark_structured_failed_to_structured_retry(store, inserted_note):
 # ===== 3. 4 新方法(5 tests)=====
 
 
-def test_mark_private_skip_writes_sync_status(store, inserted_note):
+def test_mark_private_skip_writes_sync_status(store: Any, inserted_note: Any) -> Any:
     """3.1 mark_private_skip 写 sync_status='PRIVATE_SKIP'(终态)。"""
     updated = store.mark_private_skip(inserted_note)
     assert updated.sync_status == "PRIVATE_SKIP"
@@ -136,13 +136,13 @@ def test_mark_private_skip_writes_sync_status(store, inserted_note):
     assert note.sync_status == "PRIVATE_SKIP"
 
 
-def test_mark_failed_writes_sync_status(store, inserted_note):
+def test_mark_failed_writes_sync_status(store: Any, inserted_note: Any) -> Any:
     """3.2 mark_failed 写 sync_status='FAILED' + 严判 error_class 非空字符串。"""
     updated = store.mark_failed(inserted_note, error_class="LLMError")
     assert updated.sync_status == "FAILED"
 
 
-def test_mark_failed_validates_error_class(store, inserted_note):
+def test_mark_failed_validates_error_class(store: Any, inserted_note: Any) -> Any:
     """3.3 mark_failed 严判 error_class 必传非空字符串(纯空白拒绝)。"""
     with pytest.raises(ValueError, match="error_class 必须是 str"):
         store.mark_failed(inserted_note, error_class=123)  # type: ignore[arg-type]
@@ -152,7 +152,7 @@ def test_mark_failed_validates_error_class(store, inserted_note):
         store.mark_failed(inserted_note, error_class="")
 
 
-def test_mark_archived_writes_sync_status(store, inserted_note):
+def test_mark_archived_writes_sync_status(store: Any, inserted_note: Any) -> Any:
     """3.4 mark_archived 写 sync_status='ARCHIVED'(终态)。"""
     # 先结构化(归档前置条件:必须 STRUCTURED)
     store.mark_structured(inserted_note, ["to_archived"])
@@ -160,7 +160,7 @@ def test_mark_archived_writes_sync_status(store, inserted_note):
     assert updated.sync_status == "ARCHIVED"
 
 
-def test_list_by_sync_status_filters_correctly(store, inserted_note):
+def test_list_by_sync_status_filters_correctly(store: Any, inserted_note: Any) -> Any:
     """3.5 list_by_sync_status 按状态过滤(沿 idx_notes_sync_status 索引)。"""
     # 插 3 笔 note,分别 mark 到不同状态
     store.insert(
@@ -201,21 +201,21 @@ def test_list_by_sync_status_filters_correctly(store, inserted_note):
 # ===== 4. 状态机守卫非法转换拒绝(4 tests)=====
 
 
-def test_state_guard_rejects_structured_to_structured(store, inserted_note):
+def test_state_guard_rejects_structured_to_structured(store: Any, inserted_note: Any) -> Any:
     """4.1 状态机守卫:STRUCTURED → STRUCTURED 非法(已结构化,不可重复)。"""
     store.mark_structured(inserted_note, ["first"])
     with pytest.raises(ValueError, match="状态机守卫拒绝非法转换"):
         store.mark_structured(inserted_note, ["second"])
 
 
-def test_state_guard_rejects_private_skip_to_structured(store, inserted_note):
+def test_state_guard_rejects_private_skip_to_structured(store: Any, inserted_note: Any) -> Any:
     """4.2 状态机守卫:PRIVATE_SKIP → STRUCTURED 非法(终态)。"""
     store.mark_private_skip(inserted_note)
     with pytest.raises(ValueError, match="状态机守卫拒绝非法转换"):
         store.mark_structured(inserted_note, ["late"])
 
 
-def test_state_guard_rejects_archived_to_anything(store, inserted_note):
+def test_state_guard_rejects_archived_to_anything(store: Any, inserted_note: Any) -> Any:
     """4.3 状态机守卫:ARCHIVED 终态不可再转换(ARCHIVED → STRUCTURED 拒绝)。"""
     store.mark_structured(inserted_note, ["t"])
     store.mark_archived(inserted_note)
@@ -223,7 +223,7 @@ def test_state_guard_rejects_archived_to_anything(store, inserted_note):
         store.mark_structured(inserted_note, ["unarchive"])
 
 
-def test_state_guard_rejects_invalid_status_string():
+def test_state_guard_rejects_invalid_status_string() -> Any:
     """4.4 _check_state_transition 严判当前/目标状态白名单。"""
     from my_ai_employee.db.notes import NoteStore
 

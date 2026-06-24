@@ -104,7 +104,7 @@ class FakeReviewResult(ReviewResult):
 
 
 @pytest.fixture
-def adapter(store) -> EmailReviewerAdapter:
+def adapter(store: Any) -> EmailReviewerAdapter:
     """默认 Adapter(in-memory store, 默认 PolicyEngine/Heartbeat/LaneBoard)."""
     return EmailReviewerAdapter(source="qq", event_store=store)
 
@@ -606,7 +606,7 @@ class TestEmailReviewerAdapterInit:
         assert a._heartbeat is not None
         assert a._board is not None
 
-    def test_all_4_deps_injected(self, store) -> None:
+    def test_all_4_deps_injected(self, store: Any) -> None:
         engine = PolicyEngine()
         from my_ai_employee.policy.heartbeat import Heartbeat
         from my_ai_employee.policy.lane_board import LaneBoard

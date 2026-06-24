@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def fake_runner():
+def fake_runner() -> Any:
     """Mock osascript runner(可注入测试场景输出)."""
     return lambda script: ""
 
@@ -340,12 +340,12 @@ def test_notes_connector_propagates_osascript_failure() -> None:
         connector.list_all_notes_metadata()
 
 
-def test_notes_connector_propagates_subprocess_error(monkeypatch) -> None:
+def test_notes_connector_propagates_subprocess_error(monkeypatch: Any) -> None:
     """5.2 subprocess.run FileNotFoundError → NotesConnectorError."""
     from my_ai_employee.connectors.apple_notes import NotesConnector, NotesConnectorError
 
     # 模拟 osascript 不在 PATH
-    def fake_run(*args, **kwargs):  # noqa: ARG001
+    def fake_run(*args: Any, **kwargs: Any) -> Any:  # noqa: ARG001
         raise FileNotFoundError("osascript not found")
 
     monkeypatch.setattr("subprocess.run", fake_run)

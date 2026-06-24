@@ -17,6 +17,7 @@ from __future__ import annotations
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -57,7 +58,7 @@ def _make_envelope(uid: int, subject: str, sender: str) -> dict:
 
 
 @pytest.mark.e2e
-def test_s1_imap_fetch_10_emails(monkeypatch, tmp_path):
+def test_s1_imap_fetch_10_emails(monkeypatch: Any, tmp_path: Any) -> Any:
     """S1.1 — 10 封 faker 邮件 IMAP fetch 全返回."""
 
     from my_ai_employee.connectors.imap import IMAPConnector
@@ -103,7 +104,7 @@ def test_s1_imap_fetch_10_emails(monkeypatch, tmp_path):
 
 
 @pytest.mark.e2e
-def test_s1_imap_circuit_breaker(monkeypatch, tmp_path):
+def test_s1_imap_circuit_breaker(monkeypatch: Any, tmp_path: Any) -> Any:
     """S1.2 — 连续失败 3 次触发熔断(沿 BaseConnector CIRCUIT_BREAKER_THRESHOLD=3).
 
     D6.0 简化:monkeypatch 替换 conn.fetch 每次抛 ConnectionError,
@@ -124,7 +125,7 @@ def test_s1_imap_circuit_breaker(monkeypatch, tmp_path):
     conn = IMAPConnector(provider="qq", email="test@qq.com")
 
     # monkeypatch conn.fetch 永远抛 ConnectionError(模拟网络失败)
-    async def _failing_fetch(since):  # noqa: ARG001
+    async def _failing_fetch(since: Any) -> Any:  # noqa: ARG001
         raise ConnectionError("mock network failure for circuit breaker test")
 
     conn.fetch = _failing_fetch  # type: ignore[method-assign]
@@ -143,7 +144,7 @@ def test_s1_imap_circuit_breaker(monkeypatch, tmp_path):
 
 
 @pytest.mark.e2e
-def test_s1_classify_emails(monkeypatch, session_factory):
+def test_s1_classify_emails(monkeypatch: Any, session_factory: Any) -> Any:
     """S1.3 — 5 封邮件走 EmailClassifierAdapter 分类入口契约(Mock LLM router).
 
     D6.0 阶段:不调真实 LLM,Mock router 返回固定 5 类(每类各 1 封).
@@ -157,7 +158,7 @@ def test_s1_classify_emails(monkeypatch, session_factory):
         def __init__(self) -> None:
             self._call_count = 0
 
-        def route(self, *, task_type, messages, temperature, max_tokens):
+        def route(self, *, task_type: Any, messages: Any, temperature: Any, max_tokens: Any) -> Any:
             # 5 类循环
             categories = list(EmailCategory)
             category = categories[self._call_count % len(categories)]

@@ -15,6 +15,7 @@ D6.4 升级:
 from __future__ import annotations
 
 from collections.abc import Iterator
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -39,13 +40,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker(沿 policy/conftest 范本)."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def session(session_factory) -> Iterator[Session]:
+def session(session_factory: Any) -> Iterator[Session]:
     """单 session fixture(测试完 rollback,隔离各 test)."""
     s = session_factory()
     try:

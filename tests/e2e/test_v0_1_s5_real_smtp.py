@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -27,7 +28,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 @pytest.mark.e2e
 @pytest.mark.requires_real
-def test_s5_real_smtp_1_email_sent(session_factory):
+def test_s5_real_smtp_1_email_sent(session_factory: Any) -> Any:
     """S5.1 — 真实 SMTP 1 封 SENT(沿 D5.6.5 范本 + 4 重防误发)."""
     # 默认 skip(由 conftest.py 控);仅当 SMTP_REAL_NETWORK=1 才真发
     if os.environ.get("SMTP_REAL_NETWORK") != "1":

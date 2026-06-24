@@ -42,7 +42,7 @@ from my_ai_employee.db.notes import Note, NoteStore  # noqa: E402
 
 
 @pytest.fixture
-def engine():
+def engine() -> Any:
     """InMemory SQLite + Note ORM 10 列 create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -54,12 +54,12 @@ def engine():
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory) -> NoteStore:
+def store(session_factory: Any) -> NoteStore:
     return NoteStore(session_factory)
 
 

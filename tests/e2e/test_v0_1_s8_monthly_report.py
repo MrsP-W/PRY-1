@@ -15,6 +15,7 @@ import subprocess
 import sys
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -92,7 +93,7 @@ def _make_test_db(db_path: Path, target_year: int, target_month: int) -> None:
 
 
 @pytest.mark.e2e
-def test_s8_monthly_report_generation(tmp_path):
+def test_s8_monthly_report_generation(tmp_path: Any) -> Any:
     """S8.1 — 每月 1 号 09:00 触发 monthly_report.py generate → exit 0 + 文件生成.
 
     沿 D5.6.5 真实 1 封范本 + D10.2 4 退出码契约.用临时 DB 隔离真实生产 DB.
@@ -143,7 +144,7 @@ def test_s8_monthly_report_generation(tmp_path):
 
 
 @pytest.mark.e2e
-def test_s8_audit_agent_notification_frequency():
+def test_s8_audit_agent_notification_frequency() -> Any:
     """S8.2 — @审计员 通知频率 ≤ 1 次/月(沿 week2-mvp.md L222 决策).
 
     校验审计员 agent 提示词必明示 每月 ≤ 1 次 通知上限.
@@ -161,7 +162,7 @@ def test_s8_audit_agent_notification_frequency():
 
 
 @pytest.mark.e2e
-def test_s8_monthly_report_template_rendered():
+def test_s8_monthly_report_template_rendered() -> Any:
     """S8.3 — 月报模板必含 9 段(总览/收入/支出/分类 Top 5/异常高亮/同比环比/...)."""
     template_path = PROJECT_ROOT / "templates" / "finance_monthly.md"
     content = template_path.read_text(encoding="utf-8")

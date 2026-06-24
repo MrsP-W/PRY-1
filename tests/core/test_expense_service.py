@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -49,13 +49,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def note_store(session_factory):
+def note_store(session_factory: Any) -> Any:
     """NoteStore 实例。"""
     from my_ai_employee.db.notes import NoteStore
 
@@ -63,7 +63,7 @@ def note_store(session_factory):
 
 
 @pytest.fixture
-def tx_store(session_factory):
+def tx_store(session_factory: Any) -> Any:
     """TransactionStore 实例。"""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -71,7 +71,7 @@ def tx_store(session_factory):
 
 
 @pytest.fixture
-def merchant_profile_store(session_factory, tx_store):
+def merchant_profile_store(session_factory: Any, tx_store: Any) -> Any:
     """MerchantProfileStore 实例(D8.1)。"""
     from my_ai_employee.db.merchant_profile import MerchantProfileStore
 
@@ -79,7 +79,7 @@ def merchant_profile_store(session_factory, tx_store):
 
 
 @pytest.fixture
-def anomaly_detector(tx_store, merchant_profile_store):
+def anomaly_detector(tx_store: Any, merchant_profile_store: Any) -> Any:
     """RuleBasedAnomalyDetector 实例(D8.2)。"""
     from my_ai_employee.core.anomaly_detector import RuleBasedAnomalyDetector
 
@@ -90,7 +90,7 @@ def anomaly_detector(tx_store, merchant_profile_store):
 
 
 @pytest.fixture
-def service(note_store, tx_store, anomaly_detector):
+def service(note_store: Any, tx_store: Any, anomaly_detector: Any) -> Any:
     """ExpenseServiceImpl 默认实例(无 clipboard / tcc 注入)。"""
     from my_ai_employee.core.expense_service import ExpenseServiceImpl
 
@@ -104,7 +104,7 @@ def service(note_store, tx_store, anomaly_detector):
 # ===== 1. 构造注入严判(3 tests)=====
 
 
-def test_construct_rejects_none_note_store(tx_store, anomaly_detector):
+def test_construct_rejects_none_note_store(tx_store: Any, anomaly_detector: Any) -> Any:
     """1.1 None note_store 拒绝(TypeError)。"""
     from my_ai_employee.core.expense_service import ExpenseServiceImpl
 
@@ -116,7 +116,7 @@ def test_construct_rejects_none_note_store(tx_store, anomaly_detector):
         )
 
 
-def test_construct_rejects_wrong_type_anomaly_detector(note_store, tx_store):
+def test_construct_rejects_wrong_type_anomaly_detector(note_store: Any, tx_store: Any) -> Any:
     """1.2 anomaly_detector 类型错拒绝(TypeError)。"""
     from my_ai_employee.core.expense_service import ExpenseServiceImpl
 
@@ -128,7 +128,9 @@ def test_construct_rejects_wrong_type_anomaly_detector(note_store, tx_store):
         )
 
 
-def test_construct_validates_cache_ttl(note_store, tx_store, anomaly_detector):
+def test_construct_validates_cache_ttl(
+    note_store: Any, tx_store: Any, anomaly_detector: Any
+) -> Any:
     """1.3 cache_ttl_ms 越界拒绝(ValueError)。"""
     from my_ai_employee.core.expense_service import ExpenseServiceImpl
 
@@ -151,12 +153,12 @@ def test_construct_validates_cache_ttl(note_store, tx_store, anomaly_detector):
 # ===== 2. Notes 相关 3 方法(4 tests)=====
 
 
-def test_get_total_notes_count_empty(service):
+def test_get_total_notes_count_empty(service: Any) -> Any:
     """2.1 空表 → 0。"""
     assert service.get_total_notes_count() == 0
 
 
-def test_get_total_notes_count_after_inserts(note_store, service):
+def test_get_total_notes_count_after_inserts(note_store: Any, service: Any) -> Any:
     """2.2 插入 3 笔 → 3。"""
     for i in range(3):
         note_store.insert(
@@ -169,7 +171,7 @@ def test_get_total_notes_count_after_inserts(note_store, service):
     assert service.get_total_notes_count() == 3
 
 
-def test_get_unsynced_count_filters_new(note_store, service):
+def test_get_unsynced_count_filters_new(note_store: Any, service: Any) -> Any:
     """2.3 unsynced = sync_status='NEW' 行数(沿 v0.2.1 #4 sync_status 字段)。"""
     # 插 3 笔,2 笔结构化(structure_and_emit 路径),1 笔保持 NEW
     note_store.insert(
@@ -199,7 +201,7 @@ def test_get_unsynced_count_filters_new(note_store, service):
     assert service.get_unsynced_count() == 1  # 只 note-003 是 NEW
 
 
-def test_get_recent_note_titles_returns_titles(note_store, service):
+def test_get_recent_note_titles_returns_titles(note_store: Any, service: Any) -> Any:
     """2.4 recent_titles 返回 list[title](按 synced_at_ms DESC)。"""
     note_store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -222,12 +224,12 @@ def test_get_recent_note_titles_returns_titles(note_store, service):
 # ===== 3. 系统状态 2 方法(2 tests)=====
 
 
-def test_is_clipboard_listener_running_false_without_proc(service):
+def test_is_clipboard_listener_running_false_without_proc(service: Any) -> Any:
     """3.1 clipboard_listener_proc 未注入 → False。"""
     assert service.is_clipboard_listener_running() is False
 
 
-def test_get_tcc_authorization_status_false_without_fn(service):
+def test_get_tcc_authorization_status_false_without_fn(service: Any) -> Any:
     """3.2 tcc_check_fn 未注入 → False。"""
     assert service.get_tcc_authorization_status() is False
 
@@ -235,17 +237,17 @@ def test_get_tcc_authorization_status_false_without_fn(service):
 # ===== 4. Anomaly 缓存 + 查询(3 tests)=====
 
 
-def test_get_anomaly_count_empty_returns_zero(service):
+def test_get_anomaly_count_empty_returns_zero(service: Any) -> Any:
     """4.1 空 transactions 表 → 0(无 anomaly)。"""
     assert service.get_anomaly_count() == 0
 
 
-def test_get_recent_anomalies_empty_returns_empty_list(service):
+def test_get_recent_anomalies_empty_returns_empty_list(service: Any) -> Any:
     """4.2 空 transactions 表 → []。"""
     assert service.get_recent_anomalies(limit=10) == []
 
 
-def test_get_recent_anomalies_validates_limit(service):
+def test_get_recent_anomalies_validates_limit(service: Any) -> Any:
     """4.3 limit 严判 [1, 100](type() is bool 拒绝 + 越界拒绝)。"""
     with pytest.raises(ValueError, match="limit 必须是"):
         service.get_recent_anomalies(limit=0)

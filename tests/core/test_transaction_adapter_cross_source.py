@@ -26,7 +26,7 @@ import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -59,18 +59,18 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def adapter(session_factory):
+def adapter(session_factory: Any) -> Any:
     from my_ai_employee.core.transaction_adapter import TransactionAdapter
 
     return TransactionAdapter(session_factory)
 
 
-def test_import_alipay_csv_inserts_categorized(adapter, session_factory) -> None:
+def test_import_alipay_csv_inserts_categorized(adapter: Any, session_factory: Any) -> None:
     """Case 1 — 支付宝 2024 样本 5 行全部入库,分类 + 状态机推进到 categorized."""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -94,7 +94,7 @@ def test_import_alipay_csv_inserts_categorized(adapter, session_factory) -> None
     assert all(len(row.normalized_fingerprint) == 32 for row in rows)
 
 
-def test_import_alipay_csv_duplicate_second_run(adapter, session_factory) -> None:
+def test_import_alipay_csv_duplicate_second_run(adapter: Any, session_factory: Any) -> None:
     """Case 2 — 同一份支付宝 CSV 导两次:第二次 5 条全走 duplicate,表内仍 5 条."""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -112,7 +112,7 @@ def test_import_alipay_csv_duplicate_second_run(adapter, session_factory) -> Non
     assert len(store.list_by_source("alipay", limit=expected + 1)) == expected
 
 
-def test_cross_source_alipay_triggers_wechat_candidate(adapter, session_factory) -> None:
+def test_cross_source_alipay_triggers_wechat_candidate(adapter: Any, session_factory: Any) -> None:
     """Case 3 — alipay 导入触发 wechat 已有候选:L2 命中 + needs_confirm 标记.
 
     D7 关键验证:跨源去重链路贯通(alipay → wechat 候选)。
@@ -169,7 +169,7 @@ def test_cross_source_alipay_triggers_wechat_candidate(adapter, session_factory)
     assert new_tx.candidate_match_id == existing.id
 
 
-def test_cross_source_wechat_triggers_alipay_candidate(adapter, session_factory) -> None:
+def test_cross_source_wechat_triggers_alipay_candidate(adapter: Any, session_factory: Any) -> None:
     """Case 4 — wechat 导入触发 alipay 已有候选:L2 命中 + needs_confirm 标记.
 
     D7 关键验证:跨源去重链路贯通(wechat → alipay 候选,反方向)。
@@ -222,7 +222,7 @@ def test_cross_source_wechat_triggers_alipay_candidate(adapter, session_factory)
     assert new_tx.candidate_match_id == existing.id
 
 
-def test_l1_unique_not_cross_source_confused(adapter, session_factory) -> None:
+def test_l1_unique_not_cross_source_confused(adapter: Any, session_factory: Any) -> None:
     """Case 5 — L1 UNIQUE 不跨源误判(wechat 'tx-001' 不阻塞 alipay 'tx-001').
 
     D7 关键验证:UNIQUE(source, external_transaction_id) 是 source 维度的,
@@ -275,7 +275,7 @@ def test_l1_unique_not_cross_source_confused(adapter, session_factory) -> None:
     assert wechat_tx is not None
 
 
-def test_unified_dispatcher_pattern(adapter, session_factory) -> None:
+def test_unified_dispatcher_pattern(adapter: Any, session_factory: Any) -> None:
     """Case 6 — 演示 D7 复用 import_raw_transactions(source="alipay") 单一入口.
 
     D7 关键验证:微信/支付宝共用同一编排层,仅 source 参数不同。

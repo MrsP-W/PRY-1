@@ -39,6 +39,7 @@ from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -65,13 +66,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory):
+def store(session_factory: Any) -> Any:
     """MerchantProfileStore 实例(注入 session_factory + TransactionStore)。"""
     from my_ai_employee.db.merchant_profile import MerchantProfileStore
     from my_ai_employee.db.transactions import TransactionStore
@@ -81,7 +82,7 @@ def store(session_factory):
 
 
 @pytest.fixture
-def tx_store(session_factory):
+def tx_store(session_factory: Any) -> Any:
     """TransactionStore 实例(供 setup helper 复用)。"""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -92,7 +93,7 @@ def tx_store(session_factory):
 
 
 def _seed_history(
-    tx_store, counterparty: str, n: int, base_amount: Decimal = Decimal("50.00")
+    tx_store: Any, counterparty: str, n: int, base_amount: Decimal = Decimal("50.00")
 ) -> None:
     """插入 n 笔同一商家的历史交易(供 compute_profile 测试用)。"""
     from my_ai_employee.db.transactions import Transaction
@@ -200,7 +201,9 @@ def test_validate_amount_rejects_negative_and_non_decimal() -> None:
 # ===== Segment 3: compute_profile 冷启动/正常(2 tests)=====
 
 
-def test_compute_profile_returns_none_when_history_below_threshold(store, tx_store) -> None:
+def test_compute_profile_returns_none_when_history_below_threshold(
+    store: Any, tx_store: Any
+) -> None:
     """Case 5 — compute_profile < 5 笔历史 → None(冷启动 fallback,沿 D8.1 决策 MIN_HISTORY_FOR_PROFILE=5)."""
     # 插 4 笔(< 5 阈值)
     _seed_history(tx_store, "新商家", n=4)
@@ -208,7 +211,7 @@ def test_compute_profile_returns_none_when_history_below_threshold(store, tx_sto
     assert result is None
 
 
-def test_compute_profile_returns_dict_with_correct_stats(store, tx_store) -> None:
+def test_compute_profile_returns_dict_with_correct_stats(store: Any, tx_store: Any) -> None:
     """Case 6 — compute_profile >= 5 笔 → dict 含 avg_amount + amount_std + tx_count."""
     # 插 10 笔 ¥50.00(同金额 σ=0)
     _seed_history(tx_store, "星巴克", n=10, base_amount=Decimal("50.00"))
@@ -230,7 +233,7 @@ def test_compute_profile_returns_dict_with_correct_stats(store, tx_store) -> Non
 # ===== Segment 4: upsert_profile insert / update(2 tests)=====
 
 
-def test_upsert_profile_inserts_new_profile(store) -> None:
+def test_upsert_profile_inserts_new_profile(store: Any) -> None:
     """Case 7 — upsert_profile 新增画像(MerchantProfile 行入库 + 字段严判生效)."""
     import time
 
@@ -255,7 +258,7 @@ def test_upsert_profile_inserts_new_profile(store) -> None:
     assert fetched.updated_at_ms >= now_ms - 1000  # 误差 1s 内
 
 
-def test_upsert_profile_updates_existing_profile(store) -> None:
+def test_upsert_profile_updates_existing_profile(store: Any) -> None:
     """Case 8 — upsert_profile 覆盖已有画像(tx_count 累加 + 字段全更新)."""
     import time
 
@@ -300,7 +303,7 @@ def test_upsert_profile_updates_existing_profile(store) -> None:
 # 其余 1 个 case 在 test_transactions.py 末尾追加
 
 
-def test_list_by_counterparty_integration_with_profile(store, tx_store) -> None:
+def test_list_by_counterparty_integration_with_profile(store: Any, tx_store: Any) -> None:
     """Case 9(integration) — TransactionStore.list_by_counterparty + MerchantProfileStore 联动.
 
     集成验证:历史交易 → 商家画像 — 模拟 D8.2 Detector 调用场景.

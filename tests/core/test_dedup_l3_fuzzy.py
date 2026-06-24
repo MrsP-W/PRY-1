@@ -24,6 +24,7 @@ import sys
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -52,14 +53,14 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     return sessionmaker(bind=engine)
 
 
 # ===== 1. find_l3_fuzzy_candidates 严判 + 归一化(8 tests)=====
 
 
-def test_l3_fuzzy_basic_match_same_day(session_factory) -> None:
+def test_l3_fuzzy_basic_match_same_day(session_factory: Any) -> None:
     """L3 模糊匹配:同日期同商家名应命中候选."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -91,7 +92,7 @@ def test_l3_fuzzy_basic_match_same_day(session_factory) -> None:
         assert candidates[0]["counterparty"] == "星巴克咖啡(国贸店)"
 
 
-def test_l3_fuzzy_match_with_whitespace_and_fuzzy_mark(session_factory) -> None:
+def test_l3_fuzzy_match_with_whitespace_and_fuzzy_mark(session_factory: Any) -> None:
     """L3 模糊匹配:归一化应容忍空白 + 模糊符 *(沿 _normalize_counterparty_value)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -123,7 +124,7 @@ def test_l3_fuzzy_match_with_whitespace_and_fuzzy_mark(session_factory) -> None:
         assert candidates[0]["id"] == existing.id
 
 
-def test_l3_fuzzy_match_plus_minus_one_day(session_factory) -> None:
+def test_l3_fuzzy_match_plus_minus_one_day(session_factory: Any) -> None:
     """L3 模糊匹配:日期 ±1 day 应命中(±1 day 默认窗口)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -164,7 +165,7 @@ def test_l3_fuzzy_match_plus_minus_one_day(session_factory) -> None:
         assert candidates[0]["id"] == existing.id
 
 
-def test_l3_fuzzy_no_match_outside_window(session_factory) -> None:
+def test_l3_fuzzy_no_match_outside_window(session_factory: Any) -> None:
     """L3 模糊匹配:超出 ±1 day 窗口不应命中."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -194,7 +195,7 @@ def test_l3_fuzzy_no_match_outside_window(session_factory) -> None:
         assert len(candidates) == 0, "L3:±2 day 超出窗口不应命中"
 
 
-def test_l3_fuzzy_no_match_different_merchant(session_factory) -> None:
+def test_l3_fuzzy_no_match_different_merchant(session_factory: Any) -> None:
     """L3 模糊匹配:不同商家名不应命中(严格归一化匹配)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -226,7 +227,7 @@ def test_l3_fuzzy_no_match_different_merchant(session_factory) -> None:
         )
 
 
-def test_l3_fuzzy_returns_sorted_by_id(session_factory) -> None:
+def test_l3_fuzzy_returns_sorted_by_id(session_factory: Any) -> None:
     """L3 模糊匹配:多候选应按 id ASC 排序(沿 L2 范本)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -284,7 +285,7 @@ def test_l3_fuzzy_returns_sorted_by_id(session_factory) -> None:
         assert candidates[2]["id"] == tx3.id
 
 
-def test_l3_fuzzy_exclude_tx_id(session_factory) -> None:
+def test_l3_fuzzy_exclude_tx_id(session_factory: Any) -> None:
     """L3 模糊匹配:exclude_tx_id 应排除自身(防自命中)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -315,7 +316,7 @@ def test_l3_fuzzy_exclude_tx_id(session_factory) -> None:
         assert len(candidates) == 0, "L3:exclude_tx_id 应排除自身"
 
 
-def test_l3_fuzzy_source_filter(session_factory) -> None:
+def test_l3_fuzzy_source_filter(session_factory: Any) -> None:
     """L3 模糊匹配:source_filter 应限定 source(单源查询)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -363,7 +364,7 @@ def test_l3_fuzzy_source_filter(session_factory) -> None:
 # ===== 2. find_l3_fuzzy_candidates ±N day 边界 + 严判(6 tests)=====
 
 
-def test_l3_fuzzy_date_tolerance_zero_exact_only(session_factory) -> None:
+def test_l3_fuzzy_date_tolerance_zero_exact_only(session_factory: Any) -> None:
     """L3 模糊匹配:date_tolerance_days=0 时只命中同日期(等同 L2 容错为 0)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -394,7 +395,7 @@ def test_l3_fuzzy_date_tolerance_zero_exact_only(session_factory) -> None:
         assert len(candidates) == 0, "L3:tolerance=0 + 差 1 day 不应命中"
 
 
-def test_l3_fuzzy_date_tolerance_seven_cross_weekend(session_factory) -> None:
+def test_l3_fuzzy_date_tolerance_seven_cross_weekend(session_factory: Any) -> None:
     """L3 模糊匹配:date_tolerance_days=7 支持跨周末(防周末消费周一录入误匹配)."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -426,7 +427,7 @@ def test_l3_fuzzy_date_tolerance_seven_cross_weekend(session_factory) -> None:
         assert candidates[0]["id"] == existing.id
 
 
-def test_l3_fuzzy_rejects_invalid_date_tolerance(session_factory) -> None:
+def test_l3_fuzzy_rejects_invalid_date_tolerance(session_factory: Any) -> None:
     """L3 模糊匹配:date_tolerance_days 超出 [0, 7] → ValueError."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
 
@@ -449,7 +450,7 @@ def test_l3_fuzzy_rejects_invalid_date_tolerance(session_factory) -> None:
             )
 
 
-def test_l3_fuzzy_rejects_invalid_transaction_date_type(session_factory) -> None:
+def test_l3_fuzzy_rejects_invalid_transaction_date_type(session_factory: Any) -> None:
     """L3 模糊匹配:transaction_date 必须是 date(非 str/datetime)→ TypeError."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
 
@@ -470,7 +471,7 @@ def test_l3_fuzzy_rejects_invalid_transaction_date_type(session_factory) -> None
             )
 
 
-def test_l3_fuzzy_rejects_empty_counterparty(session_factory) -> None:
+def test_l3_fuzzy_rejects_empty_counterparty(session_factory: Any) -> None:
     """L3 模糊匹配:counterparty 必填非空 → ValueError."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
 
@@ -489,7 +490,7 @@ def test_l3_fuzzy_rejects_empty_counterparty(session_factory) -> None:
             )
 
 
-def test_l3_fuzzy_rejects_invalid_limit(session_factory) -> None:
+def test_l3_fuzzy_rejects_invalid_limit(session_factory: Any) -> None:
     """L3 模糊匹配:limit 必须是 [1, 100] 的 int(非 bool)→ ValueError."""
     from my_ai_employee.core.dedup import find_l3_fuzzy_candidates
 
@@ -535,18 +536,18 @@ def notes_engine() -> Iterator:
 
 
 @pytest.fixture
-def notes_session_factory(notes_engine):
+def notes_session_factory(notes_engine: Any) -> Any:
     return sessionmaker(bind=notes_engine)
 
 
 @pytest.fixture
-def notes_store(notes_session_factory):
+def notes_store(notes_session_factory: Any) -> Any:
     from my_ai_employee.db.notes import NoteStore
 
     return NoteStore(notes_session_factory)
 
 
-def test_notes_insert_l3_fallback_no_match(notes_store) -> None:
+def test_notes_insert_l3_fallback_no_match(notes_store: Any) -> None:
     """NoteStore.insert:无 L2/L3 候选时,needs_confirm=0, candidate_match_id=None."""
     note = notes_store.insert(
         apple_note_id="x-coredata://test/note-l3-001",
@@ -559,7 +560,7 @@ def test_notes_insert_l3_fallback_no_match(notes_store) -> None:
     assert note.candidate_match_id is None
 
 
-def test_notes_insert_l2_match_first_priority(notes_store) -> None:
+def test_notes_insert_l2_match_first_priority(notes_store: Any) -> None:
     """NoteStore.insert:L2 fingerprint 命中时优先 L2(不触发 L3 fallback)."""
 
     base_ms = 1700000000000
@@ -583,7 +584,7 @@ def test_notes_insert_l2_match_first_priority(notes_store) -> None:
     assert note2.candidate_match_id is not None
 
 
-def test_notes_insert_l3_fallback_match(notes_store) -> None:
+def test_notes_insert_l3_fallback_match(notes_store: Any) -> None:
     """NoteStore.insert:L2 不命中但 L3 模糊匹配时 → needs_confirm=1."""
     from datetime import datetime as _dt
 
@@ -609,7 +610,7 @@ def test_notes_insert_l3_fallback_match(notes_store) -> None:
     assert note2.candidate_match_id is not None, "L3 命中应设置 candidate_match_id"
 
 
-def test_notes_insert_l3_fallback_outside_window(notes_store) -> None:
+def test_notes_insert_l3_fallback_outside_window(notes_store: Any) -> None:
     """NoteStore.insert:超出 ±1 day 窗口时 L3 不命中 → needs_confirm=0."""
     from datetime import datetime as _dt
 
@@ -635,7 +636,7 @@ def test_notes_insert_l3_fallback_outside_window(notes_store) -> None:
     assert note2.candidate_match_id is None
 
 
-def test_notes_insert_l3_fallback_different_title(notes_store) -> None:
+def test_notes_insert_l3_fallback_different_title(notes_store: Any) -> None:
     """NoteStore.insert:不同 title 归一化后不等 → L3 不命中(误匹配防护)."""
     from datetime import datetime as _dt
 
@@ -660,7 +661,7 @@ def test_notes_insert_l3_fallback_different_title(notes_store) -> None:
     assert note2.needs_confirm == 0, "L3 归一化不等 → needs_confirm=0"
 
 
-def test_notes_insert_l3_fallback_title_normalized_equal(notes_store) -> None:
+def test_notes_insert_l3_fallback_title_normalized_equal(notes_store: Any) -> None:
     """NoteStore.insert:title 归一化相等但 L2 fp 不等(同日期不同大小写)→ L3 命中.
 
     注意:实际场景中 size/case 不同的 title 会让 L2 fp 不同(L2 是 strip+lower 的),
@@ -692,7 +693,7 @@ def test_notes_insert_l3_fallback_title_normalized_equal(notes_store) -> None:
     assert note2.candidate_match_id is not None
 
 
-def test_notes_insert_l3_fallback_picks_earliest_id(notes_store) -> None:
+def test_notes_insert_l3_fallback_picks_earliest_id(notes_store: Any) -> None:
     """NoteStore.insert:L3 多候选时,选最早 id(沿 L2 范本 ORDER BY id ASC)."""
     from datetime import datetime as _dt
 
@@ -726,7 +727,7 @@ def test_notes_insert_l3_fallback_picks_earliest_id(notes_store) -> None:
     )
 
 
-def test_notes_insert_l3_fallback_with_fuzzy_mark(notes_store) -> None:
+def test_notes_insert_l3_fallback_with_fuzzy_mark(notes_store: Any) -> None:
     """NoteStore.insert:title 含模糊符 * → L3 归一化后命中.
 
     实际场景:用户笔记写"星巴克*"(脱敏),原始 CSV 写"星巴克"→ L2 fp 不同
@@ -756,7 +757,7 @@ def test_notes_insert_l3_fallback_with_fuzzy_mark(notes_store) -> None:
     assert note2.candidate_match_id is not None
 
 
-def test_notes_l3_helper_validates_inputs(notes_store) -> None:
+def test_notes_l3_helper_validates_inputs(notes_store: Any) -> None:
     """NoteStore._find_l3_fuzzy_in_session:严判入参(沿 D4.7.3 范本)."""
     from my_ai_employee.core.fingerprint import _normalize_note_title_value
 
@@ -767,7 +768,7 @@ def test_notes_l3_helper_validates_inputs(notes_store) -> None:
         _normalize_note_title_value(None)  # type: ignore[arg-type]
 
 
-def test_notes_l3_helper_basic_usage(notes_store) -> None:
+def test_notes_l3_helper_basic_usage(notes_store: Any) -> None:
     """NoteStore._find_l3_fuzzy_in_session:基本用法(直接调 helper)."""
     from datetime import datetime as _dt
 

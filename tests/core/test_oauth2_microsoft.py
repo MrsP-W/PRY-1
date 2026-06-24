@@ -34,7 +34,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 # ===== 1. URL 构造(4 tests)=====
 
 
-def test_get_auth_url_basic_construction():
+def test_get_auth_url_basic_construction() -> Any:
     """1.1 MicrosoftOAuth2.get_auth_url 基本 URL 构造(6 字段全含)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import (
@@ -66,7 +66,7 @@ def test_get_auth_url_basic_construction():
     )
 
 
-def test_get_auth_url_state_none_generates_state():
+def test_get_auth_url_state_none_generates_state() -> Any:
     """1.2 get_auth_url state=None 时自动 generate_state(防 CSRF,沿 RFC 6749 §10.12)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
@@ -86,7 +86,7 @@ def test_get_auth_url_state_none_generates_state():
     assert len(state_raw) >= 32
 
 
-def test_get_auth_url_rejects_invalid_config():
+def test_get_auth_url_rejects_invalid_config() -> Any:
     """1.3 get_auth_url config 非 OAuth2Config 拒绝(沿 D4.7.3 公共 API 入口严判)."""
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
 
@@ -95,7 +95,7 @@ def test_get_auth_url_rejects_invalid_config():
         provider.get_auth_url("not a config")  # type: ignore[arg-type]
 
 
-def test_get_auth_url_rejects_invalid_state():
+def test_get_auth_url_rejects_invalid_state() -> Any:
     """1.4 get_auth_url state 非 str / 空字符串拒绝(沿 D4.7.3 公共 API 入口严判)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
@@ -127,7 +127,7 @@ def _build_mock_msal_factory(return_value: Any) -> MagicMock:
     return mock_factory
 
 
-def test_exchange_code_success_returns_oauth2_token():
+def test_exchange_code_success_returns_oauth2_token() -> Any:
     """2.1 exchange_code 成功返回 OAuth2Token(模拟 msal 返回值)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
@@ -170,7 +170,7 @@ def test_exchange_code_success_returns_oauth2_token():
     assert call_kwargs["redirect_uri"] == "https://my-app.com/oauth/callback"
 
 
-def test_exchange_code_error_response_raises_token_exchange_error():
+def test_exchange_code_error_response_raises_token_exchange_error() -> Any:
     """2.2 exchange_code msal 返回 error 抛 OAuth2TokenExchangeError(沿 RFC 6749 §5.2)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import (
@@ -195,7 +195,7 @@ def test_exchange_code_error_response_raises_token_exchange_error():
         provider.exchange_code(config, "expired-code")
 
 
-def test_exchange_code_msal_exception_narrows_to_token_exchange_error():
+def test_exchange_code_msal_exception_narrows_to_token_exchange_error() -> Any:
     """2.3 exchange_code msal 抛异常(网络错等)收窄为 OAuth2TokenExchangeError(沿 D3.3.3 范本)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import (
@@ -224,7 +224,7 @@ def _build_mock_msal_factory_refresh(return_value: Any) -> MagicMock:
     return mock_factory
 
 
-def test_refresh_token_success_returns_new_oauth2_token():
+def test_refresh_token_success_returns_new_oauth2_token() -> Any:
     """3.1 refresh_token 成功返回新 OAuth2Token(refresh_token 通常不轮换)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
@@ -259,7 +259,7 @@ def test_refresh_token_success_returns_new_oauth2_token():
     assert call_kwargs["refresh_token"] == "old-refresh-token"
 
 
-def test_refresh_token_error_response_raises_token_refresh_error():
+def test_refresh_token_error_response_raises_token_refresh_error() -> Any:
     """3.2 refresh_token msal 返回 error 抛 OAuth2TokenRefreshError(语义对应)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import (
@@ -285,7 +285,7 @@ def test_refresh_token_error_response_raises_token_refresh_error():
         provider.refresh_token(config, "expired-refresh-token")
 
 
-def test_refresh_token_msal_exception_narrows_to_token_refresh_error():
+def test_refresh_token_msal_exception_narrows_to_token_refresh_error() -> Any:
     """3.3 refresh_token msal 抛异常(网络错等)收窄为 OAuth2TokenRefreshError(沿 D3.3.3 范本)."""
     from my_ai_employee.core.oauth2 import OAuth2Config
     from my_ai_employee.core.oauth2_microsoft import (
@@ -311,7 +311,7 @@ def test_refresh_token_msal_exception_narrows_to_token_refresh_error():
 # ===== 4. 严判(1 test) + Protocol 合规(1 test)=====
 
 
-def test_default_scopes_validation():
+def test_default_scopes_validation() -> Any:
     """4.1 default_scopes 严判(沿 D4.7.3 数据类契约严判)."""
     from my_ai_employee.core.oauth2_microsoft import MicrosoftOAuth2
 
@@ -328,7 +328,7 @@ def test_default_scopes_validation():
         MicrosoftOAuth2(default_scopes=("valid", "   "))
 
 
-def test_microsoft_oauth2_satisfies_oauth2provider_protocol():
+def test_microsoft_oauth2_satisfies_oauth2provider_protocol() -> Any:
     """4.2 MicrosoftOAuth2 满足 OAuth2Provider Protocol(沿 v0.2.1 #6 范本).
 
     验证 MicrosoftOAuth2 实例可被 `isinstance(provider, OAuth2Provider)` 识别,

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import text
@@ -31,7 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 def _insert_test_tx(
-    session,
+    session: Any,
     *,
     source: str = "wechat",
     external_tx_id: str = "tx-1",
@@ -73,7 +74,7 @@ def _insert_test_tx(
 # ===== L1 源内幂等(8 cases)=====
 
 
-def test_01_l1_same_source_same_id_hits(session) -> None:
+def test_01_l1_same_source_same_id_hits(session: Any) -> None:
     """L1 Case 1 — 同源同 ID 命中返回 True."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -81,14 +82,14 @@ def test_01_l1_same_source_same_id_hits(session) -> None:
     assert check_l1_duplicate(session, "wechat", "tx-l1-001") is True
 
 
-def test_02_l1_miss_returns_false(session) -> None:
+def test_02_l1_miss_returns_false(session: Any) -> None:
     """L1 Case 2 — 未命中返回 False."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
     assert check_l1_duplicate(session, "wechat", "tx-l1-not-exist") is False
 
 
-def test_03_l1_same_id_different_source_misses(session) -> None:
+def test_03_l1_same_id_different_source_misses(session: Any) -> None:
     """L1 Case 3 — 同 ID 不同 source 不命中(D7 兼容:UNIQUE(source, external_tx_id))."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -96,7 +97,7 @@ def test_03_l1_same_id_different_source_misses(session) -> None:
     assert check_l1_duplicate(session, "alipay", "tx-l1-shared") is False
 
 
-def test_04_l1_source_format_guard(session) -> None:
+def test_04_l1_source_format_guard(session: Any) -> None:
     """L1 Case 4 — source 严判 ^[a-z0-9_-]{1,32}$ 小写 snake_case."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -106,7 +107,7 @@ def test_04_l1_source_format_guard(session) -> None:
         check_l1_duplicate(session, "", "tx-1")  # type: ignore[arg-type]
 
 
-def test_05_l1_ext_tx_id_empty_guard(session) -> None:
+def test_05_l1_ext_tx_id_empty_guard(session: Any) -> None:
     """L1 Case 5 — external_transaction_id 必填非空."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -116,7 +117,7 @@ def test_05_l1_ext_tx_id_empty_guard(session) -> None:
         check_l1_duplicate(session, "wechat", "   ")  # type: ignore[arg-type]
 
 
-def test_06_l1_ext_tx_id_length_guard(session) -> None:
+def test_06_l1_ext_tx_id_length_guard(session: Any) -> None:
     """L1 Case 6 — external_transaction_id 长度 1-128."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -124,14 +125,14 @@ def test_06_l1_ext_tx_id_length_guard(session) -> None:
         check_l1_duplicate(session, "wechat", "x" * 129)  # type: ignore[arg-type]
 
 
-def test_07_l1_strict_stub_returns_true(session) -> None:
+def test_07_l1_strict_stub_returns_true(session: Any) -> None:
     """L1 Case 7 — strict 入口是 stub(INSERT 流程由 D6.5 Adapter 负责)."""
     from my_ai_employee.core.dedup import check_l1_duplicate_strict
 
     assert check_l1_duplicate_strict(session, "wechat", "tx-strict") is True
 
 
-def test_08_l1_wrong_type_guards(session) -> None:
+def test_08_l1_wrong_type_guards(session: Any) -> None:
     """L1 Case 8 — type 严判 — None / int 抛 ValueError."""
     from my_ai_employee.core.dedup import check_l1_duplicate
 
@@ -144,7 +145,7 @@ def test_08_l1_wrong_type_guards(session) -> None:
 # ===== L2 跨源候选(5 cases)=====
 
 
-def test_09_l2_same_fingerprint_hits(session) -> None:
+def test_09_l2_same_fingerprint_hits(session: Any) -> None:
     """L2 Case 1 — 同 fingerprint 命中返回候选 list."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -155,7 +156,7 @@ def test_09_l2_same_fingerprint_hits(session) -> None:
     assert candidates[0]["external_transaction_id"] == "tx-l2-001"
 
 
-def test_10_l2_different_fingerprint_misses(session) -> None:
+def test_10_l2_different_fingerprint_misses(session: Any) -> None:
     """L2 Case 2 — 不同 fingerprint 不命中."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -164,7 +165,7 @@ def test_10_l2_different_fingerprint_misses(session) -> None:
     assert candidates == []
 
 
-def test_11_l2_multiple_candidates_pick_min_id(session) -> None:
+def test_11_l2_multiple_candidates_pick_min_id(session: Any) -> None:
     """L2 Case 3 — 多候选时按 id ASC 排序(确定性)."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -176,7 +177,7 @@ def test_11_l2_multiple_candidates_pick_min_id(session) -> None:
     assert ids == sorted(ids), "候选必须按 id ASC 排序"
 
 
-def test_12_l2_exclude_self_id(session) -> None:
+def test_12_l2_exclude_self_id(session: Any) -> None:
     """L2 Case 4 — exclude_tx_id 排除自身(防自命中)."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -189,7 +190,7 @@ def test_12_l2_exclude_self_id(session) -> None:
     assert candidates_excl == []
 
 
-def test_13_l2_fingerprint_format_guard(session) -> None:
+def test_13_l2_fingerprint_format_guard(session: Any) -> None:
     """L2 Case 5 — fingerprint 严判 32 chars lowercase hex."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -202,7 +203,7 @@ def test_13_l2_fingerprint_format_guard(session) -> None:
 # ===== L3 模糊匹配(5 cases)=====
 
 
-def test_14_l3_new_id_eq_candidate_raises(session) -> None:
+def test_14_l3_new_id_eq_candidate_raises(session: Any) -> None:
     """L3 Case 1 — new_tx_id == candidate_match_id 抛 ValueError(防自命中)."""
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
@@ -210,7 +211,7 @@ def test_14_l3_new_id_eq_candidate_raises(session) -> None:
         mark_l3_needs_confirm(session, 1, 1)  # type: ignore[arg-type]
 
 
-def test_15_l3_tx_id_positive_int_guard(session) -> None:
+def test_15_l3_tx_id_positive_int_guard(session: Any) -> None:
     """L3 Case 2 — new_tx_id / candidate_match_id 必须是正 int(非 bool)."""
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
@@ -222,7 +223,7 @@ def test_15_l3_tx_id_positive_int_guard(session) -> None:
         mark_l3_needs_confirm(session, True, 2)  # type: ignore[arg-type]
 
 
-def test_16_l3_type_guard(session) -> None:
+def test_16_l3_type_guard(session: Any) -> None:
     """L3 Case 3 — tx_id type 严判 — None / str 抛 ValueError."""
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
@@ -232,7 +233,7 @@ def test_16_l3_type_guard(session) -> None:
         mark_l3_needs_confirm(session, "1", 1)  # type: ignore[arg-type]
 
 
-def test_17_l3_no_l2_hit_skips_l3(session) -> None:
+def test_17_l3_no_l2_hit_skips_l3(session: Any) -> None:
     """L3 Case 4 — 无 L2 命中时无 L3 触发(空表查询 → 无候选 → mark_l3 不被调用)."""
     from my_ai_employee.core.dedup import find_l2_candidates
 
@@ -242,7 +243,7 @@ def test_17_l3_no_l2_hit_skips_l3(session) -> None:
     # 无 L3 触发路径(本测试只验证 L2 不命中时不走 L3 逻辑)
 
 
-def test_18_l3_chained_3layer_integration(session) -> None:
+def test_18_l3_chained_3layer_integration(session: Any) -> None:
     """L3 Case 5 — 端到端 3 层串联通路:L1 命中 → skip insert,无 L2/L3 触发."""
     from my_ai_employee.core.dedup import check_l1_duplicate, find_l2_candidates
 

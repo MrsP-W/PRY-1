@@ -16,6 +16,7 @@ import os
 import sys
 from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -49,7 +50,7 @@ def _install_fake_keychain() -> None:
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch) -> Iterator[None]:
+def fake_keychain(monkeypatch: Any) -> Iterator[None]:
     """装 fake keychain(逐 test 隔离)."""
     _FAKE_KEYCHAIN.clear()
     _install_fake_keychain()
@@ -64,7 +65,7 @@ def temp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def session_factory(temp_db_path: Path, fake_keychain):
+def session_factory(temp_db_path: Path, fake_keychain: Any) -> Any:
     """构造 SQLAlchemy sessionmaker,跑 0001-0006 migration.
 
     D6.0 e2e 决策:用明文 sqlite + SQLAlchemy create_engine(不调 SQLCipher),
@@ -94,7 +95,7 @@ def session_factory(temp_db_path: Path, fake_keychain):
 
 
 @pytest.fixture
-def smtp_inmemory():
+def smtp_inmemory() -> Any:
     """InMemorySmtpTransport 实例(默认 e2e 走模拟)."""
     from my_ai_employee.connectors.smtp import InMemorySmtpTransport
 
@@ -104,7 +105,7 @@ def smtp_inmemory():
 # ===== Env 门控(沿 D5.6.5 4 重防误发)=====
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: Any, items: Any) -> Any:
     """默认 skip S5(需真实 SMTP);S6-S9 已实化(D6+D7+D9+D10 全部落地).
 
     S6 已实化(S6.1+S6.2+S6.3 真实断言在 test_v0_1_s6_finance.py):

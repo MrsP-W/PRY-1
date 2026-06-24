@@ -16,6 +16,7 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -24,7 +25,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 @pytest.mark.e2e
-def test_s4_approve_5_outbox_to_approved(session_factory):
+def test_s4_approve_5_outbox_to_approved(session_factory: Any) -> Any:
     """S4.1 — 5 封 outbox pending_send 1-click 审批 → APPROVED."""
     from my_ai_employee.core.outbox import OutboxStatus, OutboxTone
     from my_ai_employee.db.outbox import OutboxStore
@@ -58,7 +59,7 @@ def test_s4_approve_5_outbox_to_approved(session_factory):
 
 
 @pytest.mark.e2e
-def test_s4_illegal_transition_pending_to_sent(session_factory):
+def test_s4_illegal_transition_pending_to_sent(session_factory: Any) -> Any:
     """S4.2 — 非法转移 PENDING_SEND → SENT → OutboxIllegalTransitionError(D5.2 白名单严判)."""
     from my_ai_employee.core.outbox import OutboxStatus, OutboxTone
     from my_ai_employee.db.outbox import OutboxIllegalTransitionError, OutboxStore
@@ -83,7 +84,7 @@ def test_s4_illegal_transition_pending_to_sent(session_factory):
 
 
 @pytest.mark.e2e
-def test_s4_approved_keeps_timestamp_on_resend(session_factory):
+def test_s4_approved_keeps_timestamp_on_resend(session_factory: Any) -> Any:
     """S4.3 — APPROVED → SENDING → SENT 过程保留 last_approved_at_ms(不重置)."""
     from my_ai_employee.core.outbox import OutboxStatus, OutboxTone
     from my_ai_employee.db.outbox import OutboxStore

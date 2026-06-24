@@ -12,7 +12,7 @@ import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -46,18 +46,20 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def adapter(session_factory):
+def adapter(session_factory: Any) -> Any:
     from my_ai_employee.core.transaction_adapter import TransactionAdapter
 
     return TransactionAdapter(session_factory)
 
 
-def test_import_wechat_csv_inserts_categorized_transactions(adapter, session_factory) -> None:
+def test_import_wechat_csv_inserts_categorized_transactions(
+    adapter: Any, session_factory: Any
+) -> None:
     """Case 1 — 2024 微信样本 5 行全部入库,分类 + 状态机推进到 categorized."""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -81,7 +83,7 @@ def test_import_wechat_csv_inserts_categorized_transactions(adapter, session_fac
     assert all(len(row.normalized_fingerprint) == 32 for row in rows)
 
 
-def test_import_wechat_csv_duplicate_second_run_skips(adapter, session_factory) -> None:
+def test_import_wechat_csv_duplicate_second_run_skips(adapter: Any, session_factory: Any) -> None:
     """Case 2 — 同一份微信 CSV 导两次:第二次 5 条全走 duplicate,表内仍 5 条."""
     from my_ai_employee.db.transactions import TransactionStore
 
@@ -99,7 +101,7 @@ def test_import_wechat_csv_duplicate_second_run_skips(adapter, session_factory) 
     assert len(store.list_by_source("wechat", limit=expected + 1)) == expected
 
 
-def test_cross_source_candidate_marks_needs_confirm(adapter, session_factory) -> None:
+def test_cross_source_candidate_marks_needs_confirm(adapter: Any, session_factory: Any) -> None:
     """Case 3 — 跨源同日同金额同商家:新交易只标记 needs_confirm,不自动合并."""
     from my_ai_employee.connectors.wechat_csv import RawTransaction
     from my_ai_employee.core.fingerprint import normalize_fingerprint
@@ -147,7 +149,7 @@ def test_cross_source_candidate_marks_needs_confirm(adapter, session_factory) ->
 # ===== D6.6 P2 修复 3 专项测试(Case 4-6)=====
 
 
-def test_multi_candidate_selects_min_id_intentionally(adapter, session_factory) -> None:
+def test_multi_candidate_selects_min_id_intentionally(adapter: Any, session_factory: Any) -> None:
     """Case 4 (D6.6 P2) — 多候选时选最小 id 是有意设计:测试锁定契约.
 
     验证:
@@ -224,7 +226,7 @@ def test_multi_candidate_selects_min_id_intentionally(adapter, session_factory) 
     )
 
 
-def test_failed_items_tracks_value_error_per_row(adapter) -> None:
+def test_failed_items_tracks_value_error_per_row(adapter: Any) -> None:
     """Case 5 (D6.6 P2) — 业务/严判失败时 failed_items 记录 ext_id + error_type,继续下一行.
 
     验证:
@@ -238,7 +240,7 @@ def test_failed_items_tracks_value_error_per_row(adapter) -> None:
 
     original_categorize = transaction_adapter.categorize
 
-    def _selective_categorize(counterparty: str, amount):  # noqa: ARG001
+    def _selective_categorize(counterparty: str, amount: Any) -> Any:  # noqa: ARG001
         if counterparty == "坏数据行":
             raise ValueError("D6.6 测试故意失败")
         return TransactionCategory.OTHER  # 正常行返回有效分类
@@ -282,7 +284,7 @@ def test_failed_items_tracks_value_error_per_row(adapter) -> None:
 
 
 def test_atomicity_insert_rollback_on_illegal_transition(
-    adapter, session_factory, monkeypatch: pytest.MonkeyPatch
+    adapter: Any, session_factory: Any, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Case 6 (D6.6 P2) — insert_and_advance_status 原子性:状态机非法转换 → insert 也回滚.
 
@@ -299,7 +301,7 @@ def test_atomicity_insert_rollback_on_illegal_transition(
     # Monkeypatch 必须在 class 层(否则 adapter._store 实例 bound method 不变)
     original_insert_and_advance = TransactionStore.insert_and_advance_status
 
-    def _force_illegal_transition(self, **kwargs):  # noqa: ARG001
+    def _force_illegal_transition(self: Any, **kwargs: Any) -> Any:  # noqa: ARG001
         # 强制传一个非法 from_status → assert_transition 抛 IllegalTransition
         return original_insert_and_advance(
             self,

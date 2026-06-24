@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -35,18 +36,18 @@ def _frontmatter() -> str:
     return text[4:end]
 
 
-def test_steward_file_exists():
+def test_steward_file_exists() -> Any:
     """管家.md 必存(本项目 L4 专属角色,新建于 D5 周)."""
     assert STEWARD_PATH.exists(), f"管家.md 必存,实际路径 {STEWARD_PATH}"
 
 
-def test_steward_frontmatter_name():
+def test_steward_frontmatter_name() -> Any:
     """frontmatter name 必为 '管家'(L4 角色契约 1)."""
     fm = _frontmatter()
     assert "name: 管家" in fm, f"frontmatter 必含 'name: 管家',实际 fm={fm!r}"
 
 
-def test_steward_frontmatter_description_non_empty():
+def test_steward_frontmatter_description_non_empty() -> Any:
     """frontmatter description 必非空(单行描述)."""
     fm = _frontmatter()
     lines = fm.strip().splitlines()
@@ -56,21 +57,21 @@ def test_steward_frontmatter_description_non_empty():
     assert len(desc) > 10, f"description 必 > 10 字符,实际 {desc!r}"
 
 
-def test_steward_frontmatter_metadata_type_agent():
+def test_steward_frontmatter_metadata_type_agent() -> Any:
     """metadata.type 必为 'agent'(L4 角色类型契约)."""
     fm = _frontmatter()
     assert "metadata:" in fm, "frontmatter 必含 metadata 段"
     assert "type: agent" in fm or "type:agent" in fm, f"metadata.type 必为 'agent',实际 fm={fm!r}"
 
 
-def test_steward_responsibilities_listed():
+def test_steward_responsibilities_listed() -> Any:
     """管家职责 4 大类必在正文列出(邮件/日程/账本/笔记)."""
     body = _read()
     for keyword in ("邮件处理", "日程管理", "账本", "笔记"):
         assert keyword in body, f"管家职责必列 {keyword},正文未含"
 
 
-def test_steward_collaboration_with_auditor():
+def test_steward_collaboration_with_auditor() -> Any:
     """管家 ↔ 审计员 双向强制(沿 D10 决策 1)."""
     body = _read()
     assert "@管家 ↔ @审计员" in body or "管家 ↔ 审计员" in body, (
@@ -78,20 +79,20 @@ def test_steward_collaboration_with_auditor():
     )
 
 
-def test_steward_three_iron_rules():
+def test_steward_three_iron_rules() -> Any:
     """管家铁律 3 条(不抢控制权 / 不联网外传 / 不收费 SaaS)."""
     body = _read()
     for rule in ("不抢控制权", "不联网外传", "不收费 SaaS"):
         assert rule in body, f"管家铁律必含 {rule}"
 
 
-def test_steward_24h_on_duty():
+def test_steward_24h_on_duty() -> Any:
     """管家 24h 在岗(全天候数字员工视角)."""
     body = _read()
     assert "24h 在岗" in body or "24小时在岗" in body, "管家必明示 24h 在岗"
 
 
-def test_steward_no_duplicate_with_auditor_prompts():
+def test_steward_no_duplicate_with_auditor_prompts() -> Any:
     """管家与审计员职责必不重叠(双角色边界清晰)."""
     auditor = (AGENTS_DIR / "审计员.md").read_text(encoding="utf-8")
     steward_body = _read()
@@ -108,13 +109,13 @@ def test_steward_no_duplicate_with_auditor_prompts():
         "How to apply",
     ],
 )
-def test_steward_required_sections(expected_section: str):
+def test_steward_required_sections(expected_section: str) -> Any:
     """管家必含 4 大段(沿 Agent Assistant .md 范本)."""
     body = _read()
     assert expected_section in body, f"管家必含段 {expected_section!r}"
 
 
-def test_steward_markdown_paragraph_breaks():
+def test_steward_markdown_paragraph_breaks() -> Any:
     """管家.md 段间必有空行(沿 D6 docs Lint 范本)."""
     body = _read()
     assert "## 核心职责\n\n" in body or "## 核心职责 \n\n" in body, (

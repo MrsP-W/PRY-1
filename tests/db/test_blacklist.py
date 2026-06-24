@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -57,13 +57,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory) -> RecipientBlacklistStore:
+def store(session_factory: Any) -> RecipientBlacklistStore:
     """RecipientBlacklistStore 实例(注入 session_factory)."""
     from my_ai_employee.db.blacklist import RecipientBlacklistStore
 

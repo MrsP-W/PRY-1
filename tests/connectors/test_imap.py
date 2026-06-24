@@ -16,6 +16,7 @@ import asyncio
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -42,7 +43,7 @@ def mock_client() -> MockIMAPClient:
 
 
 @pytest.fixture
-def installed_connector(monkeypatch, mock_client) -> IMAPConnector:
+def installed_connector(monkeypatch: Any, mock_client: Any) -> IMAPConnector:
     """构造 IMAPConnector 并把 MockIMAPClient 注入。"""
     conn = IMAPConnector(provider="qq", email="test@qq.com")
     install_mock(monkeypatch, conn, mock_client)
@@ -94,7 +95,7 @@ def test_healthcheck_success(installed_connector: IMAPConnector) -> None:
     assert status.circuit_open is False
 
 
-def test_healthcheck_auth_failure(monkeypatch) -> None:
+def test_healthcheck_auth_failure(monkeypatch: Any) -> None:
     """鉴权失败：healthcheck 返回 ok=False。"""
     mock = MockIMAPClient()
     mock.login_should_fail = True
@@ -112,7 +113,7 @@ def test_healthcheck_auth_failure(monkeypatch) -> None:
     assert "登录" in status.error or "login" in status.error.lower()
 
 
-def test_healthcheck_no_credential(monkeypatch) -> None:
+def test_healthcheck_no_credential(monkeypatch: Any) -> None:
     """Keychain 缺凭证：healthcheck 返回 ok=False。"""
     conn = IMAPConnector(provider="qq", email="test@qq.com")
     monkeypatch.setattr(
@@ -127,7 +128,7 @@ def test_healthcheck_no_credential(monkeypatch) -> None:
     assert "Keychain" in status.error
 
 
-def test_healthcheck_triggers_circuit_breaker(monkeypatch) -> None:
+def test_healthcheck_triggers_circuit_breaker(monkeypatch: Any) -> None:
     """healthcheck 失败也会进入熔断计数（P1-2 review 修复）。
 
     连续 3 次失败 → 熔断开启。
@@ -208,7 +209,7 @@ def test_fetch_returns_envelope_dicts(
     assert subjects == {"First", "Second"}
 
 
-def test_safe_fetch_isolates_failure(monkeypatch) -> None:
+def test_safe_fetch_isolates_failure(monkeypatch: Any) -> None:
     """fetch 抛异常 → safe_fetch 返回空 list，不传染。"""
     mock = MockIMAPClient()
     conn = IMAPConnector(provider="qq", email="test@qq.com")
@@ -220,7 +221,7 @@ def test_safe_fetch_isolates_failure(monkeypatch) -> None:
     )
 
     # 让 search 抛错
-    def boom(_criteria):
+    def boom(_criteria: Any) -> Any:
         raise ConnectionError("Mock: network down")
 
     monkeypatch.setattr(mock, "search", boom)
@@ -232,7 +233,7 @@ def test_safe_fetch_isolates_failure(monkeypatch) -> None:
     assert conn.circuit_state["consecutive_failures"] == 1
 
 
-def test_safe_fetch_circuit_breaker_opens(monkeypatch) -> None:
+def test_safe_fetch_circuit_breaker_opens(monkeypatch: Any) -> None:
     """连续失败 3 次 → 熔断开启。"""
     mock = MockIMAPClient()
     conn = IMAPConnector(provider="qq", email="test@qq.com")
@@ -253,7 +254,7 @@ def test_safe_fetch_circuit_breaker_opens(monkeypatch) -> None:
     assert state["is_open"] is True
 
 
-def test_safe_fetch_circuit_skips_when_open(monkeypatch) -> None:
+def test_safe_fetch_circuit_skips_when_open(monkeypatch: Any) -> None:
     """熔断开启后 → 跳过 fetch（不调用底层）。"""
     mock = MockIMAPClient()
     conn = IMAPConnector(provider="qq", email="test@qq.com")
@@ -270,7 +271,7 @@ def test_safe_fetch_circuit_skips_when_open(monkeypatch) -> None:
 
     called = {"search": 0}
 
-    def track(_criteria):
+    def track(_criteria: Any) -> Any:
         called["search"] += 1
         return []
 

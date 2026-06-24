@@ -26,6 +26,7 @@ import sys
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -50,7 +51,7 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     return sessionmaker(bind=engine)
 
 
@@ -81,7 +82,7 @@ def test_fingerprint_cross_source_different_amount() -> None:
     assert fp1 != fp2, "D7 跨源 fingerprint:金额差 0.01 应不命中"
 
 
-def test_l1_duplicate_alipay_blocks_alipay(session_factory) -> None:
+def test_l1_duplicate_alipay_blocks_alipay(session_factory: Any) -> None:
     """Case 3 — L1 同源 UNIQUE 命中:alipay 重复 alipay 应被业务阻断.
 
     D7 兼容验证:`check_l1_duplicate(session, source='alipay', ...)` 工作正常。
@@ -113,7 +114,7 @@ def test_l1_duplicate_alipay_blocks_alipay(session_factory) -> None:
         assert is_dup_wechat is False, "D7 L1:不同 source 同 ID 不应被预检命中"
 
 
-def test_l2_candidates_cross_source_default(session_factory) -> None:
+def test_l2_candidates_cross_source_default(session_factory: Any) -> None:
     """Case 4 — L2 跨源候选(默认不传 source_filter):wechat + alipay 同时命中.
 
     D7 兼容验证:`find_l2_candidates` 默认查所有 source 跨源候选。
@@ -160,7 +161,7 @@ def test_l2_candidates_cross_source_default(session_factory) -> None:
         assert ids == {wechat_tx.id, alipay_tx.id}, f"D7 L2 ID 集合错误: {ids}"
 
 
-def test_l2_candidates_same_source_no_match(session_factory) -> None:
+def test_l2_candidates_same_source_no_match(session_factory: Any) -> None:
     """Case 5 — L2 同源查询(指定 source_filter='alipay'):只命中 alipay 不命中 wechat.
 
     D7 兼容验证:`source_filter` 参数工作正常(限制单源查询)。
@@ -205,7 +206,7 @@ def test_l2_candidates_same_source_no_match(session_factory) -> None:
         assert candidates[0]["id"] == alipay_tx.id
 
 
-def test_l3_mark_cross_source_candidate(session_factory) -> None:
+def test_l3_mark_cross_source_candidate(session_factory: Any) -> None:
     """Case 6 — L3 跨源标记 needs_confirm:wechat 新交易标记 alipay 老候选.
 
     D7 兼容验证:`mark_l3_needs_confirm` 跨源标记工作正常。
@@ -345,7 +346,7 @@ def test_fingerprint_sign_lock_invalid_sign_raises() -> None:
         normalize_fingerprint(date(2026, 6, 14), Decimal("38.50"), "星巴克咖啡", sign=2)
 
     # sign=字符串 → TypeError(type 严判,mypy 兼容 cast)
-    from typing import cast  # noqa: PLC0415
+    from typing import cast  # noqa: PLC0415, Any
 
     with pytest.raises(TypeError, match="sign 必须是 int 或 None"):
         normalize_fingerprint(

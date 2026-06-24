@@ -24,6 +24,7 @@ from collections.abc import Iterator
 from datetime import date, timedelta
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -50,13 +51,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
 @pytest.fixture
-def detector(session_factory):
+def detector(session_factory: Any) -> Any:
     """RuleBasedAnomalyDetector + 2 stores."""
     from my_ai_employee.core.anomaly_detector import RuleBasedAnomalyDetector
     from my_ai_employee.db.merchant_profile import MerchantProfileStore
@@ -84,7 +85,7 @@ def _make_fp(seed: str) -> str:
 
 
 @pytest.mark.e2e
-def test_s11_amount_3sigma_end_to_end(detector, session_factory) -> None:
+def test_s11_amount_3sigma_end_to_end(detector: Any, session_factory: Any) -> None:
     """S11.1 — 35 笔 ¥50 baseline + 1 笔 ¥888 → amount_3sigma 触发(端到端真链路)."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -137,7 +138,7 @@ def test_s11_amount_3sigma_end_to_end(detector, session_factory) -> None:
 
 
 @pytest.mark.e2e
-def test_s11_frequency_anomaly_end_to_end(detector, session_factory) -> None:
+def test_s11_frequency_anomaly_end_to_end(detector: Any, session_factory: Any) -> None:
     """S11.2 — 1 小时 6 笔同 source → frequency_5tx_per_hour 触发(端到端真链路)."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -189,7 +190,7 @@ def test_s11_frequency_anomaly_end_to_end(detector, session_factory) -> None:
 
 
 @pytest.mark.e2e
-def test_s11_new_merchant_cold_start(detector, session_factory) -> None:
+def test_s11_new_merchant_cold_start(detector: Any, session_factory: Any) -> None:
     """S11.3 — 全新商家(< 5 笔历史)→ new_merchant 标记(端到端真链路)."""
     from my_ai_employee.db.transactions import Transaction
 

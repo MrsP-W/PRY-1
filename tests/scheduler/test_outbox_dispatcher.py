@@ -53,7 +53,7 @@ import dataclasses
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -120,7 +120,7 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]
 
 
 @pytest.fixture
-def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
+def session_factory(db_with_schema: Database) -> Any:  # type: ignore[no-untyped-def]
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
@@ -128,7 +128,7 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 
 
 @pytest.fixture
-def store(session_factory) -> OutboxStore:  # type: ignore[no-untyped-def]
+def store(session_factory: Any) -> OutboxStore:  # type: ignore[no-untyped-def]
     return OutboxStore(session_factory)
 
 
@@ -752,7 +752,7 @@ def test_run_once_value_error_treated_as_skipped(
     # 此处模拟"内部编程错误" — 通过 monkeypatch 实例方法让 send_and_emit 抛 ValueError
     _insert_entry(store, email_id=1)
 
-    def raise_value_error(**kwargs):  # type: ignore[no-untyped-def]
+    def raise_value_error(**kwargs: Any) -> Any:  # type: ignore[no-untyped-def]
         raise ValueError("programmer error: bad arg")
 
     original_send = adapter.send_and_emit
@@ -914,7 +914,7 @@ def test_run_once_concurrent_state_change_to_sending(
     # 临时 monkeypatch by_status 返回已 SENDING 的 entry
     original_by_status = store.by_status
 
-    def fake_by_status(status, limit=100):  # type: ignore[no-untyped-def]
+    def fake_by_status(status: Any, limit: Any = 100) -> Any:  # type: ignore[no-untyped-def]
         if status == OutboxStatus.PENDING_SEND.value:
             return [store.by_id(outbox_id)]  # type: ignore[list-item]
         return []
@@ -1041,7 +1041,7 @@ def test_run_once_a1_build_message_does_not_swallow_base_exception(
 
     original_set_content = _EmailMessage.set_content
 
-    def raise_runtime_error(self, *args, **kwargs):  # type: ignore[no-untyped-def]
+    def raise_runtime_error(self, *args: Any, **kwargs: Any) -> Any:  # type: ignore[no-untyped-def]
         raise RuntimeError("simulated base exception not in narrowed set")
 
     _EmailMessage.set_content = raise_runtime_error  # type: ignore[method-assign]
@@ -1091,7 +1091,9 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     # D5.6.2 修复:目标状态 PENDING_SEND → APPROVED(白名单 FAILED → APPROVED 直通)
     original_update_status = store.update_status
 
-    def fake_update_status(row_id, new_status, *, from_status, last_approved_at_ms=None):  # type: ignore[no-untyped-def]
+    def fake_update_status(
+        row_id: Any, new_status: Any, *, from_status: Any, last_approved_at_ms: Any = None
+    ) -> Any:  # type: ignore[no-untyped-def]
         if new_status == OutboxStatus.APPROVED.value and from_status == OutboxStatus.FAILED.value:
             from my_ai_employee.db.outbox import OutboxIllegalTransitionError
 
@@ -1107,7 +1109,7 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
             row_id, new_status, from_status=from_status, last_approved_at_ms=last_approved_at_ms
         )
 
-    store.update_status = fake_update_status  # type: ignore[method-assign]
+    store.update_status = fake_update_status  # type: ignore[assignment]
     try:
         # 退避窗口已过(1_000_000 + 60_000 + 1 = 1_060_001)
         second = dispatcher.run_once(now_ms=1_060_001)
@@ -1664,7 +1666,7 @@ def test_run_once_batch_size_1_only_retry_pool_picks_failed(
 
 
 def _override_sla_due_at_ms(
-    session_factory,  # type: ignore[no-untyped-def]
+    session_factory: Any,  # type: ignore[no-untyped-def]
     entry_id: int,
     sla_due_at_ms: int | None,
 ) -> None:
@@ -1686,7 +1688,7 @@ def _override_sla_due_at_ms(
 def test_run_once_prioritizes_sla_urgent_low_over_normal_non_urgent(
     store: OutboxStore,
     smtp_transport: InMemorySmtpTransport,
-    session_factory,  # type: ignore[no-untyped-def]
+    session_factory: Any,  # type: ignore[no-untyped-def]
 ) -> None:
     """v0.2 B2.2 P1 核心契约: SLA 临近(LOW)在排序上必先于非临近(URGENT)。
 

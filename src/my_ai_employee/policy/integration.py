@@ -2770,7 +2770,7 @@ class EmailDrafterAdapter:
             ),
         )
 
-    def record_draft_blocked_and_emit(self, **kwargs) -> DraftBlockedDecisionReport:
+    def record_draft_blocked_and_emit(self, **kwargs: Any) -> DraftBlockedDecisionReport:
         """向后兼容别名 → record_draft_business_blocked_and_emit(D4.7.3 v1.0.1 P1-1 拆分).
 
         旧 v1.0.0 入参 `consecutive_draft_failures` 不再需要(业务阻断不计入失败计数器),

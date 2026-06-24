@@ -36,7 +36,7 @@ from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.sync import IMAPSync, SyncResult  # noqa: E402
 
 
-def _arun(coro):
+def _arun(coro: Any) -> Any:
     """测试用 async runner（避免 pytest-asyncio 配置依赖）。"""
     return asyncio.run(coro)
 
@@ -45,7 +45,7 @@ def _arun(coro):
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch):
+def fake_keychain(monkeypatch: Any) -> Any:
     """in-memory Keychain 模拟（D3.2.3 同款）。"""
     store: dict[tuple[str, str], str] = {}
 

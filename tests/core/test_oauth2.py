@@ -22,7 +22,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 # ===== 1. OAuth2Token 数据类严判(5 tests)=====
 
 
-def test_oauth2_token_basic_construction():
+def test_oauth2_token_basic_construction() -> Any:
     """1.1 OAuth2Token 基本构造(正常字段全过)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -53,7 +53,7 @@ def test_oauth2_token_basic_construction():
     assert token.scope == ("https://www.googleapis.com/auth/gmail.send",)
 
 
-def test_oauth2_token_rejects_empty_access_token():
+def test_oauth2_token_rejects_empty_access_token() -> Any:
     """1.2 access_token 空字符串拒绝(双层防御严判)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -61,7 +61,7 @@ def test_oauth2_token_rejects_empty_access_token():
         OAuth2Token(access_token="   ", refresh_token=None, expires_at_ms=1700000000000)
 
 
-def test_oauth2_token_rejects_bool_expires():
+def test_oauth2_token_rejects_bool_expires() -> Any:
     """1.3 expires_at_ms=bool 拒绝(沿 D4.7.3 v1.0.4 P2-2 type() is bool 严判)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -69,7 +69,7 @@ def test_oauth2_token_rejects_bool_expires():
         OAuth2Token(access_token="ya29", refresh_token=None, expires_at_ms=True)  # type: ignore[arg-type]
 
 
-def test_oauth2_token_rejects_non_string_scope():
+def test_oauth2_token_rejects_non_string_scope() -> Any:
     """1.4 scope tuple 含非 str 元素拒绝(沿 D4.7.3 严判)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -82,7 +82,7 @@ def test_oauth2_token_rejects_non_string_scope():
         )
 
 
-def test_oauth2_token_is_expired():
+def test_oauth2_token_is_expired() -> Any:
     """1.5 is_expired 含 buffer 提前刷新(沿 RFC 6749 §6 行业惯例 60s buffer)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -99,7 +99,7 @@ def test_oauth2_token_is_expired():
 # ===== 2. OAuth2Config 数据类严判(4 tests)=====
 
 
-def test_oauth2_config_basic_construction():
+def test_oauth2_config_basic_construction() -> Any:
     """2.1 OAuth2Config 基本构造(URL 严判全过)。"""
     from my_ai_employee.core.oauth2 import OAuth2Config
 
@@ -115,7 +115,7 @@ def test_oauth2_config_basic_construction():
     assert config.scope_string() == "https://www.googleapis.com/auth/gmail.send"
 
 
-def test_oauth2_config_rejects_invalid_redirect_uri():
+def test_oauth2_config_rejects_invalid_redirect_uri() -> Any:
     """2.2 redirect_uri 非 http/https 拒绝(沿 RFC 6749 §3.1.2)。"""
     from my_ai_employee.core.oauth2 import OAuth2Config
 
@@ -123,7 +123,7 @@ def test_oauth2_config_rejects_invalid_redirect_uri():
         OAuth2Config(client_id="x", redirect_uri="ftp://invalid.com/cb")
 
 
-def test_oauth2_config_rejects_non_tuple_scope():
+def test_oauth2_config_rejects_non_tuple_scope() -> Any:
     """2.3 scope 非 tuple 拒绝(沿 D4.7.3 严判)。"""
     from my_ai_employee.core.oauth2 import OAuth2Config
 
@@ -135,7 +135,7 @@ def test_oauth2_config_rejects_non_tuple_scope():
         )
 
 
-def test_oauth2_config_scope_string_joins_with_space():
+def test_oauth2_config_scope_string_joins_with_space() -> Any:
     """2.4 scope_string 空格分隔(沿 RFC 6749 §3.3)。"""
     from my_ai_employee.core.oauth2 import OAuth2Config
 
@@ -150,7 +150,7 @@ def test_oauth2_config_scope_string_joins_with_space():
 # ===== 3. generate_state 工具函数(2 tests)=====
 
 
-def test_generate_state_length_default():
+def test_generate_state_length_default() -> Any:
     """3.1 generate_state 默认长度 32(防 CSRF,沿 RFC 6749 §10.12)。"""
     from my_ai_employee.core.oauth2 import generate_state
 
@@ -162,7 +162,7 @@ def test_generate_state_length_default():
     )
 
 
-def test_generate_state_length_validation():
+def test_generate_state_length_validation() -> Any:
     """3.2 generate_state 长度严判 [16, 256](沿 D4.7.3 v1.0.5 P2-1 type() is bool 拒绝)。"""
     from my_ai_employee.core.oauth2 import generate_state
 
@@ -177,7 +177,7 @@ def test_generate_state_length_validation():
 # ===== 4. Keychain 集成(3 tests)=====
 
 
-def test_oauth2_token_serialization_roundtrip():
+def test_oauth2_token_serialization_roundtrip() -> Any:
     """4.1 OAuth2Token.to_dict / from_dict 序列化往返(用于 Keychain JSON 存储)。"""
     from my_ai_employee.core.oauth2 import OAuth2Token
 
@@ -196,7 +196,7 @@ def test_oauth2_token_serialization_roundtrip():
     assert restored.scope == original.scope
 
 
-def test_keychain_set_oauth_token_validates_provider(monkeypatch):
+def test_keychain_set_oauth_token_validates_provider(monkeypatch: Any) -> Any:
     """4.2 set_oauth_token provider 白名单严判(沿 D4.7.3 严判)。"""
     from my_ai_employee.core import keychain
 
@@ -212,7 +212,7 @@ def test_keychain_set_oauth_token_validates_provider(monkeypatch):
         keychain.set_oauth_token("microsoft", "user@example.com", "   ")
 
 
-def test_keychain_get_oauth_token_validates_provider(monkeypatch):
+def test_keychain_get_oauth_token_validates_provider(monkeypatch: Any) -> Any:
     """4.3 get_oauth_token provider 白名单严判(沿 D4.7.3 严判)。"""
     from my_ai_employee.core import keychain
 

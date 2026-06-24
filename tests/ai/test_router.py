@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -294,7 +295,7 @@ class _MockProviderResult:
         self.calls: list[LLMRequest] = []
 
 
-def _make_mock_chat(mock: _MockProviderResult):
+def _make_mock_chat(mock: _MockProviderResult) -> Any:
     """构造一个可注入的 mock chat 函数(闭包)."""
 
     def mock_chat(self: OpenAICompatibleProvider, request: LLMRequest) -> LLMResponse:

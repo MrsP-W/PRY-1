@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -32,18 +33,18 @@ def _frontmatter() -> str:
     return text[4:end]
 
 
-def test_auditor_file_exists():
+def test_auditor_file_exists() -> Any:
     """审计员.md 必存(本项目 L4 专属角色,D10 启动)."""
     assert AUDITOR_PATH.exists(), f"审计员.md 必存,实际 {AUDITOR_PATH}"
 
 
-def test_auditor_frontmatter_name():
+def test_auditor_frontmatter_name() -> Any:
     """frontmatter name 必为 '审计员'."""
     fm = _frontmatter()
     assert "name: 审计员" in fm, f"frontmatter 必含 'name: 审计员',实际 fm={fm!r}"
 
 
-def test_auditor_frontmatter_description_non_empty():
+def test_auditor_frontmatter_description_non_empty() -> Any:
     """description 必非空(监督视角)."""
     fm = _frontmatter()
     lines = fm.strip().splitlines()
@@ -55,21 +56,21 @@ def test_auditor_frontmatter_description_non_empty():
     )
 
 
-def test_auditor_frontmatter_metadata_type_agent():
+def test_auditor_frontmatter_metadata_type_agent() -> Any:
     """metadata.type 必为 'agent'."""
     fm = _frontmatter()
     assert "metadata:" in fm
     assert "type: agent" in fm or "type:agent" in fm
 
 
-def test_auditor_responsibilities_3_categories():
+def test_auditor_responsibilities_3_categories() -> Any:
     """审计员职责 3 大类(LLM 审计 / 数据流监督 / 权限审计)."""
     body = _read()
     for keyword in ("LLM", "数据流", "权限"):
         assert keyword in body, f"审计员职责必含 {keyword}"
 
 
-def test_auditor_4_red_lines():
+def test_auditor_4_red_lines() -> Any:
     """审计红线 4 条(LLM 延迟 > 5000ms / spam 草稿 / SMTP 失败 / 敏感数据外发)."""
     body = _read()
     # 4 关键红线
@@ -80,19 +81,19 @@ def test_auditor_4_red_lines():
     assert "敏感数据" in body or "身份证" in body, "审计红线 4: 敏感数据外发"
 
 
-def test_auditor_collaboration_with_steward():
+def test_auditor_collaboration_with_steward() -> Any:
     """审计员 ↔ 管家 双向强制(管家执行 + 审计员监督)."""
     body = _read()
     assert "@审计员 ↔ @管家" in body or "审计员 ↔ 管家" in body, "审计员必与管家双向强制"
 
 
-def test_auditor_triggers_inspector_for_quality_gate():
+def test_auditor_triggers_inspector_for_quality_gate() -> Any:
     """审计员 → 检查员(每 D-step 收官前 @检查员 看审计日志做质量门)."""
     body = _read()
     assert "@检查员" in body, "审计员必召唤 @检查员做质量门"
 
 
-def test_auditor_audit_log_retention():
+def test_auditor_audit_log_retention() -> Any:
     """审计留痕铁律(数据流可追溯)."""
     body = _read()
     # 审计日志 / 留痕 / llm_audit / health.log 至少出现一次
@@ -101,14 +102,14 @@ def test_auditor_audit_log_retention():
     ), "审计员必明示审计日志/留痕机制"
 
 
-def test_auditor_monthly_report_trigger():
+def test_auditor_monthly_report_trigger() -> Any:
     """审计员每月 1 号 09:00 触发月报(沿 week2-mvp.md L224 + D10 启动决策)."""
     body = _read()
     assert "每月 1 号" in body or "每月1号" in body, "审计员必明示每月 1 号触发月报"
     assert "09:00" in body, "审计员必明示 09:00 触发时间"
 
 
-def test_auditor_no_send_authority():
+def test_auditor_no_send_authority() -> Any:
     """审计员无发送权限(只监督不执行,沿 D10 双角色边界)."""
     body = _read()
     # 监督视角,不写"SMTP 发送" / "1-click 审批"等执行类关键词
@@ -127,7 +128,7 @@ def test_auditor_no_send_authority():
         "How to apply",
     ],
 )
-def test_auditor_required_sections(expected_section: str):
+def test_auditor_required_sections(expected_section: str) -> Any:
     """审计员必含 5 大段(沿 Agent Assistant .md 范本)."""
     body = _read()
     assert expected_section in body, f"审计员必含段 {expected_section!r}"

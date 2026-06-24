@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -24,7 +24,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 @pytest.mark.e2e
-def test_s3_outbox_store_5_drafts(session_factory):
+def test_s3_outbox_store_5_drafts(session_factory: Any) -> Any:
     """S3.1 — 5 封草稿入库,全部 status=pending_send."""
     from my_ai_employee.core.outbox import OutboxPriority, OutboxStatus, OutboxTone
     from my_ai_employee.db.outbox import OutboxStore
@@ -77,7 +77,7 @@ def test_s3_outbox_store_5_drafts(session_factory):
 
 
 @pytest.mark.e2e
-def test_s3_outbox_duplicate_email_id_business_blocked(session_factory):
+def test_s3_outbox_duplicate_email_id_business_blocked(session_factory: Any) -> Any:
     """S3.2 — 同 email_id 第 2 次入库 → OutboxEmailDuplicateError → 业务阻断入口."""
     from my_ai_employee.core.outbox import OutboxTone
     from my_ai_employee.db.outbox import OutboxEmailDuplicateError, OutboxStore

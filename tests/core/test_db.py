@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 import sqlcipher3
@@ -40,7 +41,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch):
+def fake_keychain(monkeypatch: Any) -> Any:
     """用 in-memory dict 模拟 Keychain（避免污染真实 macOS Keychain）。
 
     返回内部 store dict（测试可断言：密码被写入 / 已存在时不重写）。
@@ -114,7 +115,9 @@ def test_db_round_trip_with_correct_password(tmp_db_path: Path, fake_keychain: d
     db2.close()
 
 
-def test_db_rejects_wrong_password(tmp_db_path: Path, fake_keychain: dict, monkeypatch) -> None:
+def test_db_rejects_wrong_password(
+    tmp_db_path: Path, fake_keychain: dict, monkeypatch: Any
+) -> None:
     """错误密码重开 → Database.open() 时主动抛 sqlcipher3.DatabaseError。
 
     设计：db.py 主动跑 PRAGMA quick_check 触发密码校验

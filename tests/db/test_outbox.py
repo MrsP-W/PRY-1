@@ -35,7 +35,7 @@ from __future__ import annotations
 import contextlib
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -71,7 +71,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch):
+def fake_keychain(monkeypatch: Any) -> Any:
     """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
@@ -106,7 +106,7 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]
 
 
 @pytest.fixture
-def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
+def session_factory(db_with_schema: Database) -> Any:  # type: ignore[no-untyped-def]
     """返回 SQLAlchemy sessionmaker(绑 SQLCipher engine)。"""
     from sqlalchemy.orm import sessionmaker
 
@@ -115,7 +115,7 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
 
 
 @pytest.fixture
-def store(session_factory) -> OutboxStore:  # type: ignore[no-untyped-def]
+def store(session_factory: Any) -> OutboxStore:  # type: ignore[no-untyped-def]
     """OutboxStore 实例(注入 session_factory)。"""
     return OutboxStore(session_factory)
 

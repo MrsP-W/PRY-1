@@ -256,7 +256,7 @@ def _normalize_amount_value_with_sign(
 # 目标:L2 软标记同 title + 同 folder + 同日期(忽略时分秒)的跨源重复 note
 
 
-def _normalize_note_title_value(value):
+def _normalize_note_title_value(value: str) -> str:
     """v0.2.1 #5 Note title 归一化(strip + lower)。
 
     沿 transactions counterparty 归一化(同 _normalize_counterparty_value 模式)。
@@ -266,7 +266,7 @@ def _normalize_note_title_value(value):
     return value.strip().lower()
 
 
-def _normalize_note_folder_value(value):
+def _normalize_note_folder_value(value: str) -> str:
     """v0.2.1 #5 Note folder 归一化(strip + lower)。
 
     Apple Notes 文件夹名(沿 _normalize_counterparty_value 模式)。
@@ -276,7 +276,7 @@ def _normalize_note_folder_value(value):
     return value.strip().lower()
 
 
-def _normalize_note_updated_at_date(updated_at_ms):
+def _normalize_note_updated_at_date(updated_at_ms: int) -> str:
     """v0.2.1 #5 Note updated_at_ms → YYYY-MM-DD 日期字符串。
 
     沿 _normalize_date_value 模式(只取日期,忽略时分秒)。
@@ -288,10 +288,10 @@ def _normalize_note_updated_at_date(updated_at_ms):
 
 
 def normalize_note_fingerprint(
-    title,
-    folder,
-    updated_at_ms,
-):
+    title: str,
+    folder: str,
+    updated_at_ms: int,
+) -> str:
     """v0.2.1 #5 Note 专用 fingerprint 派生(title + folder + updated_at_date)。
 
     沿 [[v0.2.1-candidates-2026-06-17]] §6.2 设计。

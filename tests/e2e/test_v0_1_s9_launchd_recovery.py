@@ -13,6 +13,7 @@ from __future__ import annotations
 import plistlib
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -24,7 +25,7 @@ STEWARD_PATH = PROJECT_ROOT / "src" / "my_ai_employee" / "agents" / "管家.md"
 
 
 @pytest.mark.e2e
-def test_s9_launchd_plist_deployment_structure():
+def test_s9_launchd_plist_deployment_structure() -> Any:
     """S9.1 — launchd plist 必含部署结构(Label / ProgramArguments / StartCalendarInterval)."""
     assert PLIST_PATH.exists(), f"S9.1 plist 必存: {PLIST_PATH}"
     with PLIST_PATH.open("rb") as f:
@@ -49,7 +50,7 @@ def test_s9_launchd_plist_deployment_structure():
 
 
 @pytest.mark.e2e
-def test_s9_launchd_install_script_deploys_to_home_bin():
+def test_s9_launchd_install_script_deploys_to_home_bin() -> Any:
     """S9.2 — install.sh 必部署到 ~/bin/(沿 D5.6 范本)."""
     text = INSTALL_SH.read_text(encoding="utf-8")
     # ~/bin 路径必出现
@@ -64,7 +65,7 @@ def test_s9_launchd_install_script_deploys_to_home_bin():
 
 
 @pytest.mark.e2e
-def test_s9_launchd_uninstall_script_removes_plist():
+def test_s9_launchd_uninstall_script_removes_plist() -> Any:
     """S9.3 — uninstall.sh 必卸载 plist + 支持 --purge-bin."""
     text = UNINSTALL_SH.read_text(encoding="utf-8")
     assert "launchctl unload" in text, "S9.3 uninstall.sh 必调 launchctl unload"
@@ -73,7 +74,7 @@ def test_s9_launchd_uninstall_script_removes_plist():
 
 
 @pytest.mark.e2e
-def test_s9_steward_agent_monitors_all_adapters():
+def test_s9_steward_agent_monitors_all_adapters() -> Any:
     """S9.4 — @管家 agent 必监控全部 5 类适配器(IMAP/微信/支付宝/Apple Notes/菜单栏)."""
     body = STEWARD_PATH.read_text(encoding="utf-8")
     # 管家职责段
@@ -90,7 +91,7 @@ def test_s9_steward_agent_monitors_all_adapters():
 
 
 @pytest.mark.e2e
-def test_s9_steward_24h_on_duty_with_sla():
+def test_s9_steward_24h_on_duty_with_sla() -> Any:
     """S9.5 — @管家 必 24h 在岗 + SLA 告警(沿 D5.5 Heartbeat)."""
     body = STEWARD_PATH.read_text(encoding="utf-8")
     assert "24h 在岗" in body or "24小时在岗" in body, "S9.5 管家必明示 24h 在岗"
@@ -103,7 +104,7 @@ def test_s9_steward_24h_on_duty_with_sla():
 
 
 @pytest.mark.e2e
-def test_s9_launchd_recovery_subprocess_succeeds():
+def test_s9_launchd_recovery_subprocess_succeeds() -> Any:
     """S9.6 — install.sh 跑 help(不真跑 deploy)能 dry-run 通过(沿 D5.6.5 spike 范本).
 
     真实 launchctl load 在 CI 不可达,本测试只验 install.sh 能被 shell 解析(无 syntax error).

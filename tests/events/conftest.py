@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine():
+def engine() -> Any:
     """in-memory SQLite engine (无加密, 测试用)."""
     eng = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(eng)
@@ -33,12 +33,12 @@ def engine():
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory) -> EventStore:  # type: ignore[no-untyped-def]
+def store(session_factory: Any) -> EventStore:  # type: ignore[no-untyped-def]
     """EventStore 实例."""
     return EventStore(session_factory)

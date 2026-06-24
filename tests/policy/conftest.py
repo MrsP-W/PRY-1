@@ -19,7 +19,7 @@ from my_ai_employee.events import EventStore
 
 
 @pytest.fixture
-def engine():
+def engine() -> Any:
     """in-memory SQLite engine (无加密, 测试用)."""
     eng = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(eng)
@@ -28,13 +28,13 @@ def engine():
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory) -> EventStore:
+def store(session_factory: Any) -> EventStore:
     """EventStore 实例(用于 PolicyEngine 事件落地集成测试)."""
     return EventStore(session_factory)
 

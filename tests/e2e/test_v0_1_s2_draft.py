@@ -16,6 +16,7 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -23,12 +24,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
-def _make_router_mock():
+def _make_router_mock() -> Any:
     """Mock LLM router,返回固定 DraftResult JSON."""
     from my_ai_employee.ai.providers import LLMResponse
 
     class _MockRouter:
-        def route(self, *, task_type, messages, temperature, max_tokens):
+        def route(self, *, task_type: Any, messages: Any, temperature: Any, max_tokens: Any) -> Any:
             return LLMResponse(
                 content=(
                     '{"subject": "Re: 客户投诉处理", '
@@ -46,7 +47,7 @@ def _make_router_mock():
 
 
 @pytest.mark.e2e
-def test_s2_draft_single_email():
+def test_s2_draft_single_email() -> Any:
     """S2.1 — 单邮件 drafter 草稿生成 < 10s,body_length 10-8000,tone 在 3 类中."""
     from my_ai_employee.ai.drafter import DraftResult, DraftTone, EmailDrafter
 
@@ -70,7 +71,7 @@ def test_s2_draft_single_email():
 
 
 @pytest.mark.e2e
-def test_s2_draft_batch_5_emails():
+def test_s2_draft_batch_5_emails() -> Any:
     """S2.2 — 5 封 drafter 顺序生成,全部成功 < 30s."""
     from my_ai_employee.ai.drafter import DraftResult, EmailDrafter
 
@@ -90,7 +91,7 @@ def test_s2_draft_batch_5_emails():
 
 
 @pytest.mark.e2e
-def test_s2_draft_spam_blocked_by_default():
+def test_s2_draft_spam_blocked_by_default() -> Any:
     """S2.3 — SPAM 邮件默认被业务硬阻断(SpamBlockedError)."""
     from my_ai_employee.ai.classifier import EmailCategory
     from my_ai_employee.ai.drafter import EmailDrafter, SpamBlockedError

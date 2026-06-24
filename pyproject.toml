@@ -112,7 +112,7 @@ ignore = ["E501"]  # 行长度交给 black
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false  # Week 1 不强制，Phase 2 再严
+disallow_untyped_defs = true  # v0.2.40 锁死(沿撞坑 #55 v2.0 范本:严格模式 + CI 默认化 + pyproject 锁死)
 ignore_missing_imports = true
 # D3 阶段 scripts/ 是 CLI/spike 脚本（不在 mypy 严格范围）— 业务代码走 src/ + tests/
 exclude = ["scripts/"]

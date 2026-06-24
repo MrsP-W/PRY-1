@@ -23,6 +23,7 @@ from __future__ import annotations
 import base64
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -35,7 +36,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 # 沿 RFC 7628 §3.1 SASL XOAUTH2 初始客户端响应
 
 
-def test_build_xoauth2_auth_string_sasl_default():
+def test_build_xoauth2_auth_string_sasl_default() -> Any:
     """1.1 build_xoauth2_auth_string 默认 SASL 格式(沿 RFC 7628 §3.1)。
 
     验证:
@@ -63,7 +64,7 @@ def test_build_xoauth2_auth_string_sasl_default():
     assert auth.access_token == "ya29.xx_access_token"
 
 
-def test_build_xoauth2_auth_string_json_format():
+def test_build_xoauth2_auth_string_json_format() -> Any:
     """1.2 build_xoauth2_auth_string JSON 格式(legacy 兼容)。
 
     验证:
@@ -92,7 +93,7 @@ def test_build_xoauth2_auth_string_json_format():
     assert auth.format == XOAUTH2_FORMAT_JSON
 
 
-def test_build_xoauth2_auth_string_rejects_invalid_email():
+def test_build_xoauth2_auth_string_rejects_invalid_email() -> Any:
     """1.3 build_xoauth2_auth_string email 严判失败(4 重防误发 #4)。
 
     验证:
@@ -118,7 +119,7 @@ def test_build_xoauth2_auth_string_rejects_invalid_email():
         build_xoauth2_auth_string(email="   ", access_token="token")
 
 
-def test_build_xoauth2_auth_string_rejects_invalid_token():
+def test_build_xoauth2_auth_string_rejects_invalid_token() -> Any:
     """1.4 build_xoauth2_auth_string access_token 严判失败(沿 D4.7.3 公共 API 入口严判)。
 
     验证:
@@ -142,7 +143,7 @@ def test_build_xoauth2_auth_string_rejects_invalid_token():
 # ===== 2. parse_xoauth2_auth_string(2 tests)=====
 
 
-def test_parse_xoauth2_auth_string_sasl_round_trip():
+def test_parse_xoauth2_auth_string_sasl_round_trip() -> Any:
     """2.1 build → parse SASL 格式往返一致(沿 RFC 7628 §3.1)。
 
     验证:
@@ -166,7 +167,7 @@ def test_parse_xoauth2_auth_string_sasl_round_trip():
     assert fmt == XOAUTH2_FORMAT_SASL
 
 
-def test_parse_xoauth2_auth_string_json_round_trip():
+def test_parse_xoauth2_auth_string_json_round_trip() -> Any:
     """2.2 build → parse JSON 格式往返一致(legacy 兼容)。
 
     验证:
@@ -193,7 +194,7 @@ def test_parse_xoauth2_auth_string_json_round_trip():
 # ===== 3. parse_xoauth2_failure_response(2 tests)=====
 
 
-def test_parse_xoauth2_failure_response_success():
+def test_parse_xoauth2_failure_response_success() -> Any:
     """3.1 parse_xoauth2_failure_response 成功解析(沿 RFC 7628 §3.2)。
 
     验证:
@@ -213,7 +214,7 @@ def test_parse_xoauth2_failure_response_success():
     assert failure.raw == server_response
 
 
-def test_parse_xoauth2_failure_response_is_retryable():
+def test_parse_xoauth2_failure_response_is_retryable() -> Any:
     """3.2 XOAUTH2Failure.is_retryable 判定(沿 RFC 7628 §3.2)。
 
     验证:
@@ -236,7 +237,7 @@ def test_parse_xoauth2_failure_response_is_retryable():
 # ===== 4. XOAUTH2Authenticator(4 tests)=====
 
 
-def test_xoauth2_authenticator_constructor_validates_provider():
+def test_xoauth2_authenticator_constructor_validates_provider() -> Any:
     """4.1 XOAUTH2Authenticator.__init__ provider / format 严判(沿 D4.7.3 公共 API 入口严判)。
 
     验证:
@@ -270,7 +271,7 @@ def test_xoauth2_authenticator_constructor_validates_provider():
         )
 
 
-def test_xoauth2_authenticator_build_auth_string():
+def test_xoauth2_authenticator_build_auth_string() -> Any:
     """4.2 XOAUTH2Authenticator.build_auth_string 端到端 + 构造 format 透传。
 
     验证:
@@ -295,7 +296,7 @@ def test_xoauth2_authenticator_build_auth_string():
     assert auth_json.format == XOAUTH2_FORMAT_JSON
 
 
-def test_xoauth2_authenticator_four_layers_defense():
+def test_xoauth2_authenticator_four_layers_defense() -> Any:
     """4.3 XOAUTH2Authenticator 4 重防误发(沿 D5.6.5 / D5.6.5.1 范本)。
 
     4 重防误发:
@@ -338,7 +339,7 @@ def test_xoauth2_authenticator_four_layers_defense():
         auth3.build_auth_string(email="bad", access_token="t3")
 
 
-def test_xoauth2_authenticator_end_to_end_via_oauth2_provider():
+def test_xoauth2_authenticator_end_to_end_via_oauth2_provider() -> Any:
     """4.4 XOAUTH2Authenticator.build_auth_string_via_oauth2_provider 端到端。
 
     验证:

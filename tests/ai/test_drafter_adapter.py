@@ -462,7 +462,7 @@ class TestDraftAndEmit:
         assert report.spam_reply_authorized is False
         assert report.spam_reply_intent is None
 
-    def test_draft_and_emit_with_event_store(self, store) -> None:
+    def test_draft_and_emit_with_event_store(self, store: Any) -> None:
         """EventStore 落地 1 条 PolicyDecisionEvent(D4.3 + D4.5 范本)."""
         a = EmailDrafterAdapter(source="qq", event_store=store)
         result = FakeDraftResult.make(body_length=50, latency_ms=1500)
@@ -488,7 +488,7 @@ class TestDraftAndEmit:
         assert meta.get("spam_reply_authorized") is False
         assert meta.get("spam_reply_intent") is None
 
-    def test_draft_and_emit_spam_authorized_propagates(self, store) -> None:
+    def test_draft_and_emit_spam_authorized_propagates(self, store: Any) -> None:
         """D4.7.2 v1.0.8 强一致双字段透传到 event_metadata(SPAM 授权放行)."""
         a = EmailDrafterAdapter(source="qq", event_store=store)
         result = FakeDraftResult.make(
@@ -621,7 +621,7 @@ class TestRecordDraftBusinessBlockedAndEmit:
         assert report.spam_reply_intent is None
         assert report.lane_entry_id == "draft:qq:rbb001"
 
-    def test_business_blocked_with_event_store(self, store) -> None:
+    def test_business_blocked_with_event_store(self, store: Any) -> None:
         """EventStore 落地 1 条 PolicyDecisionEvent, blocked_kind=business."""
         a = EmailDrafterAdapter(source="qq", event_store=store)
         report = a.record_draft_business_blocked_and_emit(
@@ -809,7 +809,7 @@ class TestRecordDraftFailureAndEmit:
         )
         assert report.consecutive_draft_failures == 3
 
-    def test_failure_with_event_store(self, store) -> None:
+    def test_failure_with_event_store(self, store: Any) -> None:
         """EventStore 落地 1 条 PolicyDecisionEvent, failed_kind=technical."""
         a = EmailDrafterAdapter(source="qq", event_store=store)
         report = a.record_draft_failure_and_emit(
@@ -964,7 +964,7 @@ class TestDraftDecisionReportStrongConsistency:
 class TestDraftBlockedDecisionReportStrongConsistency:
     """DraftBlockedDecisionReport.__post_init__ 强一致 + 字段自洽."""
 
-    def _make_base_blocked_report(self):
+    def _make_base_blocked_report(self) -> Any:
         a = EmailDrafterAdapter(source="qq")
         # D4.7.3 v1.0.1 P1-1: 用新拆分入口 record_draft_business_blocked_and_emit
         return a.record_draft_business_blocked_and_emit(
@@ -1094,7 +1094,7 @@ class TestD473V101Fixes:
 
     # ----- P1-1: 业务阻断 vs 技术失败 -----
 
-    def test_p1_1_business_blocked_no_retry(self, store) -> None:
+    def test_p1_1_business_blocked_no_retry(self, store: Any) -> None:
         """D4.7.3 v1.0.1 P1-1: 业务阻断不触发 retry (last_draft_failed=False, cf=0).
 
         旧 v1.0.0 漏洞: record_draft_blocked_and_emit 用 last_draft_failed=True
@@ -1146,7 +1146,7 @@ class TestD473V101Fixes:
 
     # ----- P1-2: 6 字段透传契约(week1-mvp.md 锁定) -----
 
-    def test_p1_2_six_fields_propagated(self, store) -> None:
+    def test_p1_2_six_fields_propagated(self, store: Any) -> None:
         """D4.7.3 v1.0.1 P1-2: draft_subject/draft_body/tone/model_full_id/email_id/category 6 字段全透传.
 
         week1-mvp.md:705 锁定契约。
@@ -2068,7 +2068,7 @@ class TestD473V105Fixes:
 
     # ===== P2-1: reason 非哈希 TypeError → ValueError (2 tests) =====
 
-    def test_p2_1_reject_unhashable_reason_list(self, store) -> None:
+    def test_p2_1_reject_unhashable_reason_list(self, store: Any) -> None:
         """v1.0.5 P2-1: reason=[] 抛 ValueError 而非 TypeError.
 
         v1.0.4 漏洞: record_draft_business_blocked_and_emit 入口白名单检查
@@ -2087,7 +2087,7 @@ class TestD473V105Fixes:
                 spam_reply_authorized=False,
             )
 
-    def test_p2_1_reject_unhashable_reason_dict(self, store) -> None:
+    def test_p2_1_reject_unhashable_reason_dict(self, store: Any) -> None:
         """v1.0.5 P2-1: reason={} 抛 ValueError 而非 TypeError.
 
         与 list 测试对照: dict 同样 unhashable.
@@ -2116,7 +2116,7 @@ class TestD473V105Fixes:
         with pytest.raises(ValueError, match="source 必填非空白 str"):
             EmailDrafterAdapter(source="   ")
 
-    def test_p2_2_reject_whitespace_run_id_in_build_lane_entry_id(self, store) -> None:
+    def test_p2_2_reject_whitespace_run_id_in_build_lane_entry_id(self, store: Any) -> None:
         """v1.0.5 P2-2: build_lane_entry_id('   ') 抛 ValueError.
 
         v1.0.4 漏洞: build_lane_entry_id 用 `not run_id` 长度检查,

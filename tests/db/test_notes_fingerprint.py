@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -48,13 +48,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory):
+def store(session_factory: Any) -> Any:
     """NoteStore 实例。"""
     from my_ai_employee.db.notes import NoteStore
 
@@ -64,7 +64,7 @@ def store(session_factory):
 # ===== 1. normalize_note_fingerprint 纯函数正确性(4 tests)=====
 
 
-def test_normalize_note_fingerprint_basic():
+def test_normalize_note_fingerprint_basic() -> Any:
     """1.1 normalize_note_fingerprint 基本派生(同 title/folder/date → 同 fingerprint)。"""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
 
@@ -75,7 +75,7 @@ def test_normalize_note_fingerprint_basic():
     assert all(c in "0123456789abcdef" for c in fp.lower())
 
 
-def test_normalize_note_fingerprint_case_insensitive():
+def test_normalize_note_fingerprint_case_insensitive() -> Any:
     """1.2 同 title/folder 但大小写不同 → 同 fingerprint(沿 strip + lower)。"""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
 
@@ -84,7 +84,7 @@ def test_normalize_note_fingerprint_case_insensitive():
     assert fp1 == fp2, "大小写不敏感(strip + lower)"
 
 
-def test_normalize_note_fingerprint_different_title():
+def test_normalize_note_fingerprint_different_title() -> Any:
     """1.3 不同 title → 不同 fingerprint。"""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
 
@@ -93,7 +93,7 @@ def test_normalize_note_fingerprint_different_title():
     assert fp1 != fp2, "不同 title 应派生不同 fingerprint"
 
 
-def test_normalize_note_fingerprint_different_day():
+def test_normalize_note_fingerprint_different_day() -> Any:
     """1.4 不同日期(updated_at_ms 跨天)→ 不同 fingerprint(只取日期,忽略时分秒)。"""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
 
@@ -106,7 +106,7 @@ def test_normalize_note_fingerprint_different_day():
 # ===== 2. NoteStore.insert 自动派生 fingerprint(3 tests)=====
 
 
-def test_insert_auto_derives_fingerprint(store):
+def test_insert_auto_derives_fingerprint(store: Any) -> Any:
     """2.1 insert 后 normalized_fingerprint 自动派生(同 title/folder/date 同日)。"""
     note = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -119,7 +119,7 @@ def test_insert_auto_derives_fingerprint(store):
     assert len(note.normalized_fingerprint) == 32
 
 
-def test_insert_same_title_folder_day_same_fingerprint(store):
+def test_insert_same_title_folder_day_same_fingerprint(store: Any) -> Any:
     """2.2 同 title/folder/date 的 note 同 fingerprint(跨 apple_note_id 仍相同)。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -139,7 +139,7 @@ def test_insert_same_title_folder_day_same_fingerprint(store):
     assert note1.normalized_fingerprint == note2.normalized_fingerprint
 
 
-def test_insert_case_insensitive_fingerprint(store):
+def test_insert_case_insensitive_fingerprint(store: Any) -> Any:
     """2.3 大小写不同的 title/folder 派生相同 fingerprint。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -162,7 +162,7 @@ def test_insert_case_insensitive_fingerprint(store):
 # ===== 3. NoteStore.find_candidates_by_fingerprint L2 跨源查询(4 tests)=====
 
 
-def test_find_candidates_returns_cross_source_matches(store):
+def test_find_candidates_returns_cross_source_matches(store: Any) -> Any:
     """3.1 同 fingerprint 的 2 笔 note 互为候选(L2 跨源查询基本场景)。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -189,7 +189,7 @@ def test_find_candidates_returns_cross_source_matches(store):
     }
 
 
-def test_find_candidates_exclude_self(store):
+def test_find_candidates_exclude_self(store: Any) -> Any:
     """3.2 exclude_note_id 排除自身(写入时防自命中)。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -212,7 +212,7 @@ def test_find_candidates_exclude_self(store):
     assert candidates[0].apple_note_id == "x-coredata://test/note-002"
 
 
-def test_find_candidates_folder_filter(store):
+def test_find_candidates_folder_filter(store: Any) -> Any:
     """3.3 folder_filter 限定单 folder 候选。"""
     # folder A 同 fingerprint
     store.insert(
@@ -245,7 +245,7 @@ def test_find_candidates_folder_filter(store):
     assert all(c.folder == "FolderA" for c in candidates)
 
 
-def test_find_candidates_validates_fingerprint(store):
+def test_find_candidates_validates_fingerprint(store: Any) -> Any:
     """3.4 find_candidates_by_fingerprint 严判 fingerprint 必为 32 chars SHA-256 hex。"""
     with pytest.raises(ValueError, match="fingerprint 必须是 32 chars SHA-256 hex"):
         store.find_candidates_by_fingerprint("too_short")

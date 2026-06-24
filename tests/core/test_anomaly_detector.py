@@ -35,6 +35,7 @@ from collections.abc import Iterator
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
+from typing import Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -61,13 +62,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker(expire_on_commit=False 避免 commit 后 attribute 过期)."""
     return sessionmaker(bind=engine, expire_on_commit=False)
 
 
 @pytest.fixture
-def stores(session_factory):
+def stores(session_factory: Any) -> Any:
     """返回 (TransactionStore, MerchantProfileStore) 元组(供多测试复用)."""
     from my_ai_employee.db.merchant_profile import MerchantProfileStore
     from my_ai_employee.db.transactions import TransactionStore
@@ -78,7 +79,7 @@ def stores(session_factory):
 
 
 @pytest.fixture
-def detector(stores):
+def detector(stores: Any) -> Any:
     """RuleBasedAnomalyDetector 实例."""
     from my_ai_employee.core.anomaly_detector import RuleBasedAnomalyDetector
 
@@ -100,7 +101,7 @@ def _make_fp(seed: str) -> str:
 
 
 def _seed_baseline(
-    tx_store, counterparty: str, n: int, base_amount: Decimal = Decimal("50.00")
+    tx_store: Any, counterparty: str, n: int, base_amount: Decimal = Decimal("50.00")
 ) -> None:
     """插 n 笔 baseline(默认 ¥50)."""
     from my_ai_employee.db.transactions import Transaction
@@ -215,7 +216,7 @@ def test_anomaly_result_detected_at_ms_rejects_bool() -> None:
 # ===== Segment 2: detect_amount_anomaly(2 tests)=====
 
 
-def test_detect_amount_anomaly_triggers_on_large_amount(detector, stores) -> None:
+def test_detect_amount_anomaly_triggers_on_large_amount(detector: Any, stores: Any) -> None:
     """Case 4 — detect_amount_anomaly 触发 amount_3sigma(35 笔 ¥50 + 1 笔 ¥888)."""
     tx_store, _ = stores
     _seed_baseline(tx_store, "星巴克", n=35, base_amount=Decimal("50.00"))
@@ -243,7 +244,7 @@ def test_detect_amount_anomaly_triggers_on_large_amount(detector, stores) -> Non
     assert result.detected_at_ms > 0
 
 
-def test_detect_amount_anomaly_returns_none_for_cold_start(detector, stores) -> None:
+def test_detect_amount_anomaly_returns_none_for_cold_start(detector: Any, stores: Any) -> None:
     """Case 5 — detect_amount_anomaly < 30 笔历史 → None(冷启动 fallback)."""
     tx_store, _ = stores
     _seed_baseline(tx_store, "新商家", n=10, base_amount=Decimal("50.00"))
@@ -270,7 +271,7 @@ def test_detect_amount_anomaly_returns_none_for_cold_start(detector, stores) -> 
 # ===== Segment 3: detect_frequency_anomaly(2 tests)=====
 
 
-def test_detect_frequency_anomaly_triggers_over_threshold(detector, stores) -> None:
+def test_detect_frequency_anomaly_triggers_over_threshold(detector: Any, stores: Any) -> None:
     """Case 6 — detect_frequency_anomaly 触发(1 小时 6 笔 > 5 笔阈值)."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -316,7 +317,7 @@ def test_detect_frequency_anomaly_triggers_over_threshold(detector, stores) -> N
     assert result.context["window"] == "1h"
 
 
-def test_detect_frequency_anomaly_returns_none_under_threshold(detector, stores) -> None:
+def test_detect_frequency_anomaly_returns_none_under_threshold(detector: Any, stores: Any) -> None:
     """Case 7 — detect_frequency_anomaly 边界 = 5 笔 → None(< 5 阈值要求 > 5)."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -362,7 +363,7 @@ def test_detect_frequency_anomaly_returns_none_under_threshold(detector, stores)
 # ===== Segment 4: detect_duplicate_charge(2 tests)=====
 
 
-def test_detect_duplicate_charge_triggers_with_same_fingerprint(detector, stores) -> None:
+def test_detect_duplicate_charge_triggers_with_same_fingerprint(detector: Any, stores: Any) -> None:
     """Case 8 — detect_duplicate_charge 同 fingerprint 多笔 → 触发."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -407,7 +408,7 @@ def test_detect_duplicate_charge_triggers_with_same_fingerprint(detector, stores
     assert result.context["categorized_count"] >= DUPLICATE_FINGERPRINT_THRESHOLD - 1
 
 
-def test_detect_duplicate_charge_returns_none_for_unique_fingerprint(detector) -> None:
+def test_detect_duplicate_charge_returns_none_for_unique_fingerprint(detector: Any) -> None:
     """Case 9 — detect_duplicate_charge 唯一 fingerprint → None."""
     from my_ai_employee.db.transactions import Transaction
 
@@ -430,7 +431,7 @@ def test_detect_duplicate_charge_returns_none_for_unique_fingerprint(detector) -
 # ===== Segment 5: detect_merchant_profile_drift(2 tests)=====
 
 
-def test_detect_merchant_profile_drift_new_merchant(detector, stores) -> None:
+def test_detect_merchant_profile_drift_new_merchant(detector: Any, stores: Any) -> None:
     """Case 10 — detect_merchant_profile_drift < 5 笔历史 → new_merchant."""
     tx_store, _ = stores
     # 插 3 笔(< 5 阈值)
@@ -456,7 +457,7 @@ def test_detect_merchant_profile_drift_new_merchant(detector, stores) -> None:
     assert results[0].context["counterparty"] == "全新商家"
 
 
-def test_detect_merchant_profile_drift_amount_drift(detector, stores) -> None:
+def test_detect_merchant_profile_drift_amount_drift(detector: Any, stores: Any) -> None:
     """Case 11 — detect_merchant_profile_drift 金额漂移 → amount_drift."""
     tx_store, profile_store = stores
     # 插 10 笔 ¥50(均值 50,σ=0 → 无 σ 漂移)
@@ -501,7 +502,9 @@ def test_detect_merchant_profile_drift_amount_drift(detector, stores) -> None:
 # ===== Segment 6: detect_all 综合(1 test)=====
 
 
-def test_detect_all_returns_multiple_anomalies_for_same_transaction(detector, stores) -> None:
+def test_detect_all_returns_multiple_anomalies_for_same_transaction(
+    detector: Any, stores: Any
+) -> None:
     """Case 12 — detect_all 单笔触发 2 类异常(amount_3sigma + frequency)."""
     tx_store, _ = stores
     # 35 笔 ¥50 baseline + 5 笔 1 小时内(同 source)
@@ -557,7 +560,9 @@ DUPLICATE_FINGERPRINT_THRESHOLD = 2  # 来自 core.anomaly_detector
 # ===== Segment 7 (v0.2 D8.5.2): is_signal + frequency 修复验证(2 cases)=====
 
 
-def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(detector, stores) -> None:
+def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(
+    detector: Any, stores: Any
+) -> None:
     """Case 13 (D8.5.2) — is_signal 字段严判 + new_merchant 自动设 True."""
     from my_ai_employee.core.anomaly_detector import AnomalyResult
     from my_ai_employee.db.transactions import Transaction
@@ -593,7 +598,9 @@ def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(detector,
     assert results[0].is_signal is True  # D8.5.2 修复:冷启动业务信号
 
 
-def test_detect_frequency_anomaly_uses_precise_ms_time_window(detector, session_factory) -> None:
+def test_detect_frequency_anomaly_uses_precise_ms_time_window(
+    detector: Any, session_factory: Any
+) -> None:
     """Case 14 (D8.5.2) — detect_frequency_anomaly 改调精确毫秒时窗,跨天 5 笔不误报."""
     from my_ai_employee.db.transactions import Transaction
 

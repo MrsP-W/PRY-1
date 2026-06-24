@@ -21,7 +21,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 from sqlalchemy import create_engine
@@ -50,13 +50,13 @@ def engine() -> Iterator:
 
 
 @pytest.fixture
-def session_factory(engine):
+def session_factory(engine: Any) -> Any:
     """返回 sessionmaker."""
     return sessionmaker(bind=engine)
 
 
 @pytest.fixture
-def store(session_factory):
+def store(session_factory: Any) -> Any:
     """NoteStore 实例。"""
     from my_ai_employee.db.notes import NoteStore
 
@@ -66,7 +66,7 @@ def store(session_factory):
 # ===== 1. NoteStore.insert 自动派生 needs_confirm(3 tests)====
 
 
-def test_insert_first_note_needs_confirm_zero(store):
+def test_insert_first_note_needs_confirm_zero(store: Any) -> Any:
     """1.1 第一次写入:needs_confirm=0(无 L2 候选)。"""
     note = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -78,7 +78,7 @@ def test_insert_first_note_needs_confirm_zero(store):
     assert note.needs_confirm == 0, "首次写入同 fingerprint 应 needs_confirm=0"
 
 
-def test_insert_second_note_needs_confirm_one(store):
+def test_insert_second_note_needs_confirm_one(store: Any) -> Any:
     """1.2 第二次写入(同 fingerprint,不同 apple_note_id):needs_confirm=1。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -97,7 +97,7 @@ def test_insert_second_note_needs_confirm_one(store):
     assert note2.needs_confirm == 1, "同 fingerprint 跨 apple_note_id 写入应 needs_confirm=1"
 
 
-def test_insert_different_fingerprint_no_confirm(store):
+def test_insert_different_fingerprint_no_confirm(store: Any) -> Any:
     """1.3 不同 fingerprint(不同 title 或不同日期):needs_confirm=0(无候选)。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -119,7 +119,7 @@ def test_insert_different_fingerprint_no_confirm(store):
 # ===== 2. NoteStore.insert 自动锁定 candidate_match_id(3 tests)====
 
 
-def test_insert_first_note_candidate_match_none(store):
+def test_insert_first_note_candidate_match_none(store: Any) -> Any:
     """2.1 第一次写入:candidate_match_id=NULL(无候选)。"""
     note = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -131,7 +131,7 @@ def test_insert_first_note_candidate_match_none(store):
     assert note.candidate_match_id is None, "首次写入应 candidate_match_id=NULL"
 
 
-def test_insert_second_note_candidate_match_locks_earliest(store):
+def test_insert_second_note_candidate_match_locks_earliest(store: Any) -> Any:
     """2.2 第二次写入(同 fingerprint):candidate_match_id=earliest.id(最早候选)。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -152,7 +152,7 @@ def test_insert_second_note_candidate_match_locks_earliest(store):
     )
 
 
-def test_insert_third_note_candidate_match_locks_first_not_second(store):
+def test_insert_third_note_candidate_match_locks_first_not_second(store: Any) -> Any:
     """2.3 第三次写入:candidate_match_id 仍锁最早(not 第二早),避免链式引用。"""
     note1 = store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -186,7 +186,7 @@ def test_insert_third_note_candidate_match_locks_first_not_second(store):
 # ===== 3. NoteStore.list_by_needs_confirm L2 待确认列表(3 tests)====
 
 
-def test_list_by_needs_confirm_returns_only_candidates(store):
+def test_list_by_needs_confirm_returns_only_candidates(store: Any) -> Any:
     """3.1 list_by_needs_confirm 只返 needs_confirm=1 的 notes。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -217,7 +217,7 @@ def test_list_by_needs_confirm_returns_only_candidates(store):
     assert pending[0].needs_confirm == 1
 
 
-def test_list_by_needs_confirm_empty_when_no_candidates(store):
+def test_list_by_needs_confirm_empty_when_no_candidates(store: Any) -> Any:
     """3.2 无 L2 候选时返空 list(全部 needs_confirm=0)。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
@@ -237,7 +237,7 @@ def test_list_by_needs_confirm_empty_when_no_candidates(store):
     assert pending == []
 
 
-def test_list_by_needs_confirm_validates_limit(store):
+def test_list_by_needs_confirm_validates_limit(store: Any) -> Any:
     """3.3 list_by_needs_confirm 严判 limit 范围 [1, 10000] 沿 list_by_sync_status 范本。"""
     with pytest.raises(ValueError, match="limit 必须是"):
         store.list_by_needs_confirm(limit=0)

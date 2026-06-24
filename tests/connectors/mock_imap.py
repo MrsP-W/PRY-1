@@ -137,7 +137,7 @@ def make_envelope(
     return {uid: {b"ENVELOPE": env, b"RFC822.SIZE": size}}
 
 
-def install_mock(monkeypatch, target: Any, mock: MockIMAPClient) -> None:
+def install_mock(monkeypatch: Any, target: Any, mock: MockIMAPClient) -> None:
     """把 MockIMAPClient 注入到 IMAPConnector._connect_sync 内部的 IMAPClient 构造点。
 
     原理：IMAPConnector._connect_sync 直接构造 `IMAPClient(host, port, ssl, timeout)`。
@@ -152,19 +152,19 @@ def install_mock(monkeypatch, target: Any, mock: MockIMAPClient) -> None:
             # 把 mock 暴露给 target（方便测试断言）
             target._client = mock
 
-        def login(self, username: str, password: str):
+        def login(self, username: str, password: str) -> Any:
             return mock.login(username, password)
 
-        def select_folder(self, folder: str, readonly: bool = False):
+        def select_folder(self, folder: str, readonly: bool = False) -> Any:
             return mock.select_folder(folder, readonly)
 
-        def search(self, criteria):
+        def search(self, criteria: Any) -> Any:
             return mock.search(criteria)
 
-        def fetch(self, uids, parts):
+        def fetch(self, uids: Any, parts: Any) -> Any:
             return mock.fetch(uids, parts)
 
-        def logout(self):
+        def logout(self) -> Any:
             return mock.logout()
 
     monkeypatch.setattr(imap_module, "IMAPClient", _FakeIMAPClient)
