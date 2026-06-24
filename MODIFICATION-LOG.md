@@ -145,7 +145,7 @@
 - **README.md** · 顶部状态 v0.2.35 → v0.2.36 + 14 commit 链 + 21 类撞坑
 - **SESSION-STATE.md** · 7 处更新(v0.2.35 → v0.2.36)
 - **MODIFICATION-LOG.md**(本文件)· 顶部快照表 + 累计记录区 +1 条新记录
-- **Agent Assistant 跨项目沉淀**:`L2_memory/v0.2.36-spike-49.md` · 待写(本轮提交后)
+- **Agent Assistant 跨项目沉淀**:`L2_memory/v0.2.36-spike-49.md` · 已写(2026-06-24 11:16 · 5988 bytes · 撞坑 #53 v2.0 + #54 范本 · MEMORY.md L66 索引行)
 - **9/9 质量门全绿**:2265 passed / 1 skipped / 88.77% coverage · mypy 0 errors / ruff check passed / ruff format 246 files / alembic --sql exit 0 / uv build OK / MD lint 0 errors / coverage spike 88.77% / spike-49 inserted(24) + duplicates(25) = parsed(49)
 
 **4. 撞坑沉淀**
