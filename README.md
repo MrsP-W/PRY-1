@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🎯 **v0.2.38 P1-1 mypy 严格模式 9 errors 修复已收口**(2026-06-24 · 沿 v0.2.23 cast 范本 + isinstance 守卫)。承接 v0.2.36 W3 真账单 `--max-rows 49` 全量入库已收口 + v0.2.37 docs-only 漂移小修 + **撞坑 #55(本轮新增)严格模式 mypy 双 0 范本**。**P1-1 mypy 严格模式修复结果**:`mypy --check-untyped-defs src tests` 0 errors / 209 files ✅;9 errors 全部分类修复(KeychainResult(success=) → ok= 2 处 call-arg + cast() 显式类型 5 处 arg-type + isinstance 守卫 2 处 union-attr);沿用 v0.2.23 cast() 范本 + D4.7.3 v1.0.4 P1-1 跨字段校验范本。**撞坑 #55(本轮新增)严格模式 mypy 双 0 范本** = 默认模式 0 errors + 严格模式 0 errors;撞坑 #31 沿用(mypy 历史 dry-run 13 errors → 9 errors 严格模式专属 → 本轮全修);撞坑 #51 链路逻辑(doc 口径必须与实际状态一致)。16 commit 链(v0.2.25-v0.2.38 + v0.2.33 二次纠偏 + v0.2.35 漂移小修 + v0.2.37 docs-only)+ 撞坑 22 类沉淀(本轮新增 #55)。验证:**2265 passed / 1 skipped / 0 mypy 默认 / 0 mypy 严格 / 0 ruff / 0 MD lint / 88.77% coverage**。HEAD 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移)。**下一步候选**:outlook/gmail SMTP spike(等授权 + Keychain 凭据)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.38-p1-1-mypy-strict-fix-2026-06-24.md](docs/v0.2.38-p1-1-mypy-strict-fix-2026-06-24.md)。
+> **状态**:🎯 **v0.2.39 启用 `--check-untyped-defs` 为 CI 默认已收口**(2026-06-24 · 撞坑 #55 v2.0 范本升级)。承接 v0.2.38 P1-1 mypy 严格模式 9 errors 修复 + **撞坑 #55 v2.0(本轮升级)严格模式 mypy 双 0 + CI 默认化范本**。**v0.2.39 Makefile 修复结果**:Makefile L213-216 mypy target 启用 `--check-untyped-defs` 参数 + echo 加(严格模式)标识 + 注释明示;**撞坑 #50 docstring/code 漂移范本沿用**(修前注释写"严格模式"但实际未启用 = 漂移,修后注释+实际命令对齐)。**范本升级**:不只验证一次 0 errors,而要让 CI 强制守住 — 任何后续 PR 必须通过严格模式,避免回退。18 commit 链(v0.2.25-v0.2.39 + v0.2.33 二次纠偏 + v0.2.35 漂移小修 + v0.2.37 docs-only + v0.2.38 P1-1)+ 撞坑 23 类沉淀(本轮升级 #55 v2.0)。验证:**make mypy 严格模式 0 errors / 209 files + 2265 passed / 1 skipped / 0 ruff / 0 MD lint / 88.77% coverage**。HEAD 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移)。**下一步候选**:pyproject.toml mypy config 同步锁死 / outlook/gmail SMTP 真实发送 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.39-mypy-strict-ci-default-2026-06-24.md](docs/v0.2.39-mypy-strict-ci-default-2026-06-24.md)。
 
 ---
 
@@ -213,6 +213,7 @@ make help
 | **v0.2.36** W3 真账单 `--max-rows 49` 全量入库收口(选项 B · 阶梯 1→5→10→25→49 五阶段 + 撞坑 #53 v2.0 累计公式 v2.0 + 撞坑 #54 选项 B 优于选项 A 范本 · `parsed=49 inserted=24 categorized=24 duplicates=25`) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.37** docs-only 漂移小修(README L301 最后更新 → 历史版本说明 + MODIFICATION-LOG L148 待写 → 已写 · 撞坑 #50 第三层范本沿用) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.38** P1-1 mypy 严格模式 9 errors 修复(沿 v0.2.23 cast 范本 + isinstance 守卫 · 撞坑 #55 严格模式 mypy 双 0 范本 · `mypy --check-untyped-defs src tests` 0 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
+| **v0.2.39** 启用 `--check-untyped-defs` 为 CI 默认(Makefile mypy target 修复撞坑 #50 docstring/code 漂移 · 撞坑 #55 v2.0 范本升级严格模式 + CI 默认化 = 强制约束) | ✅ 6/24 落地 | 2026-06-24 |
 
 ---
 
