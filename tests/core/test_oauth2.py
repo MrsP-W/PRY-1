@@ -201,7 +201,7 @@ def test_keychain_set_oauth_token_validates_provider(monkeypatch):
     from my_ai_employee.core import keychain
 
     monkeypatch.setattr(
-        keychain, "set_password", lambda *args, **kwargs: keychain.KeychainResult(success=True)
+        keychain, "set_password", lambda *args, **kwargs: keychain.KeychainResult(ok=True)
     )
 
     with pytest.raises(ValueError, match="oauth_provider 必传"):
@@ -219,7 +219,7 @@ def test_keychain_get_oauth_token_validates_provider(monkeypatch):
     monkeypatch.setattr(
         keychain,
         "get_password",
-        lambda *args, **kwargs: keychain.KeychainResult(success=True, value="{}"),
+        lambda *args, **kwargs: keychain.KeychainResult(ok=True, value="{}"),
     )
 
     with pytest.raises(ValueError, match="oauth_provider 必传"):

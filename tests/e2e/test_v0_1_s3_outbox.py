@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import cast
 
 import pytest
 
@@ -48,15 +49,20 @@ def test_s3_outbox_store_5_drafts(session_factory):
     )
 
     # 3. 逐封入库
+    from my_ai_employee.policy.outbox_adapter import OutboxDecisionReport
+
     for d in drafts:
         report = adapter.store_and_emit(
-            email_id=d["email_id"],
-            subject=d["subject"],
-            body=d["body"],
-            tone=d["tone"],
-            recipient_email=d["recipient_email"],
+            email_id=cast(int, d["email_id"]),
+            subject=cast(str, d["subject"]),
+            body=cast(str, d["body"]),
+            tone=cast(str, d["tone"]),
+            recipient_email=cast(str, d["recipient_email"]),
             run_id=f"e2e-s3-{d['email_id']}",
         )
+        # 窄化联合类型:store_and_emit 可能返回 OutboxDecisionReport | OutboxBlockedDecisionReport
+        # 黑名单命中时是 OutboxBlockedDecisionReport(无 outbox_stored / outbox_id)
+        assert isinstance(report, OutboxDecisionReport), f"unexpected blocked report: {report}"
         assert report.outbox_stored is True
         assert report.outbox_id is not None and report.outbox_id >= 1
 
