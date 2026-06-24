@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.36 W3 真账单 `--max-rows 49` 全量入库已收口(2026-06-24 · 选项 B 路径 · 当前阶梯 1→5→10→25→49 五阶段全部收口,撞坑 #53 v2.0 累计公式 v2.0 + #54 选项 B 优于 A 范本)
+# SESSION-STATE — v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(2026-06-24 · 撞坑 #55 v3.0 三重锁死 + #56 AST 注入顺序陷阱)
 
 > **最后更新**:2026-06-24 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.36 W3 真账单 `--max-rows 49` 全量入库已收口**(6/24 · 选项 B 路径 · spike-49 跑通 `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 承接 v0.2.35 spike-25 收口)。**阶梯验证范本 1 → 5 → 10 → 25 → 49 5 阶段全部收口**:五阶段公式 `inserted + duplicates = parsed` 全部成立(1+0=1 / 4+1=5 / 5+5=10 / 15+10=25 / 24+25=49);`duplicates` 单调递增(0 → 1 → 5 → 10 → 25);`needs_confirm` / `candidate_count` 全程 0(单源导入,L2 不触发);`categorized = inserted`(无 failed → 无 OTHER 兜底)。**v0.2.36 撞坑 #53 v2.0 沉淀**:跨 spike 累计公式校验 + 全量入库 = 业务链路完整性证明 — 全 spike 链路 Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 90 成立(49 + 41 = 90 = 1+5+10+25+49)✅。**v0.2.36 撞坑 #54(本轮新增)选项 B 优于选项 A 范本**:"带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性。**v0.2.36 状态固化**:沿用撞坑 #50 双层防御范本 — 第一层 = v0.2.34 启动前状态固化(已收口)+ 第二层 = v0.2.36 spike 跑完后二次纠偏(本次 docs-only)。v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike-49 全 categorized 无新增 needs_confirm)。v0.2.31 汇总脚本复用 OK(6 维度渲染正常)。**v0.2.36 / 6/24 实操授权候选**:P1-1 mypy tests 13 errors / outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped / 88.77% coverage** · 撞坑累计 21 类(本轮新增 #54)。边界:不真发邮件、不真导入账单(沿用 `--max-rows` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。
+> **状态**:✅ **v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口**(6/24 · 承接 v0.2.39 `--check-untyped-defs` CI 默认化)。**修复结果**:Makefile + pyproject.toml 双锁死(Makefile `--check-untyped-defs` + `disallow_untyped_defs = true`);393 errors 全修(src/ 5 个具体类型注解 + tests/ 421 函数 Any 注解);`make mypy` 双锁 **0 errors / 209 files**。**撞坑 #55 v3.0**:严格模式 mypy 双 0 + CI 默认化 + pyproject 锁死 = 命令层/配置层/Makefile 层三重强制约束。**撞坑 #56**:批量 AST 注入 `from typing import Any` 时必须尊重 future import 首行顺序,本轮修复 23 文件 SyntaxError 风险。**质量门**:2265 passed / 1 skipped / 88.77% coverage / ruff 0 / MD lint 0 / mypy 0。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:enable mypy `--strict`(需授权)/ outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.36 W3 真账单 `--max-rows 49` 全量入库已收口(2026-06-24,选项 B 路径 · 阶梯验证 1 → 5 → 10 → 25 → 49 五阶段全部跑通)**,**下一步候选**:P1-1 mypy tests 13 errors 修复(纯工程债)/ outlook/gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)/ 7/1 月度复盘(7 天后自动启动)。
+**当前启动候选**:**v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(2026-06-24,撞坑 #55 v3.0 三重锁死 + #56 AST 注入顺序陷阱)**,**下一步候选**:enable mypy `--strict`(需用户授权)/ outlook-gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)/ 7/1 月度复盘。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

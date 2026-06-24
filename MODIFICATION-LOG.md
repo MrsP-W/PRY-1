@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.36` W3 真账单 `--max-rows 49` 全量入库已收口(选项 B 路径 · docs-only · 承接 v0.2.35 spike-25 `a6e2409` · 阶梯验证范本 1 → 5 → 10 → 25 → 49 五阶段全部跑通 · spike-49 跑通 `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(24) + duplicates(25) = parsed(49)` 公式成立)· 撞坑 #50 双层防御范本沿用(第一层 v0.2.34 启动前状态固化 + 第二层 v0.2.36 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 → 10 → 25)· 撞坑 #52 阶梯验证范本升级到 5 阶段 · 撞坑 #53 v2.0 跨 spike 累计公式校验 + 全量入库(Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 90 = 49 + 41 = 1+5+10+25+49 成立,这是"完整性证明"最高级形式)· 撞坑 #54(本轮新增)选项 B 优于选项 A 范本("带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性)· docs-only 收口,无新代码改动);**下一步候选**:P1-1 mypy tests 13 errors(纯工程债)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.36 十二类报告 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.35` W3 真账单 `--max-rows 25` 阶梯验证 + 漂移小修已关闭(docs `a6e2409` + `d8e04e2` · 阶梯 4 阶段范本 + 撞坑 #53 跨 spike 累计公式 v1.0)|
-| **上上一阶段** | ✅ `v0.2.34` W3 真账单 `--max-rows 10` 阶梯验证已关闭(docs `bbb76a7` · 阶梯 3 阶段范本 + 撞坑 #52)|
+| **当前阶段** | ✅ `v0.2.40` pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(commit `94ef2f7` + docs `fcc4968` · Makefile `--check-untyped-defs` + pyproject.toml `disallow_untyped_defs = true` 双锁死 · 393 errors 全修(src/ 5 个具体类型注解 + tests/ 421 函数 Any 注解)· `make mypy` 双锁 **0 errors / 209 files** · 撞坑 #55 v3.0 三重锁死范本 + 撞坑 #56 AST 注入顺序陷阱 · 2265 passed / 1 skipped / 88.77% coverage / ruff 0 / MD lint 0);**下一步候选**:enable mypy `--strict`(需授权)/ outlook-gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.40 十五类报告 / 8/1 v0.2.1 release tag 锚定评估 |
+| **上一阶段** | ✅ `v0.2.39` 启用 `--check-untyped-defs` 为 CI 默认已关闭(commit `0c38232` + docs `3b0bee0` · 撞坑 #55 v2.0 严格模式 + CI 默认化)|
+| **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 125 files** / **88.77% coverage** |
-| **下一棒** | P1-1 mypy tests 13 errors(纯工程债)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.36 十二类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **下一棒** | enable mypy `--strict`(需用户授权)→ outlook-gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.40 十五类报告 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
