@@ -52,6 +52,7 @@ logs/
 # Local review exports（可能包含真实账单/交易候选,默认不入库）
 reports/transaction-candidates*.csv
 reports/transaction-candidates*.jsonl
+reports/transaction-candidate-review-summary*.md
 
 # IDE
 .idea/
