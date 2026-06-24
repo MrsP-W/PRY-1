@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**：🎯 **v0.2.29 交易候选 review/export 机制已收口**(2026-06-23 · 小修复)。承接 v0.2.28 L2 sign-lock 后剩余 `candidate_count=367` 需人工 review 的事实,新增 `TransactionStore.list_by_needs_confirm()` 只读热路径 + `scripts/export_transaction_candidates.py` JSONL/CSV 导出脚本,可把 `needs_confirm=1` 的新交易与候选交易成对导出,不导入账单、不修改数据库、不自动合并；导出的 `reports/transaction-candidates*.csv/jsonl` 已加入 `.gitignore`,默认本地 review 不入库。验证:38 passed / ruff 0 / mypy 0 / CLI help ok。当前仍是 **W3 真账单授权等待态**:等用户提供真实微信/支付宝 CSV 后,只允许 `--max-rows 1` 小样本导入验证；若暂无 CSV,下一步可用导出脚本 review 现有候选。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.29-transaction-candidate-export-2026-06-23.md](docs/v0.2.29-transaction-candidate-export-2026-06-23.md)。
+> **状态**：🎯 **v0.2.32 W3 真账单 spike + 撞坑 #49 已收口**(2026-06-24 · 真实 spike 跑通)。承接 v0.2.31 候选 review 汇总闭环,用户提供真实支付宝 62 笔流水(5/24-6/24,16827.01 元),扩 `AlipayCSV2027RealParser` 处理真实字段格式(`交易时间` header / 22 行说明前缀 / `不计入收支` 第 3 type)+ `detect_version` 扫前 30 行找真 header。**真实 spike 结果**:`--max-rows 1` → `parsed=1 inserted=1 categorized=1 version=2027` ✅;全量 dry-run 49 笔 / 16827.11 元(差 0.10 = 套餐关闭行);v0.2.31 汇总脚本复用正常。**撞坑 #49**:faker ≠ 真实格式(三重不一致)。9 commit 链(v0.2.25-v0.2.32)+ 撞坑 16 类沉淀(本轮新增 #46/#47/#48/#49)。验证:**2265 passed / 1 skipped / 0 mypy / 0 ruff / 0 MD lint**。HEAD `5e25983`。当前状态:**W3 真账单 `--max-rows 5` 小扩容验证准备就绪**(不等全量 49 笔)。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.32-w3-real-bill-spike-2026-06-24.md](docs/v0.2.32-w3-real-bill-spike-2026-06-24.md)。
 
 ---
 
@@ -202,6 +202,14 @@ make help
 | **v0.2.2 #5 commit 2** MicrosoftOAuth2 实现(msal 接入 + 12 unit tests · 8/8 质量门全绿 · 沿 v0.2.2 范本) | ✅ 6/18 落地 | 2026-06-18 |
 | **v0.2.2 #5 commit 3** GoogleOAuth2 实现(google-auth 接入 + 11 unit tests · 9/9 质量门全绿 · 沿 commit 2 范本) | ✅ 6/18 落地 | 2026-06-18 |
 | **v0.2.2 #5 commit 4** XOAUTH2 SMTP 鉴权集成(RFC 7628 + 4 重防误发 + 12 unit tests · 顶层 placement 避免重构) | ✅ 6/18 落地 | 2026-06-18 |
+| **v0.2.25** P0 二修(真账单 `--max-rows` 真透传 adapter + launchd seal bash bad substitution 修复) | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.26** W3 虚拟 spike 2345 行收口报告 | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.27** W3 真实 spike 2345 行收口报告 | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.28** L2 fingerprint sign-lock(消除 sign 反向误判 · 6 tests · 业务侧 `raw.type→+1/-1` 派生) | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.29** 候选 review/export 机制(`list_by_needs_confirm` 只读 + JSONL/CSV 导出 + 38 tests) | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.30** 候选导出硬化(`.gitignore` 保护 + CLI 错误硬化 · 沿 v0.2.18 §3 范本) | ✅ 6/23 落地 | 2026-06-23 |
+| **v0.2.31** 候选 review 汇总闭环(6 维度聚合 + review_decision 三分类 + 14 tests · 撞坑 #46/#47/#48) | ✅ 6/24 落地 | 2026-06-24 |
+| **v0.2.32** W3 真账单 spike + 撞坑 #49(faker ≠ 真实格式 · 2027 real parser + 4 tests · `--max-rows 1` 跑通 parsed=1 inserted=1 categorized=1 version=2027) | ✅ 6/24 落地 | 2026-06-24 |
 
 ---
 
@@ -216,7 +224,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%** → v0.2.1 #2 **2077 passed / 1 skipped / 89.21%** → v0.2.1 #6 + NoteStore L2 跨源写入 **2100 passed / 1 skipped / 89.07%** → v0.2.2 #1/#2 **2135 passed / 1 skipped / 89.03%** → v0.2.2 #3 **2159 passed / 1 skipped / 89.08%** → v0.2.2 #6/#7 **2176 passed / 1 skipped / 89.28%** → v0.2.2 #5 commit 2/3/4 **2211 passed / 1 skipped / 88.86%** → v0.2.2 #5 commit 5 + #8 + v0.2 launch plan 整体收口 + v0.2.4 + v0.2.5 **2220 passed / 1 skipped / 88.85%** → **v0.2.6 D4.7.4 v1.0.3 改进项延后 2225 passed / 1 skipped / 88.85%**(2026-06-20 实测,8/8 质量门全绿,mypy tests 13 errors 历史 baseline 未引入新错) |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%** → v0.2.1 #2 **2077 passed / 1 skipped / 89.21%** → v0.2.1 #6 + NoteStore L2 跨源写入 **2100 passed / 1 skipped / 89.07%** → v0.2.2 #1/#2 **2135 passed / 1 skipped / 89.03%** → v0.2.2 #3 **2159 passed / 1 skipped / 89.08%** → v0.2.2 #6/#7 **2176 passed / 1 skipped / 89.28%** → v0.2.2 #5 commit 2/3/4 **2211 passed / 1 skipped / 88.86%** → v0.2.2 #5 commit 5 + #8 + v0.2 launch plan 整体收口 + v0.2.4 + v0.2.5 **2220 passed / 1 skipped / 88.85%** → **v0.2.6 D4.7.4 v1.0.3 改进项延后 2225 passed / 1 skipped / 88.85%** → **v0.2.25 P0 二修 2240 passed / 1 skipped**(2026-06-23) → **v0.2.28 L2 sign-lock 2240 passed / 1 skipped**(2026-06-23,沿用) → **v0.2.31 候选 review 汇总闭环 2261 passed / 1 skipped**(2026-06-24,撞坑 #46/#47/#48) → **v0.2.32 W3 真账单 spike 2265 passed / 1 skipped**(2026-06-24,撞坑 #49 新增 2027 real parser + 4 tests) |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本)→ D10.3 launchd_install.sh 部署(5 源判定 + ~/bin/)+ 每月 1 号 09:00 月报触发 |
 
 ---

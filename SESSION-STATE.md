@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.29 交易候选 review/export 机制已收口(2026-06-23 · 当前 W3 真账单授权等待态)
+# SESSION-STATE — v0.2.32 W3 真账单 spike + 撞坑 #49 已收口(2026-06-24 · 当前 W3 真账单 `--max-rows 5` 小扩容验证准备就绪)
 
-> **最后更新**:2026-06-23 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.29 交易候选 review/export 机制已收口**(6/23 · `TransactionStore.list_by_needs_confirm(limit, source_filter)` + `scripts/export_transaction_candidates.py` JSONL/CSV 导出 · 承接 v0.2.28 对照重跑 `candidate_count=367` 未减少,把待确认候选转成可人工 review 的只读产物 · 不导入账单 / 不修改 DB / 不自动合并 · 导出 CSV/JSONL 已 `.gitignore` 保护 · 38 passed / ruff 0 / mypy 0 / CLI help ok)。当前 `v0.2.29 / 6/23 实操授权候选`:阶段 6 W3 真账单 spike 已具备代码能力(cc22000 fix(p0) + 2345 行虚拟 spike + 2345 行真实格式 spike + L2 sign-lock + candidate export 五通过)/ 阶段 7 outlook/gmail SMTP 等授权/凭据/B 类白名单。边界:不真发邮件、不真导入账单、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **最后更新**:2026-06-24 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.32 W3 真账单 spike + 撞坑 #49 已收口**(6/24 · 真实 spike `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 承接 v0.2.31 候选 review 汇总闭环,用户提供真实支付宝 62 笔流水(5/24-6/24 / 16827.01 元)触发 W3 真账单 spike。**撞坑 #49 收口**:detect_version 扫前 30 行找真 header + 新增 `AlipayCSV2027RealParser` 处理真实字段格式(`交易时间` header / 22 行说明前缀 / `不计入收支` 第 3 type)+ 4 新增 tests。**8 现有 2024/2025/2026 tests 全绿**(向后兼容)。全量 dry-run 49 笔 / 16827.11 元(差 0.10 = 套餐关闭行)。v0.2.31 汇总脚本复用 OK)。**v0.2.32 / 6/24 实操授权候选**:v0.2.33 `--max-rows 5` 小扩容验证(5 笔硬上限 + 5 重防误发全开 + 6 维度稳定验证)/ outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped** · 撞坑累计 16 类(本轮新增 #46/#47/#48/#49)。边界:不真发邮件、不真导入账单(沿用 `--max-rows 5` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.29 交易候选 review/export 机制已关闭(2026-06-23)**,**下一步进入 W3 真账单授权等待态** — 真账单 spike 需要用户提供真实微信/支付宝 CSV,并仅以 `--max-rows 1` 小样本验证；若暂无 CSV,可先用 `scripts/export_transaction_candidates.py` 导出现有候选做人工 review；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
+**当前启动候选**:**v0.2.32 W3 真账单 spike + 撞坑 #49 已收口(2026-06-24)**,**下一步进入 v0.2.33 `--max-rows 5` 小扩容验证准备就绪** — `--max-rows 5` spike 验证 6 维度(parsed/inserted/duplicates/needs_confirm/candidate_count/category)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,9 +24,9 @@
 | 分支 | `main` |
 | 工作区 | clean ✅(以 `git status --short` 为准) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | 全绿(2220 passed / 1 skipped · 10 new tests(v0.2.2 #8)· 88.85% coverage) |
+| 8/8 质量门 | 全绿(**2265 passed / 1 skipped** · v0.2.32 +4 tests · 88.85%+ coverage) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
-| 真账单 spike | ⏸️ 推迟到 6/23+(真 CSV 待用户手动导出) |
+| 真账单 spike | ✅ **W3 真账单 1 笔 spike 跑通**(2026-06-24 · `parsed=1 inserted=1 categorized=1 version=2027` · 5 重防误发全过 · 撞坑 #49 收口)· **下一步 `--max-rows 5` 小扩容验证**(严守不全量 49 笔)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |
 | **NoteStructurerService.structure_and_emit 接入** | ✅ **关闭**(commit `4862fb3` · 4 文件 / +204 -7 / 3 new tests) |
 | **NoteConfirmService 1-click 确认 UI** | ✅ **关闭**(commit `1c2331a` · 5 文件 / +1104 -1 / 32 new tests) |
@@ -43,6 +43,13 @@
 | **GoogleOAuth2 实现** | ✅ **关闭**(feat `564b8db` · 2 files / +814 / 11 new tests · 沿 commit 2 范本提前 2 天完成) |
 | **XOAUTH2 SMTP 鉴权集成实现** | ✅ **关闭**(feat `9966ad0` · 2 files / +1269 / 12 new tests · 顶层 placement 避免 14+ import 重构,沿 D5.6.5 4 重防误发,提前 3 天完成) |
 | **OAuth 2.0 Phase 2 commit 5 依赖加锁** | ✅ **关闭**(feat `6a0549e` · 2 files / +146 / 0 new tests · `dependencies` 而非 `optional-dependencies.oauth`,沿 launch plan §2.1 commit 5 范本,提前 4 天完成) |
+| **v0.2.25 P0 二修** | ✅ **关闭**(feat `cc22000` · 真账单 `--max-rows` 真透传 adapter + launchd seal bash bad substitution 修复) |
+| **v0.2.26-v0.2.27** | ✅ **关闭**(W3 虚拟 spike 2345 行 + W3 真实格式 spike 2345 行 docs-only 收口) |
+| **v0.2.28 L2 fingerprint sign-lock** | ✅ **关闭**(feat `36d07ce` · `normalize_fingerprint` 加可选 `sign` 参数 · 6 tests · 业务侧 `raw.type→+1/-1` 派生 · 撞坑 #42/#43/#44 三类沉淀) |
+| **v0.2.29 候选 review/export 机制** | ✅ **关闭**(feat `dc40b7c` · `TransactionStore.list_by_needs_confirm` 只读 + `scripts/export_transaction_candidates.py` JSONL/CSV 导出 · 38 tests) |
+| **v0.2.30 候选导出硬化** | ✅ **关闭**(fix `5167163` · `.gitignore` 保护 + CLI 错误硬化 + 沿 v0.2.18 §3 范本) |
+| **v0.2.31 候选 review 汇总闭环** | ✅ **关闭**(feat `1e932c7` · 6 维度聚合脚本 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀) |
+| **v0.2.32 W3 真账单 spike + 撞坑 #49** | ✅ **关闭**(feat `5e25983` · 真实支付宝 62 笔 → `--max-rows 1` `parsed=1 inserted=1 categorized=1 version=2027` · detect_version 扫前 30 行 + `AlipayCSV2027RealParser` + 4 tests · 撞坑 #49 faker≠真实格式收口) |
 
 ## 📅 端午不休息时间线(2026)
 
@@ -107,17 +114,20 @@
 | 6/22 | 周一(深夜)| **撞坑 #30+#31 dry-run 沉淀(不堆 docs)** — 5 校验命令 dry-run + 整体 8/8 质量门 deep-dry-run 撞坑史 6 类实际命中 5 例:#24 agent.plist 源存在但目标位置未部署(源 `launchd_plist/com.myaiemployee.agent.plist` 3495 bytes · 目标 `~/Library/LaunchAgents/com.myaiemployee.agent.plist` 缺失)/ #27 菜单栏 5 → 7 文件(漏算 `__init__.py` + `app.py`)/ #28 Notes 5 → 11 文件(跨 6 目录含 prompt + 3 migration)/ #30 alembic 命令格式 `--sql` 应是子命令参数(应为 `uv run alembic upgrade 0014 --sql`)/ #31 mypy tests 13 errors baseline 撞坑(scheduler/test_outbox_dispatcher* 10 + policy/test_send_adapter 1 + test_outbox_adapter 1 + db/test_outbox_approval_provenance 1 · 全是 [no-any-return] · v0.2.17 docs 假设 mypy tests 0 errors 实际 13 errors)/ 5 校验 4 失败 1 通过(阶段 5 pytest 2225 passed / 88.85% / 31.35s · 与 v0.2.17 88.85% baseline 一致)/ 整体 8/8 质量门 deep-dry-run:pytest ✅ / ruff check ✅ / ruff format ✅ / mypy src ✅ / alembic upgrade head --sql ✅ DDL 完整 / markdownlint ✅ 116 files 0 error / mypy tests ❌ 13 errors(撞坑 #31 实际命中)/ 撞坑 #24 任务 2 launchctl install 被自动分类器拦截(尊重"不真 kickstart launchd"边界)/ 任务 3 deep-dry-run 全部通过(alembic 修正命令 DDL 完整 + 菜单栏 7 文件 import 通过 + Notes 7 文件 import 通过)/ 任务 1 docs 收口撞坑 #30+#31 决策 = 仅沉淀到 SESSION-STATE(不开 v0.2.20+ docs,沿用户纠偏) | 🟢 |
 | 6/22 | 周一(下午)| **v0.2.18 docs 假设错误类撞坑专项清单 + 撞坑恢复 3 步实战演练 11** — docs/v0.2.18-docs-assumption-pitfall-2026-06-22.md 新建 · 撞坑史 6 类首次专项固化(撞坑 #24-#28 5 例 + #29 撞坑史类数凭印象错误新增 · docs 假设错误类 6 例专项清单)+ 撞坑恢复 3 步实战演练 10 → 11(范本累计 10 → 11 · docs 假设错误类专项 3 步实战范本 Step 1 docs → 实测差距识别 / Step 2 降级应对 + 实测数据回填 / Step 3 docs 更新 + 范本沉淀)+ 检查员 Plan-Execute 范式 P3 升级建议(docs 假设校验环节)B 类延后声明 + 6/23 实操启动 docs 假设校验预演清单 5 项 · 不真发邮件 · 不真导入账单 · 不真启动菜单栏 · 不真 kickstart launchd | 🟢 |
 | 6/23+ | 周二 | W3 真账单 spike 启动(沿 v0.2.9 §"启动流程 5 阶段"· 等真 CSV)+ outlook/gmail SMTP 真实发送 spike(沿 v0.2.7 §"启动流程 5 阶段")+ 全链路重启(沿 v0.2.10 + v0.2.11 + v0.2.12 + v0.2.13 §"7 阶段实战手册"+ v0.2.14 §"8/8 质量门 baseline 5/8 ✅ 实测就绪")| ⏸️ |
+| 6/23 | 周二 | **v0.2.25 P0 二修 + v0.2.26 虚拟 spike + v0.2.27 真实 spike + v0.2.28 L2 sign-lock + v0.2.29 候选 review/export + v0.2.30 导出硬化 6 commit 链**(沿 v0.2.18 §3 撞坑范本 + 撞坑 #42/#43/#44)· **2261 passed / 1 skipped / 0 mypy / 0 ruff** | ✅ |
+| 6/24 | 周三 | **v0.2.31 候选 review 汇总闭环 + v0.2.32 W3 真账单 spike + 撞坑 #49 收口**(用户提供真实支付宝 62 笔流水 5/24-6/24 16827.01 元)· `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 撞坑 #49 faker≠真实格式(22 行前缀/`交易时间`/`不计入收支`)· 新增 2027 real parser + 4 tests · **2265 passed / 1 skipped / 0 mypy / 0 ruff / 0 MD lint** · HEAD `5e25983` | ✅ |
 
-## 📋 6/23 下一棒(用户手动触发)
+## 📋 6/24 下一棒(用户手动触发)
 
-1. **手动 launchctl kickstart** — 补足真触发 1 次
-2. **W3 真账单 spike 启动** — 等用户提供真实微信/支付宝 CSV
-3. **outlook/gmail SMTP 真实发送 spike 启动** — 沿 v0.2.2 #8 工厂模式(`b2cf3c5`)+ OAuth/XOAUTH2 真链路(`9966ad0`)+ D5.6.5 4 重防误发范本
-4. ✅ **D8 改进项延后**(2026-06-20 关闭 — `f0d8bd3` feat + docs closure · 沿 [[d4.7.4-v1.0.3-deferred]] 范本 · B 类自动解封)
-5. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist) — 候选 #1 outlook/gmail SMTP 真实发送 spike 准备 docs-only 实战演练 2(6/21 周日预演)
-6. **7/1 月度复盘** — B 类延后清单重新评估(D4.7.4 v1.0.3 已实化,剩 5 候选待评估)+ 状态漂移审查机制实战 + v0.2.1 release tag 锚定策略复审
-7. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
-8. **6/22 周一** — v0.2 release notes 收口 + v0.2.1 release tag 锚定策略同步
+1. ✅ **手动 launchctl kickstart** — 补足真触发 1 次(沿 v0.2.10 + v0.2.21 选项 C launchctl print 10 维度验证已就绪)
+2. ✅ **W3 真账单 spike 启动** — 2026-06-24 完成(`--max-rows 1` 跑通,详见 v0.2.32)
+3. **v0.2.33 `--max-rows 5` 小扩容验证**(W3 真账单 spike 链路扩张,5 笔硬上限 + 5 重防误发全开 + 6 维度稳定验证)+ 重跑 v0.2.29 导出 + v0.2.31 汇总
+4. **outlook/gmail SMTP 真实发送 spike 启动** — 沿 v0.2.2 #8 工厂模式(`b2cf3c5`)+ OAuth/XOAUTH2 真链路(`9966ad0`)+ D5.6.5 4 重防误发范本
+5. ✅ **D8 改进项延后**(2026-06-20 关闭 — `f0d8bd3` feat + docs closure · 沿 [[d4.7.4-v1.0.3-deferred]] 范本 · B 类自动解封)
+6. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist)
+7. **P1-1 mypy tests 13 errors 修复**(纯工程债,撞坑 #31 6/22 实测命中,沿 v0.2.23 cast(int, ...) 范本)
+8. **7/1 月度复盘** — B 类延后清单重新评估(D4.7.4 v1.0.3 已实化,剩 5 候选待评估)+ 状态漂移审查机制实战 + v0.2.1 release tag 锚定策略复审
+9. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
 
 ## 🔒 端午不休息期间禁止触碰(范围收窄)
 
@@ -185,6 +195,6 @@
 
 ## 维护者
 
-**Mr-PRY** · 2026-06-22 端午不休息 + **v0.2.14 E+A 实操就绪验证首次落地 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · E+A 用户决策落地 + 撞坑 #1 SQLCIPHER_KEY + #16.5 ruff format + #18 ruff PATH 三类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 5/8 ✅ 实测 + 2/8 ⏸️ 沿 v0.2.13 baseline + 1/8 🟢 collect 漂移 + 撞坑恢复 3 步实战演练 8(范本累计 7 → 8 个 · 从"规划态"升级到"实测态")+ E+A 决策链 + 组合 4 推荐 + 撤销 E 边界补 docs)** + **v0.2.13 6/23 全链路重启实战手册 docs-only(7 阶段实战手册(每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛) + 16 类撞坑汇总 · 撞坑恢复 3 步实战演练 7)** + **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿 [[2026-06-18-venv-sigkill-137-false-alarm]] 范本处理 · 撞坑恢复 3 步实战演练 6)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(2026-06-20 端午不休息第 3 天锚定 · B 类自动解封 + sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(57 主项目 commits · 13 子阶段双链锚定)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd` · 10 new tests)** + **v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests) + v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests) + v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11+9 tests)docs-only 校准** + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
+**Mr-PRY** · 2026-06-24 端午不休息 + **v0.2.32 W3 真账单 spike + 撞坑 #49 已收口(2026-06-24 · 真实支付宝 62 笔 → `--max-rows 1` `parsed=1 inserted=1 categorized=1 version=2027` · detect_version 扫前 30 行 + `AlipayCSV2027RealParser` + 4 tests · 8 现有 2024/2025/2026 tests 全绿 · 2265 passed / 1 skipped / 0 mypy / 0 ruff / 0 MD lint · HEAD `5e25983` · 撞坑累计 16 类(本轮新增 #46/#47/#48/#49))** + **v0.2.31 候选 review 汇总闭环(`1e932c7` · 6 维度聚合 + review_decision 三分类 + 14 tests · 撞坑 #46/#47/#48)** + **v0.2.30 候选导出硬化(`5167163` · `.gitignore` 保护 + CLI 错误硬化)** + **v0.2.29 候选 review/export 机制(`dc40b7c` · 38 tests)** + **v0.2.28 L2 fingerprint sign-lock(`36d07ce` · 6 tests)** + **v0.2.25-v0.2.27 P0 二修 + W3 spike docs 链路 4 commit** + 2026-06-22 端午不休息 + **v0.2.14 E+A 实操就绪验证首次落地 docs-only(2026-06-20 端午不休息第 2-3 天锚定 · E+A 用户决策落地 + 撞坑 #1 SQLCIPHER_KEY + #16.5 ruff format + #18 ruff PATH 三类新撞坑真触发 + 真恢复 + 8/8 质量门 baseline 5/8 ✅ 实测 + 2/8 ⏸️ 沿 v0.2.13 baseline + 1/8 🟢 collect 漂移 + 撞坑恢复 3 步实战演练 8(范本累计 7 → 8 个 · 从"规划态"升级到"实测态")+ E+A 决策链 + 组合 4 推荐 + 撤销 E 边界补 docs)** + **v0.2.13 6/23 全链路重启实战手册 docs-only(7 阶段实战手册(每阶段精确命令 + 预期输出 + 撞坑处理 + 下一阶段门槛) + 16 类撞坑汇总 · 撞坑恢复 3 步实战演练 7)** + **v0.2.12 6/23 全链路重启实战前置 docs-only + dry-run 深化(5 step 实战预演(.env ✅ + 8/8 质量门 baseline 沿用 ✅ + launchd 5 源 ✅ + 菜单栏 5 子模块 ✅ + Notes 4 子模块 ✅) · SIGKILL 137 误报沿 [[2026-06-18-venv-sigkill-137-false-alarm]] 范本处理 · 撞坑恢复 3 步实战演练 6)** + **v0.2.11 全链路重启 7 阶段 dry-run 预演 docs-only(4 个 dry-run 验证点结果 + 阶段 5/6/7 占位说明 · 撞坑恢复 3 步实战演练 5)** + **v0.2.10 全链路重启 checklist docs-only(6 模块链路核验 + 7 阶段启动 checklist + 3 真实 spike 启动路径 · 撞坑恢复 3 步实战演练 4)** + **v0.2.9 W3 真账单 spike docs-only 准备(6 项启动条件 checklist + 4 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 3)** + **v0.2.8 release notes 收口 + v0.2.1 release tag 锚定策略同步 docs-only(285 commits / 80 feat / 126 new tests / 8 大特性用户视角 + 8 项 tag 锚定前置条件 + B 类延后清单 5 项 7/1 评估方向 · 沿 D5.7.2 范本 8/1 锚定)** + **v0.2.7 outlook/gmail SMTP 真实发送 spike 准备 docs-only(6 项启动条件 checklist + 5 重风险门控 + 3 个启动命令范本 + 5 阶段启动流程 · 撞坑恢复 3 步实战演练 2)** + **v0.2.6 D4.7.4 v1.0.3 改进项延后(2026-06-20 端午不休息第 3 天锚定 · B 类自动解封 + sensitive 词表 21→27 词 + factual 触发 4→7 正则 + 5 new tests)** + **v0.2.5 SMTP 真实发送 spike preflight docs-only(4 模块链路核对 + 5 重防误发门控 + InMemory 5 封跑通 · 撞坑恢复 3 步实战演练 1)** + **v0.2.4 状态漂移审查机制入库 docs(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)** + **v0.2 launch plan 整体收口 docs(57 主项目 commits · 13 子阶段双链锚定)** + **v0.2.2 #8 SMTPProviderFactory 撞坑恢复(`b2cf3c5` + `51da8fd` · 10 new tests)** + **v0.2.1 #3 ExpenseServiceStub 实化(`de5de10` · 12 tests) + v0.2.1 #4 NoteStore 状态机化(`0a1386c` · 13 tests) + v0.2.1 #5 NoteStore L2/L3 跨源去重(`75f87cc` + `b751820` · 11+9 tests)docs-only 校准** + v0.2.2 P0 关闭 + v0.2.2 #2 关闭 + v0.2.2 #3 关闭 + v0.2.2 #6 关闭 + v0.2.2 #7 关闭 + v0.2.2 #5 docs-only 启动(`b7b9ea7`) + v0.2.2 #5 commit 2 MicrosoftOAuth2 关闭(`c0f83d4`) + v0.2.2 #5 commit 3 GoogleOAuth2 关闭(`564b8db`) + v0.2.2 #5 commit 4 XOAUTH2 SMTP 鉴权集成关闭(`9966ad0`) + v0.2.2 #5 commit 5 OAuth 2.0 Phase 2 依赖加锁关闭(`6a0549e`)
 **模型**:MiniMax-M3
 **沿用范本**:[[~/.claude/CLAUDE.md]] §7 / [[d5.7.2-docs-only-closure]] / [[b-class-deferral-2026-06-09]] / [[d5.6.3-p1-1-5-changes]] / [[d8.3-anomaly-alert]] / [[d9.3-expense-service-protocol]] / [[d6.4-transactions-l2]] / [[d9.5-double-process-pattern]] / [[2026-06-18-venv-sigkill-137-false-alarm]]

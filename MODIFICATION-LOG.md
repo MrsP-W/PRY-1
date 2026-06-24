@@ -75,18 +75,18 @@
 
 ---
 
-## 📊 当前项目整体状态(最新快照 · 2026-06-23 锚定)
+## 📊 当前项目整体状态(最新快照 · 2026-06-24 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.29` 交易候选 review/export 机制已关闭(`TransactionStore.list_by_needs_confirm` + `scripts/export_transaction_candidates.py` JSONL/CSV · 承接 v0.2.28 剩余 `candidate_count=367` 需人工 review · 只读导出,不导入/不改库/不自动合并 · 导出 CSV/JSONL 已 `.gitignore` 保护 · 38 passed + ruff 0 + mypy 0 + CLI help ok);当前进入 W3 真账单授权等待态(等用户真实微信/支付宝 CSV,只跑 `--max-rows 1`)|
-| **上一阶段** | ✅ `v0.2.28` L2 fingerprint sign-lock 修复已关闭(commit `36d07ce` · `normalize_fingerprint(..., sign=±1)` + `transaction_adapter.py:192` 显式派生 sign · 已消除反向符号误判风险 · v0.2.27 对照重跑 `candidate_count=367` 未减少,说明剩余候选是同日同金额同商户同方向的合理业务碰撞,需用户 review · 2240 passed / 1 skipped / 88.77% coverage · 纯修复性升级)|
-| **上上一阶段** | ✅ `v0.2.27` W3 真实格式账单 spike 2345 行端到端报告已关闭(commit `d1503ad` · 微信 1200 + 支付宝 1145 = 2345 行 · 真实 2024 字段 + UTF-8 BOM 100% 解析 · needs_confirm=367 = candidate_count=367 · 100 构造跨源 + 267 同方向业务候选 · categorized=1978 / duplicates=0 / failed=0 · 1.62s / 1449 rows/s · 纯 spike + docs,0 src/tests 改动)|
+| **当前阶段** | ✅ `v0.2.32` W3 真账单 spike + 撞坑 #49 faker≠真实格式已收口(commit `5e25983` · 用户提供真实支付宝 62 笔流水 5/24-6/24 16827.01 元 · `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 新增 `AlipayCSV2027RealParser` + `detect_version` 扫前 30 行找真 header + 4 tests · 撞坑 #49 三重不一致收口(22 行前缀/`交易时间`/`不计入收支`));**当前进入 v0.2.33 `--max-rows 5` 小扩容验证准备就绪**(严守不全量 49 笔 + 5 重防误发全开 + 6 维度稳定验证)|
+| **上一阶段** | ✅ `v0.2.31` 候选 review 汇总闭环已关闭(commit `1e932c7` · `scripts/summarize_transaction_candidate_review.py` 6 维度聚合 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀)|
+| **上上一阶段** | ✅ `v0.2.30` 候选导出硬化已关闭(commit `5167163` · `.gitignore` 增量 `transaction-candidate-review-summary*.md` + CLI 错误硬化 · 沿 v0.2.18 §3 范本)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.29 聚焦验证:38 passed / ruff 0 / mypy 0 / CLI help ok；v0.2.28 全量质量门:2240 passed / 1 skipped / 88.77% coverage / mypy src+tests 0 / ruff 0 / alembic sql 0 / build ok / MD lint 0 |
-| **下一棒** | W3 真账单 spike(等用户真实 CSV,只导 `--max-rows 1`) → 或先导出 `needs_confirm=1` 候选人工 review → 7/1 月度复盘 review v0.2.27 + v0.2.28 + v0.2.29 三类报告 → 8/1 v0.2.1 release tag 锚定评估 |
-| **后续锚点** | 7/1 月度复盘 12:00 → 17:00；8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 123 files** |
+| **下一棒** | **v0.2.33 `--max-rows 5` 小扩容验证**(W3 真账单 spike 链路扩张,5 笔硬上限)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化 → P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.32 八类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **后续锚点** | 7/1 月度复盘 12:00 → 17:00(八类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -114,6 +114,118 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-24 [v0.2.32 W3 真账单 spike + 撞坑 #49 faker≠真实格式] — 收口
+
+**1. 本次修改内容**
+
+- **src/my_ai_employee/connectors/alipay_csv.py** · 4 处改动
+  - `detect_version` 扫前 30 行找含 hints 的真 header(沿用同样 30 行扫描沿范本)· 加 2027 hint `("交易时间",)`
+  - 新增 `AlipayCSV2027RealParser`(真实字段映射,沿 D7.1 范本不动 2024/2025/2026)
+  - `_locate_header_row` 静态方法定位真 header 行号
+  - parse 用 StringIO 包 header + 数据,DictReader 不再误读说明段
+  - skip `不计入收支` 行(spike 边界,不破坏 `_normalize_type` 契约)
+- **tests/connectors/test_alipay_csv.py** · 4 新增撞坑 #49 tests
+- **tests/fixtures/alipay_faker/alipay_2027_real_sample.csv** · 新增真实样本 fixture(6 行 + 22 行前缀)
+- **docs/v0.2.32-w3-real-bill-spike-2026-06-24.md** · 新建收口报告
+- **README.md** + **SESSION-STATE.md** + **MODIFICATION-LOG.md** · 顶部状态同步 v0.2.32
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #49(本轮新增) faker ≠ 真实格式**:D7.1 InMemory faker 基于公开文档,但真实支付宝 2026-06-24 样本有 3 处不一致(22 行前缀 / `交易时间` header / `不计入收支` 第 3 type) → 修法:扩 2027 real parser(向后兼容不动 2024/2025/2026 faker)
+- ⚠️ **8 现有 2024/2025/2026 tests 全绿**(向后兼容 ✅)· 不破坏 `_normalize_type` 契约(沿撞坑 #42 范本严判边界要贴合业务语义)
+- ⚠️ **撞坑 #46/#47/#48 沿用 v0.2.31 沉淀**(测试通过 ≠ 实测通过 / 隐式依赖 / 校验顺序)
+- **P1**: v0.2.33 `--max-rows 5` 小扩容验证(严守不全量 49 笔)
+- **P2**: 7/1 月度复盘 review v0.2.25-v0.2.32 八类报告
+- **P3**: 8/1 v0.2.1 release tag 锚定(本次 W3 spike 已跑通 1 笔,outlook/gmail 真实 SMTP 仍等授权)
+
+**3. 当前项目整体总结**
+
+- 进度:**2265 passed / 1 skipped / 9/9 质量门全绿 / W3 真账单 1 笔 spike 跑通(parsed=1 inserted=1 categorized=1 version=2027)**
+- 状态:**v0.2.32 W3 真账单 spike + 撞坑 #49 收口(2026-06-24,真实 spike 已跑通,等待 v0.2.33 `--max-rows 5` 小扩容验证)**
+- 风险:3 项已知风险(见上),无新风险
+- 下一步:v0.2.33 `--max-rows 5` 小扩容验证 → 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定
+- 下一棒:用户(下一步指令)→ 主 Agent(v0.2.33 spike)→ 检查员(7/1 月度复盘)
+
+### 2026-06-24 [v0.2.31 候选 review 汇总闭环] — 收口
+
+**1. 本次修改内容**
+
+- **scripts/summarize_transaction_candidate_review.py** · 新增(338 行)
+  - 6 维度聚合(总候选 / source / counterparty Top N / 同金额同商户 / candidate_missing / review_decision 三分类)
+  - `review_decision` 三分类白名单(`same_transaction` / `separate_transactions` / `needs_investigation`)
+  - CLI 错误硬化(`--top-n` 预检,沿 v0.2.30 范本)· 退出码 0/1/2 契约
+- **tests/scripts/test_summarize_transaction_candidate_review.py** · 14 tests(主流程 13 + 防 ## ## 标题双 # 回归 1)
+- **.gitignore** · 增量 `reports/transaction-candidate-review-summary*.md`
+- **docs/v0.2.31-candidate-review-summary-2026-06-24.md** · 新建收口报告
+- **README.md** + **SESSION-STATE.md** + **MODIFICATION-LOG.md** · 顶部状态同步 v0.2.31
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #46(本轮新增) 测试通过 ≠ 实测通过(markdown 标题双 #)**:13 tests 全绿但实测跑出 `## ## 2. 按 source 分布` 双 `##` → 修法:调用方改传不带 `##` 标题 + 新增 `test_build_summary_report_no_double_hash_in_titles` 防回归
+- ⚠️ **撞坑 #47(本轮新增) 隐式依赖 = 隐藏 bug**:`_format_review_decision_table` 内部 `len(samples.get("_total", []))` 但 `_total` 字段从未被填充 → 修法:把 `total_rows` 提升为函数参数,从调用方显式传入
+- ⚠️ **撞坑 #48(本轮新增) 校验顺序 = 错误语义优先级**:`_read_rows` 先 `exists()` 后 `_detect_format()` → 文件不存在优先抛 FileNotFoundError → 修法:交换顺序,先 `_detect_format()` 再 `exists()`
+- **P1**: v0.2.32 W3 真账单 spike(等用户提供真实微信/支付宝 CSV)
+- **P2**: 7/1 月度复盘 review v0.2.25-v0.2.31 七类报告
+
+**3. 当前项目整体总结**
+
+- 进度:**2261 passed / 1 skipped / 9/9 质量门全绿 / 候选 review 汇总闭环跑通(1 行 alipay 候选实测)**
+- 状态:**v0.2.31 候选 review 汇总闭环收口(2026-06-24,把"候选判定"从逐行肉眼升级为 6 维度聚合 + schema 引导)**
+- 风险:3 项已知风险(见上),无新风险
+- 下一步:v0.2.32 W3 真账单 spike(用户提供真实 CSV 后 `--max-rows 1`)→ 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定
+
+### 2026-06-24 [v0.2.30 候选导出硬化] — 收口
+
+**1. 本次修改内容**
+
+- **scripts/export_transaction_candidates.py** · 沿 v0.2.18 §3 范本硬化
+  - `--limit` 预检范围 `[1,10000]` + `--source` strip + 拒空字符串(CLI 错误时 exit 1,不打开 DB)
+  - 错误时返回可读错误而非 traceback(撞坑 #46 沿用范本)
+- **tests/scripts/test_export_transaction_candidates.py** · 5 tests 增量(沿 v0.2.29 范本)
+- **.gitignore** · 增量 `reports/transaction-candidates*.csv/jsonl`(本地不入库)
+- **docs/v0.2.29-transaction-candidate-export-2026-06-23.md** · 沿用范本补全硬化段
+- 验证:**38 passed / ruff 0 / mypy 0 / make lint 0**
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #46 沿用 v0.2.31 沉淀**(测试通过 ≠ 实测通过 — 但本轮已加 CLI 错误硬化前置)
+- **P1**: v0.2.31 候选 review 汇总闭环(承接本轮硬化产物)
+- **P2**: v0.2.32 W3 真账单 spike
+
+**3. 当前项目整体总结**
+
+- 进度:**38 passed / ruff 0 / mypy 0 / CLI help ok**
+- 状态:**v0.2.30 候选导出硬化收口(2026-06-23,CLI 错误硬化 + .gitignore 保护)**
+- 风险:1 项已知风险(见上),无新风险
+- 下一步:v0.2.31 候选 review 汇总 → v0.2.32 W3 真账单 spike
+
+### 2026-06-23 [v0.2.25-v0.2.29 6 commit 链(P0 二修 + W3 spike 链路 + L2 sign-lock + 候选 review/export)] — 收口
+
+**1. 本次修改内容**
+
+- **v0.2.25** P0 二修(`cc22000`)· 真账单 `--max-rows` 真透传 adapter + launchd seal bash bad substitution 修复
+- **v0.2.26** W3 虚拟 spike 2345 行收口报告(`c0a8af9` docs-only)
+- **v0.2.27** W3 真实 spike 2345 行收口报告(`d1503ad` docs-only)
+- **v0.2.28** L2 fingerprint sign-lock(`36d07ce`)· `normalize_fingerprint` 加可选 `sign` 参数 + 业务侧派生 · 6 tests · 撞坑 #42/#43/#44 三类沉淀
+- **v0.2.29** 候选 review/export 机制(`dc40b7c`)· `TransactionStore.list_by_needs_confirm` 只读 + JSONL/CSV 导出 · 38 tests
+- 验证:**2240 passed / 1 skipped / 88.77% coverage / 0 mypy / 0 ruff / 0 MD lint**
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #42(本轮新增) sign 与 amount 矛盾过度严判**:删除矛盾严判,改用 `sign=+1` 统一返回 `+abs(amt)`
+- ⚠️ **撞坑 #43(本轮新增) 现有测试与新业务对齐**:13 个测试 case 失败,5 处现有 case 升级 `sign=+1` 与业务侧对齐
+- ⚠️ **撞坑 #44(本轮新增) ruff F841 隐藏修复**:`del wechat_fps_unused` + `# noqa: F841` 保留计算表达
+- **P1**: v0.2.30 候选导出硬化(沿 v0.2.18 §3 范本)
+- **P2**: v0.2.31 候选 review 汇总闭环
+- **P3**: v0.2.32 W3 真账单 spike(等用户真实 CSV)
+
+**3. 当前项目整体总结**
+
+- 进度:**2240 passed / 1 skipped / 9/9 质量门全绿 / L2 fingerprint sign-lock 修复完成 / D6.2 + D7.2 + D6.6 已有测试零破坏**
+- 状态:**v0.2.25-v0.2.29 六 commit 链收口(纯修复性升级,真账单 spike 等用户真实 CSV)**
+- 风险:6 项已知风险(见上),无新风险
+- 下一步:v0.2.30 候选导出硬化 → v0.2.31 候选 review 汇总 → v0.2.32 W3 真账单 spike
 
 ### 2026-06-20 [v0.2.16 7/1 月度复盘准备 docs-only] — 收口
 
@@ -1406,5 +1518,5 @@
 
 ---
 
-> **累计**:17 条 / 2026-06-18-23(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike + v0.2.28 L2 sign-lock 修复)
+> **累计**:21 条 / 2026-06-18-24(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike + v0.2.28 L2 sign-lock 修复 + v0.2.29 候选 review/export + v0.2.30 候选导出硬化 + v0.2.31 候选 review 汇总闭环 + v0.2.32 W3 真账单 spike + 撞坑 #49 faker≠真实格式)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
