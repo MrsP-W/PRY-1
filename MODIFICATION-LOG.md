@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.34` W3 真账单 `--max-rows 10` 小扩容验证已收口(commit `aa2a937` + 本轮 docs-only · 承接 v0.2.33 spike-5 `9e9754a` · 阶梯验证范本 1 → 5 → 10 全部跑通 · spike-10 跑通 `parsed=10 inserted=5 categorized=5 duplicates=5 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(5) + duplicates(5) = parsed(10)` 公式成立)· 撞坑 #50 双层防御范本落地(第一层 v0.2.33 启动前状态固化 + 第二层 v0.2.34 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 = 上一阶段 inserted 累加)· 撞坑 #52 阶梯验证范本(1 → 5 → 10 三阶段公式校验比"一次跑满"更能暴露链路问题)· docs-only 收口,无新代码改动);**下一步候选**:`--max-rows 25` 继续阶梯验证 / 全量 49 笔(需用户授权) / P1-1 mypy tests 13 errors(可选)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.34 十类报告 / 8/1 v0.2.1 release tag 锚定评估 |
+| **当前阶段** | ✅ `v0.2.35` W3 真账单 `--max-rows 25` 阶梯验证已收口(commit `bbb76a7` + 本轮 docs-only · 承接 v0.2.34 spike-10 `aa2a937` · 阶梯验证范本 1 → 5 → 10 → 25 全部跑通 · spike-25 跑通 `parsed=25 inserted=15 categorized=15 duplicates=10 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(15) + duplicates(10) = parsed(25)` 公式成立)· 撞坑 #50 双层防御范本沿用(第一层 v0.2.34 启动前状态固化 + 第二层 v0.2.35 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 → 10)· 撞坑 #52 阶梯验证范本升级到 4 阶段 · 撞坑 #53 跨 spike 累计公式校验(全 spike 链路 Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 41 = 1+5+10+25 成立,这是"完整性证明")· docs-only 收口,无新代码改动);**下一步候选**:全量 49 笔 spike(需用户授权) / P1-1 mypy tests 13 errors(可选)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.35 十一类报告 / 8/1 v0.2.1 release tag 锚定评估 |
 | **上一阶段** | ✅ `v0.2.31` 候选 review 汇总闭环已关闭(commit `1e932c7` · `scripts/summarize_transaction_candidate_review.py` 6 维度聚合 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀)|
 | **上上一阶段** | ✅ `v0.2.30` 候选导出硬化已关闭(commit `5167163` · `.gitignore` 增量 `transaction-candidate-review-summary*.md` + CLI 错误硬化 · 沿 v0.2.18 §3 范本)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 123 files** |
-| **下一棒** | `--max-rows 25` 继续阶梯验证(无阻塞)→ 全量 49 笔(需用户授权)→ P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.34 十类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **下一棒** | 全量 49 笔 spike(需用户授权)→ P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.35 十一类报告 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(八类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,38 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-24 [v0.2.35 `--max-rows 25` 阶梯验证 + 4 阶段范本 + 撞坑 #50 第二层 + #53 跨 spike 累计公式校验] — 收口
+
+**1. 本次修改内容**
+
+- **阶梯验证范本 1 → 5 → 10 → 25**(`--max-rows 25` spike)
+  - **docs/v0.2.35-w3-spike-25-2026-06-24.md** · 新建收口报告
+  - 跑通结果:`parsed=25 inserted=15 categorized=15 duplicates=10 needs_confirm=0 failed=0 candidate_count=0 version=2027`
+  - 6 维度稳定性验证 ✅(`inserted(15) + duplicates(10) = parsed(25)` 公式成立)
+  - **4 阶段全部跑通**:`duplicates` 单调递增(0 → 1 → 5 → 10);`needs_confirm` / `candidate_count` 全程 0;`categorized = inserted`
+  - v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike-25 全 categorized 无新增 needs_confirm)
+  - v0.2.31 汇总脚本复用 OK(6 维度渲染正常)
+- **3 文件状态二次纠偏**(沿用撞坑 #50 第二层范本)
+  - README.md + SESSION-STATE.md + MODIFICATION-LOG.md 顶部统一为 "v0.2.35 W3 真账单 `--max-rows 25` 阶梯验证已收口"
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #50 第二层范本沿用**:v0.2.35 spike 跑完后**再做状态口径二次纠偏**(本次 docs-only)
+- ⚠️ **撞坑 #51(沿用) duplicates 链路逻辑**:本阶段 duplicates=10 ≠ 累计 duplicates(撞坑 #51 公式修正 — 单次 spike 公式 `inserted + duplicates = parsed` 严格约束单次 spike)
+- ⚠️ **撞坑 #52(沿用 + 升级) 阶梯验证范本**:4 阶段公式校验全部成立
+- ⚠️ **撞坑 #53(本轮新增) 跨 spike 累计公式校验**:全 spike 链路 Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 41 成立,这是"完整性证明"
+- **P1**: 全量 49 笔 spike(需用户授权)
+- **P2**: 7/1 月度复盘 review v0.2.25-v0.2.35 十一类报告
+- **P3**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike 已跑通 1+5+10+25 = 41 笔,outlook/gmail 真实 SMTP 仍等授权)
+
+**3. 当前项目整体总结**
+
+- 进度:**2265 passed / 1 skipped / 9/9 质量门全绿 / W3 真账单阶梯 1+5+10+25 = 41 笔 spike 跑通 / 撞坑 20 类**
+- 状态:**v0.2.35 `--max-rows 25` 阶梯验证已收口(2026-06-24,4 阶段全部跑通,撞坑 #50 第二层范本 + 撞坑 #53 沉淀)**
+- 风险:4 项已知风险(撞坑 #50/#51/#52/#53 + 待办 P1/P2/P3),无新风险
+- 下一步:全量 49 笔 spike(需用户授权)→ 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定
+- 下一棒:用户(下一步指令)→ 主 Agent(全量 49 笔或继续)/ 检查员(7/1 月度复盘)
 
 ### 2026-06-24 [v0.2.34 `--max-rows 10` spike + 阶梯验证范本 1 → 5 → 10 + 撞坑 #50 第二层 + #52 阶梯验证范本] — 收口
 

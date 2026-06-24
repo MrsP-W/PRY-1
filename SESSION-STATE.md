@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.34 W3 真账单 `--max-rows 10` 小扩容验证已收口(2026-06-24 · 当前 v0.2.34 阶梯验证范本 1 → 5 → 10 全部收口,准备 `--max-rows 25` 继续阶梯 或全量 49 笔 等用户授权)
+# SESSION-STATE — v0.2.35 W3 真账单 `--max-rows 25` 阶梯验证已收口(2026-06-24 · 当前阶梯 1→5→10→25 全部收口,准备全量 49 笔 spike 等用户授权)
 
 > **最后更新**:2026-06-24 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.34 W3 真账单 `--max-rows 10` 小扩容验证已收口**(6/24 · spike-10 跑通 `parsed=10 inserted=5 categorized=5 duplicates=5 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 承接 v0.2.33 spike-5 收口)。**阶梯验证范本 1 → 5 → 10 全部收口**:三个阶段公式 `inserted + duplicates = parsed` 全部成立;`duplicates` 单调递增(0 → 1 → 5 = 上一阶段 inserted 累加);`needs_confirm` / `candidate_count` 全程 0(单源导入,L2 不触发);`categorized = inserted`(无 failed → 无 OTHER 兜底)。**v0.2.34 spike-10 撞坑 #52 沉淀**:阶梯验证范本(1 → 5 → 10 三阶段公式校验比"一次跑满"更能暴露链路问题)。**v0.2.34 状态固化**:沿用撞坑 #50 双层防御范本 — 第一层 = v0.2.33 启动前状态固化(已收口)+ 第二层 = v0.2.34 spike 跑完后二次纠偏(本次 docs-only)。v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike-10 全 categorized 无新增 needs_confirm)。v0.2.31 汇总脚本复用 OK(6 维度渲染正常)。**v0.2.34 / 6/24 实操授权候选**:继续阶梯 `--max-rows 25` 验证 / 全量 49 笔导入(需用户明确授权)/ outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped** · 撞坑累计 19 类(本轮新增 #52)。边界:不真发邮件、不真导入账单(沿用 `--max-rows` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。
+> **状态**:✅ **v0.2.35 W3 真账单 `--max-rows 25` 阶梯验证已收口**(6/24 · spike-25 跑通 `parsed=25 inserted=15 categorized=15 duplicates=10 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 承接 v0.2.34 spike-10 收口)。**阶梯验证范本 1 → 5 → 10 → 25 4 阶段全部收口**:四阶段公式 `inserted + duplicates = parsed` 全部成立(1+0=1 / 4+1=5 / 5+5=10 / 15+10=25);`duplicates` 单调递增(0 → 1 → 5 → 10);`needs_confirm` / `candidate_count` 全程 0(单源导入,L2 不触发);`categorized = inserted`(无 failed → 无 OTHER 兜底)。**v0.2.35 撞坑 #53 沉淀**:跨 spike 累计公式校验 — 全 spike 链路 Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 41 成立(25 + 16 = 41 = 1+5+10+25)✅,这是"完整性证明"。**v0.2.35 状态固化**:沿用撞坑 #50 双层防御范本 — 第一层 = v0.2.34 启动前状态固化(已收口)+ 第二层 = v0.2.35 spike 跑完后二次纠偏(本次 docs-only)。v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike-25 全 categorized 无新增 needs_confirm)。v0.2.31 汇总脚本复用 OK(6 维度渲染正常)。**v0.2.35 / 6/24 实操授权候选**:全量 49 笔 spike(需用户明确授权)/ outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped** · 撞坑累计 20 类(本轮新增 #53)。边界:不真发邮件、不真导入账单(沿用 `--max-rows` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.34 W3 真账单 `--max-rows 10` 小扩容验证已收口(2026-06-24,阶梯验证 1 → 5 → 10 全部跑通)**,**下一步候选**:`--max-rows 25` 继续阶梯验证 / 全量 49 笔导入(需用户明确授权)/ P1-1 mypy tests 13 errors 修复(纯工程债)/ outlook/gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)。
+**当前启动候选**:**v0.2.35 W3 真账单 `--max-rows 25` 阶梯验证已收口(2026-06-24,阶梯验证 1 → 5 → 10 → 25 全部跑通)**,**下一步候选**:全量 49 笔 spike(需用户明确授权)/ P1-1 mypy tests 13 errors 修复(纯工程债)/ outlook/gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
