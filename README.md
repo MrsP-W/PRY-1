@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🎯 **v0.2.39 启用 `--check-untyped-defs` 为 CI 默认已收口**(2026-06-24 · 撞坑 #55 v2.0 范本升级)。承接 v0.2.38 P1-1 mypy 严格模式 9 errors 修复 + **撞坑 #55 v2.0(本轮升级)严格模式 mypy 双 0 + CI 默认化范本**。**v0.2.39 Makefile 修复结果**:Makefile L213-216 mypy target 启用 `--check-untyped-defs` 参数 + echo 加(严格模式)标识 + 注释明示;**撞坑 #50 docstring/code 漂移范本沿用**(修前注释写"严格模式"但实际未启用 = 漂移,修后注释+实际命令对齐)。**范本升级**:不只验证一次 0 errors,而要让 CI 强制守住 — 任何后续 PR 必须通过严格模式,避免回退。18 commit 链(v0.2.25-v0.2.39 + v0.2.33 二次纠偏 + v0.2.35 漂移小修 + v0.2.37 docs-only + v0.2.38 P1-1)+ 撞坑 23 类沉淀(本轮升级 #55 v2.0)。验证:**make mypy 严格模式 0 errors / 209 files + 2265 passed / 1 skipped / 0 ruff / 0 MD lint / 88.77% coverage**。HEAD 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移)。**下一步候选**:pyproject.toml mypy config 同步锁死 / outlook/gmail SMTP 真实发送 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.39-mypy-strict-ci-default-2026-06-24.md](docs/v0.2.39-mypy-strict-ci-default-2026-06-24.md)。
+> **状态**:🎯 **v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口**(2026-06-24 · 撞坑 #55 v3.0 三重锁死范本)。承接 v0.2.39 启用 `--check-untyped-defs` 为 CI 默认 + **撞坑 #55 v3.0(本轮升级)严格模式 mypy 双 0 + CI 默认化 + pyproject 锁死 = 三重强制约束**。**v0.2.40 修复结果**:Makefile + pyproject.toml 双锁死(Makefile `--check-untyped-defs` + pyproject.toml `disallow_untyped_defs = true`);393 errors 全修(src/ 5 个具体类型注解 + tests/ 421 函数 Any 注解);**撞坑 #56(本轮新增)AST 注入顺序陷阱**(批量脚本把 typing import 插在 future 前面 → Python SyntaxError,23 文件修复);21 commit 链(v0.2.25-v0.2.40 + 4 docs-only 收口 + v0.2.38 P1-1 + v0.2.39 严格模式化 + 本轮 v0.2.40)+ 撞坑 24 类沉淀(本轮新增 #56)。验证:**make mypy 双锁 0 errors / 209 files + 2265 passed / 1 skipped / 0 ruff / 0 MD lint / 88.77% coverage**。HEAD 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移)。**下一步候选**:enable mypy --strict / outlook/gmail SMTP 真实发送 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.40-pyproject-disallow-untyped-defs-2026-06-24.md](docs/v0.2.40-pyproject-disallow-untyped-defs-2026-06-24.md)。
 
 ---
 
@@ -214,6 +214,7 @@ make help
 | **v0.2.37** docs-only 漂移小修(README L301 最后更新 → 历史版本说明 + MODIFICATION-LOG L148 待写 → 已写 · 撞坑 #50 第三层范本沿用) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.38** P1-1 mypy 严格模式 9 errors 修复(沿 v0.2.23 cast 范本 + isinstance 守卫 · 撞坑 #55 严格模式 mypy 双 0 范本 · `mypy --check-untyped-defs src tests` 0 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.39** 启用 `--check-untyped-defs` 为 CI 默认(Makefile mypy target 修复撞坑 #50 docstring/code 漂移 · 撞坑 #55 v2.0 范本升级严格模式 + CI 默认化 = 强制约束) | ✅ 6/24 落地 | 2026-06-24 |
+| **v0.2.40** pyproject.toml mypy config 锁死 + 393 errors 全量修复(沿撞坑 #55 v3.0 范本 = 命令层 + 配置层 + Makefile 层 三重锁死 + 撞坑 #56 AST 注入顺序陷阱 · `mypy --disallow-untyped-defs` 0 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
 
 ---
 
