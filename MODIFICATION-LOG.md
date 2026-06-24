@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.33` W3 真账单 `--max-rows 5` 小扩容验证已收口(commit `9e9754a` · 承接 v0.2.32 spike-1 `5e25983` · Phase 1 状态固化 3 文件修复漂移 + Phase 2 spike-5 跑通 `parsed=5 inserted=4 categorized=4 duplicates=1 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(4) + duplicates(1) = parsed(5)` 公式成立)· 撞坑 #50 状态文档漂移收口(README/SESSION/MODIFICATION-LOG 3 文件顶部同步范本)+ 撞坑 #51 duplicates=1 链路逻辑(L1 source 内 UNIQUE 是预期行为,`inserted + duplicates = parsed` 公式必成立)· 状态固化 = docs-only commit,无新代码改动);**当前进入 v0.2.34 `--max-rows 10` 小扩容验证准备就绪**(严守不全量 49 笔 + 5 重防误发全开 + 6 维度稳定验证)|
+| **当前阶段** | ✅ `v0.2.34` W3 真账单 `--max-rows 10` 小扩容验证已收口(commit `aa2a937` + 本轮 docs-only · 承接 v0.2.33 spike-5 `9e9754a` · 阶梯验证范本 1 → 5 → 10 全部跑通 · spike-10 跑通 `parsed=10 inserted=5 categorized=5 duplicates=5 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(5) + duplicates(5) = parsed(10)` 公式成立)· 撞坑 #50 双层防御范本落地(第一层 v0.2.33 启动前状态固化 + 第二层 v0.2.34 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 = 上一阶段 inserted 累加)· 撞坑 #52 阶梯验证范本(1 → 5 → 10 三阶段公式校验比"一次跑满"更能暴露链路问题)· docs-only 收口,无新代码改动);**下一步候选**:`--max-rows 25` 继续阶梯验证 / 全量 49 笔(需用户授权) / P1-1 mypy tests 13 errors(可选)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.34 十类报告 / 8/1 v0.2.1 release tag 锚定评估 |
 | **上一阶段** | ✅ `v0.2.31` 候选 review 汇总闭环已关闭(commit `1e932c7` · `scripts/summarize_transaction_candidate_review.py` 6 维度聚合 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀)|
 | **上上一阶段** | ✅ `v0.2.30` 候选导出硬化已关闭(commit `5167163` · `.gitignore` 增量 `transaction-candidate-review-summary*.md` + CLI 错误硬化 · 沿 v0.2.18 §3 范本)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 123 files** |
-| **下一棒** | **v0.2.34 `--max-rows 10` 小扩容验证**(W3 真账单 spike 链路扩张,10 笔硬上限)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化 → P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.33 九类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **下一棒** | `--max-rows 25` 继续阶梯验证(无阻塞)→ 全量 49 笔(需用户授权)→ P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.34 十类报告 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(八类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,37 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-24 [v0.2.34 `--max-rows 10` spike + 阶梯验证范本 1 → 5 → 10 + 撞坑 #50 第二层 + #52 阶梯验证范本] — 收口
+
+**1. 本次修改内容**
+
+- **阶梯验证范本 1 → 5 → 10**(`--max-rows 10` spike)
+  - **docs/v0.2.34-w3-spike-10-2026-06-24.md** · 新建收口报告
+  - 跑通结果:`parsed=10 inserted=5 categorized=5 duplicates=5 needs_confirm=0 failed=0 candidate_count=0 version=2027`
+  - 6 维度稳定性验证 ✅(`inserted(5) + duplicates(5) = parsed(10)` 公式成立)
+  - **阶梯 1 → 5 → 10 三阶段全部跑通**:`duplicates` 单调递增(0 → 1 → 5 = 上一阶段 inserted 累加);`needs_confirm` / `candidate_count` 全程 0(单源导入,L2 不触发);`categorized = inserted`(无 failed → 无 OTHER 兜底)
+  - v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike-10 全 categorized 无新增 needs_confirm)
+  - v0.2.31 汇总脚本复用 OK(6 维度渲染正常,counterparty 麦当劳(朝阳店) 1 行)
+- **3 文件状态二次纠偏**(沿用撞坑 #50 第二层范本)
+  - README.md + SESSION-STATE.md + MODIFICATION-LOG.md 顶部统一为 "v0.2.34 W3 真账单 `--max-rows 10` 小扩容验证已收口"
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #50 第二层范本落地**:v0.2.34 spike 跑完后**再做状态口径二次纠偏**(本次 docs-only),沿用第一层范本 = 每个收口都应顺手同步 3 文件
+- ⚠️ **撞坑 #51(沿用) duplicates 链路逻辑**:spike 链路复用同一 CSV 时 L1 UNIQUE 单调递增(spike-1=0 / spike-5=1 / spike-10=5),`inserted + duplicates = parsed` 公式必成立
+- ⚠️ **撞坑 #52(本轮新增) 阶梯验证范本**:阶梯采样(1 → 5 → 10)比"一次跑满"更能暴露链路问题 — 三阶段公式校验可定位到具体阶段的代码改动
+- **P1**: `--max-rows 25` 继续阶梯验证(无阻塞)
+- **P2**: 7/1 月度复盘 review v0.2.25-v0.2.34 十类报告
+- **P3**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike 已跑通 1 + 5 + 10 笔,outlook/gmail 真实 SMTP 仍等授权)
+
+**3. 当前项目整体总结**
+
+- 进度:**2265 passed / 1 skipped / 9/9 质量门全绿 / W3 真账单阶梯 1+5+10 = 16 笔 spike 跑通 / 撞坑 19 类**
+- 状态:**v0.2.34 `--max-rows 10` 小扩容验证已收口(2026-06-24,阶梯验证 1 → 5 → 10 全部跑通,撞坑 #50 第二层范本 + 撞坑 #52 沉淀)**
+- 风险:3 项已知风险(撞坑 #50/#51/#52 + 待办 P1/P2/P3),无新风险
+- 下一步:`--max-rows 25` 继续阶梯 / 全量 49 笔(需用户授权)→ 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定
+- 下一棒:用户(下一步指令)→ 主 Agent(继续阶梯或全量)→ 检查员(7/1 月度复盘)
 
 ### 2026-06-24 [v0.2.33 状态固化 + `--max-rows 5` spike + 撞坑 #50 状态文档漂移 + #51 duplicates=1 链路逻辑] — 收口
 
