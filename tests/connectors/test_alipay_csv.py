@@ -208,3 +208,63 @@ def test_get_parser_invalid_version_guards() -> None:
     assert p.version == 2024
     p2 = get_parser(2025)
     assert p2.version == 2025
+
+
+# ===== 撞坑 #49 — 2027 真实样本格式测试(2026-06-24 W3 spike)=====
+
+
+def test_2027_real_parser_3_rows_skips_unrecorded() -> None:
+    """Case 9 — 2027 真实样本解析器:3 行支出 + 3 行不计收支,只产出 3 行.
+
+    撞坑 #49 (2026-06-24):真实支付宝导出文件
+        - header 用 `交易时间`(不是 2026 faker 的 `消费时间`)
+        - 含 ~22 行说明前缀
+        - 收/支 列含第三种值 `不计入收支`(花呗还款/余额宝收益等)
+        - parser 必须跳过不计收支行(spike 边界)
+    """
+    from my_ai_employee.connectors.alipay_csv import AlipayCSV2027RealParser
+
+    path = _FAKER_DIR / "alipay_2027_real_sample.csv"
+    parser = AlipayCSV2027RealParser()
+    results = list(parser.parse(path))
+
+    assert len(results) == 3, f"期望 3 行支出,实际 {len(results)}"
+    for r in results:
+        assert isinstance(r.date, date)
+        assert isinstance(r.amount, Decimal)
+        assert r.type == "支出", f"2027 parser 只保留支出行,实际 type={r.type!r}"
+        assert r.counterparty.strip()
+        assert len(r.raw_row_hash) == 32
+
+    # 验证第 1 行(滴滴出行 24.40 支出)
+    assert results[0].counterparty == "滴滴出行"
+    assert results[0].amount == Decimal("24.40")
+    assert results[0].external_transaction_id == "2026062323001451041451584898"
+
+
+def test_detect_version_2027_real_sample() -> None:
+    """Case 10 — detect_version 对 2027 真实样本(含说明前缀)嗅探为 2027."""
+    from my_ai_employee.connectors.alipay_csv import detect_version
+
+    path = _FAKER_DIR / "alipay_2027_real_sample.csv"
+    assert detect_version(path) == 2027
+
+
+def test_2027_parser_skips_prefix_lines() -> None:
+    """Case 11 — 2027 parser 跳过支付宝说明前缀段(22 行),不误读 `导出信息:`."""
+    from my_ai_employee.connectors.alipay_csv import AlipayCSV2027RealParser
+
+    path = _FAKER_DIR / "alipay_2027_real_sample.csv"
+    # 验证 _locate_header_row 能定位到含 `交易时间` 的真 header 行
+    header_idx = AlipayCSV2027RealParser._locate_header_row(path)
+    assert header_idx >= 22, f"header 应该在第 22 行之后(说明前缀段),实际 {header_idx}"
+    assert header_idx <= 25, f"header 行号意外 {header_idx}"
+
+
+def test_get_parser_2027_creates_real_parser() -> None:
+    """Case 12 — get_parser(2027) 返回 AlipayCSV2027RealParser 实例."""
+    from my_ai_employee.connectors.alipay_csv import AlipayCSV2027RealParser, get_parser
+
+    parser = get_parser(2027)
+    assert isinstance(parser, AlipayCSV2027RealParser)
+    assert parser.version == 2027

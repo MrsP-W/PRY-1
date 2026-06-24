@@ -269,6 +269,111 @@ class AlipayCSV2026Parser(AlipayCSVParser):
         )
 
 
+# ===== 2027 真实样本格式(撞坑 #49 2026-06-24)=====
+
+
+class AlipayCSV2027RealParser(AlipayCSVParser):
+    """2027 版支付宝账单 CSV 解析器(真实用户样本字段).
+
+    真实样本字段(2026-06-24 用户 62 笔导出):
+        交易时间, 交易分类, 交易对方, 对方账号, 商品说明,
+        收/支, 金额, 收/付款方式, 交易状态, 交易订单号, 商家订单号, 备注
+
+    与 2024/2025/2026 faker 差异:
+        - 2024: 付款时间 / 交易号
+        - 2025: 创建时间 / 交易号
+        - 2026: 消费时间 / 订单号 (D7.1 faker 假设)
+        - 2027: 交易时间 / 交易订单号 (真实用户导出格式)
+
+    特性:
+        - 跳过文件前缀说明段(支付宝导出文件首 ~22 行是说明)
+        - 真实 ext_id 是 `交易订单号`(不是 `商家订单号`)
+        - 收/付款方式字段名与 2024/2025 略有差异(收/付款方式 vs 支付方式)
+        - 状态字段包含"交易关闭/退款成功"等,需在 _parse_row 中保留行(原始数据透传)
+    """
+
+    _COL_DATE = "交易时间"
+    _COL_CATEGORY = "交易分类"
+    _COL_DIRECTION = "收/支"
+    _COL_AMOUNT = "金额"
+    _COL_PAYMENT = "收/付款方式"
+    _COL_COUNTERPARTY = "交易对方"
+    _COL_TX_ID = "交易订单号"
+
+    @property
+    def version(self) -> int:
+        return 2027
+
+    def parse(self, path: Path) -> Iterator[RawTransaction]:
+        """逐行解析 2027 版 CSV(真实样本).
+
+        异常处理:
+            - 文件不存在 / 无权限 → 透传 OSError 给 safe_parse
+            - 单行字段缺失 → 抛 ValueError 给 safe_parse
+
+        撞坑 #49 (2026-06-24):真实样本前缀段可达 22 行说明文字,
+        必须先用 _locate_header_row 找到真 header 行,然后把 header + 数据行
+        拼成新字符串交给 csv.DictReader,确保 DictReader 把 header 当第一行。
+        """
+        import io
+
+        header_row_index = self._locate_header_row(path)
+        with open(path, encoding="utf-8-sig", newline="") as f:
+            lines = f.readlines()
+        # 拼 header + 数据行,过滤空行
+        body_lines = lines[header_row_index:]
+        body = "".join(line for line in body_lines if line.strip())
+        reader = csv.DictReader(io.StringIO(body))
+        for row in reader:
+            if not row.get(self._COL_DATE):
+                continue
+            # 撞坑 #49:真实支付宝 `收/支` 列含第三种值 `不计入收支`
+            # (花呗还款/余额宝收益/提现等),不是正常交易,
+            # 2027 parser 直接跳过(spike 边界,不破坏 _normalize_type 契约)
+            direction = (row.get(self._COL_DIRECTION) or "").strip()
+            if direction == "不计入收支":
+                continue
+            yield self._parse_row(row)
+
+    @staticmethod
+    def _locate_header_row(path: Path) -> int:
+        """定位真 CSV header 行号(含 `交易时间` 字段).
+
+        撞坑 #49:支付宝导出文件前 ~22 行是说明段,真 header 在第 23 行附近。
+        扫前 30 行找含 `交易时间` 字段的行返回其行号。
+        """
+        with open(path, encoding="utf-8-sig") as f:
+            for i, raw in enumerate(f):
+                if i >= 30:
+                    break
+                if "交易时间" in raw:
+                    return i
+        raise ValueError(f"未在前 30 行找到含 `交易时间` 字段的 header 行: {path}")
+
+    def _parse_row(self, row: dict[str, str]) -> RawTransaction:
+        for col in (
+            self._COL_DATE,
+            self._COL_DIRECTION,
+            self._COL_AMOUNT,
+            self._COL_COUNTERPARTY,
+            self._COL_TX_ID,
+        ):
+            if col not in row:
+                raise ValueError(
+                    f"2027 支付宝账单 CSV 缺少必填列: {col!r}, row keys={list(row.keys())}"
+                )
+
+        return RawTransaction(
+            date=_normalize_date(row[self._COL_DATE]),
+            amount=_normalize_amount(row[self._COL_AMOUNT]),
+            counterparty=(row[self._COL_COUNTERPARTY] or "").strip(),
+            type=_normalize_type(row[self._COL_DIRECTION]),
+            payment_method=(row.get(self._COL_PAYMENT) or "").strip(),
+            external_transaction_id=(row[self._COL_TX_ID] or "").strip(),
+            raw_row_hash=_row_hash(row),
+        )
+
+
 # ===== 工厂层(detect_version + 路由)=====
 
 
@@ -276,23 +381,29 @@ class UnsupportedCSVVersionError(Exception):
     """不支持的支付宝账单 CSV 版本(嗅探失败)."""
 
 
-# 2024 / 2025 / 2026 嗅探规则: 用 header 中**唯一**字段名识别
+# 2024 / 2025 / 2026 / 2027 嗅探规则: 用 header 中**唯一**字段名识别
 # (避免 2024 / 2025 共有字段如 "收/支" / "金额" / "交易号" 误判)
+# 2027 撞坑 #49:真实样本用 `交易时间` 字段名(2026 faker 用 `消费时间`)
 _VERSION_HINTS: dict[int, tuple[str, ...]] = {
     2024: ("付款时间",),  # 2024 旧版独有(2025 用"创建时间")
     2025: ("创建时间",),  # 2025 新版独有(2024 用"付款时间")
     2026: ("消费时间",),  # 2026 公开文档(待用户样本)
+    2027: ("交易时间",),  # 2026-06-24 用户真实样本字段(撞坑 #49)
 }
 
 
 def detect_version(path: Path) -> int:
-    """读 header 嗅探支付宝账单版本(2024 / 2025 / 2026).
+    """读 header 嗅探支付宝账单版本(2024 / 2025 / 2026 / 2027).
 
     嗅探规则(沿 D6.1 范本):
-        1. 读 CSV header(首行)
-        2. 检查是否含各版本**独有**字段名
-        3. 命中 → 返回版本号
-        4. 未命中 → 抛 UnsupportedCSVVersionError
+        1. 跳过文件前缀说明段(支付宝导出文件首 ~22 行可能是"导出信息"等说明)
+        2. 找到含 CSV 字段的真 header 行
+        3. 检查是否含各版本**独有**字段名
+        4. 命中 → 返回版本号
+        5. 未命中 → 抛 UnsupportedCSVVersionError
+
+    撞坑 #49 (2026-06-24):真实支付宝导出文件首行是"导出信息:",不是 CSV header;
+    必须扫前 30 行找含版本 hints 的真 header。
     """
     if not isinstance(path, Path):
         raise TypeError(f"path 必须是 Path,实际 {type(path).__name__}")
@@ -302,17 +413,27 @@ def detect_version(path: Path) -> int:
         raise ValueError(f"path 不是文件: {path}")
 
     with open(path, encoding="utf-8-sig", newline="") as f:
-        reader = csv.reader(f)
-        try:
-            header = next(reader)
-        except StopIteration as e:
-            raise UnsupportedCSVVersionError(f"CSV 文件为空: {path}") from e
+        # 扫前 30 行找含 hints 的真 header 行
+        # (撞坑 #49:支付宝导出文件前缀说明段可达 22 行)
+        lines_to_check = 30
+        for _ in range(lines_to_check):
+            raw = f.readline()
+            if not raw:
+                break
+            header_line = raw.strip()
+            if not header_line:
+                continue
+            # 用 csv.reader 单行解析(检测是否含 hints)
+            try:
+                parsed = next(csv.reader([header_line]))
+            except Exception:
+                continue
+            for version, hints in _VERSION_HINTS.items():
+                if any(hint in parsed for hint in hints):
+                    return version
 
-    for version, hints in _VERSION_HINTS.items():
-        if any(hint in header for hint in hints):
-            return version
     raise UnsupportedCSVVersionError(
-        f"无法嗅探支付宝账单版本: header={header}, 已知版本 hints={dict(_VERSION_HINTS)}"
+        f"无法嗅探支付宝账单版本: 扫描前 {lines_to_check} 行未匹配已知 hints={dict(_VERSION_HINTS)}"
     )
 
 
@@ -321,6 +442,7 @@ _PARSERS: dict[int, type[AlipayCSVParser]] = {
     2024: AlipayCSV2024Parser,
     2025: AlipayCSV2025Parser,
     2026: AlipayCSV2026Parser,
+    2027: AlipayCSV2027RealParser,
 }
 
 
