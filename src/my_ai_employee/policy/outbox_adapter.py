@@ -1112,6 +1112,7 @@ __all__ = [
     "_validate_outbox_recipient_email",
     "_validate_outbox_priority",
     "_validate_outbox_block_reason",
+    "_validate_draft_tone",
     # 3 工厂 + 1 acceptance + 1 context
     "compute_outbox_acceptance",
     "build_outbox_packet",

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🎯 **v0.2.41 mypy --strict 启用 + 388 errors 大幅修复已收口**(2026-06-24 · 撞坑 #55 v4.0 范本升级)。承接 v0.2.40 pyproject.toml 锁死 + 393 errors 全量修复 + **撞坑 #55 v4.0(本轮升级)严格模式 mypy 四重锁死 + 388→43 errors = 89% 严格模式覆盖率**。**v0.2.41 修复结果**:Makefile `--strict` 参数启用(沿 v0.2.39/v0.2.40 三重锁基础上升级);388 errors 大幅修复(215 unused-ignore 删冗余 + 132 type-arg 加泛型 + 23 list 单参 + 5 多行 import 错位 + 3 isinstance 参数 + 3 Queue runtime 实例化 + 6 method-assign);剩余 43 errors 是真实代码问题(attr-defined / untyped-decorator / 等),沿撞坑 #18 范本单独 PR 修复。**撞坑 #57(本轮新增)ast.unparse 注释丢失陷阱**:AST 转换会丢失注释 / # type: ignore / 引号风格 / 空行,优先用正则替换(只替换精确模式);撞坑 #55 v4.0 = v3.0 基础上 + mypy --strict 启用 + 388→43 修复 = 89% 严格模式覆盖率。24 commit 链(v0.2.25-v0.2.41 + 4 docs-only 收口 + v0.2.38 P1-1 + v0.2.39 + v0.2.40 + 本轮 v0.2.41)+ 撞坑 25 类沉淀(本轮新增 #57)。验证:**make mypy 默认 0 errors + make mypy --strict 43 errors(89% 修复) + 2265 passed / 1 skipped / 0 ruff / 0 MD lint / 88.78% coverage**。HEAD 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移)。**下一步候选**:v0.2.42 修 43 errors 单独 PR / outlook/gmail SMTP 真实发送 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.41-mypy-strict-mode-2026-06-24.md](docs/v0.2.41-mypy-strict-mode-2026-06-24.md)。
+> **状态**:✅ **v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口**(2026-06-25 · 承接 v0.2.41 `--strict` 启用但不阻塞)。**修复结果**:剩余 43 errors 全清零(`attr-defined` 显式导出 / JSON TypeDecorator 精确返回 / rumps untyped decorator 局部 ignore / policy rule callable 标注 / 测试比较与 mock 类型收窄);Makefile `make mypy` 从“43 errors 可见不阻塞”升级为 **失败即阻塞**。**验证**:`make mypy` **0 errors / 209 source files**;`make test` **2265 passed / 1 skipped / 88.76% coverage**;ruff check 0;ruff format --check 0;MD lint 0。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:outlook/gmail SMTP 真实发送 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.42-mypy-strict-zero-2026-06-25.md](docs/v0.2.42-mypy-strict-zero-2026-06-25.md)。
 
 ---
 
@@ -216,6 +216,7 @@ make help
 | **v0.2.39** 启用 `--check-untyped-defs` 为 CI 默认(Makefile mypy target 修复撞坑 #50 docstring/code 漂移 · 撞坑 #55 v2.0 范本升级严格模式 + CI 默认化 = 强制约束) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.40** pyproject.toml mypy config 锁死 + 393 errors 全量修复(沿撞坑 #55 v3.0 范本 = 命令层 + 配置层 + Makefile 层 三重锁死 + 撞坑 #56 AST 注入顺序陷阱 · `mypy --disallow-untyped-defs` 0 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.41** mypy `--strict` 启用 + 388 errors 大幅修复(沿撞坑 #55 v4.0 范本 = 四重锁死 + 388→43 errors = 89% 严格模式覆盖率 + 撞坑 #57 ast.unparse 注释丢失陷阱 · `mypy --strict src tests` 43 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
+| **v0.2.42** mypy `--strict` 43 errors 清零 + 硬门锁死(Makefile 取消 `|| echo` 放行 · `mypy --strict src tests` 0 errors / 209 files · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 

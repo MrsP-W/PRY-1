@@ -753,4 +753,5 @@ __all__ = [
     "SERVER_CONFIGS",
     "SMTPProviderFactory",
     "SMTPConnector",
+    "logger",
 ]

@@ -184,4 +184,5 @@ def build_event_dict(event_type: str, **fields: Any) -> dict[str, Any]:
 __all__ = [
     "HotkeyListenerProcess",
     "build_event_dict",
+    "_mp",
 ]

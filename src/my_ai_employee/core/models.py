@@ -68,17 +68,20 @@ class JSONList(TypeDecorator[Any]):
     impl = Text
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):  # type: ignore[no-untyped-def, override]
+    def process_bind_param(self, value: list[Any] | None, dialect: Any) -> str | None:
         """ORM → DB：list[Any] 序列化为 JSON 文本。None → None（用 NULL 还是 [] 看业务）。"""
         if value is None:
             return None
         return json.dumps(value, ensure_ascii=False)
 
-    def process_result_value(self, value, dialect):  # type: ignore[no-untyped-def, override]
+    def process_result_value(self, value: str | None, dialect: Any) -> list[Any]:
         """DB → ORM：JSON 文本 → list[Any]。空字符串/None 一律视作 []。"""
         if not value:
             return []
-        return json.loads(value)
+        result = json.loads(value)
+        if isinstance(result, list):
+            return result
+        return []
 
 
 # 别名（保持与之前 D3.2.0 JSON_FIELD 命名兼容 — 内部用更准确的 JSONList）

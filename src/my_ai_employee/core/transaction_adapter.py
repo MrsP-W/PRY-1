@@ -294,4 +294,5 @@ __all__ = [
     "TransactionAdapter",
     "TransactionImportResult",
     "FailedItem",
+    "categorize",
 ]

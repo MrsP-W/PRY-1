@@ -200,7 +200,7 @@ def _build_default_capture_service() -> ClipboardCaptureService:
     return ClipboardCaptureService(store=store, structurer=structurer)
 
 
-class NotesMenuBarApp(_RumpsAppBase):
+class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
     """Apple Notes 菜单栏 App(D9.3 — 沿 D10 留 ExpenseService 注入点).
 
     Attributes:
@@ -334,7 +334,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         self._notes_count = self._service.get_total_notes_count()
         self.title = self._format_title(self._notes_count)
 
-    @_clicked_decorator("立即同步")
+    @_clicked_decorator("立即同步")  # type: ignore[untyped-decorator]
     def _on_sync_now(self, _sender: Any) -> None:
         """点击"立即同步" — subprocess 调 sync_notes.py sync(4 退出码契约).
 
@@ -356,7 +356,7 @@ class NotesMenuBarApp(_RumpsAppBase):
                 (result.stderr or "未知错误")[:200],
             )
 
-    @_clicked_decorator("打开 Notes")
+    @_clicked_decorator("打开 Notes")  # type: ignore[untyped-decorator]
     def _on_open_notes(self, _sender: Any) -> None:
         """点击"打开 Notes" — `open -a Notes` 启动 Apple Notes.app."""
         subprocess.run(  # noqa: S603
@@ -366,7 +366,7 @@ class NotesMenuBarApp(_RumpsAppBase):
             timeout=10,
         )
 
-    @_clicked_decorator("授权引导")
+    @_clicked_decorator("授权引导")  # type: ignore[untyped-decorator]
     def _on_open_privacy(self, _sender: Any) -> None:
         """点击"授权引导" — 打开 系统设置→自动化 引导用户授权."""
         subprocess.run(  # noqa: S603
@@ -378,7 +378,7 @@ class NotesMenuBarApp(_RumpsAppBase):
 
     # ===== D8.3 异常告警菜单项(不弹通知,用户主动查询)=====
 
-    @_clicked_decorator("⚠️ 异常告警")
+    @_clicked_decorator("⚠️ 异常告警")  # type: ignore[untyped-decorator]
     def _on_anomaly_alert(self, _sender: Any) -> None:
         """点击"⚠️ 异常告警" — 弹窗显示本月异常列表(D8.3 接入 RuleBasedAnomalyDetector).
 
@@ -431,7 +431,7 @@ class NotesMenuBarApp(_RumpsAppBase):
 
     # ===== v0.2.2 候选 #2 1-click 确认 UI(沿 D8.3 异常告警范本)=====
 
-    @_clicked_decorator("📥 待确认")
+    @_clicked_decorator("📥 待确认")  # type: ignore[untyped-decorator]
     def _on_show_pending_confirm(self, _sender: Any) -> None:
         """点击"📥 待确认" — 弹窗显示 L2 跨源候选待确认列表(v0.2.2 候选 #2 接入).
 
@@ -486,7 +486,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         new_title = f"📥 待确认 ({count})"
         _update_menu_badge(self.menu, "📥 待确认", new_title)
 
-    @_clicked_decorator("📥 确认第 1 条")
+    @_clicked_decorator("📥 确认第 1 条")  # type: ignore[untyped-decorator]
     def _on_confirm_first(self, _sender: Any) -> None:
         """点击"📥 确认第 1 条" — 1-click 确认 top 1 待确认 note(v0.2.2 候选 #2).
 

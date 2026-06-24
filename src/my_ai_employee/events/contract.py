@@ -230,7 +230,7 @@ def _normalize_enum(value: Any, enum_cls: type, field_name: str) -> str:
         return str(value.value)  # type: ignore[attr-defined]
     if isinstance(value, str):
         # 迭代 enum_cls 成员(用 vars() 走 __members__, isinstance 用 enum_cls 自身)
-        valid = {str(e.value) for e in vars(enum_cls).values() if isinstance(e, enum_cls)}  # type: ignore[arg-type,attr-defined]
+        valid = {str(e.value) for e in vars(enum_cls).values() if isinstance(e, enum_cls)}  # type: ignore[attr-defined]
         if value not in valid:
             raise EventContractError(
                 f"{field_name} 非法: {value!r} 不在 {enum_cls.__name__} 枚举 ({valid})"

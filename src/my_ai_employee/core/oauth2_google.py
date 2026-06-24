@@ -503,5 +503,7 @@ __all__ = [
     "GOOGLE_RESPONSE_TYPE_CODE",
     "GOOGLE_INCLUDE_GRANTED_SCOPES",
     "GoogleOAuth2",
+    "OAuth2TokenExchangeError",
+    "OAuth2TokenRefreshError",
     # 严判 helper 暂不导出(私有 API,仅 GoogleOAuth2 内部使用)
 ]

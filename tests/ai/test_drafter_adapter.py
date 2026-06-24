@@ -31,7 +31,7 @@ from __future__ import annotations
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -1667,7 +1667,7 @@ class TestD473V103Fixes:
         fake_engine = _BoolFalseFake()
         a = EmailDrafterAdapter(source="qq", engine=fake_engine)  # type: ignore[arg-type]
         # 验证: 替身被保留(不是默认 PolicyEngine)
-        assert a._engine is fake_engine
+        assert cast(Any, a)._engine is fake_engine
         # 验证: 替身的 update 方法可正常调用
         fake_engine.update(transport_alive=True)
         assert len(fake_engine.calls) == 1

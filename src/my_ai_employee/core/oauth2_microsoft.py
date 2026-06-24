@@ -459,5 +459,7 @@ __all__ = [
     "MICROSOFT_DEFAULT_EXPIRES_IN_SECONDS",
     "MICROSOFT_AUTHORITY_COMMON",
     "MicrosoftOAuth2",
+    "OAuth2TokenExchangeError",
+    "OAuth2TokenRefreshError",
     # 严判 helper 暂不导出(私有 API,仅 MicrosoftOAuth2 内部使用)
 ]

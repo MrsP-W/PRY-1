@@ -120,4 +120,5 @@ def open_privacy_settings(op: str = "Accessibility") -> int:
 __all__ = [
     "TCCPermissionError",
     "open_privacy_settings",
+    "subprocess",
 ]

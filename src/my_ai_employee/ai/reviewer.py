@@ -646,6 +646,7 @@ class EmailReviewer:
 
 __all__ = [
     "EmailReviewer",
+    "EmailCategory",
     "ReviewBlockReason",
     "ReviewBlockedResult",
     "ReviewFailureResult",

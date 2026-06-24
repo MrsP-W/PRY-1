@@ -75,17 +75,17 @@
 
 ---
 
-## 📊 当前项目整体状态(最新快照 · 2026-06-24 锚定)
+## 📊 当前项目整体状态(最新快照 · 2026-06-25 锚定)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.40` pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(commit `94ef2f7` + docs `fcc4968` · Makefile `--check-untyped-defs` + pyproject.toml `disallow_untyped_defs = true` 双锁死 · 393 errors 全修(src/ 5 个具体类型注解 + tests/ 421 函数 Any 注解)· `make mypy` 双锁 **0 errors / 209 files** · 撞坑 #55 v3.0 三重锁死范本 + 撞坑 #56 AST 注入顺序陷阱 · 2265 passed / 1 skipped / 88.77% coverage / ruff 0 / MD lint 0);**下一步候选**:enable mypy `--strict`(需授权)/ outlook-gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.40 十五类报告 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.39` 启用 `--check-untyped-defs` 为 CI 默认已关闭(commit `0c38232` + docs `3b0bee0` · 撞坑 #55 v2.0 严格模式 + CI 默认化)|
+| **当前阶段** | ✅ `v0.2.42` mypy `--strict` 43 errors 清零 + 硬门锁死已收口(承接 `v0.2.41` 388→43;剩余 43 errors 全清零;Makefile `make mypy` 取消 `|| echo` 放行,失败即阻塞;`make mypy` **0 errors / 209 source files**;`make test` **2265 passed / 1 skipped / 88.76% coverage**;ruff check 0;ruff format --check 0;MD lint 0);**下一步候选**:outlook-gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.42 / 8/1 v0.2.1 release tag 锚定评估 |
+| **上一阶段** | ✅ `v0.2.41` mypy `--strict` 启用 + 388 errors 大幅修复已关闭(commit `1b1d405` + docs `27b8825` · 388→43 · 43 errors 可见不阻塞)|
 | **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 125 files** / **88.77% coverage** |
-| **下一棒** | enable mypy `--strict`(需用户授权)→ outlook-gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.40 十五类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | v0.2.42 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / MD lint **0 errors / 132 files** / **88.76% coverage** |
+| **下一棒** | outlook-gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.42 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.42 mypy `--strict` 43 errors 清零 + 硬门锁死] — 收口
+
+**1. 本次修改内容**
+
+- **代码收口**:承接 v0.2.41 剩余 43 errors,完成 `attr-defined` 显式导出 / `JSONList` 与 `JSONDict` TypeDecorator 严格签名 / rumps UI 边界局部 ignore / `PolicyEngine` callable 类型收窄 / tests 类型比较与 MagicMock 小修。
+- **门控升级**:`Makefile` `make mypy` 删除 `|| echo` 放行,从“43 errors 可见不阻塞”升级为 **`mypy --strict` 失败即阻塞**。
+- **状态沉淀**:`README.md` / `SESSION-STATE.md` / 本文件顶部快照同步到 v0.2.42,新增 `docs/v0.2.42-mypy-strict-zero-2026-06-25.md`。
+
+**2. 风险点**
+
+- rumps 菜单栏装饰器仍是第三方 untyped 边界,本轮只做局部 `type: ignore[untyped-decorator]`,不重写 UI 框架封装。
+- JSON TypeDecorator 增加反序列化类型守卫后,非 list/dict JSON 会落到空列表/空字典,与原“空值兜底”口径一致;如未来要保留异常数据,需单独设计迁移。
+- 本轮不真发 SMTP / 不 kickstart launchd / 不移动 tag / 不打 v0.2.x tag。
+
+**3. 当前项目整体总结**
+
+- `make mypy`:0 errors / 209 source files。
+- `make test`:2265 passed / 1 skipped / 88.76% coverage。
+- `ruff check`:All checks passed;`ruff format --check`:246 files already formatted;`make lint`:133 markdown files / 0 errors。
+- 下一棒:outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)→ 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定评估。
 
 ### 2026-06-24 11:00 [v0.2.36 W3 真账单 `--max-rows 49` 全量入库收口(选项 B 路径) + 撞坑 #53 v2.0 累计公式 + #54 选项 B 优于 A 范本] — 收口
 

@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import enum
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -242,7 +243,7 @@ class PolicyEngine:
 
     def _run_all_rules(self, packet: TaskPacket, ctx: dict[str, Any]) -> list[PolicyDecision]:
         """跑 6 rule, 按 priority 降序排."""
-        rules = [
+        rules: list[Callable[[], PolicyDecision | None]] = [
             lambda: self._rule_retry_available(ctx),
             lambda: self._rule_rebase_required(ctx),
             lambda: self._rule_stale_cleanup_required(ctx),

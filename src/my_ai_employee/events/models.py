@@ -42,17 +42,20 @@ class JSONDict(TypeDecorator[Any]):
     impl = Text
     cache_ok = True
 
-    def process_bind_param(self, value, dialect):  # type: ignore[no-untyped-def, override]
+    def process_bind_param(self, value: dict[str, Any] | None, dialect: Any) -> str | None:
         """ORM → DB: dict[Any, Any] 序列化为 JSON 文本. None → None."""
         if value is None:
             return None
         return json.dumps(value, ensure_ascii=False)
 
-    def process_result_value(self, value, dialect):  # type: ignore[no-untyped-def, override]
+    def process_result_value(self, value: str | None, dialect: Any) -> dict[str, Any]:
         """DB → ORM: JSON 文本 → dict[Any, Any]. 空字符串/None 一律视作 {}."""
         if not value:
             return {}
-        return json.loads(value)
+        result = json.loads(value)
+        if isinstance(result, dict):
+            return result
+        return {}
 
 
 # ===== 4 个 StrEnum (g004 4 不变量 + 2 辅助) =====

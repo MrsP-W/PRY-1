@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(2026-06-24 · 撞坑 #55 v3.0 三重锁死 + #56 AST 注入顺序陷阱)
+# SESSION-STATE — v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口(2026-06-25 · 撞坑 #55 v5.0 失败即阻塞)
 
-> **最后更新**:2026-06-24 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口**(6/24 · 承接 v0.2.39 `--check-untyped-defs` CI 默认化)。**修复结果**:Makefile + pyproject.toml 双锁死(Makefile `--check-untyped-defs` + `disallow_untyped_defs = true`);393 errors 全修(src/ 5 个具体类型注解 + tests/ 421 函数 Any 注解);`make mypy` 双锁 **0 errors / 209 files**。**撞坑 #55 v3.0**:严格模式 mypy 双 0 + CI 默认化 + pyproject 锁死 = 命令层/配置层/Makefile 层三重强制约束。**撞坑 #56**:批量 AST 注入 `from typing import Any` 时必须尊重 future import 首行顺序,本轮修复 23 文件 SyntaxError 风险。**质量门**:2265 passed / 1 skipped / 88.77% coverage / ruff 0 / MD lint 0 / mypy 0。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:enable mypy `--strict`(需授权)/ outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘。
+> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口**(6/25 · 承接 v0.2.41 `--strict` 启用但 43 errors 不阻塞)。**修复结果**:剩余 43 errors 全清零(`attr-defined` 显式导出 / JSON TypeDecorator 精确返回 / rumps untyped decorator 局部 ignore / policy rule callable 标注 / 测试比较与 mock 类型收窄);Makefile `make mypy` 取消 `|| echo` 放行,升级为 **失败即阻塞**。**撞坑 #55 v5.0**:命令层 + 配置层 + Makefile 层 + `--strict` + CI 硬失败 = 五重锁死。**质量门**:`make mypy` 0 errors / 209 source files;`make test` 2265 passed / 1 skipped / 88.76% coverage;ruff check 0;ruff format --check 0;MD lint 0。边界:不真发邮件、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)/ 7/1 月度复盘/8/1 v0.2.1 release tag 锚定评估。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.40 pyproject.toml mypy config 锁死 + 393 errors 全量修复已收口(2026-06-24,撞坑 #55 v3.0 三重锁死 + #56 AST 注入顺序陷阱)**,**下一步候选**:enable mypy `--strict`(需用户授权)/ outlook-gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)/ 7/1 月度复盘。
+**当前启动候选**:**v0.2.42 mypy --strict 43 errors 清零 + 硬门锁死已收口(2026-06-25,撞坑 #55 v5.0 失败即阻塞)**,**下一步候选**:outlook-gmail SMTP 真实 spike(等授权 + Keychain 凭据 + B 类白名单决策)/ 7/1 月度复盘/8/1 v0.2.1 release tag 锚定评估。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

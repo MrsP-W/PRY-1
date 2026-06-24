@@ -89,7 +89,8 @@ class TestEmailCategory:
         assert EmailCategory.URGENT == "URGENT"
         assert f"category={EmailCategory.URGENT}" == "category=URGENT"
         # 严格 != 拼写错
-        assert EmailCategory.URGENT != "urgent"  # StrEnum 大小写敏感
+        lower_case_category: str = "urgent"
+        assert EmailCategory.URGENT.value != lower_case_category  # StrEnum 大小写敏感
 
 
 # ============================================================

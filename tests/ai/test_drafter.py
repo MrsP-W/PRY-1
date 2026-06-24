@@ -2698,7 +2698,7 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
         """
         d = self._make_drafter()
         # 准备 mock LLM 响应(SPAM 授权放行走 draft() 调 LLM 路径)
-        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock = d._router
         router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
@@ -2765,7 +2765,7 @@ class TestDraftV107SpamReplyAuthorizedRequiresSPAM:
 
     def _mock_success(self, d: EmailDrafter) -> None:
         """配置 router mock 返回合法 JSON(SuSPAM 授权放行调 LLM 路径)."""
-        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock = d._router
         router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
@@ -2834,7 +2834,7 @@ class TestDraftV107SpamReplyAuthorizedRequiresSPAM:
         """PERSONAL + allow_spam_reply=True → spam_reply_authorized=False."""
         d = self._make_drafter()
         # mock 返回 FRIENDLY(与请求 tone 一致, 契约 3 强制)
-        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock = d._router
         router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
             _valid_draft_json(tone="FRIENDLY"), model="minimax/M3", latency=200
         )
@@ -2888,7 +2888,7 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
         return EmailDrafter(router=MagicMock())
 
     def _mock_success(self, d: EmailDrafter) -> None:
-        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock = d._router
         router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
@@ -3241,7 +3241,7 @@ class TestDraftV107SpamReplyIntentValidation:
         return EmailDrafter(router=MagicMock())
 
     def _mock_success(self, d: EmailDrafter) -> None:
-        router_mock = d._router  # type: ignore[assignment, attr-defined]
+        router_mock = d._router
         router_mock.route.return_value = _mock_router_response(  # type: ignore[attr-defined]
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )

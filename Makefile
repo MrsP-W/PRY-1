@@ -211,9 +211,9 @@ spike-d8-anomaly: ## v0.2 D8.4 — S11 智能财务异常检测真链路 spike(3
 # ===== 9 质量门补齐(v0.2 B-5 + D8 实施前置)=====
 
 .PHONY: mypy
-mypy: ## 9 质量门 — mypy 类型检查(严格模式 `--check-untyped-defs`,沿 v0.1 9 门范本 + v0.2.39 严格模式化 + v0.2.41 --strict 启用但 43 errors 显式可见不阻塞)
+mypy: ## 9 质量门 — mypy 类型检查(严格模式 `--strict`,沿 v0.2.42 范本:43 errors 清零 + 失败即阻塞)
 	@echo "$(BLUE)🔍 mypy 类型检查(严格模式 --strict)$(RESET)"
-	@$(PYTHON) -m mypy --strict src tests || echo "$(YELLOW)⚠️ --strict 模式有 43 errors(388→43·89% 修复),详 v0.2.41 docs$(RESET)"
+	@$(PYTHON) -m mypy --strict src tests
 
 .PHONY: ruff
 ruff: ## 9 质量门 — ruff lint 检查
