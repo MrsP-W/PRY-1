@@ -38,6 +38,7 @@ D4.7.2 起始固定(2026-06-09), 后续扩 SYSTEM prompt 类别 / 改 prompt 文
 from __future__ import annotations
 
 import json
+from typing import Any
 
 # ===== 5+1 类 SYSTEM prompt =====
 
@@ -268,7 +269,7 @@ def build_user_message(
     tone: str = "FORMAL",
     allow_spam_reply: bool = False,
     spam_reply_intent: str | None = None,
-) -> list[dict]:
+) -> list[dict[Any, Any]]:
     """构造 user 消息列表(OpenAI 风格).
 
     与 drafter.py 的 build_user_message 对齐, 接受字符串化的 email_category

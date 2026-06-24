@@ -13,8 +13,8 @@
     - **级联**：Attachment / EmailLabel 配 `cascade="all, delete-orphan"`
         （对应 schema.sql 的 `ON DELETE CASCADE` FK）
     - **时间字段**：epoch ms INTEGER（D3 阶段不引入 datetime / 时区复杂性）
-    - **JSON 字段**：recipients / labels 存 TEXT，Model 层 `JSONList` TypeDecorator
-        做序列化（D3 阶段实际存空 list 即可，API 先实现）
+    - **JSON 字段**：recipients / labels 存 TEXT，Model 层 `JSONList` TypeDecorator[Any]
+        做序列化（D3 阶段实际存空 list[Any] 即可，API 先实现）
 
 注意：
     - 本文件 **不** import `db.py`（避免循环依赖；alembic env.py 负责连接）
@@ -50,18 +50,18 @@ class Base(DeclarativeBase):
 # ===== 字段类型辅助 =====
 
 
-class JSONList(TypeDecorator):
-    """list ↔ JSON 文本（D3 阶段 mirror schema.sql TEXT DEFAULT '[]'）。
+class JSONList(TypeDecorator[Any]):
+    """list[Any] ↔ JSON 文本（D3 阶段 mirror schema.sql TEXT DEFAULT '[]'）。
 
     设计：
         - DDL 层面是 TEXT（D3.1 schema.sql 决策 — 避免 SQLAlchemy JSON 在 SQLite
           走 TEXT 存 JSON 文本时和 schema.sql 不一致；schema.sql 是真理之源）
-        - ORM 层面是 list[str]（TypeDecorator 透明处理 dumps/loads）
-        - server_default="[]"（DDL） + default=list（Python）配对
+        - ORM 层面是 list[str]（TypeDecorator[Any] 透明处理 dumps/loads）
+        - server_default="[]"（DDL） + default=list[Any]（Python）配对
 
     用法：
         recipients: Mapped[list[str]] = mapped_column(
-            JSONList, nullable=False, default=list, server_default="[]"
+            JSONList, nullable=False, default=list[Any], server_default="[]"
         )
     """
 
@@ -69,13 +69,13 @@ class JSONList(TypeDecorator):
     cache_ok = True
 
     def process_bind_param(self, value, dialect):  # type: ignore[no-untyped-def, override]
-        """ORM → DB：list 序列化为 JSON 文本。None → None（用 NULL 还是 [] 看业务）。"""
+        """ORM → DB：list[Any] 序列化为 JSON 文本。None → None（用 NULL 还是 [] 看业务）。"""
         if value is None:
             return None
         return json.dumps(value, ensure_ascii=False)
 
     def process_result_value(self, value, dialect):  # type: ignore[no-untyped-def, override]
-        """DB → ORM：JSON 文本 → list。空字符串/None 一律视作 []。"""
+        """DB → ORM：JSON 文本 → list[Any]。空字符串/None 一律视作 []。"""
         if not value:
             return []
         return json.loads(value)
@@ -124,7 +124,7 @@ class Email(Base):
     subject: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     sender: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     recipients: Mapped[list[str]] = mapped_column(
-        JSONList, nullable=False, default=list, server_default="[]"
+        JSONList, nullable=False, default=list[Any], server_default="[]"
     )
     received_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
@@ -132,7 +132,7 @@ class Email(Base):
     body_html: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     fetched_at: Mapped[int] = mapped_column(Integer, nullable=False)
     labels: Mapped[list[str]] = mapped_column(
-        JSONList, nullable=False, default=list, server_default="[]"
+        JSONList, nullable=False, default=list[Any], server_default="[]"
     )
 
     # 关系
@@ -418,15 +418,15 @@ def list_tables() -> list[str]:
 
 
 def to_dict(obj: Any) -> dict[str, Any]:
-    """ORM 对象 → dict（D3.3 同步脚本批量入库用）。
+    """ORM 对象 → dict[Any, Any]（D3.3 同步脚本批量入库用）。
 
     跳过 SQLAlchemy 内部状态（_sa_instance_state）。
-    处理 JSON 字段：recipients / labels 已由 JSONList TypeDecorator
-    转换为 list（DDL 走 TEXT，ORM 走 list ↔ JSON 文本）— 直接序列化。
+    处理 JSON 字段：recipients / labels 已由 JSONList TypeDecorator[Any]
+    转换为 list[Any]（DDL 走 TEXT，ORM 走 list[Any] ↔ JSON 文本）— 直接序列化。
     """
     result: dict[str, Any] = {}
     for col in obj.__table__.columns:
         value = getattr(obj, col.name)
-        # JSONList TypeDecorator 已完成 list ↔ JSON 文本的转换（D3.2.3 修复）
+        # JSONList TypeDecorator[Any] 已完成 list[Any] ↔ JSON 文本的转换（D3.2.3 修复）
         result[col.name] = value
     return result

@@ -9,7 +9,7 @@ clipboard_listener.py 重写。test 改写点:
   - 公开 API 测试(T1/T2/T5/T6/T7/T8/T9)保持不变,沿 D4.7.3 v1.0.5 范本
 
 D4.7.3 范本(沿用):
-  - subprocess.run / multiprocessing.Queue 全部 mock(沿 D4.7.3 v1.0.5)
+  - subprocess.run / multiprocessing.Queue[Any] 全部 mock(沿 D4.7.3 v1.0.5)
   - 异常收容 Quartz listener 启动失败 (沿 v1.0.5 P3)
   - 私有方法 _emit_hotkey / _emit_tcc_denied / _emit_listener_started 直接白盒测
   - multiprocessing.Process.start mock 不真 spawn(沿 D5 业务调度范本)
@@ -18,6 +18,7 @@ D4.7.3 范本(沿用):
 from __future__ import annotations
 
 import multiprocessing as _mp
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -26,8 +27,8 @@ import pytest
 
 
 @pytest.fixture
-def event_queue() -> _mp.Queue:
-    """真实 multiprocessing.Queue(子进程和主进程通信用)."""
+def event_queue() -> _mp.Queue[Any]:
+    """真实 multiprocessing.Queue[Any](子进程和主进程通信用)."""
     return _mp.Queue()
 
 
@@ -45,21 +46,21 @@ def test_init_rejects_none_queue() -> None:
 # ===== T2. 初始化正常路径 — daemon=True + name 锁定 =====
 
 
-def test_init_daemon_and_name(event_queue: _mp.Queue) -> None:
+def test_init_daemon_and_name(event_queue: _mp.Queue[Any]) -> None:
     """T2: HotkeyListenerProcess.daemon=True + name='notes-hotkey-listener'."""
     from my_ai_employee.menu_bar.clipboard_listener import HotkeyListenerProcess
 
     proc = HotkeyListenerProcess(queue=event_queue)
     assert proc.daemon is True
     assert proc.name == "notes-hotkey-listener"
-    assert proc._queue is event_queue  # type: ignore[attr-defined]
+    assert proc._queue is event_queue
 
 
 # ===== T3. Quartz.CGEventTapCreate 返回 None → 推 tcc_denied(辅助功能未授权)=====
 
 
 def test_run_quartz_tap_create_returns_none_pushes_tcc_denied(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+    event_queue: _mp.Queue[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """T3(v0.2 B-5): Quartz.CGEventTapCreate 返回 None → 推 tcc_denied + reason='辅助功能未授权'."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
@@ -91,7 +92,7 @@ def test_run_quartz_tap_create_returns_none_pushes_tcc_denied(
 
 
 def test_run_quartz_loop_setup_failure_pushes_tcc_denied(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+    event_queue: _mp.Queue[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """T4(v0.2 B-5): Quartz tap 创建成功但 CFRunLoopAddSource 抛异常 → 推 tcc_denied."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
@@ -118,7 +119,7 @@ def test_run_quartz_loop_setup_failure_pushes_tcc_denied(
 # ===== T5. hotkey 按下 → 推 hotkey 事件 + combo 字段 =====
 
 
-def test_on_hotkey_pushes_event(event_queue: _mp.Queue) -> None:
+def test_on_hotkey_pushes_event(event_queue: _mp.Queue[Any]) -> None:
     """T5: _on_hotkey() → 推 {"event":"hotkey", "combo":"<alt>+<cmd>+n"}."""
     from my_ai_employee.menu_bar.clipboard_listener import HotkeyListenerProcess
 
@@ -133,7 +134,7 @@ def test_on_hotkey_pushes_event(event_queue: _mp.Queue) -> None:
 # ===== T6. _emit_tcc_denied 严判 reason 非空白 =====
 
 
-def test_emit_tcc_denied_rejects_empty_reason(event_queue: _mp.Queue) -> None:
+def test_emit_tcc_denied_rejects_empty_reason(event_queue: _mp.Queue[Any]) -> None:
     """T6: _emit_tcc_denied(reason="") 或 "   " → ValueError(沿 D4.7.3 范本)."""
     from my_ai_employee.menu_bar.clipboard_listener import HotkeyListenerProcess
 
@@ -147,7 +148,7 @@ def test_emit_tcc_denied_rejects_empty_reason(event_queue: _mp.Queue) -> None:
 # ===== T7. _emit_listener_started 推 started 事件 =====
 
 
-def test_emit_listener_started_pushes_event(event_queue: _mp.Queue) -> None:
+def test_emit_listener_started_pushes_event(event_queue: _mp.Queue[Any]) -> None:
     """T7: _emit_listener_started() → 推 {"event":"listener_started"}."""
     from my_ai_employee.menu_bar.clipboard_listener import HotkeyListenerProcess
 
@@ -175,15 +176,17 @@ def test_build_event_dict_validates_event_type() -> None:
 
     # 非法 event_type
     with pytest.raises(ValueError, match="event_type 必 ∈"):
-        build_event_dict("hot_key")  # type: ignore[arg-type]
+        build_event_dict("hot_key")
     with pytest.raises(ValueError, match="event_type 必 ∈"):
-        build_event_dict("other_event")  # type: ignore[arg-type]
+        build_event_dict("other_event")
 
 
 # ===== T9. 子进程 start 调 multiprocessing.Process.start =====
 
 
-def test_start_calls_super_start(event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_start_calls_super_start(
+    event_queue: _mp.Queue[Any], monkeypatch: pytest.MonkeyPatch
+) -> None:
     """T9: proc.start() 调 multiprocessing.Process.start(不真 spawn,沿 D5 范本)."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module
 
@@ -200,7 +203,7 @@ def test_start_calls_super_start(event_queue: _mp.Queue, monkeypatch: pytest.Mon
 
 
 def test_quartz_callback_detects_alt_cmd_n(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+    event_queue: _mp.Queue[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """T10(v0.2 B-5 新): Quartz C 回调内 ⌥⌘N 按下 → 推 hotkey.
 
@@ -266,7 +269,7 @@ def test_quartz_callback_detects_alt_cmd_n(
 
 
 def test_run_full_chain_with_quartz_event_loop(
-    event_queue: _mp.Queue, monkeypatch: pytest.MonkeyPatch
+    event_queue: _mp.Queue[Any], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """T11: 完整 run() 链路 — 推 listener_started → Quartz CGEventTap 启用 → CFRunLoopRun 立即返回."""
     from my_ai_employee.menu_bar import clipboard_listener as cl_module

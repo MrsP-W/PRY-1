@@ -27,6 +27,7 @@ import os
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -114,7 +115,7 @@ class LLMRequest:
     """
 
     model_full_id: str
-    messages: list[dict]
+    messages: list[dict[Any, Any]]
     temperature: float = 0.3
     max_tokens: int = 1024
 
@@ -278,7 +279,7 @@ class OpenAICompatibleProvider(LLMProvider):
         url = f"{self._base_url}/chat/completions"
         payload = {
             "model": model_id,
-            "messages": list(request.messages),
+            "messages": list[Any](request.messages),
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
         }

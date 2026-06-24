@@ -176,9 +176,7 @@ def render_info_body(
 def _print_panel(title: str, body: str) -> None:
     """打印面板（rich 可用时用彩色，否则用纯文本）。"""
     if RICH_AVAILABLE:
-        _console.print(  # type: ignore[union-attr]
-            Panel(body, title=title, border_style="blue", padding=(1, 2))
-        )
+        _console.print(Panel(body, title=title, border_style="blue", padding=(1, 2)))
     else:
         # 降级版（应急版范本 Level 3）
         width = 60

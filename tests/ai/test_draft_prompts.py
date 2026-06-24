@@ -340,9 +340,9 @@ class TestBuildUserMessage:
         with pytest.raises(ValueError, match="tone 字符串必须"):
             build_user_message(subject="x", sender="y", body_excerpt="z", tone="OOPS")
         with pytest.raises(ValueError, match="tone 字符串必须"):
-            build_user_message(subject="x", sender="y", body_excerpt="z", tone="")  # type: ignore[arg-type]
+            build_user_message(subject="x", sender="y", body_excerpt="z", tone="")
         with pytest.raises(ValueError, match="tone 字符串必须"):
-            build_user_message(subject="x", sender="y", body_excerpt="z", tone="formal")  # type: ignore[arg-type]  # 大小写敏感
+            build_user_message(subject="x", sender="y", body_excerpt="z", tone="formal")
 
     def test_invalid_email_category_raises(self) -> None:
         """非法 email_category 字符串 → ValueError."""
@@ -351,7 +351,7 @@ class TestBuildUserMessage:
                 subject="x",
                 sender="y",
                 body_excerpt="z",
-                email_category="OOPS",  # type: ignore[arg-type]
+                email_category="OOPS",
                 tone="FORMAL",
             )
 

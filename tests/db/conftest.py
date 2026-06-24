@@ -57,7 +57,7 @@ from my_ai_employee.events.models import Event  # noqa: E402, F401  触发 event
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + 全部 Model create_all(沿 tests/events/conftest.py 范本).
 
     **修复 v0.2.2 #7**:
@@ -73,5 +73,5 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker(沿 tests/events/conftest.py:36 范本)."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any](沿 tests/events/conftest.py:36 范本)."""
+    return sessionmaker[Any](bind=engine)

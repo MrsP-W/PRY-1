@@ -377,7 +377,7 @@ class GoogleOAuth2(OAuth2Provider):
         client = self._build_google_auth_client(validated_config)
         # 沿 [[d3.3.3-sqlcipher-integrityerror]] except 范围窄化:仅捕 google_auth/网络异常
         try:
-            result: dict[str, Any] = client.fetch_token(  # type: ignore[attr-defined]
+            result: dict[str, Any] = client.fetch_token(
                 token_url=GOOGLE_TOKEN_URL,
                 code=validated_code,
                 client_id=validated_config.client_id,
@@ -421,7 +421,7 @@ class GoogleOAuth2(OAuth2Provider):
         client = self._build_google_auth_client(validated_config)
         # 沿 [[d3.3.3-sqlcipher-integrityerror]] except 范围窄化
         try:
-            result: dict[str, Any] = client.fetch_token(  # type: ignore[attr-defined]
+            result: dict[str, Any] = client.fetch_token(
                 token_url=GOOGLE_TOKEN_URL,
                 refresh_token=validated_refresh,
                 client_id=validated_config.client_id,
@@ -474,9 +474,9 @@ class GoogleOAuth2(OAuth2Provider):
             )
 
         # 函数内 import:6/19 commit 3 测试不依赖 google_auth_oauthlib,6/22 commit 5 加 dep
-        import google_auth_oauthlib  # type: ignore[import-untyped]
+        import google_auth_oauthlib
 
-        return google_auth_oauthlib.flow.Flow.from_client_config(  # type: ignore[attr-defined]
+        return google_auth_oauthlib.flow.Flow.from_client_config(
             client_config={
                 "web": {
                     "client_id": config.client_id,

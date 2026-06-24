@@ -41,7 +41,7 @@ def test_tcc_permission_denied_op_whitelist() -> None:
     from my_ai_employee.menu_bar.tcc import TCCPermissionError
 
     with pytest.raises(ValueError, match="op 必 ∈"):
-        TCCPermissionError(op="Bluetooth", reason="test")  # type: ignore[arg-type]
+        TCCPermissionError(op="Bluetooth", reason="test")
 
 
 # ===== T3. 异常类 reason 语义非空严判 =====
@@ -107,7 +107,7 @@ def test_open_privacy_settings_rejects_invalid_op() -> None:
     from my_ai_employee.menu_bar import tcc as tcc_module
 
     with pytest.raises(ValueError, match="op 必 ∈"):
-        tcc_module.open_privacy_settings(op="Bluetooth")  # type: ignore[arg-type]
+        tcc_module.open_privacy_settings(op="Bluetooth")
 
 
 # ===== T7. open_privacy_settings 非 str op 抛 ValueError =====

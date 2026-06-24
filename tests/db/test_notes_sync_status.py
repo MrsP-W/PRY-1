@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Note ORM 11 列 create_all(v0.2.1 #4 sync_status)。"""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -49,8 +49,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -145,7 +145,7 @@ def test_mark_failed_writes_sync_status(store: Any, inserted_note: Any) -> Any:
 def test_mark_failed_validates_error_class(store: Any, inserted_note: Any) -> Any:
     """3.3 mark_failed 严判 error_class 必传非空字符串(纯空白拒绝)。"""
     with pytest.raises(ValueError, match="error_class 必须是 str"):
-        store.mark_failed(inserted_note, error_class=123)  # type: ignore[arg-type]
+        store.mark_failed(inserted_note, error_class=123)
     with pytest.raises(ValueError, match="error_class 必填且必须非空字符串"):
         store.mark_failed(inserted_note, error_class="   ")
     with pytest.raises(ValueError, match="error_class 必填且必须非空字符串"):

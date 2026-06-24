@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 import httpx
 import pytest
@@ -52,7 +53,9 @@ _PROVIDER_CASES: list[tuple[Provider, str, str, str]] = [
 ]
 
 
-def _mock_openai_response(content: str, input_tokens: int = 10, output_tokens: int = 5) -> dict:
+def _mock_openai_response(
+    content: str, input_tokens: int = 10, output_tokens: int = 5
+) -> dict[Any, Any]:
     """构造标准 OpenAI 风格响应."""
     return {
         "id": "chatcmpl-test",
@@ -376,7 +379,7 @@ class TestChatProgrammingError:
             base_url="https://api.openai.com/v1",
             api_key="test-key",
         )
-        # messages 传 None → TypeError 在 list() 转换时抛, 透传
+        # messages 传 None → TypeError 在 list[Any]() 转换时抛, 透传
         with pytest.raises(TypeError):
             p.chat(LLMRequest(model_full_id="openai/gpt-4.1", messages=None))  # type: ignore[arg-type]
 

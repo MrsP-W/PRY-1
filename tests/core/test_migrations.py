@@ -69,7 +69,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def alembic_cfg(tmp_db_path: Path, fake_keychain: dict) -> AlembicConfig:
+def alembic_cfg(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> AlembicConfig:
     """配 alembic 走项目根的 alembic.ini，env.py 自动捡到我们的 fake_keychain。"""
     cfg = AlembicConfig(str(PROJECT_ROOT / "alembic.ini"))
     # alembic 已经在 ini 里指了 script_location
@@ -83,7 +83,7 @@ def patched_database_open(tmp_db_path: Path, monkeypatch: Any) -> Any:
 
     original_open = db_module.Database.open
 
-    def patched_open(db_path: Any = None) -> Any:  # type: ignore[no-untyped-def]
+    def patched_open(db_path: Any = None) -> Any:
         return original_open(db_path=tmp_db_path)
 
     monkeypatch.setattr(db_module.Database, "open", staticmethod(patched_open))
@@ -95,7 +95,7 @@ def patched_database_open(tmp_db_path: Path, monkeypatch: Any) -> Any:
 
 def test_alembic_upgrade_head_creates_all_seven_tables(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -129,7 +129,7 @@ def test_alembic_upgrade_head_creates_all_seven_tables(
 
 def test_alembic_version_records_current_revision(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -165,7 +165,7 @@ def test_alembic_version_records_current_revision(
 
 def test_alembic_schema_matches_d31_sql(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -209,7 +209,7 @@ def test_alembic_schema_matches_d31_sql(
 
 def test_alembic_creates_desc_indexes(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -239,7 +239,7 @@ def test_alembic_creates_desc_indexes(
 
 
 def test_alembic_offline_sql_generation(
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
     capsys: pytest.CaptureFixture[str],
@@ -275,7 +275,7 @@ def test_alembic_offline_sql_generation(
 
 def test_orm_metadata_tables_match_alembic_tables(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -328,7 +328,7 @@ def test_orm_metadata_tables_match_alembic_tables(
 
 def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -401,7 +401,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
 
 def test_0003_migration_is_idempotent_for_new_0002_path(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -435,7 +435,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
 def test_0003_migration_subject_id_null_dedupe_enforced(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -466,7 +466,7 @@ def test_0003_migration_subject_id_null_dedupe_enforced(
             # 2) 同 fingerprint + subject_id=NULL 第二次插 → 必败(UNIQUE(fingerprint) 触发)
             #    注意: SQLCipher dialect 不一定包装 dbapi 异常为 SA IntegrityError
             #    (D3.3.3 教训: 双层 except 防御) — 同时接两种类型
-            import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # type: ignore[import-untyped]
+            import sqlcipher3.dbapi2 as _sqlcipher_dbapi
             from sqlalchemy.exc import IntegrityError as SAIntegrityError
 
             try:

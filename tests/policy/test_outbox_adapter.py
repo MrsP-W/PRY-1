@@ -21,7 +21,7 @@ D4.8.7 测试点(沿用 D4.7.3 + D4.7.4 测试范本):
 D4.7.3 v1.0.5 教训应用(关键):
   - bool 是 int 子类(isinstance(True, int)==True 陷阱)— type() is bool 严判
   - strip() 严判语义非空(防 "   " 绕过)
-  - type 严判在 hash 操作前(防 list/dict/set 触发 TypeError)
+  - type 严判在 hash 操作前(防 list[Any]/dict[Any, Any]/set 触发 TypeError)
   - 工厂层 + __post_init__ 双层防御
   - 跨字段约束(business_blocked 必配 SPAM 等)
 
@@ -97,7 +97,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_keychain(monkeypatch: Any) -> Any:
-    """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
+    """用 in-memory dict[Any, Any] 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
     def fake_get() -> keychain.KeychainResult:
@@ -116,7 +116,7 @@ def fake_keychain(monkeypatch: Any) -> Any:
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Any:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Any:
     """打开 DB + Base.metadata.create_all + yield(测试后自动 close)。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -129,16 +129,16 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Any:
 
 
 @pytest.fixture
-def session_factory(db_with_schema: Database) -> sessionmaker:  # type: ignore[no-untyped-def]
-    """返回 SQLAlchemy sessionmaker(绑 SQLCipher engine)。"""
+def session_factory(db_with_schema: Database) -> sessionmaker[Any]:
+    """返回 SQLAlchemy sessionmaker[Any](绑 SQLCipher engine)。"""
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
-def outbox_store(session_factory: Any) -> OutboxStore:  # type: ignore[no-untyped-def]
+def outbox_store(session_factory: Any) -> OutboxStore:
     """OutboxStore 实例(注入 session_factory)。"""
     return OutboxStore(session_factory)
 
@@ -164,9 +164,9 @@ class TestValidateHelpers:
     def test_validate_outbox_email_id_rejects_bool(self) -> None:
         """_validate_outbox_email_id 拒 bool 子类(isinstance(True, int)==True 陷阱)。"""
         with pytest.raises(ValueError, match="email_id 必须是原生 int"):
-            _validate_outbox_email_id(True)  # type: ignore[arg-type]
+            _validate_outbox_email_id(True)
         with pytest.raises(ValueError, match="email_id 必须是原生 int"):
-            _validate_outbox_email_id(False)  # type: ignore[arg-type]
+            _validate_outbox_email_id(False)
 
     def test_validate_outbox_email_id_rejects_negative(self) -> None:
         """_validate_outbox_email_id 拒负数(contract 4 联动 reason=duplicate_email_id 必非负)。"""
@@ -212,9 +212,9 @@ class TestValidateHelpers:
     # ---- _validate_outbox_priority(2 tests)----
 
     def test_validate_outbox_priority_type_rejects_int(self) -> None:
-        """_validate_outbox_priority type 严判(防 list/dict/set 触发 TypeError)。"""
+        """_validate_outbox_priority type 严判(防 list[Any]/dict[Any, Any]/set 触发 TypeError)。"""
         with pytest.raises(ValueError, match="priority 必须是 str"):
-            _validate_outbox_priority(1)  # type: ignore[arg-type]
+            _validate_outbox_priority(1)
 
     def test_validate_outbox_priority_rejects_invalid(self) -> None:
         """_validate_outbox_priority 白名单 6 选 1(v0.2 B1.1 扩 3→6)。"""
@@ -226,7 +226,7 @@ class TestValidateHelpers:
     def test_validate_outbox_block_reason_type_rejects_list(self) -> None:
         """_validate_outbox_block_reason type 严判在 hash 前(D4.7.3 v1.0.5 P2-1 范本)。"""
         with pytest.raises(ValueError, match="block_reason 必须是 str"):
-            _validate_outbox_block_reason(["duplicate_email_id"])  # type: ignore[arg-type]
+            _validate_outbox_block_reason(["duplicate_email_id"])
 
     def test_validate_outbox_block_reason_rejects_invalid(self) -> None:
         """_validate_outbox_block_reason 白名单 2 类。"""
@@ -359,7 +359,7 @@ class TestBuildOutboxPolicyContext:
 
     注:context 函数只严判 last_outbox_failed(类型)+ cf(类型+双向),
     其他字段(email_id / tone / priority / lengths)由 Adapter 入口严判,
-    context 函数自身只透传 dict。
+    context 函数自身只透传 dict[Any, Any]。
     """
 
     def test_policy_context_basic_8_fields(self) -> None:
@@ -676,12 +676,12 @@ class TestEmailOutboxAdapterInit:
     def test_init_reject_empty_source(self, outbox_store: OutboxStore) -> None:
         """拒空 source(沿用 D4.5 P0 范本)。"""
         with pytest.raises(ValueError, match="source 必填非空白"):
-            EmailOutboxAdapter(source="", outbox_store=outbox_store)  # type: ignore[arg-type]
+            EmailOutboxAdapter(source="", outbox_store=outbox_store)
 
     def test_init_rejects_whitespace_source(self, outbox_store: OutboxStore) -> None:
         """拒纯空白 source(strip() 后非空)。"""
         with pytest.raises(ValueError, match="source 必填非空白"):
-            EmailOutboxAdapter(source="   ", outbox_store=outbox_store)  # type: ignore[arg-type]
+            EmailOutboxAdapter(source="   ", outbox_store=outbox_store)
 
     def test_init_engine_is_none_fallback(self, outbox_store: OutboxStore) -> None:
         """engine=None 走 is None fallback(防 falsey 替身,D4.7.3 v1.0.3 P2-2 范本)。"""
@@ -961,7 +961,7 @@ class TestRecordStoreFailureAndEmit:
         """技术失败严判 email_id 拒 bool。"""
         with pytest.raises(ValueError, match="email_id 必须是原生 int"):
             adapter.record_store_failure_and_emit(
-                email_id=False,  # type: ignore[arg-type]
+                email_id=False,
                 subject=_VALID_SUBJECT,
                 body=_VALID_BODY,
                 tone=_VALID_TONE,
@@ -1119,7 +1119,7 @@ class TestTopLevelExports:
 
 
 @pytest.fixture
-def blacklist_store(session_factory: Any) -> RecipientBlacklistStore:  # type: ignore[no-untyped-def]
+def blacklist_store(session_factory: Any) -> RecipientBlacklistStore:
     """RecipientBlacklistStore 实例(注入 session_factory)。"""
     from my_ai_employee.db.blacklist import RecipientBlacklistStore
 
@@ -1294,7 +1294,7 @@ class TestBlacklistStoreIntegration:
             board=None,
             blacklist_store=blacklist_store,
         )
-        assert a._blacklist_store is blacklist_store  # type: ignore[attr-defined]
+        assert a._blacklist_store is blacklist_store
 
     def test_blacklist_store_includes_added_by_in_last_error(
         self,
@@ -1339,10 +1339,10 @@ class TestBlacklistStoreIntegration:
         assert blacklist_check_helper(store, "lifecycle@example.com") is True
 
     def test_blacklist_store_dict_type_mismatch_rejected(self) -> None:
-        """13.9 blacklist_store 传 dict → ValueError(type 严判,拒 duck-typed fake)。
+        """13.9 blacklist_store 传 dict[Any, Any] → ValueError(type 严判,拒 duck-typed fake)。
 
         B4.2 closure 测口径填实:Adapter.__init__ 不接受任何非 RecipientBlacklistStore 实例,
-        即使有 is_blocked/find_by_email 方法的 dict 也拒收(防止 duck-type 漏接)。
+        即使有 is_blocked/find_by_email 方法的 dict[Any, Any] 也拒收(防止 duck-type 漏接)。
         """
         fake_dict = {
             "is_blocked": lambda email: False,
@@ -1352,7 +1352,7 @@ class TestBlacklistStoreIntegration:
             EmailOutboxAdapter(source="outbox_dict_test", blacklist_store=fake_dict)  # type: ignore[arg-type]
 
     def test_blacklist_store_list_type_mismatch_rejected(self) -> None:
-        """13.10 blacklist_store 传 list → ValueError(type 严判,拒 list 替身)。"""
+        """13.10 blacklist_store 传 list[Any] → ValueError(type 严判,拒 list[Any] 替身)。"""
         with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
             EmailOutboxAdapter(source="outbox_list_test", blacklist_store=[])  # type: ignore[arg-type]
 

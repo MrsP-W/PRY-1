@@ -33,7 +33,7 @@ from sqlalchemy.orm import sessionmaker
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-if True:  # type: ignore[has-type]
+if True:
     from collections.abc import Iterator
 
 
@@ -41,7 +41,7 @@ if True:  # type: ignore[has-type]
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Transaction ORM create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -54,7 +54,7 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 # ===== 1. find_l3_fuzzy_candidates 严判 + 归一化(8 tests)=====
@@ -501,7 +501,7 @@ def test_l3_fuzzy_rejects_invalid_limit(session_factory: Any) -> None:
                 session,
                 transaction_date=date(2026, 6, 14),
                 counterparty="星巴克",
-                limit=True,  # type: ignore[arg-type]
+                limit=True,
             )
         # 超出范围
         with pytest.raises(ValueError, match="limit 必须是"):
@@ -524,7 +524,7 @@ def test_l3_fuzzy_rejects_invalid_limit(session_factory: Any) -> None:
 
 
 @pytest.fixture
-def notes_engine() -> Iterator:
+def notes_engine() -> Iterator[Any]:
     """InMemory SQLite + Note ORM create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -537,7 +537,7 @@ def notes_engine() -> Iterator:
 
 @pytest.fixture
 def notes_session_factory(notes_engine: Any) -> Any:
-    return sessionmaker(bind=notes_engine)
+    return sessionmaker[Any](bind=notes_engine)
 
 
 @pytest.fixture
@@ -782,8 +782,8 @@ def test_notes_l3_helper_basic_usage(notes_store: Any) -> None:
     )
     # 直接调 helper 验证 ±1 day 窗口
 
-    with notes_store._sf() as session:  # type: ignore[attr-defined]
-        candidates = notes_store._find_l3_fuzzy_in_session(  # type: ignore[attr-defined]
+    with notes_store._sf() as session:
+        candidates = notes_store._find_l3_fuzzy_in_session(
             session,
             title="星巴克",
             updated_at_ms=int(_dt(2026, 6, 15, 10, 0, 0, tzinfo=UTC).timestamp() * 1000),

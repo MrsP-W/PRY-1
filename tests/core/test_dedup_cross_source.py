@@ -35,12 +35,12 @@ from sqlalchemy.orm import sessionmaker
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
-if True:  # type: ignore[has-type]
+if True:
     from collections.abc import Iterator
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
     from my_ai_employee.db.transactions import Transaction  # noqa: F401
@@ -52,7 +52,7 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 def test_fingerprint_cross_source_same_signature() -> None:

@@ -212,9 +212,9 @@ class TestBackwardsCompat:
         p = TaskPacket.from_dict(
             {
                 "objective": "x",
-                "scope": None,  # type: ignore[dict-item]
-                "resources": None,  # type: ignore[dict-item]
-                "acceptance_criteria": None,  # type: ignore[dict-item]
+                "scope": None,
+                "resources": None,
+                "acceptance_criteria": None,
             }
         )
         assert p.scope == []
@@ -328,7 +328,7 @@ class TestProgrammingErrorsPropagate:
     def test_wrong_type_objective_propagates(self) -> None:
         """objective 不是 str → 编程错误(透传)."""
         p = TaskPacket(
-            objective="x",  # type: ignore[arg-type]
+            objective="x",
             scope=["y/"],
             acceptance_criteria=["z"],
         )

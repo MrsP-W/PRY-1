@@ -61,7 +61,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Transaction ORM 16 列 create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -74,8 +74,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -90,7 +90,7 @@ def store(session_factory: Any) -> TransactionStore:  # type: ignore[name-define
 
 
 @pytest.fixture
-def valid_tx_params() -> dict:
+def valid_tx_params() -> dict[Any, Any]:
     """典型合法 transaction 入参(供 insert 测试复用)。"""
     return {
         "source": "wechat",
@@ -168,7 +168,9 @@ def test_orm_unique_constraint_and_indexes() -> None:
 # ===== Segment 2: insert 基础(4 tests)====
 
 
-def test_insert_basic_returns_transaction_with_id(store: Any, valid_tx_params: dict) -> None:
+def test_insert_basic_returns_transaction_with_id(
+    store: Any, valid_tx_params: dict[Any, Any]
+) -> None:
     """Case 4 — insert 基本字段:返回 Transaction 实例,id 非空,status='imported'。"""
     tx = store.insert(**valid_tx_params)
     assert tx.id is not None and tx.id > 0
@@ -182,13 +184,13 @@ def test_insert_basic_returns_transaction_with_id(store: Any, valid_tx_params: d
     assert tx.notes is None
 
 
-def test_insert_default_imported_at_ms(store: Any, valid_tx_params: dict) -> None:
+def test_insert_default_imported_at_ms(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 5 — import 未传 imported_at_ms,默认 = 当前时间(int > 0)。"""
     tx = store.insert(**valid_tx_params)
     assert isinstance(tx.imported_at_ms, int) and tx.imported_at_ms > 0
 
 
-def test_insert_category_optional(store: Any, valid_tx_params: dict) -> None:
+def test_insert_category_optional(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 6 — category 可空(None),D6.5 Adapter 调 categorizer() 后回填。"""
     params = valid_tx_params.copy()
     params["category"] = None
@@ -196,7 +198,7 @@ def test_insert_category_optional(store: Any, valid_tx_params: dict) -> None:
     assert tx.category is None
 
 
-def test_insert_all_optional_fields(store: Any, valid_tx_params: dict) -> None:
+def test_insert_all_optional_fields(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 7 — 所有可空字段都传值:category / payment_method / candidate_match_id / notes。"""
     params = valid_tx_params.copy()
     params["candidate_match_id"] = 999
@@ -209,7 +211,7 @@ def test_insert_all_optional_fields(store: Any, valid_tx_params: dict) -> None:
 # ===== Segment 3: insert 入参严判(6 tests)====
 
 
-def test_insert_rejects_non_str_source(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_non_str_source(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 8 — source 非 str → ValueError(沿 D6.2 _validate_source 范本)。"""
     params = valid_tx_params.copy()
     params["source"] = 12345
@@ -217,7 +219,7 @@ def test_insert_rejects_non_str_source(store: Any, valid_tx_params: dict) -> Non
         store.insert(**params)
 
 
-def test_insert_rejects_invalid_source_pattern(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_invalid_source_pattern(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 9 — source 含大写字母 → ValueError(^[a-z0-9_-]{1,32}$)。"""
     params = valid_tx_params.copy()
     params["source"] = "WeChat"  # 大写 W 非法
@@ -225,7 +227,7 @@ def test_insert_rejects_invalid_source_pattern(store: Any, valid_tx_params: dict
         store.insert(**params)
 
 
-def test_insert_rejects_non_decimal_amount(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_non_decimal_amount(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 10 — amount 非 Decimal → TypeError(防精度漂移)。"""
     params = valid_tx_params.copy()
     params["amount"] = 13.14  # float → 精度漂移风险
@@ -233,7 +235,7 @@ def test_insert_rejects_non_decimal_amount(store: Any, valid_tx_params: dict) ->
         store.insert(**params)
 
 
-def test_insert_rejects_non_bool_needs_confirm(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_non_bool_needs_confirm(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 11 — needs_confirm 非 bool(传 0 / 1 / "True")→ TypeError(D3.2 雷区 #2 + bool 是 int 子类陷阱)。"""
     params = valid_tx_params.copy()
     params["needs_confirm"] = 1  # int(虽然是 1)而非 bool
@@ -241,7 +243,7 @@ def test_insert_rejects_non_bool_needs_confirm(store: Any, valid_tx_params: dict
         store.insert(**params)
 
 
-def test_insert_rejects_invalid_status(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_invalid_status(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 12 — status 非 5 选 1 → ValueError(沿 D4.7.3 v1.0.5 P2-1 type 严判)。"""
     params = valid_tx_params.copy()
     params["status"] = "invalid_status"
@@ -249,7 +251,9 @@ def test_insert_rejects_invalid_status(store: Any, valid_tx_params: dict) -> Non
         store.insert(**params)
 
 
-def test_insert_rejects_invalid_fingerprint_length(store: Any, valid_tx_params: dict) -> None:
+def test_insert_rejects_invalid_fingerprint_length(
+    store: Any, valid_tx_params: dict[Any, Any]
+) -> None:
     """Case 13 — fingerprint 长度 != 32 → ValueError(沿 D6.2 _validate_fingerprint 范本)。"""
     params = valid_tx_params.copy()
     params["normalized_fingerprint"] = "abc"  # 长度 3
@@ -261,7 +265,7 @@ def test_insert_rejects_invalid_fingerprint_length(store: Any, valid_tx_params: 
 
 
 def test_insert_duplicate_source_ext_id_raises_duplicate_error(
-    store: Any, valid_tx_params: dict
+    store: Any, valid_tx_params: dict[Any, Any]
 ) -> None:
     """Case 14 — 插入重复 (source, external_transaction_id) → TransactionDuplicateError(L1 业务阻断入口)。"""
     from my_ai_employee.db.transactions import TransactionDuplicateError
@@ -275,7 +279,9 @@ def test_insert_duplicate_source_ext_id_raises_duplicate_error(
     assert exc_info.value.external_transaction_id == "4200000123456789"
 
 
-def test_insert_duplicate_does_not_rollback_previous(store: Any, valid_tx_params: dict) -> None:
+def test_insert_duplicate_does_not_rollback_previous(
+    store: Any, valid_tx_params: dict[Any, Any]
+) -> None:
     """Case 15 — 重复 insert 失败,但之前成功的行仍在(回滚只影响失败那条)。"""
     from my_ai_employee.db.transactions import TransactionDuplicateError
 
@@ -296,7 +302,7 @@ def test_get_by_id_returns_none_when_not_found(store: Any) -> None:
     assert store.get_by_id(99999) is None
 
 
-def test_get_by_id_returns_transaction(store: Any, valid_tx_params: dict) -> None:
+def test_get_by_id_returns_transaction(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 17 — get_by_id 存在 id → 返回 Transaction。"""
     tx = store.insert(**valid_tx_params)
     fetched = store.get_by_id(tx.id)
@@ -305,7 +311,7 @@ def test_get_by_id_returns_transaction(store: Any, valid_tx_params: dict) -> Non
     assert fetched.source == "wechat"
 
 
-def test_by_external_id_returns_transaction(store: Any, valid_tx_params: dict) -> None:
+def test_by_external_id_returns_transaction(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 18 — by_external_id 命中 UNIQUE 索引,返回单条。"""
     tx = store.insert(**valid_tx_params)
     fetched = store.by_external_id("wechat", "4200000123456789")
@@ -313,7 +319,7 @@ def test_by_external_id_returns_transaction(store: Any, valid_tx_params: dict) -
     assert fetched.id == tx.id
 
 
-def test_by_external_id_source_isolation(store: Any, valid_tx_params: dict) -> None:
+def test_by_external_id_source_isolation(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 19 — by_external_id 跨源隔离:同 ID 不同 source 不命中(D7 兼容 #1)。"""
     store.insert(**valid_tx_params)
     # D6='wechat' 已有,D7='alipay' 同 ID 应未命中
@@ -324,7 +330,7 @@ def test_by_external_id_source_isolation(store: Any, valid_tx_params: dict) -> N
 # ===== Segment 6: list_by_source(2 tests)====
 
 
-def test_list_by_source_returns_all(store: Any, valid_tx_params: dict) -> None:
+def test_list_by_source_returns_all(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 20 — list_by_source 返回该 source 所有交易,按 imported_at_ms DESC 排序。"""
     tx1 = store.insert(**valid_tx_params)
     params2 = valid_tx_params.copy()
@@ -337,7 +343,7 @@ def test_list_by_source_returns_all(store: Any, valid_tx_params: dict) -> None:
     assert {tx1.id, tx2.id} <= ids
 
 
-def test_list_by_source_since_date_filter(store: Any, valid_tx_params: dict) -> None:
+def test_list_by_source_since_date_filter(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 21 — list_by_source(since=date(2026, 6, 14)) 过滤旧交易。"""
     params_old = valid_tx_params.copy()
     params_old["transaction_date"] = date(2026, 6, 1)
@@ -357,7 +363,7 @@ def test_list_by_source_since_date_filter(store: Any, valid_tx_params: dict) -> 
 
 
 def test_list_by_needs_confirm_returns_pending_only_ordered_and_filterable(
-    store: Any, valid_tx_params: dict
+    store: Any, valid_tx_params: dict[Any, Any]
 ) -> None:
     """Case 21.5 — 只返回 needs_confirm=1,按 imported_at_ms DESC,可 source 过滤."""
     candidate = store.insert(
@@ -414,7 +420,7 @@ def test_list_by_needs_confirm_validates_arguments(store: Any) -> None:
     with pytest.raises(ValueError, match="limit 必须是"):
         store.list_by_needs_confirm(limit=10001)
     with pytest.raises(ValueError, match="limit 必须是"):
-        store.list_by_needs_confirm(limit=True)  # type: ignore[arg-type]
+        store.list_by_needs_confirm(limit=True)
     with pytest.raises(ValueError, match="source 必填"):
         store.list_by_needs_confirm(source_filter="")
 
@@ -423,12 +429,14 @@ def test_list_by_needs_confirm_validates_arguments(store: Any) -> None:
 
 
 def test_find_candidates_returns_empty_when_no_match(store: Any) -> None:
-    """Case 22 — fingerprint 未命中 → 空 list。"""
+    """Case 22 — fingerprint 未命中 → 空 list[Any]。"""
     result = store.find_candidates_by_fingerprint("0" * 32)
     assert result == []
 
 
-def test_find_candidates_returns_existing_transactions(store: Any, valid_tx_params: dict) -> None:
+def test_find_candidates_returns_existing_transactions(
+    store: Any, valid_tx_params: dict[Any, Any]
+) -> None:
     """Case 23 — fingerprint 命中已有 transactions,按 id ASC 排序。"""
     params1 = valid_tx_params.copy()
     params1["external_transaction_id"] = "fp_001"
@@ -445,7 +453,7 @@ def test_find_candidates_returns_existing_transactions(store: Any, valid_tx_para
 # ===== Segment 8: update_status 状态机(3 tests)====
 
 
-def test_update_status_valid_transition(store: Any, valid_tx_params: dict) -> None:
+def test_update_status_valid_transition(store: Any, valid_tx_params: dict[Any, Any]) -> None:
     """Case 24 — update_status(IMPORTED → CATEGORIZED) 合法,返回更新后 Transaction。"""
     tx = store.insert(**valid_tx_params)
     updated = store.update_status(tx.id, "categorized", from_status="imported")
@@ -453,7 +461,7 @@ def test_update_status_valid_transition(store: Any, valid_tx_params: dict) -> No
 
 
 def test_update_status_drift_detection_raises_illegal_transition(
-    store: Any, valid_tx_params: dict
+    store: Any, valid_tx_params: dict[Any, Any]
 ) -> None:
     """Case 25 — update_status(IMPORTED → CATEGORIZED 期望 from=imported,实际 row=categorized)→ TransactionIllegalTransitionError(漂移检测,沿 D5.2 范本)。"""
     tx = store.insert(**valid_tx_params)
@@ -467,7 +475,7 @@ def test_update_status_drift_detection_raises_illegal_transition(
 
 
 def test_update_status_invalid_transition_raises_illegal_transition(
-    store: Any, valid_tx_params: dict
+    store: Any, valid_tx_params: dict[Any, Any]
 ) -> None:
     """Case 26 — update_status(IMPORTED → CONFIRMED 跳级)→ TransactionIllegalTransitionError(白名单外转换)。"""
     tx = store.insert(**valid_tx_params)
@@ -481,7 +489,7 @@ def test_update_status_invalid_transition_raises_illegal_transition(
 
 
 def test_update_status_confirmed_requires_confirmed_at_ms(
-    store: Any, valid_tx_params: dict
+    store: Any, valid_tx_params: dict[Any, Any]
 ) -> None:
     """Case 27 — update_status(new_status=CONFIRMED) 必传 confirmed_at_ms,否则 ValueError(沿 D5.6.3 范本)。"""
     tx = store.insert(**valid_tx_params)
@@ -551,7 +559,7 @@ def test_list_by_counterparty_validates_arguments(store: Any) -> None:
     """Case 29 (D8.1) — list_by_counterparty 严判 counterparty 非 str / 空字符串 / since 非 date."""
     # counterparty 非 str → TypeError
     with pytest.raises(TypeError, match="counterparty 必须是 str"):
-        store.list_by_counterparty(123)  # type: ignore[arg-type]
+        store.list_by_counterparty(123)
     # counterparty 空字符串 → ValueError
     with pytest.raises(ValueError, match="counterparty 必填非空白"):
         store.list_by_counterparty("")
@@ -559,10 +567,10 @@ def test_list_by_counterparty_validates_arguments(store: Any) -> None:
         store.list_by_counterparty("   \n\t")
     # since 非 date → TypeError
     with pytest.raises(TypeError, match="since 必须是 date"):
-        store.list_by_counterparty("星巴克", since="2026-06-01")  # type: ignore[arg-type]
+        store.list_by_counterparty("星巴克", since="2026-06-01")
     # until 非 date → TypeError
     with pytest.raises(TypeError, match="until 必须是 date"):
-        store.list_by_counterparty("星巴克", until="2026-06-30")  # type: ignore[arg-type]
+        store.list_by_counterparty("星巴克", until="2026-06-30")
     # limit 越界 → ValueError
     with pytest.raises(ValueError, match="limit 必须是"):
         store.list_by_counterparty("星巴克", limit=0)
@@ -570,7 +578,7 @@ def test_list_by_counterparty_validates_arguments(store: Any) -> None:
         store.list_by_counterparty("星巴克", limit=10001)
     # limit 非 int → ValueError(不是 TypeError,沿 list_by_source 同款)
     with pytest.raises(ValueError, match="limit 必须是"):
-        store.list_by_counterparty("星巴克", limit="100")  # type: ignore[arg-type]
+        store.list_by_counterparty("星巴克", limit="100")
 
 
 # ===== Segment 11 (v0.2 D8.5.1): list_by_source_in_time_window(2 cases)=====
@@ -634,13 +642,13 @@ def test_list_by_source_in_time_window_validates_arguments(store: Any) -> None:
         store.list_by_source_in_time_window("", since_ms=0)
     # since_ms bool → ValueError(D4.7.3 v1.0.4 P2-2 范本:type() is bool)
     with pytest.raises(ValueError, match="since_ms 必须是原生 int"):
-        store.list_by_source_in_time_window("wechat", since_ms=True)  # type: ignore[arg-type]
+        store.list_by_source_in_time_window("wechat", since_ms=True)
     # since_ms < 0 → ValueError
     with pytest.raises(ValueError, match="since_ms 必须是原生 int"):
         store.list_by_source_in_time_window("wechat", since_ms=-1)
     # until_ms bool → ValueError
     with pytest.raises(ValueError, match="until_ms 必须是原生 int"):
-        store.list_by_source_in_time_window("wechat", since_ms=0, until_ms=True)  # type: ignore[arg-type]
+        store.list_by_source_in_time_window("wechat", since_ms=0, until_ms=True)
     # until_ms < 0 → ValueError
     with pytest.raises(ValueError, match="until_ms 必须是原生 int"):
         store.list_by_source_in_time_window("wechat", since_ms=0, until_ms=-1)

@@ -86,7 +86,7 @@ class DraftTone(StrEnum):
 
     D4.7.1 起始固定,后续扩枚举需 B 类审批。
     顺序固定(FORMAL → FRIENDLY → CONCISE),业务层做"按语气分组"时可直接用
-    `list(DraftTone)` 排序。
+    `list[Any](DraftTone)` 排序。
     """
 
     FORMAL = "FORMAL"  # 正式: 商务 / 官方 / 客户沟通
@@ -354,7 +354,7 @@ class DraftResult:
         # _validate_draft_tone 接受 DraftTone | str, 这里 tone 已是 DraftTone, 必通过
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化为 dict(便于 JSON 化)."""
+        """序列化为 dict[Any, Any](便于 JSON 化)."""
         return {
             "subject": self.subject,
             "body": self.body,
@@ -507,7 +507,7 @@ class DraftBlockedResult:
             )
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化为 dict(便于 JSON 化)."""
+        """序列化为 dict[Any, Any](便于 JSON 化)."""
         return {
             "subject": self.subject,
             "body": self.body,
@@ -587,7 +587,7 @@ class EmailDrafter:
 
     def stats(self) -> dict[str, int]:
         """返回草稿生成器统计(便于 mmx policy status 等可观测性子命令)."""
-        return dict(self._stats)
+        return dict[Any, Any](self._stats)
 
     def validate_draft(
         self,
@@ -877,7 +877,7 @@ class EmailDrafter:
 
     def draft_batch(
         self,
-        emails: list[dict],
+        emails: list[dict[Any, Any]],
         *,
         allow_spam_reply: bool = False,
     ) -> list[
@@ -892,11 +892,11 @@ class EmailDrafter:
         """批量草稿生成(顺序串行, 避免触发熔断).
 
         Args:
-            emails: list[dict], 每条 dict 必须包含 subject/sender/body_excerpt 3 key
+            emails: list[dict[Any, Any]], 每条 dict[Any, Any] 必须包含 subject/sender/body_excerpt 3 key
                    (类型不匹配 / 缺字段 → 异常入 results, 不静默吞掉, 不外抛)
                    可选 key: email_category / tone / allow_spam_reply(per-email 覆盖批默认)
             allow_spam_reply: 批级默认 SPAM 阻断策略(默认 False = 业务硬阻断)
-                - per-email dict 中若含 "allow_spam_reply" 键, 则用 per-email 值覆盖
+                - per-email dict[Any, Any] 中若含 "allow_spam_reply" 键, 则用 per-email 值覆盖
                 - True: SPAM 走 draft 路径(可能调用 LLM)
                 - False(默认): SPAM 业务硬阻断, 产出 DraftBlockedResult(不调 LLM)
 
@@ -906,14 +906,14 @@ class EmailDrafter:
               - SPAM 业务阻断(默认): DraftBlockedResult(0 配额, 不调 LLM)
               - 响应解析失败: DrafterResponseError
               - LLM 全链失败: LLMError
-              - 编程错误(非 dict / 类型错): ValueError
+              - 编程错误(非 dict[Any, Any] / 类型错): ValueError
               - 编程错误(缺字段): KeyError
               - 6/9 v1.0.4 P1-2 新增: 阻断模板构造异常降级: TypeError
             SpamBlockedError 绝不上抛 — 6/9 v1.0.3 P1-1 修复(批次不中断, 输入输出 1:1)。
         """
         # 6/9 v1.0.4 P1-1 修复: 批级参数严判 type(value) is bool
         # 签名默认 bool=False, 但 Python 不拒 int=1 / str="true" 等真值陷阱
-        # 严判后返回空 list + logger 告警(让"批级非法"立即被上层发现, 不静默)
+        # 严判后返回空 list[Any] + logger 告警(让"批级非法"立即被上层发现, 不静默)
         if type(allow_spam_reply) is not bool:
             raise ValueError(
                 f"draft_batch 批级 allow_spam_reply 必须是 bool, "
@@ -930,9 +930,11 @@ class EmailDrafter:
         ] = []
         for i, email in enumerate(emails):
             if not isinstance(email, dict):
-                results.append(ValueError(f"emails[{i}] 必须是 dict, 实际 {type(email).__name__}"))
+                results.append(
+                    ValueError(f"emails[{i}] 必须是 dict[Any, Any], 实际 {type(email).__name__}")
+                )
                 continue
-            # 缺字段时 KeyError 收容入 list(D4.6 v1.0.2 P2-4 范本)
+            # 缺字段时 KeyError 收容入 list[Any](D4.6 v1.0.2 P2-4 范本)
             missing_keys = [k for k in ("subject", "sender", "body_excerpt") if k not in email]
             if missing_keys:
                 results.append(KeyError(f"emails[{i}] 缺字段 {missing_keys}"))
@@ -1240,8 +1242,8 @@ class EmailDrafter:
 # ===== 模块内辅助函数 =====
 
 
-def system_to_message(content: str) -> dict:
-    """把 system prompt 字符串转 OpenAI 风格 message dict.
+def system_to_message(content: str) -> dict[Any, Any]:
+    """把 system prompt 字符串转 OpenAI 风格 message dict[Any, Any].
 
     严判: content 必须是原生 str(D4.5 P0 教训应用)。
     """
@@ -1377,7 +1379,7 @@ def _parse_draft_response(
          (不允许 prose / 不允许外层 fence / 不允许平衡括号兜底)
       4. 整段解析失败 → 检测外层 fence 包裹 → 拒收(reason=markdown_fenced_outer)
          或 拒收(reason=json_decode_error)
-      5. 严判结构(必须 dict) + 严判 subject / body / tone 字段类型与值
+      5. 严判结构(必须 dict[Any, Any]) + 严判 subject / body / tone 字段类型与值
       6. **P1-3 强制**: 若传入 expected_tone, 返回 tone 必须 == expected_tone
 
     任何一步失败 → DrafterResponseError(业务异常, 可重试).
@@ -1427,7 +1429,7 @@ def _parse_draft_response(
             reason=f"json_decode_error={type(parse_err).__name__}",
         ) from parse_err
 
-    # 严判结构(必须是 dict)
+    # 严判结构(必须是 dict[Any, Any])
     if not isinstance(data, dict):
         raise DrafterResponseError(
             "JSON 顶层必须是 object",

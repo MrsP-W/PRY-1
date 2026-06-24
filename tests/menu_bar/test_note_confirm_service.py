@@ -165,7 +165,7 @@ class TestNoteConfirmServiceImplConstruction:
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
         with pytest.raises(TypeError, match="note_store 必填"):
-            NoteConfirmServiceImpl(None)  # type: ignore[arg-type]
+            NoteConfirmServiceImpl(None)
 
     def test_construct_with_missing_methods_raises_type_error(self) -> None:
         """构造严判:缺 list_by_needs_confirm 或 mark_archived → TypeError."""
@@ -177,7 +177,7 @@ class TestNoteConfirmServiceImplConstruction:
                 return []
 
         with pytest.raises(TypeError, match="缺方法"):
-            NoteConfirmServiceImpl(_IncompleteStore())  # type: ignore[arg-type]
+            NoteConfirmServiceImpl(_IncompleteStore())
 
         # 缺 list_by_needs_confirm
         class _IncompleteStore2:
@@ -185,7 +185,7 @@ class TestNoteConfirmServiceImplConstruction:
                 return None
 
         with pytest.raises(TypeError, match="缺方法"):
-            NoteConfirmServiceImpl(_IncompleteStore2())  # type: ignore[arg-type]
+            NoteConfirmServiceImpl(_IncompleteStore2())
 
 
 class TestNoteConfirmServiceImplGetCount:
@@ -268,7 +268,7 @@ class TestNoteConfirmServiceImplListPending:
             impl.list_pending_confirm(limit="10")  # type: ignore[arg-type]
         # bool 拒收(isinstance(True, int)==True 陷阱)
         with pytest.raises(ValueError, match="limit 必须是"):
-            impl.list_pending_confirm(limit=True)  # type: ignore[arg-type]
+            impl.list_pending_confirm(limit=True)
         # 超出范围
         with pytest.raises(ValueError, match="limit 必须是"):
             impl.list_pending_confirm(limit=0)

@@ -66,7 +66,7 @@ def test_oauth2_token_rejects_bool_expires() -> Any:
     from my_ai_employee.core.oauth2 import OAuth2Token
 
     with pytest.raises(ValueError, match="expires_at_ms 必须是正 int"):
-        OAuth2Token(access_token="ya29", refresh_token=None, expires_at_ms=True)  # type: ignore[arg-type]
+        OAuth2Token(access_token="ya29", refresh_token=None, expires_at_ms=True)
 
 
 def test_oauth2_token_rejects_non_string_scope() -> Any:
@@ -171,7 +171,7 @@ def test_generate_state_length_validation() -> Any:
     with pytest.raises(ValueError, match="length 必须是"):
         generate_state(length=512)
     with pytest.raises(ValueError, match="length 必须是"):
-        generate_state(length=True)  # type: ignore[arg-type]
+        generate_state(length=True)
 
 
 # ===== 4. Keychain 集成(3 tests)=====

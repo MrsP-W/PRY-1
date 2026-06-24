@@ -4,7 +4,7 @@
 
 D6.0 范围(2026-06-14 启动):
     - 10 封 faker 邮件(MockIMAPClient 注入,无真实 socket)
-    - IMAPConnector.fetch 拉邮件 → list[dict](沿 D2.7 safe_fetch 范本)
+    - IMAPConnector.fetch 拉邮件 → list[dict[Any, Any]](沿 D2.7 safe_fetch 范本)
     - EmailClassifierAdapter.classify_and_emit 入口契约(不调真实 LLM,Mock router)
     - 断言:10 封全拉 + source 字段齐 + 与 5 类一致
 
@@ -25,8 +25,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
-def _make_envelope(uid: int, subject: str, sender: str) -> dict:
-    """构造 imapclient Envelope 兼容的 dict(MockIMAPClient.fetch_data 格式).
+def _make_envelope(uid: int, subject: str, sender: str) -> dict[Any, Any]:
+    """构造 imapclient Envelope 兼容的 dict[Any, Any](MockIMAPClient.fetch_data 格式).
 
     imapclient 3.x Envelope 完整字段(11 个):
         date, subject:bytes, from_, sender, reply_to, to, cc, bcc, in_reply_to:bytes, message_id:bytes
@@ -74,7 +74,7 @@ def test_s1_imap_fetch_10_emails(monkeypatch: Any, tmp_path: Any) -> Any:
 
     # 2. 构造 10 封 faker 邮件
     mock_client = MockIMAPClient()
-    mock_client.search_uids = list(range(1, 11))
+    mock_client.search_uids = list[Any](range(1, 11))
     mock_client.fetch_data = {
         uid: _make_envelope(
             uid,
@@ -160,7 +160,7 @@ def test_s1_classify_emails(monkeypatch: Any, session_factory: Any) -> Any:
 
         def route(self, *, task_type: Any, messages: Any, temperature: Any, max_tokens: Any) -> Any:
             # 5 类循环
-            categories = list(EmailCategory)
+            categories = list[Any](EmailCategory)
             category = categories[self._call_count % len(categories)]
             self._call_count += 1
             return LLMResponse(

@@ -102,9 +102,9 @@ def test_04_l1_source_format_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import check_l1_duplicate
 
     with pytest.raises(ValueError, match="source 必须匹配"):
-        check_l1_duplicate(session, "WeChat-大写", "tx-1")  # type: ignore[arg-type]
+        check_l1_duplicate(session, "WeChat-大写", "tx-1")
     with pytest.raises(ValueError, match="source 必填"):
-        check_l1_duplicate(session, "", "tx-1")  # type: ignore[arg-type]
+        check_l1_duplicate(session, "", "tx-1")
 
 
 def test_05_l1_ext_tx_id_empty_guard(session: Any) -> None:
@@ -112,9 +112,9 @@ def test_05_l1_ext_tx_id_empty_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import check_l1_duplicate
 
     with pytest.raises(ValueError, match="external_transaction_id 必填"):
-        check_l1_duplicate(session, "wechat", "")  # type: ignore[arg-type]
+        check_l1_duplicate(session, "wechat", "")
     with pytest.raises(ValueError, match="external_transaction_id 必填"):
-        check_l1_duplicate(session, "wechat", "   ")  # type: ignore[arg-type]
+        check_l1_duplicate(session, "wechat", "   ")
 
 
 def test_06_l1_ext_tx_id_length_guard(session: Any) -> None:
@@ -122,7 +122,7 @@ def test_06_l1_ext_tx_id_length_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import check_l1_duplicate
 
     with pytest.raises(ValueError, match="长度必须在"):
-        check_l1_duplicate(session, "wechat", "x" * 129)  # type: ignore[arg-type]
+        check_l1_duplicate(session, "wechat", "x" * 129)
 
 
 def test_07_l1_strict_stub_returns_true(session: Any) -> None:
@@ -195,9 +195,9 @@ def test_13_l2_fingerprint_format_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import find_l2_candidates
 
     with pytest.raises(ValueError, match="32 chars hex"):
-        find_l2_candidates(session, "short")  # type: ignore[arg-type]
+        find_l2_candidates(session, "short")
     with pytest.raises(ValueError, match="小写 hex"):
-        find_l2_candidates(session, "Z" * 32)  # type: ignore[arg-type]
+        find_l2_candidates(session, "Z" * 32)
 
 
 # ===== L3 模糊匹配(5 cases)=====
@@ -208,7 +208,7 @@ def test_14_l3_new_id_eq_candidate_raises(session: Any) -> None:
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
     with pytest.raises(ValueError, match="不能相同"):
-        mark_l3_needs_confirm(session, 1, 1)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, 1, 1)
 
 
 def test_15_l3_tx_id_positive_int_guard(session: Any) -> None:
@@ -216,11 +216,11 @@ def test_15_l3_tx_id_positive_int_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
     with pytest.raises(ValueError, match="正 int"):
-        mark_l3_needs_confirm(session, -1, 2)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, -1, 2)
     with pytest.raises(ValueError, match="正 int"):
-        mark_l3_needs_confirm(session, 0, 1)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, 0, 1)
     with pytest.raises(ValueError, match="正 int"):
-        mark_l3_needs_confirm(session, True, 2)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, True, 2)
 
 
 def test_16_l3_type_guard(session: Any) -> None:

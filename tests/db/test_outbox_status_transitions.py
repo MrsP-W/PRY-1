@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -79,7 +79,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]:
-    """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
+    """用 in-memory dict[Any, Any] 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
     def fake_get() -> keychain.KeychainResult:
@@ -98,7 +98,7 @@ def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     """打开 DB + Base.metadata.create_all + yield(测试后自动 close)。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -113,11 +113,11 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]
 
 @pytest.fixture
 def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
-    """返回 SQLAlchemy sessionmaker(绑 SQLCipher engine)。"""
+    """返回 SQLAlchemy sessionmaker[Any](绑 SQLCipher engine)。"""
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture

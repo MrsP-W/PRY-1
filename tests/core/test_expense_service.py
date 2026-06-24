@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + 全部 ORM create_all。"""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -50,8 +50,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -146,7 +146,7 @@ def test_construct_validates_cache_ttl(
             note_store=note_store,
             tx_store=tx_store,
             anomaly_detector=anomaly_detector,
-            cache_ttl_ms=True,  # type: ignore[arg-type]  # bool 拒绝
+            cache_ttl_ms=True,
         )
 
 
@@ -254,4 +254,4 @@ def test_get_recent_anomalies_validates_limit(service: Any) -> Any:
     with pytest.raises(ValueError, match="limit 必须是"):
         service.get_recent_anomalies(limit=101)
     with pytest.raises(ValueError, match="limit 必须是"):
-        service.get_recent_anomalies(limit=True)  # type: ignore[arg-type]
+        service.get_recent_anomalies(limit=True)

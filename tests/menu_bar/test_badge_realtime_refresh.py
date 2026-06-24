@@ -151,7 +151,7 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
     # 隔离默认 capture_service(避免连 DB)
     monkeypatch.setattr(app_module, "_build_default_capture_service", lambda: None)
 
-    def _start_without_polling(self: Any) -> None:  # type: ignore[no-untyped-def]
+    def _start_without_polling(self: Any) -> None:
         self._stop_hotkey_poll = threading.Event()
 
     monkeypatch.setattr(
@@ -169,7 +169,7 @@ def test_init_rejects_bool_poll_interval(fake_rumps: None) -> None:
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     with pytest.raises(ValueError, match="badge_poll_interval_seconds 必须是"):
-        NotesMenuBarApp(badge_poll_interval_seconds=True)  # type: ignore[arg-type]
+        NotesMenuBarApp(badge_poll_interval_seconds=True)
 
 
 def test_init_rejects_negative_poll_interval(fake_rumps: None) -> None:

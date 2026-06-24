@@ -24,6 +24,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from email.message import EmailMessage
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -65,7 +66,7 @@ def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
     from my_ai_employee.events import models as _events_models  # noqa: F401
@@ -80,7 +81,7 @@ def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture

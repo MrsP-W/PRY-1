@@ -11,7 +11,7 @@ pynput 1.7.7 不接收 bug,见 pynput/pynput#554):
 
 设计要点(2026-06-16 锁定):
     - 双进程范本(沿 D4.7.3 v1.0.5 范本): rumps 主进程跑 NSApp 主循环 →
-      本子进程跑 Quartz CGEvent tap → Queue 通信
+      本子进程跑 Quartz CGEvent tap → Queue[Any] 通信
     - Quartz CFRunLoopRun() 阻塞(daemon=True 主进程退出自动 kill)
     - 异常收容:Quartz tap=None / listener 启动失败 → 推 tcc_denied 后退出
     - emit_hotkey() 入口段:严判 queue 必非 None(沿 D4.7.3 范本)
@@ -32,7 +32,7 @@ from __future__ import annotations
 import multiprocessing as _mp
 from typing import Any
 
-import Quartz  # type: ignore[import-not-found]  # v0.2 B-5 新依赖,pyobjc-framework-Quartz
+import Quartz
 
 # ===== 全局快捷键组合(沿 v0.1-launch-plan.md:129 锁定)=====
 
@@ -46,7 +46,7 @@ _KEY_CODE_N: int = 0x2D
 _KC_MOD_ALT: int = Quartz.kCGEventFlagMaskAlternate
 _KC_MOD_CMD: int = Quartz.kCGEventFlagMaskCommand
 
-# Queue 事件 schema(主进程据此分发,B-5 沿用 D9.5 三类事件)
+# Queue[Any] 事件 schema(主进程据此分发,B-5 沿用 D9.5 三类事件)
 _EVENT_HOTKEY: str = "hotkey"
 _EVENT_TCC_DENIED: str = "tcc_denied"
 _EVENT_LISTENER_STARTED: str = "listener_started"
@@ -59,7 +59,7 @@ class HotkeyListenerProcess(_mp.Process):
     """⌥⌘N 全局快捷键监听子进程(v0.2 B-5:Quartz CGEvent tap).
 
     Attributes:
-        queue: multiprocessing.Queue,主进程创建的 Queue 实例(子进程推事件用)
+        queue: multiprocessing.Queue[Any],主进程创建的 Queue[Any] 实例(子进程推事件用)
 
     Lifecycle:
         1. 主进程: queue = multiprocessing.Queue()
@@ -71,20 +71,20 @@ class HotkeyListenerProcess(_mp.Process):
         4. 退出: daemon=True,主进程退出自动 kill(无需手动 join)
     """
 
-    def __init__(self, queue: _mp.Queue) -> None:
+    def __init__(self, queue: _mp.Queue[Any]) -> None:
         """初始化子进程(严判 queue 必非 None,沿 D4.7.3 v1.0.5 P1:type 严判).
 
         Args:
-            queue: 主进程创建的 Queue 实例
+            queue: 主进程创建的 Queue[Any] 实例
 
         Raises:
             ValueError: queue 为 None
         """
         # 严判 queue(沿 D4.7.3 v1.0.5 P1:type 严判)
         if queue is None:
-            raise ValueError("queue 必传非 None(主进程需 Queue 收事件)")
+            raise ValueError("queue 必传非 None(主进程需 Queue[Any] 收事件)")
         super().__init__(daemon=True, name="notes-hotkey-listener")
-        self._queue: _mp.Queue = queue
+        self._queue: _mp.Queue[Any] = queue
 
     def run(self) -> None:
         """子进程主体(被 start() 自动调).
@@ -141,7 +141,7 @@ class HotkeyListenerProcess(_mp.Process):
         """⌥⌘N 按下时触发(Quartz 回调内部调)."""
         self._emit_hotkey()
 
-    # ===== Queue emit helpers(严判 type 严判,沿 D4.7.3 范本)=====
+    # ===== Queue[Any] emit helpers(严判 type 严判,沿 D4.7.3 范本)=====
 
     def _emit_hotkey(self) -> None:
         """推 ⌥⌘N hotkey 事件."""
@@ -162,7 +162,7 @@ class HotkeyListenerProcess(_mp.Process):
 
 
 def build_event_dict(event_type: str, **fields: Any) -> dict[str, Any]:
-    """构造事件 dict(供主进程消费 / 测试用).
+    """构造事件 dict[Any, Any](供主进程消费 / 测试用).
 
     Args:
         event_type: 事件类型(_EVENT_HOTKEY / _EVENT_TCC_DENIED /
@@ -170,7 +170,7 @@ def build_event_dict(event_type: str, **fields: Any) -> dict[str, Any]:
         **fields: 额外字段(reason / combo 等)
 
     Returns:
-        dict[str, Any] — 推到 Queue 的事件 payload
+        dict[str, Any] — 推到 Queue[Any] 的事件 payload
 
     Raises:
         ValueError: event_type 非法(非 3 类之一)

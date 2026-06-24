@@ -40,7 +40,7 @@ def fake_runner() -> Any:
 
 
 @pytest.fixture
-def notes_with_metadata() -> dict:
+def notes_with_metadata() -> dict[Any, Any]:
     """典型 AppleScript 元数据输出(2 条 notes)."""
     return {
         "script_output": (
@@ -150,7 +150,7 @@ def test_parse_metadata_line_malformed() -> None:
 
 
 def test_parse_metadata_title_with_comma() -> None:
-    """2.5 标题含逗号不被切(D9.6.2 新协议:无 list 元素,"," 不参与字段切)."""
+    """2.5 标题含逗号不被切(D9.6.2 新协议:无 list[Any] 元素,"," 不参与字段切)."""
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
     sep = chr(30)
@@ -159,7 +159,7 @@ def test_parse_metadata_title_with_comma() -> None:
     )
     notes = NotesConnector._parse_metadata_result(result_str)
     assert len(notes) == 1
-    # 关键:title 含逗号不被切(因为新协议不再用 "," 切 list 元素,改用 ASCII 30 切字段)
+    # 关键:title 含逗号不被切(因为新协议不再用 "," 切 list[Any] 元素,改用 ASCII 30 切字段)
     assert notes[0]["title"] == "Meeting, with, commas"
 
 
@@ -180,7 +180,7 @@ def test_parse_metadata_title_with_pipe() -> None:
 def test_parse_metadata_english_date_locale() -> None:
     """2.7 英文 locale 日期 'Monday, June 15, 2026 at 14:30:00' 完整保留 + 真解析.
 
-    D9.6.2 P1-2 修复:旧 list 拼接 + split(',') 会把 Monday, June 15... 拆碎,modified_at 段只剩
+    D9.6.2 P1-2 修复:旧 list[Any] 拼接 + split(',') 会把 Monday, June 15... 拆碎,modified_at 段只剩
     'Monday' 后续 _parse_modified_at_ms 永远失败 → 兜底 0。本测试验证:
     1. modified_at 段必含完整英文日期字符串
     2. _parse_modified_at_ms 真解析(返回 > 0 ms,而非兜底 0)
@@ -229,7 +229,7 @@ def test_parse_metadata_multiple_notes_robust() -> None:
 
 
 def test_safe_parse_happy_path() -> None:
-    """3.1 safe_parse 合法 metadata dict → 严判通过."""
+    """3.1 safe_parse 合法 metadata dict[Any, Any] → 严判通过."""
     from my_ai_employee.connectors.apple_notes import safe_parse
 
     meta = {
@@ -265,7 +265,7 @@ def test_safe_parse_rejects_int_is_private() -> None:
         "apple_note_id": "x-coredata://ICNote/OK",
         "folder": "Notes",
         "title": "t",
-        "is_private": 1,  # type: ignore[dict-item]
+        "is_private": 1,
         "modified_at_ms": 0,
     }
     with pytest.raises(TypeError, match="is_private"):

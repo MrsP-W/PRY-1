@@ -740,7 +740,7 @@ class OutboxDispatcher:
         # v0.2 B4.3:返回类型改 union(SendDecisionReport | SendBlockedDecisionReport)
         try:
             report: SendDecisionReport | SendBlockedDecisionReport = adapter.send_and_emit(
-                outbox_id=entry.id,  # type: ignore[arg-type]
+                outbox_id=entry.id,
                 smtp_host=self._smtp_host,
                 smtp_port=self._smtp_port,
                 smtp_username=self._smtp_username,
@@ -764,7 +764,7 @@ class OutboxDispatcher:
             )
             try:
                 adapter.record_send_business_blocked_and_emit(
-                    outbox_id=entry.id,  # type: ignore[arg-type]
+                    outbox_id=entry.id,
                     reason="recipients_refused",
                     last_error=e,
                     run_id=f"dispatcher-{start_ms_str(now_ms)}",
@@ -784,7 +784,7 @@ class OutboxDispatcher:
             logger.warning(f"OutboxDispatcher 业务阻断(sender_refused): outbox_id={entry.id} {e}")
             try:
                 adapter.record_send_business_blocked_and_emit(
-                    outbox_id=entry.id,  # type: ignore[arg-type]
+                    outbox_id=entry.id,
                     reason="sender_refused",
                     last_error=e,
                     run_id=f"dispatcher-{start_ms_str(now_ms)}",
@@ -811,7 +811,7 @@ class OutboxDispatcher:
             }
             try:
                 adapter.record_send_failure_and_emit(
-                    outbox_id=entry.id,  # type: ignore[arg-type]
+                    outbox_id=entry.id,
                     error_category="transport_error",
                     last_error=e,
                     consecutive_send_failures=new_cf,
@@ -841,7 +841,7 @@ class OutboxDispatcher:
             }
             try:
                 adapter.record_send_failure_and_emit(
-                    outbox_id=entry.id,  # type: ignore[arg-type]
+                    outbox_id=entry.id,
                     error_category="smtp_other",
                     last_error=e,
                     consecutive_send_failures=new_cf,

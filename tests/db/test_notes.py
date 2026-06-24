@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Note ORM 10 列 create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -58,8 +58,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ def store(session_factory: Any) -> NoteStore:
 
 
 @pytest.fixture
-def valid_note_params() -> dict:
+def valid_note_params() -> dict[Any, Any]:
     """典型合法 note 入参(供 insert 测试复用)."""
     return {
         "apple_note_id": "x-coredata://ICNote/ABC123",
@@ -138,7 +138,7 @@ def test_note_orm_unique_constraint_on_apple_note_id() -> None:
 # ===== 2. insert 基础功能(3 tests)=====
 
 
-def test_insert_full_fields(store: NoteStore, valid_note_params: dict) -> None:
+def test_insert_full_fields(store: NoteStore, valid_note_params: dict[Any, Any]) -> None:
     """2.1 全字段插入 + 必填字段全在 + 默认值正确(folder='Notes',title='',is_private=0)."""
     note = store.insert(
         apple_note_id=valid_note_params["apple_note_id"],
@@ -263,7 +263,7 @@ def test_insert_rejects_whitespace_only_tags(store: NoteStore) -> None:
 
 
 def test_insert_duplicate_apple_note_id_raises_note_duplicate_error(
-    store: NoteStore, valid_note_params: dict
+    store: NoteStore, valid_note_params: dict[Any, Any]
 ) -> None:
     """4.1 同 apple_note_id 二次插入 → NoteDuplicateError(L1 业务阻断入口)."""
     from my_ai_employee.db.notes import NoteDuplicateError

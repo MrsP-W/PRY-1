@@ -14,7 +14,7 @@ import secrets
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
-from typing import Literal, cast
+from typing import Any, Literal, cast
 
 import pytest
 from sqlalchemy.orm import Session, sessionmaker
@@ -41,7 +41,7 @@ def _csv_to_raw_transactions(
     *,
     source: str,
     ext_id_prefix: str,
-) -> list:
+) -> list[Any]:
     """读 faker CSV 解析为 RawTransaction 列表(沿 wechat_csv.py 字段映射).
 
     Args:
@@ -99,10 +99,10 @@ def _csv_to_raw_transactions(
     return rows
 
 
-def _expand_to_100(rows_10: list) -> list:
+def _expand_to_100(rows_10: list[Any]) -> list[Any]:
     """循环展开 10 行 faker 样本到 100 行(每行 ext_id 改 unique).
 
-    沿 plan §S6.1:`list(islice(cycle(2024_5 + 2025_5), 100))` × ext_id 改 token_hex(8)。
+    沿 plan §S6.1:`list[Any](islice(cycle(2024_5 + 2025_5), 100))` × ext_id 改 token_hex(8)。
     """
     from my_ai_employee.connectors._types import RawTransaction
 
@@ -295,7 +295,7 @@ def test_s6_cross_source_dedup(session_factory: sessionmaker[Session]) -> None:
 
     engine2 = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine2)
-    sf2 = sessionmaker(bind=engine2, autoflush=False, autocommit=False)
+    sf2 = sessionmaker[Any](bind=engine2, autoflush=False, autocommit=False)
     adapter2 = TransactionAdapter(sf2)
 
     res_a2 = adapter2.import_raw_transactions(alipay_rows, source="alipay")
@@ -338,7 +338,7 @@ def test_s6_menu_bar_expense_update() -> None:
     # 独立 InMemory sqlite(沿 S6.2 反向范本,不污染其他 e2e session)
     engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
-    sf = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+    sf = sessionmaker[Any](bind=engine, autoflush=False, autocommit=False)
     adapter = TransactionAdapter(sf)
 
     # 100 笔 faker(沿 S6.1 _expand_to_100,50 笔 2024-05 + 50 笔 2025-03)

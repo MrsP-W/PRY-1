@@ -10,7 +10,7 @@
     - ExpenseService 状态展示(title 数字 + 子菜单"最近笔记" + 剪贴板/TCC 状态)
     - ⌥⌘N 全局快捷键(D9.5 双进程范本):
         * 子进程 HotkeyListenerProcess 跑 pynput.keyboard.GlobalHotKeys
-        * 主进程 _poll_hotkey_queue 轮询 Queue 收事件
+        * 主进程 _poll_hotkey_queue 轮询 Queue[Any] 收事件
         * pynput 拒授权 → 弹 notification 引导 TCC 授权
 
 设计决策(2026-06-15 锁定):
@@ -18,7 +18,7 @@
     - ExpenseService 依赖注入(默认 ExpenseServiceStub,D10 替换)
     - 子进程调 sync_notes.py(沿 D5 业务调度范本,不 in-process 调)
     - macOS TCC 风险:同步/打开 Notes 需"自动化"授权,失败时弹 rumps.notification
-    - 双进程范本:rumps NSApp + pynput 子进程,Queue 通信(沿 D4.7.3 v1.0.5)
+    - 双进程范本:rumps NSApp + pynput 子进程,Queue[Any] 通信(沿 D4.7.3 v1.0.5)
     - 测试用 monkeypatch 隔离 NSApp 拉起(rumps.App 替换为 fake class)
     - 测试用 monkeypatch 隔离子进程 start(沿 D5 业务调度范本)
 
@@ -26,7 +26,7 @@ D4.7.3 教训应用:
     - subprocess.run 严格 4 退出码契约(沿 C1 sync_notes.py)
     - 异常类型统一 (RuntimeError 透传,不静默)
     - 私有属性 _ 前缀(避免与 rumps 公共 API 冲突)
-    - 跨进程通信用 multiprocessing.Queue(不 pickle 自定义对象,沿 D5)
+    - 跨进程通信用 multiprocessing.Queue[Any](不 pickle 自定义对象,沿 D5)
 """
 
 from __future__ import annotations
@@ -139,7 +139,7 @@ def _validate_note_confirm_service(obj: object) -> None:
 
 
 def _update_menu_badge(menu: Any, prefix: str, new_title: str) -> None:
-    """更新菜单栏 badge — 支持 list 和 rumps.Menu 2 种形态(沿 v0.2.2 #2 范本).
+    """更新菜单栏 badge — 支持 list[Any] 和 rumps.Menu 2 种形态(沿 v0.2.2 #2 范本).
 
     设计决策(2026-06-17 锁定):
         - rumps.Menu 内部是 OrderedDict[str, MenuItem],iter 出来是 str(title),
@@ -149,7 +149,7 @@ def _update_menu_badge(menu: Any, prefix: str, new_title: str) -> None:
           (OrderedDict key 保持不变, NSMenu 自动同步)
 
     Args:
-        menu: self.menu 对象(list 或 rumps.Menu)
+        menu: self.menu 对象(list[Any] 或 rumps.Menu)
         prefix: 旧 title 前缀(用于匹配)
         new_title: 新 title(完整字符串,非前缀)
     """
@@ -194,7 +194,7 @@ def _build_default_capture_service() -> ClipboardCaptureService:
 
     db = Database.open()
     engine = make_sqlalchemy_engine(db)
-    sf = sessionmaker(bind=engine, expire_on_commit=False)
+    sf = sessionmaker[Any](bind=engine, expire_on_commit=False)
     store = NoteStore(sf)
     structurer = NoteStructurerService(store=store, llm_provider=get_router())
     return ClipboardCaptureService(store=store, structurer=structurer)
@@ -266,8 +266,8 @@ class NotesMenuBarApp(_RumpsAppBase):
         )
 
         # ⌥⌘N 全局快捷键子进程(D9.5 双进程范本)
-        # Queue 必须在子进程 start 之前创建(子进程会推到这)
-        self._hotkey_queue: _mp.Queue = _mp.Queue()
+        # Queue[Any] 必须在子进程 start 之前创建(子进程会推到这)
+        self._hotkey_queue: _mp.Queue[Any] = _mp.Queue()
         self._hotkey_proc: HotkeyListenerProcess | None = None
         # 轮询 thread 守护标记(测试可显式停掉)
         self._stop_hotkey_poll: _threading.Event = _threading.Event()
@@ -341,7 +341,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         Returns:
             None(结果通过 menu title 刷新 / rumps.notification 反馈)
         """
-        result = subprocess.run(  # noqa: S603 — 同步场景必传 list,eval 风险为零
+        result = subprocess.run(  # noqa: S603 — 同步场景必传 list[Any],eval 风险为零
             [sys.executable, "-m", _SYNC_SCRIPT_MODULE, "sync"],
             capture_output=True,
             text=True,
@@ -384,7 +384,7 @@ class NotesMenuBarApp(_RumpsAppBase):
 
         设计决策(沿 D8 docs 评估决策 #5):
             - 用户主动查询 vs 被动打扰(只接入"已确认"异常不弹每笔)
-            - Stub 阶段:返回空 list,弹窗提示"暂无异常"
+            - Stub 阶段:返回空 list[Any],弹窗提示"暂无异常"
             - D10 后:替换为真实 ExpenseServiceImpl,接 AnomalyDetector 真实链路
         """
         try:
@@ -491,7 +491,7 @@ class NotesMenuBarApp(_RumpsAppBase):
         """点击"📥 确认第 1 条" — 1-click 确认 top 1 待确认 note(v0.2.2 候选 #2).
 
         业务语义(沿 D6.4 transactions L2 范本):
-            - 拉 list(limit=1)取 top 1
+            - 拉 list[Any](limit=1)取 top 1
             - 空 → 弹"暂无待确认"
             - 非空 → confirm_note(apple_note_id) → NoteStore.mark_archived
             - 刷新 badge + 弹 notification 反馈结果
@@ -534,11 +534,11 @@ class NotesMenuBarApp(_RumpsAppBase):
     # ===== D9.5 ⌥⌘N 全局快捷键(双进程范本主入口)=====
 
     def _start_hotkey_listener(self) -> None:
-        """启动 ⌥⌘N 监听子进程 + Queue 轮询 thread.
+        """启动 ⌥⌘N 监听子进程 + Queue[Any] 轮询 thread.
 
         异常收容(沿 D4.7.3 v1.0.5 P3):
             - 子进程 start 失败(多进程资源不足) → 静默(主进程仍可同步)
-            - pynput TCC 拒授权 → 子进程推 Queue,主进程弹 notification
+            - pynput TCC 拒授权 → 子进程推 Queue[Any],主进程弹 notification
         """
         try:
             self._hotkey_proc = HotkeyListenerProcess(self._hotkey_queue)
@@ -568,7 +568,7 @@ class NotesMenuBarApp(_RumpsAppBase):
             self._badge_poll_thread.start()
 
     def _poll_hotkey_queue(self) -> None:
-        """轮询 Queue 收子进程事件(沿 D5 业务调度范本).
+        """轮询 Queue[Any] 收子进程事件(沿 D5 业务调度范本).
 
         事件类型:
             - hotkey       → ⌥⌘N 按下 → 调 _on_clipboard_capture()
@@ -580,7 +580,7 @@ class NotesMenuBarApp(_RumpsAppBase):
             except _queue.Empty:
                 continue
             except (EOFError, OSError):
-                # 子进程已死或 Queue 关闭 → 退出轮询
+                # 子进程已死或 Queue[Any] 关闭 → 退出轮询
                 return
             event_type = event.get("event")
             if event_type == _EVENT_HOTKEY:

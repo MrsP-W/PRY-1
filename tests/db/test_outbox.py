@@ -72,7 +72,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_keychain(monkeypatch: Any) -> Any:
-    """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
+    """用 in-memory dict[Any, Any] 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
     def fake_get() -> keychain.KeychainResult:
@@ -91,7 +91,7 @@ def fake_keychain(monkeypatch: Any) -> Any:
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     """打开 DB + Base.metadata.create_all + yield(测试后自动 close)。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -106,16 +106,16 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]
 
 
 @pytest.fixture
-def session_factory(db_with_schema: Database) -> Any:  # type: ignore[no-untyped-def]
-    """返回 SQLAlchemy sessionmaker(绑 SQLCipher engine)。"""
+def session_factory(db_with_schema: Database) -> Any:
+    """返回 SQLAlchemy sessionmaker[Any](绑 SQLCipher engine)。"""
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
-def store(session_factory: Any) -> OutboxStore:  # type: ignore[no-untyped-def]
+def store(session_factory: Any) -> OutboxStore:
     """OutboxStore 实例(注入 session_factory)。"""
     return OutboxStore(session_factory)
 
@@ -225,7 +225,7 @@ def test_outbox_entry_uniqueness_constraint_on_email_id() -> None:
     assert len(unique_constraints) == 1
     uq = unique_constraints[0]
     # UniqueConstraint 用 c.columns 列表(非 Index 的 column_keys)
-    uq_column_names = {col.name for col in uq.columns}  # type: ignore[attr-defined]
+    uq_column_names = {col.name for col in uq.columns}
     assert "email_id" in uq_column_names
 
 
@@ -244,7 +244,7 @@ def test_outbox_entry_fk_to_events_reviewer_and_drafter() -> None:
     ]
     fk_columns: list[str] = []
     for fk in fk_constraints:
-        for fk_col in fk.columns:  # type: ignore[attr-defined]
+        for fk_col in fk.columns:
             fk_columns.append(fk_col.name)
     assert "reviewer_decision_event_id" in fk_columns
     assert "drafter_decision_event_id" in fk_columns
@@ -617,11 +617,11 @@ def test_update_status_nonexistent_id_raises_value_error(store: OutboxStore) -> 
 
 
 def test_normalize_status_rejects_non_str(store: OutboxStore) -> None:
-    """_normalize_status type 严判(防 list/dict/set 触发 TypeError,D4.7.3 v1.0.5 P2-1)。"""
+    """_normalize_status type 严判(防 list[Any]/dict[Any, Any]/set 触发 TypeError,D4.7.3 v1.0.5 P2-1)。"""
     with pytest.raises(TypeError, match="status 必须是 str"):
-        store._normalize_status(123)  # type: ignore[arg-type]
+        store._normalize_status(123)
     with pytest.raises(TypeError, match="status 必须是 str"):
-        store._normalize_status(["pending_send"])  # type: ignore[arg-type]
+        store._normalize_status(["pending_send"])
 
 
 def test_normalize_status_rejects_invalid_value(store: OutboxStore) -> None:
@@ -633,9 +633,9 @@ def test_normalize_status_rejects_invalid_value(store: OutboxStore) -> None:
 def test_normalize_priority_rejects_non_str(store: OutboxStore) -> None:
     """_normalize_priority type 严判(同 status 范本)。"""
     with pytest.raises(TypeError, match="priority 必须是 str"):
-        store._normalize_priority(None)  # type: ignore[arg-type]
+        store._normalize_priority(None)
     with pytest.raises(TypeError, match="priority 必须是 str"):
-        store._normalize_priority({"priority": "normal"})  # type: ignore[arg-type]
+        store._normalize_priority({"priority": "normal"})
 
 
 # ===== 8. D5.6.4 P1:OutboxStore.insert 严判(2 tests)=====
@@ -762,7 +762,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
     """B2.1 hotfix P1-A:type 严判(沿 _normalize_priority 范本,type 严判在 hash 前)。
 
     非 str 类型(列表 / 字典 / 集合 / None / int / bool)必抛 TypeError,不抛 ValueError
-    (D4.7.3 v1.0.5 P2-1 范本:type 严判在 hash 前,防 list/dict/set 触发 TypeError)。
+    (D4.7.3 v1.0.5 P2-1 范本:type 严判在 hash 前,防 list[Any]/dict[Any, Any]/set 触发 TypeError)。
     """
     # 1. 列表 — 非可哈希类型,严判 type 优先
     with pytest.raises(TypeError, match="priority 必须是 str"):
@@ -771,7 +771,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             subject="测试列表 type 严判",
             body="测试 priority=[] 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
-            recipient_email="list@example.com",
+            recipient_email="list[Any]@example.com",
             priority=[],  # type: ignore[arg-type]
         )
     # 2. 字典 — 非可哈希类型
@@ -781,7 +781,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             subject="测试字典 type 严判",
             body="测试 priority={} 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
-            recipient_email="dict@example.com",
+            recipient_email="dict[Any, Any]@example.com",
             priority={},  # type: ignore[arg-type]
         )
     # 3. int — 非 str 类型

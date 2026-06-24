@@ -645,7 +645,7 @@ class NoteStructurerService:
             apple_note_id=apple_note_id,
             last_error=last_error,
             consecutive_failures=consecutive_failures,
-            reason=reason,  # type: ignore[arg-type]  # Literal 严判已过
+            reason=reason,
         )
 
 

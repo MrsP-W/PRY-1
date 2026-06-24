@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Note ORM 12 列 create_all(v0.2.1 #4 sync_status + #5 normalized_fingerprint)。"""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -49,8 +49,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture

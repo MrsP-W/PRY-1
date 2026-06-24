@@ -38,7 +38,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + Note ORM 14 列 create_all(v0.2.1 #4 + #5 + v0.2.1+ L2 跨源)。"""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -51,8 +51,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -218,7 +218,7 @@ def test_list_by_needs_confirm_returns_only_candidates(store: Any) -> Any:
 
 
 def test_list_by_needs_confirm_empty_when_no_candidates(store: Any) -> Any:
-    """3.2 无 L2 候选时返空 list(全部 needs_confirm=0)。"""
+    """3.2 无 L2 候选时返空 list[Any](全部 needs_confirm=0)。"""
     store.insert(
         apple_note_id="x-coredata://test/note-001",
         folder="Notes",

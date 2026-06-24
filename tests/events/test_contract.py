@@ -151,7 +151,7 @@ class TestAssertEventInvariants:
     def test_seq_wrong_type_raises_metadata_error(self) -> None:
         """seq 必须是 int, 实际 str → EventMetadataError."""
         meta = build_event_metadata(seq=1, session_id="s")
-        meta["seq"] = "1"  # type: ignore[assignment]
+        meta["seq"] = "1"
         with pytest.raises(EventMetadataError, match="seq 必须是 int"):
             assert_event_invariants(EventType.LLM_CALL_STARTED, EventStatus.STARTED, meta)
 
@@ -170,7 +170,7 @@ class TestAssertEventInvariants:
     def test_invalid_ownership_in_metadata_raises_metadata_error(self) -> None:
         """metadata.ownership 不在 EventOwnership 枚举 → EventMetadataError."""
         meta = build_event_metadata(seq=1, session_id="s")
-        meta["ownership"] = "bogus"  # type: ignore[assignment]
+        meta["ownership"] = "bogus"
         with pytest.raises(EventMetadataError, match="ownership 非法"):
             assert_event_invariants(EventType.LLM_CALL_STARTED, EventStatus.STARTED, meta)
 

@@ -120,7 +120,7 @@ def test_evaluator_negative_age_raises() -> None:
 def test_evaluator_bool_age_rejected() -> None:
     """SLAEvaluator.evaluate age_ms=True → ValueError(bool 子类是 int,严判必须拒收)。"""
     with pytest.raises(ValueError, match="age_ms 必须是原生 int"):
-        SLAEvaluator.evaluate(priority="urgent", age_ms=True)  # type: ignore[arg-type]
+        SLAEvaluator.evaluate(priority="urgent", age_ms=True)
 
 
 # ===== E. 跨字段一致性 — 数据类 vs evaluate() 双重校验(3 tests)=====

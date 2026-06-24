@@ -357,7 +357,7 @@ class MicrosoftOAuth2(OAuth2Provider):
         client = self._build_msal_client(validated_config)
         # 沿 [[d3.3.3-sqlcipher-integrityerror]] except 范围窄化:仅捕 msal/网络异常
         try:
-            result: dict[str, Any] = client.acquire_token_by_authorization_code(  # type: ignore[attr-defined]
+            result: dict[str, Any] = client.acquire_token_by_authorization_code(
                 code=validated_code,
                 scopes=list(validated_config.scope) or list(self._default_scopes),
                 redirect_uri=validated_config.redirect_uri,
@@ -400,7 +400,7 @@ class MicrosoftOAuth2(OAuth2Provider):
         client = self._build_msal_client(validated_config)
         # 沿 [[d3.3.3-sqlcipher-integrityerror]] except 范围窄化
         try:
-            result: dict[str, Any] = client.acquire_token_by_refresh_token(  # type: ignore[attr-defined]
+            result: dict[str, Any] = client.acquire_token_by_refresh_token(
                 refresh_token=validated_refresh,
                 scopes=list(validated_config.scope) or list(self._default_scopes),
             )
@@ -443,9 +443,9 @@ class MicrosoftOAuth2(OAuth2Provider):
             )
 
         # 函数内 import:6/19 commit 2 测试不依赖 msal,6/22 commit 5 加 dep
-        import msal  # type: ignore[import-untyped]
+        import msal
 
-        return msal.ConfidentialClientApplication(  # type: ignore[attr-defined]
+        return msal.ConfidentialClientApplication(
             client_id=config.client_id,
             client_credential=config.client_secret,
             authority=MICROSOFT_AUTHORITY_COMMON,

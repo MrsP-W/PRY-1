@@ -3,7 +3,7 @@
 承接 D8.1 MerchantProfile + Store + D6.4 TransactionStore + D7 跨源去重。
 本测试覆盖 12 cases:
 
-    1. AnomalyResult 数据类严判(3 tests) — kind 白名单 / context dict / detected_at_ms 类型
+    1. AnomalyResult 数据类严判(3 tests) — kind 白名单 / context dict[Any, Any] / detected_at_ms 类型
     2. detect_amount_anomaly 源内 σ 检测(2 tests) — 异常触发 / 冷启动 < 30 笔 fallback
     3. detect_frequency_anomaly 频率检测(2 tests) — 异常触发 / 边界 = 5 笔
     4. detect_duplicate_charge 重复扣款(2 tests) — 同 fingerprint 多笔 / 边界
@@ -49,7 +49,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + MerchantProfile + Transaction 2 ORM create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -63,8 +63,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker(expire_on_commit=False 避免 commit 后 attribute 过期)."""
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    """返回 sessionmaker[Any](expire_on_commit=False 避免 commit 后 attribute 过期)."""
+    return sessionmaker[Any](bind=engine, expire_on_commit=False)
 
 
 @pytest.fixture
@@ -154,7 +154,7 @@ def test_anomaly_result_kind_whitelist_validates() -> None:
 
 
 def test_anomaly_result_context_must_be_dict() -> None:
-    """Case 2 — AnomalyResult context 必 dict 类型."""
+    """Case 2 — AnomalyResult context 必 dict[Any, Any] 类型."""
     from my_ai_employee.core.anomaly_detector import AnomalyResult
     from my_ai_employee.db.transactions import Transaction
 
@@ -169,12 +169,12 @@ def test_anomaly_result_context_must_be_dict() -> None:
         imported_at_ms=1_700_000_000_000,
         raw_row_json="{}",
     )
-    # 非 dict → TypeError
-    with pytest.raises(TypeError, match="context 必须是 dict"):
+    # 非 dict[Any, Any] → TypeError
+    with pytest.raises(TypeError, match="context 必须是 dict[Any, Any]"):
         AnomalyResult(
             kind="amount_3sigma",
             tx=tx,
-            context="not a dict",  # type: ignore[arg-type]
+            context="not a dict[Any, Any]",  # type: ignore[arg-type]
             detected_at_ms=0,
         )
 
@@ -201,7 +201,7 @@ def test_anomaly_result_detected_at_ms_rejects_bool() -> None:
             kind="amount_3sigma",
             tx=tx,
             context={},
-            detected_at_ms=True,  # type: ignore[arg-type]
+            detected_at_ms=True,
         )
     # 负数 → ValueError
     with pytest.raises(ValueError, match="detected_at_ms 必须是原生 int"):

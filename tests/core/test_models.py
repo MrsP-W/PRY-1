@@ -5,7 +5,7 @@
     - 6 个 Model 的 CRUD 基本操作
     - 关系（Email.attachments / Email.labels / Attachment.email 等）
     - 级联删除（Email.delete → Attachment 自动删；Label.delete → EmailLabel 自动删）
-    - JSON 字段（recipients / labels list[dict]）往返
+    - JSON 字段（recipients / labels list[dict[Any, Any]]）往返
     - UNIQUE 约束（emails.source+uid / labels.name+source）
     - 可空字段（message_id / received_at）
     - server_default 生效（last_status="pending" / last_error=""）
@@ -64,7 +64,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_keychain(monkeypatch: Any) -> Any:
-    """用 in-memory dict 模拟 Keychain（避免污染真实 macOS Keychain）。"""
+    """用 in-memory dict[Any, Any] 模拟 Keychain（避免污染真实 macOS Keychain）。"""
     store: dict[tuple[str, str], str] = {}
 
     def fake_get() -> keychain.KeychainResult:
@@ -83,7 +83,7 @@ def fake_keychain(monkeypatch: Any) -> Any:
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     """打开 DB + 应用 schema + yield（测试后自动 close）。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -93,12 +93,12 @@ def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]
 
 
 @pytest.fixture
-def session_factory(db_with_schema: Database) -> Any:  # type: ignore[no-untyped-def]
-    """返回 SQLAlchemy sessionmaker（绑 SQLCipher engine）。"""
+def session_factory(db_with_schema: Database) -> Any:
+    """返回 SQLAlchemy sessionmaker[Any]（绑 SQLCipher engine）。"""
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 # ===== Metadata / 6 个 Model 注册 =====
@@ -135,7 +135,7 @@ def test_twelve_models_registered_in_metadata() -> None:
 # ===== CRUD — Email =====
 
 
-def test_email_create_and_query(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_create_and_query(session_factory: Any) -> None:
     """Email: 创建 + session.get 重查 + 字段一致。"""
     with session_factory() as session:
         e = Email(
@@ -163,14 +163,14 @@ def test_email_create_and_query(session_factory: Any) -> None:  # type: ignore[n
         assert got.uid == 1
         assert got.message_id == "<msg@x.com>"
         assert got.subject == "Hello"
-        # JSON 字段：list 往返
+        # JSON 字段：list[Any] 往返
         assert got.recipients == ["bob@example.com", "carol@example.com"]
         assert got.labels == ["inbox", "important"]
         assert got.received_at == 1_700_000_000_000
         assert got.fetched_at == 1_700_000_001_000
 
 
-def test_email_message_id_nullable(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_message_id_nullable(session_factory: Any) -> None:
     """Email.message_id 可空（D3.1.1 修正）。"""
     with session_factory() as session:
         e = Email(
@@ -191,7 +191,7 @@ def test_email_message_id_nullable(session_factory: Any) -> None:  # type: ignor
         assert got.message_id is None
 
 
-def test_email_received_at_nullable(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_received_at_nullable(session_factory: Any) -> None:
     """Email.received_at 可空（D3.1.1 修正）。"""
     with session_factory() as session:
         e = Email(
@@ -212,7 +212,7 @@ def test_email_received_at_nullable(session_factory: Any) -> None:  # type: igno
         assert got.fetched_at == 2000
 
 
-def test_email_default_values(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_default_values(session_factory: Any) -> None:
     """Email 默认值：subject=""/sender=""/recipients=[]/labels=[]/raw_size=0。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -232,7 +232,7 @@ def test_email_default_values(session_factory: Any) -> None:  # type: ignore[no-
         assert got.body_html == ""
 
 
-def test_email_unique_constraint_source_uid(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_unique_constraint_source_uid(session_factory: Any) -> None:
     """emails UNIQUE(source, uid) 约束生效（重复 uid 抛 IntegrityError）。"""
     with session_factory() as session:
         session.add(Email(source="qq", uid=1, fetched_at=1000))
@@ -246,7 +246,7 @@ def test_email_unique_constraint_source_uid(session_factory: Any) -> None:  # ty
 # ===== CRUD — Attachment =====
 
 
-def test_attachment_create_and_query(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_attachment_create_and_query(session_factory: Any) -> None:
     """Attachment: 创建 + 关联到 email + 重查。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -273,7 +273,7 @@ def test_attachment_create_and_query(session_factory: Any) -> None:  # type: ign
 # ===== CRUD — Label + EmailLabel =====
 
 
-def test_label_unique_name_source(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_label_unique_name_source(session_factory: Any) -> None:
     """labels UNIQUE(name, source) 约束生效。"""
     with session_factory() as session:
         session.add(Label(name="inbox", source="qq"))
@@ -284,7 +284,7 @@ def test_label_unique_name_source(session_factory: Any) -> None:  # type: ignore
         session.commit()
 
 
-def test_label_default_color(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_label_default_color(session_factory: Any) -> None:
     """Label 默认 color = "#808080" / source = "system"（server_default）。"""
     with session_factory() as session:
         label = Label(name="auto")
@@ -302,7 +302,7 @@ def test_label_default_color(session_factory: Any) -> None:  # type: ignore[no-u
 # ===== 关系 — Email ↔ Attachment =====
 
 
-def test_email_attachments_relationship(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_attachments_relationship(session_factory: Any) -> None:
     """Email.attachments 反向关系：1 个 email 多个 attachments。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -321,7 +321,7 @@ def test_email_attachments_relationship(session_factory: Any) -> None:  # type: 
         assert {a.filename for a in got.attachments} == {"a.txt", "b.txt"}
 
 
-def test_attachment_email_back_populates(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_attachment_email_back_populates(session_factory: Any) -> None:
     """Attachment.email 反向关系：attachment 拿到 email 实例。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -339,7 +339,7 @@ def test_attachment_email_back_populates(session_factory: Any) -> None:  # type:
 # ===== 级联删除 — Email → Attachment =====
 
 
-def test_cascade_delete_email_to_attachments(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_cascade_delete_email_to_attachments(session_factory: Any) -> None:
     """删 Email 自动删附件（cascade="all, delete-orphan" + FK ON DELETE CASCADE）。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -366,7 +366,7 @@ def test_cascade_delete_email_to_attachments(session_factory: Any) -> None:  # t
 # ===== CRUD — SyncState =====
 
 
-def test_sync_state_default_last_status_pending(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_sync_state_default_last_status_pending(session_factory: Any) -> None:
     """SyncState.last_status server_default = 'pending'。"""
     with session_factory() as session:
         s = SyncState(source="outlook", updated_at=3000)
@@ -384,7 +384,7 @@ def test_sync_state_default_last_status_pending(session_factory: Any) -> None:  
         assert got.consecutive_failures == 0
 
 
-def test_sync_state_unique_source(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_sync_state_unique_source(session_factory: Any) -> None:
     """sync_state UNIQUE(source) 约束。"""
     with session_factory() as session:
         session.add(SyncState(source="qq", updated_at=2000))
@@ -398,7 +398,7 @@ def test_sync_state_unique_source(session_factory: Any) -> None:  # type: ignore
 # ===== CRUD — AuditLog =====
 
 
-def test_audit_log_create_and_query(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_audit_log_create_and_query(session_factory: Any) -> None:
     """AuditLog: 创建 + event/source/detail/created_at 都持久化。"""
     with session_factory() as session:
         a = AuditLog(
@@ -423,7 +423,7 @@ def test_audit_log_create_and_query(session_factory: Any) -> None:  # type: igno
 # ===== 联合查询 — Email JOIN Attachment =====
 
 
-def test_email_attachments_filter_by_email(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_attachments_filter_by_email(session_factory: Any) -> None:
     """关系查询：拿某个 email 的所有附件（D3 阶段用得多）。"""
     with session_factory() as session:
         e1 = Email(source="qq", uid=1, sender="x@y.com", fetched_at=1000)
@@ -449,7 +449,7 @@ def test_email_attachments_filter_by_email(session_factory: Any) -> None:  # typ
 # ===== D3.2.3 修复补全：Label COLLATE NOCASE 唯一性 =====
 
 
-def test_label_unique_name_case_insensitive(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_label_unique_name_case_insensitive(session_factory: Any) -> None:
     """labels UNIQUE(name, source) + COLLATE NOCASE → "Inbox" 和 "inbox" 视为同名冲突。
 
     D3.2.3 修复：补 NOCASE 大小写唯一性测试（阻塞问题 1 闭环）。
@@ -464,7 +464,7 @@ def test_label_unique_name_case_insensitive(session_factory: Any) -> None:  # ty
         session.commit()
 
 
-def test_label_unique_name_case_insensitive_upper(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_label_unique_name_case_insensitive_upper(session_factory: Any) -> None:
     """labels COLLATE NOCASE → "INBOX" / "inbox" / "Inbox" 任意大小写组合都冲突。"""
     with session_factory() as session:
         session.add(Label(name="INBOX", source="system"))
@@ -475,7 +475,7 @@ def test_label_unique_name_case_insensitive_upper(session_factory: Any) -> None:
         session.commit()
 
 
-def test_label_unique_name_source_distinguishes(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_label_unique_name_source_distinguishes(session_factory: Any) -> None:
     """UNIQUE(name, source) 是组合键 — 同名但 source 不同应允许。"""
     with session_factory() as session:
         session.add(Label(name="Inbox", source="qq"))
@@ -492,7 +492,7 @@ def test_label_unique_name_source_distinguishes(session_factory: Any) -> None:  
 # ===== D3.2.3 修复补全：EmailLabel 多对多关系 =====
 
 
-def test_email_label_create_and_back_populates(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_email_label_create_and_back_populates(session_factory: Any) -> None:
     """EmailLabel 创建 + Email.email_labels / Label.email_labels 双向反查。
 
     D3.2.3 修复：补 EmailLabel 关系测试（阻塞问题 4 闭环）。
@@ -526,7 +526,7 @@ def test_email_label_create_and_back_populates(session_factory: Any) -> None:  #
         assert el_got.label.name == "inbox"
 
 
-def test_cascade_delete_label_to_email_labels(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_cascade_delete_label_to_email_labels(session_factory: Any) -> None:
     """删 Label 自动删 EmailLabel 关联行（cascade="all, delete-orphan"）。
 
     D3.2.3 修复：补 Label→EmailLabel 级联删除测试。
@@ -556,7 +556,7 @@ def test_cascade_delete_label_to_email_labels(session_factory: Any) -> None:  # 
         assert e_got is not None
 
 
-def test_cascade_delete_email_to_email_labels(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_cascade_delete_email_to_email_labels(session_factory: Any) -> None:
     """删 Email 自动删 EmailLabel 关联行（双向级联）。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -579,10 +579,10 @@ def test_cascade_delete_email_to_email_labels(session_factory: Any) -> None:  # 
         assert session.get(Label, lid) is not None
 
 
-# ===== D3.2.3 修复补全：JSONList TypeDecorator 边界 =====
+# ===== D3.2.3 修复补全：JSONList TypeDecorator[Any] 边界 =====
 
 
-def test_jsonlist_serialize_deserialize(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_jsonlist_serialize_deserialize(session_factory: Any) -> None:
     """JSONList 字段存 list[str] / 读回 list[str]（含中文 + 边界）。"""
     with session_factory() as session:
         e = Email(
@@ -605,7 +605,7 @@ def test_jsonlist_serialize_deserialize(session_factory: Any) -> None:  # type: 
         assert got.labels == ["收件箱", "重要"]
 
 
-def test_jsonlist_default_empty_list_on_read(session_factory: Any) -> None:  # type: ignore[no-untyped-def]
+def test_jsonlist_default_empty_list_on_read(session_factory: Any) -> None:
     """JSONList 字段缺省 / 空字符串读出 []（不让 None 蔓延到业务层）。"""
     with session_factory() as session:
         e = Email(source="qq", uid=1, sender="x@y.com", fetched_at=2000)
@@ -624,7 +624,7 @@ def test_jsonlist_default_empty_list_on_read(session_factory: Any) -> None:  # t
 # ===== D3.2.3 修复补全：DESC 索引 SQL 渲染正确 =====
 
 
-def test_emails_received_at_index_is_desc(tmp_db_path: Path, fake_keychain: dict) -> None:
+def test_emails_received_at_index_is_desc(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> None:
     """idx_emails_received_at 真实 SQL 是 DESC（D3.1 schema 决策对齐）。"""
     from sqlalchemy import inspect
 

@@ -5,7 +5,7 @@
 
     1. ORM 模型列名/类型(2 tests) — __tablename__ + 8 字段名 + UNIQUE 约束
     2. 严判 helper(2 tests) — _validate_counterparty / _validate_amount 边界
-    3. compute_profile 冷启动/正常(2 tests) — < 5 笔 → None / >= 5 笔 → dict
+    3. compute_profile 冷启动/正常(2 tests) — < 5 笔 → None / >= 5 笔 → dict[Any, Any]
     4. upsert_profile insert / update(2 tests) — 新增 + 覆盖
 
 D3.2 8 雷区严判(全部应用):
@@ -53,7 +53,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + MerchantProfile ORM 8 列 + Transaction ORM 16 列 create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -67,8 +67,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -212,7 +212,7 @@ def test_compute_profile_returns_none_when_history_below_threshold(
 
 
 def test_compute_profile_returns_dict_with_correct_stats(store: Any, tx_store: Any) -> None:
-    """Case 6 — compute_profile >= 5 笔 → dict 含 avg_amount + amount_std + tx_count."""
+    """Case 6 — compute_profile >= 5 笔 → dict[Any, Any] 含 avg_amount + amount_std + tx_count."""
     # 插 10 笔 ¥50.00(同金额 σ=0)
     _seed_history(tx_store, "星巴克", n=10, base_amount=Decimal("50.00"))
 

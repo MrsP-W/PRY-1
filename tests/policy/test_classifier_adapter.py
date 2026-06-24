@@ -128,7 +128,7 @@ class TestFactoryFunctions:
         """D4.5 P0 教训应用: 严判入口拒 bool 子类/负数/越界."""
         with pytest.raises(ValueError):
             build_classify_packet(
-                email_id=True,  # type: ignore[arg-type]  # bool 是 int 子类
+                email_id=True,
                 source="qq",
                 category_value="URGENT",
                 model_full_id="m",
@@ -180,7 +180,7 @@ class TestFactoryFunctions:
                 source="qq",
                 category_value="URGENT",
                 model_full_id="m",
-                confidence=True,  # type: ignore[arg-type]  # bool 拒收(D4.4 P1)
+                confidence=True,
             )
 
     def test_build_classify_packet_provider_parsing(self) -> None:
@@ -255,7 +255,7 @@ class TestFactoryFunctions:
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                consecutive_classify_failures=True,  # type: ignore[arg-type]
+                consecutive_classify_failures=True,
             )
         with pytest.raises(ValueError):
             build_classify_policy_context(
@@ -575,7 +575,7 @@ class TestClassifyAndEmit:
         classification = FakeClassification.make()
         with pytest.raises(ValueError):
             a.classify_and_emit(
-                email_id=True,  # type: ignore[arg-type]
+                email_id=True,
                 classification=classification,
                 run_id="r-bad-email-id",
             )
@@ -610,7 +610,7 @@ class TestClassifyAndEmit:
             a.record_classify_failure_and_emit(
                 email_id=1,
                 last_error="x",
-                consecutive_classify_failures=True,  # type: ignore[arg-type]
+                consecutive_classify_failures=True,
                 run_id="r-bool-cf",
             )
 
@@ -727,7 +727,7 @@ class TestD46V101AdapterFixes:
         @dataclass
         class BadConfBool:
             category_value: str = "URGENT"
-            confidence: object = True  # type: ignore[assignment]
+            confidence: object = True
             model_full_id: str = "deepseek/deepseek-chat"
             latency_ms: int = 1000
 
@@ -752,7 +752,7 @@ class TestD46V101AdapterFixes:
         @dataclass
         class BadConfStr:
             category_value: str = "URGENT"
-            confidence: object = "0.5"  # type: ignore[assignment]
+            confidence: object = "0.5"
             model_full_id: str = "deepseek/deepseek-chat"
             latency_ms: int = 1000
 
@@ -779,7 +779,7 @@ class TestD46V101AdapterFixes:
             category_value: str = "URGENT"
             confidence: float = 0.9
             model_full_id: str = "deepseek/deepseek-chat"
-            latency_ms: object = True  # type: ignore[assignment]
+            latency_ms: object = True
 
             @property
             def category(self) -> Any:
@@ -962,7 +962,7 @@ class TestD46V102AdapterFixes:
                 source="qq",
                 category_value="URGENT",
                 model_full_id="m",
-                confidence=float("nan"),  # type: ignore[arg-type]
+                confidence=float("nan"),
             )
 
     def test_build_classify_packet_inf_rejected(self) -> None:

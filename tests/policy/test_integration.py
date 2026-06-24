@@ -192,7 +192,7 @@ class TestFactoryFunctions:
 
         # consecutive_failures 严判
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
-            build_sync_policy_context(result=result, consecutive_failures=True)  # type: ignore[arg-type]
+            build_sync_policy_context(result=result, consecutive_failures=True)
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             build_sync_policy_context(result=result, consecutive_failures="3")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
@@ -432,7 +432,7 @@ class TestEvaluateAndEmit:
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             a.evaluate_and_emit(result, consecutive_failures=-1)
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
-            a.evaluate_and_emit(result, consecutive_failures=True)  # type: ignore[arg-type]
+            a.evaluate_and_emit(result, consecutive_failures=True)
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             a.evaluate_and_emit(result, consecutive_failures="2")  # type: ignore[arg-type]
 

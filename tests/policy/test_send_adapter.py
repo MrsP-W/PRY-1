@@ -34,7 +34,7 @@ import sys
 import time
 from email.message import EmailMessage
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -83,7 +83,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]:
-    """用 in-memory dict 模拟 Keychain(避免污染真实 macOS Keychain)。"""
+    """用 in-memory dict[Any, Any] 模拟 Keychain(避免污染真实 macOS Keychain)。"""
     store: dict[tuple[str, str], str] = {}
 
     def fake_get() -> keychain.KeychainResult:
@@ -102,7 +102,7 @@ def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> dict[tuple[str, str], str]
 
 
 @pytest.fixture
-def db_with_schema(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db_with_schema(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     """打开 DB + Base.metadata.create_all + yield(测试后自动 close)。"""
     db = Database.open(db_path=tmp_db_path)
     engine = make_sqlalchemy_engine(db)
@@ -123,11 +123,11 @@ def make_sqlalchemy_engine(db: Database):  # type: ignore[no-untyped-def]
 
 @pytest.fixture
 def session_factory(db_with_schema: Database):  # type: ignore[no-untyped-def]
-    """返回 SQLAlchemy sessionmaker(绑 SQLCipher engine)。"""
+    """返回 SQLAlchemy sessionmaker[Any](绑 SQLCipher engine)。"""
     from sqlalchemy.orm import sessionmaker
 
     engine = make_sqlalchemy_engine(db_with_schema)
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -1198,7 +1198,7 @@ def test_send_and_emit_requires_approval_provenance(
     )
 
     # 直接修改 DB:status=APPROVED, last_approved_at_ms=None(模拟漏洞场景)
-    with store._session_factory() as session:  # type: ignore[attr-defined]
+    with store._session_factory() as session:
         session.execute(
             update(OutboxEntry)
             .where(OutboxEntry.id == outbox_id)
@@ -1492,7 +1492,7 @@ def test_send_blacklist_inactive_soft_deleted_not_blocked(
 def test_send_blacklist_store_dict_type_mismatch_rejected(
     store: OutboxStore, smtp_transport: InMemorySmtpTransport
 ) -> None:
-    """B4.3-6 blacklist_store 传 dict → ValueError(type 严判,拒 duck-typed fake)。
+    """B4.3-6 blacklist_store 传 dict[Any, Any] → ValueError(type 严判,拒 duck-typed fake)。
 
     复用 outbox_adapter._validate_outbox_blacklist_store(type() is 严格):
     黑名单 SMTP 二次防御是安全门,严禁子类偷偷绕过严判。
@@ -1503,7 +1503,7 @@ def test_send_blacklist_store_dict_type_mismatch_rejected(
     }
     with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
         EmailSendAdapter(
-            source="test-send-b43-dict",
+            source="test-send-b43-dict[Any, Any]",
             outbox_store=store,
             smtp_transport=smtp_transport,
             blacklist_store=fake_dict,  # type: ignore[arg-type]
@@ -1517,4 +1517,4 @@ def session_factory_for_test(store: OutboxStore):  # type: ignore[no-untyped-def
     保证 RecipientBlacklist 与 OutboxEntry 在同一 session 内可见。
     """
     # OutboxStore.__init__ 接受 session_factory,反射取出
-    return store._session_factory  # type: ignore[attr-defined]
+    return store._session_factory

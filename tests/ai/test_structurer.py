@@ -55,7 +55,7 @@ def engine() -> Any:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -92,7 +92,7 @@ class FakeLLMRouter:
     def route(
         self,
         task_type: Any,
-        messages: list[dict],
+        messages: list[dict[Any, Any]],
         temperature: float = 0.3,
         max_tokens: int = 1024,
     ) -> LLMResponse:
@@ -152,7 +152,7 @@ class TestInit:
         with pytest.raises(ValueError, match="store 必传非 None"):
             NoteStructurerService(store=None, llm_provider=FakeLLMRouter())  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="llm_provider 必传非 None"):
-            NoteStructurerService(store=store, llm_provider=None)  # type: ignore[arg-type]
+            NoteStructurerService(store=store, llm_provider=None)
 
 
 # ===== 2. structure_and_emit 成功路径(1 test)=====

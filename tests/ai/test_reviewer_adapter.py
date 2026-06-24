@@ -137,14 +137,14 @@ class TestValidateReviewBlockReason:
         from my_ai_employee.policy.integration import _validate_review_block_reason
 
         with pytest.raises(ValueError, match="block_reason 必须是 str"):
-            _validate_review_block_reason(42)  # type: ignore[arg-type]
+            _validate_review_block_reason(42)
 
     def test_unhashable_rejected_as_valueerror(self) -> None:
         """D4.7.3 v1.0.5 P2-1 范本: type 严判在前, 防 TypeError 泄漏."""
         from my_ai_employee.policy.integration import _validate_review_block_reason
 
         with pytest.raises(ValueError, match="block_reason 必须是 str"):
-            _validate_review_block_reason([])  # type: ignore[arg-type]
+            _validate_review_block_reason([])
 
 
 # ============================================================
@@ -188,7 +188,7 @@ class TestValidateReviewSummary:
         from my_ai_employee.policy.integration import _validate_review_summary
 
         with pytest.raises(ValueError, match="review_summary 必须是 str"):
-            _validate_review_summary(123)  # type: ignore[arg-type]
+            _validate_review_summary(123)
 
 
 # ============================================================
@@ -214,13 +214,13 @@ class TestValidateReviewFlaggedIssues:
         from my_ai_employee.policy.integration import _validate_review_flagged_issues
 
         with pytest.raises(ValueError, match="flagged_issues 必须是 list"):
-            _validate_review_flagged_issues("not a list", required=False)  # type: ignore[arg-type]
+            _validate_review_flagged_issues("not a list", required=False)
 
     def test_non_str_element_rejected(self) -> None:
         from my_ai_employee.policy.integration import _validate_review_flagged_issues
 
         with pytest.raises(ValueError, match=r"flagged_issues\[0\] 必须是 str"):
-            _validate_review_flagged_issues([42, "ok"], required=False)  # type: ignore[list-item]
+            _validate_review_flagged_issues([42, "ok"], required=False)
 
     def test_valid_list_passes(self) -> None:
         from my_ai_employee.policy.integration import _validate_review_flagged_issues
@@ -261,7 +261,7 @@ class TestValidateReviewBlockedWord:
         from my_ai_employee.policy.integration import _validate_review_blocked_word
 
         with pytest.raises(ValueError, match="blocked_word 必须是 str"):
-            _validate_review_blocked_word(123, reason="sensitive_word_hit")  # type: ignore[arg-type]
+            _validate_review_blocked_word(123, reason="sensitive_word_hit")
 
 
 # ============================================================
@@ -366,7 +366,7 @@ class TestBuildReviewPacket:
     def test_strict_type_rejection(self) -> None:
         with pytest.raises(ValueError):
             build_review_packet(
-                email_id=True,  # type: ignore[arg-type]
+                email_id=True,
                 source="qq",
                 tone="FORMAL",
                 model_full_id="m",
@@ -727,7 +727,7 @@ class TestReviewAndEmit:
             category="URGENT",
             run_id="r-lane-finished",
         )
-        lane = adapter._board.get("review:qq:r-lane-finished")  # type: ignore[union-attr]
+        lane = adapter._board.get("review:qq:r-lane-finished")
         assert lane.status == LaneStatus.FINISHED
 
     def test_review_passed_false_rejected(self, adapter: EmailReviewerAdapter) -> None:
@@ -746,13 +746,13 @@ class TestReviewAndEmit:
         result = FakeReviewResult.make()
         with pytest.raises(ValueError, match="email_id 必须是原生 int >= 0"):
             adapter.review_and_emit(
-                email_id=-1,  # type: ignore[arg-type]
+                email_id=-1,
                 review_result=result,
                 category="URGENT",
             )
         with pytest.raises(ValueError, match="email_id 必须是原生 int >= 0"):
             adapter.review_and_emit(
-                email_id=True,  # type: ignore[arg-type]
+                email_id=True,
                 review_result=result,
                 category="URGENT",
             )
@@ -785,7 +785,7 @@ class TestReviewAndEmit:
         with pytest.raises(ValueError, match="review_result.body 缺失"):
             adapter.review_and_emit(
                 email_id=42,
-                review_result=Incomplete(),  # type: ignore[arg-type]
+                review_result=Incomplete(),
                 category="URGENT",
             )
 
@@ -892,7 +892,7 @@ class TestRecordReviewBusinessBlockedAndEmit:
             last_error="err",
             run_id="r-bblocked-lane",
         )
-        lane = adapter._board.get("review:qq:r-bblocked-lane")  # type: ignore[union-attr]
+        lane = adapter._board.get("review:qq:r-bblocked-lane")
         assert lane.status == LaneStatus.BLOCKED
 
     def test_invalid_reason_rejected(self, adapter: EmailReviewerAdapter) -> None:
@@ -901,7 +901,7 @@ class TestRecordReviewBusinessBlockedAndEmit:
                 email_id=42,
                 tone="FORMAL",
                 original_email_category="URGENT",
-                reason="other",  # type: ignore[arg-type]
+                reason="other",
                 blocked_word="",
                 flagged_issues=["x"],
                 review_summary="x",
@@ -1025,7 +1025,7 @@ class TestRecordReviewFailureAndEmit:
             consecutive_review_failures=1,
             run_id="r-fail-lane",
         )
-        lane = adapter._board.get("review:qq:r-fail-lane")  # type: ignore[union-attr]
+        lane = adapter._board.get("review:qq:r-fail-lane")
         assert lane.status == LaneStatus.BLOCKED
 
     def test_event_store_failed_kind(self, adapter: EmailReviewerAdapter) -> None:
@@ -1132,7 +1132,7 @@ class TestReviewDecisionReportStrongConsistency:
     def test_review_passed_false_rejected(self) -> None:
         """D4.7.4 范本: Literal[True] 类型层面固化."""
         with pytest.raises(ValueError, match="review_passed 必为 True"):
-            ReviewDecisionReport(**self._make_args(review_passed=False))  # type: ignore[arg-type]
+            ReviewDecisionReport(**self._make_args(review_passed=False))
 
     def test_blank_summary_rejected(self) -> None:
         with pytest.raises(ValueError, match="review_summary"):
@@ -1240,11 +1240,11 @@ class TestReviewBlockedDecisionReportStrongConsistency:
     def test_blocked_false_rejected(self) -> None:
         """D4.7.4 范本: blocked 必为 True."""
         with pytest.raises(ValueError, match="blocked 必为 True"):
-            ReviewBlockedDecisionReport(**self._make_args(blocked=False))  # type: ignore[arg-type]
+            ReviewBlockedDecisionReport(**self._make_args(blocked=False))
 
     def test_kind_must_be_business_blocked(self) -> None:
         with pytest.raises(ValueError, match="kind 必为 'business_blocked'"):
-            ReviewBlockedDecisionReport(**self._make_args(kind="technical"))  # type: ignore[arg-type]
+            ReviewBlockedDecisionReport(**self._make_args(kind="technical"))
 
     def test_cf_must_be_zero(self) -> None:
         """D4.7.4 范本: 业务阻断 cf=0(不计入失败累加器)."""
@@ -1269,9 +1269,7 @@ class TestReviewBlockedDecisionReportStrongConsistency:
 
     def test_invalid_reason_rejected(self) -> None:
         with pytest.raises(ValueError, match="block_reason"):
-            ReviewBlockedDecisionReport(
-                **self._make_args(reason="other", blocked_word="")  # type: ignore[arg-type]
-            )
+            ReviewBlockedDecisionReport(**self._make_args(reason="other", blocked_word=""))
 
     def test_invalid_category_rejected(self) -> None:
         with pytest.raises(ValueError):
@@ -1340,7 +1338,7 @@ class TestReviewFailureDecisionReportStrongConsistency:
     def test_failed_false_rejected(self) -> None:
         """D4.7.4 范本: failed 必为 True."""
         with pytest.raises(ValueError, match="failed 必为 True"):
-            ReviewFailureDecisionReport(**self._make_args(failed=False))  # type: ignore[arg-type]
+            ReviewFailureDecisionReport(**self._make_args(failed=False))
 
     def test_cf_must_be_positive(self) -> None:
         with pytest.raises(ValueError, match="consecutive_review_failures 必须是原生 int >= 1"):

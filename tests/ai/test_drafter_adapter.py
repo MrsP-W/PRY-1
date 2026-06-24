@@ -146,7 +146,7 @@ class TestFactoryFunctions:
         """D4.5 P0 教训应用: 严判入口拒 bool 子类/负数/越界/枚举外."""
         with pytest.raises(ValueError):
             build_draft_packet(
-                email_id=True,  # type: ignore[arg-type]
+                email_id=True,
                 source="qq",
                 tone="FORMAL",
                 model_full_id="m",
@@ -206,7 +206,7 @@ class TestFactoryFunctions:
                 source="qq",
                 tone="FORMAL",
                 model_full_id="m",
-                body_length=True,  # type: ignore[arg-type]
+                body_length=True,
             )
 
     def test_build_draft_packet_provider_parsing(self) -> None:
@@ -353,7 +353,7 @@ class TestFactoryFunctions:
                 tone="FORMAL",
                 latency_ms=1000,
                 body_length=50,
-                consecutive_draft_failures=True,  # type: ignore[arg-type]
+                consecutive_draft_failures=True,
             )
         with pytest.raises(ValueError):
             build_draft_policy_context(
@@ -513,7 +513,7 @@ class TestDraftAndEmit:
         with pytest.raises(ValueError):
             a.draft_and_emit(email_id=-1, draft_result=result, category="URGENT", run_id="r004")
         with pytest.raises(ValueError):
-            a.draft_and_emit(email_id=True, draft_result=result, category="URGENT", run_id="r004")  # type: ignore[arg-type]
+            a.draft_and_emit(email_id=True, draft_result=result, category="URGENT", run_id="r004")
 
     def test_draft_and_emit_strict_transport_alive(self) -> None:
         """严判 transport_alive bool."""

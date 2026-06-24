@@ -39,6 +39,6 @@ def session_factory(engine: Any) -> Any:
 
 
 @pytest.fixture
-def store(session_factory: Any) -> EventStore:  # type: ignore[no-untyped-def]
+def store(session_factory: Any) -> EventStore:
     """EventStore 实例."""
     return EventStore(session_factory)

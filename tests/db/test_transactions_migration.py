@@ -71,7 +71,7 @@ def tmp_db_path(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def alembic_cfg(tmp_db_path: Path, fake_keychain: dict) -> AlembicConfig:
+def alembic_cfg(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> AlembicConfig:
     """配 alembic 走项目根的 alembic.ini,env.py 自动捡到我们的 fake_keychain。"""
     return AlembicConfig(str(PROJECT_ROOT / "alembic.ini"))
 
@@ -83,7 +83,7 @@ def patched_database_open(tmp_db_path: Path, monkeypatch: Any) -> Any:
 
     original_open = db_module.Database.open
 
-    def patched_open(db_path: Any = None) -> Any:  # type: ignore[no-untyped-def]
+    def patched_open(db_path: Any = None) -> Any:
         return original_open(db_path=tmp_db_path)
 
     monkeypatch.setattr(db_module.Database, "open", staticmethod(patched_open))
@@ -95,7 +95,7 @@ def patched_database_open(tmp_db_path: Path, monkeypatch: Any) -> Any:
 
 def test_alembic_upgrade_creates_transactions_table_with_16_columns(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -157,7 +157,7 @@ def test_alembic_upgrade_creates_transactions_table_with_16_columns(
 
 def test_alembic_downgrade_drops_transactions_table(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -194,7 +194,7 @@ def test_alembic_downgrade_drops_transactions_table(
 
 def test_alembic_upgrade_downgrade_upgrade_idempotent(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -232,7 +232,7 @@ def test_alembic_upgrade_downgrade_upgrade_idempotent(
 
 def test_alembic_transactions_unique_constraint_exists(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
@@ -261,7 +261,7 @@ def test_alembic_transactions_unique_constraint_exists(
 
 def test_alembic_transactions_two_indexes_exist(
     tmp_db_path: Path,
-    fake_keychain: dict,
+    fake_keychain: dict[Any, Any],
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:

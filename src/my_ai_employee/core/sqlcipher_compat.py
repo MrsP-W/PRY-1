@@ -58,7 +58,7 @@ def make_sqlalchemy_creator(db: Database) -> Callable[[], _dbapi2.Connection]:
         接受 0 参数、返回 sqlcipher3 connection 的 callable
     """
 
-    def creator() -> _dbapi2.Connection:  # type: ignore[no-untyped-def]
+    def creator() -> _dbapi2.Connection:
         # D3.1.2 受控入口（不是私有 _conn）
         return db.connection
 

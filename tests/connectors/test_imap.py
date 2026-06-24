@@ -68,7 +68,7 @@ def test_connector_source_name_qq() -> None:
 def test_connector_unknown_provider_raises() -> None:
     """未知 provider 抛 ValueError。"""
     with pytest.raises(ValueError, match="未知 provider"):
-        IMAPConnector(provider="unknown", email="x@x.com")  # type: ignore[arg-type]
+        IMAPConnector(provider="unknown", email="x@x.com")
 
 
 def test_connector_outlook_raises_not_implemented() -> None:

@@ -45,7 +45,7 @@ if TYPE_CHECKING:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + RecipientBlacklist ORM 6 列 create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -58,8 +58,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ def store(session_factory: Any) -> RecipientBlacklistStore:
 
 
 @pytest.fixture
-def valid_bl_params() -> dict:
+def valid_bl_params() -> dict[Any, Any]:
     """典型合法 blacklist 入参(供 insert 测试复用)."""
     return {
         "recipient_email": "spam@example.com",
@@ -126,7 +126,9 @@ def test_recipient_blacklist_orm_unique_constraint_on_recipient_email() -> None:
 # ===== 2. insert 基础功能(3 tests)======
 
 
-def test_insert_full_fields(store: RecipientBlacklistStore, valid_bl_params: dict) -> None:
+def test_insert_full_fields(
+    store: RecipientBlacklistStore, valid_bl_params: dict[Any, Any]
+) -> None:
     """2.1 全字段插入 + 必填字段全在 + 默认值正确(reason/added_by/is_active)."""
     entry = store.insert(
         recipient_email=valid_bl_params["recipient_email"],

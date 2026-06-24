@@ -73,7 +73,7 @@ def test_retry_cf_seven_and_eight_same() -> None:
 def test_retry_cf_bool_rejected() -> None:
     """cf=True → ValueError(bool 子类是 int,严判必须拒收,D4.7.3 v1.0.5 P2-2 范本)。"""
     with pytest.raises(ValueError, match="consecutive_send_failures 必须是原生 int"):
-        compute_retry_after_ms(True)  # type: ignore[arg-type]
+        compute_retry_after_ms(True)
 
 
 def test_retry_cf_negative_rejected() -> None:

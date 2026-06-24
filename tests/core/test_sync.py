@@ -2,7 +2,7 @@
 
 覆盖（[docs/week1-mvp.md §D3.3 验收标准]）：
 
-    - 同步入口走 safe_fetch（mock 返回固定 list[dict]）
+    - 同步入口走 safe_fetch（mock 返回固定 list[dict[Any, Any]]）
     - 增量同步：基于 SyncState.last_uid 只拉新邮件
     - 100/批 commit ORM 入库
     - 失败隔离：单封失败不阻塞后续（用 raise_side_effect mock）
@@ -65,13 +65,13 @@ def fake_keychain(monkeypatch: Any) -> Any:
 
 
 @pytest.fixture
-def tmp_db_path(tmp_path: Path, fake_keychain: dict) -> Path:
+def tmp_db_path(tmp_path: Path, fake_keychain: dict[Any, Any]) -> Path:
     """测试用临时 DB 路径（设 fake_keychain 触发 set_db_password）。"""
     return tmp_path / "sync_test.db"
 
 
 @pytest.fixture
-def db(tmp_db_path: Path, fake_keychain: dict) -> Iterator[Database]:
+def db(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
     """打开真 SQLCipher DB（用 D3.1 schema.sql 初始化）。
 
     schema.sql 是多语句 DDL，走 `_conn.executescript()`（单语句 `execute`
@@ -127,7 +127,7 @@ class FakeIMAPConnector(BaseConnector):
         raise NotImplementedError("FakeIMAPConnector 不支持 healthcheck")
 
     async def safe_fetch(self, since: datetime) -> list[dict[str, Any]]:
-        return list(self._raw)
+        return list[Any](self._raw)
 
     async def close(self) -> None:
         self.close_called = True
@@ -276,7 +276,7 @@ class FailingBatchConnector(BaseConnector):
         raise NotImplementedError("FailingBatchConnector 不支持 healthcheck")
 
     async def safe_fetch(self, since: datetime) -> list[dict[str, Any]]:
-        return list(self._raw)
+        return list[Any](self._raw)
 
     async def close(self) -> None:
         pass
@@ -300,7 +300,7 @@ def test_sync_continues_after_batch_failure(
     sync = IMAPSync(db, connector, batch_size=100)
 
     # monkeypatch _commit_batch：第 1 次抛 OperationalError，后续正常
-    original_commit = sync._commit_batch  # type: ignore[attr-defined]  # noqa: SLF001
+    original_commit = sync._commit_batch
     call_count = {"n": 0}
 
     def maybe_fail(source: str, now_ms: int, batch: list[dict[str, Any]]) -> tuple[int, int, int]:
@@ -343,7 +343,7 @@ def test_sync_received_at_fallback_to_fetched_at(
 
     assert result.inserted == 1
     row = db.fetch_one("SELECT received_at, fetched_at FROM emails WHERE uid=1")
-    assert row is not None  # mypy：fetch_one 返回 dict | None
+    assert row is not None  # mypy：fetch_one 返回 dict[Any, Any] | None
     # received_at == fetched_at（fallback 成功）
     assert row["received_at"] == row["fetched_at"]
     assert row["received_at"] > 0  # 非零
@@ -410,7 +410,7 @@ def test_sync_updates_existing_sync_state(
 def test_sync_persists_jsonlist_fields(
     db: Database,
 ) -> None:
-    """JSONList 字段：recipients / labels list 入库后取出仍是 list。"""
+    """JSONList 字段：recipients / labels list[Any] 入库后取出仍是 list[Any]。"""
     raw = [
         {
             "uid": 1,
@@ -430,17 +430,17 @@ def test_sync_persists_jsonlist_fields(
     finally:
         sync.close()
 
-    # db.fetch_* 走 raw cursor，JSONList TypeDecorator 不生效（只在 ORM 层生效）
-    # D3.2.3 决策：DDL 走 TEXT，ORM 走 list；raw cursor 拿 JSON 字符串，需手动 loads
+    # db.fetch_* 走 raw cursor，JSONList TypeDecorator[Any] 不生效（只在 ORM 层生效）
+    # D3.2.3 决策：DDL 走 TEXT，ORM 走 list[Any]；raw cursor 拿 JSON 字符串，需手动 loads
     import json as _json
 
     row = db.fetch_one("SELECT recipients, labels FROM emails WHERE uid=1")
-    assert row is not None  # mypy：fetch_one 返回 dict | None
+    assert row is not None  # mypy：fetch_one 返回 dict[Any, Any] | None
     assert isinstance(row["recipients"], str)  # raw cursor 拿的是 JSON 文本
     assert _json.loads(row["recipients"]) == ["bob@x.com", "carol@x.com"]
     assert _json.loads(row["labels"]) == ["inbox", "important"]
 
-    # 对比：用 ORM 拿是 list（TypeDecorator 透明转换）
+    # 对比：用 ORM 拿是 list[Any]（TypeDecorator[Any] 透明转换）
     from sqlalchemy.orm import Session
 
     from my_ai_employee.core.models import Email as _Email

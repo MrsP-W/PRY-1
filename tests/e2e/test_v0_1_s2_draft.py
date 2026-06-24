@@ -51,7 +51,7 @@ def test_s2_draft_single_email() -> Any:
     """S2.1 — 单邮件 drafter 草稿生成 < 10s,body_length 10-8000,tone 在 3 类中."""
     from my_ai_employee.ai.drafter import DraftResult, DraftTone, EmailDrafter
 
-    drafter = EmailDrafter(router=_make_router_mock())  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=_make_router_mock())
 
     start = time.time()
     result = drafter.draft(
@@ -75,14 +75,14 @@ def test_s2_draft_batch_5_emails() -> Any:
     """S2.2 — 5 封 drafter 顺序生成,全部成功 < 30s."""
     from my_ai_employee.ai.drafter import DraftResult, EmailDrafter
 
-    drafter = EmailDrafter(router=_make_router_mock())  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=_make_router_mock())
     emails = [
         {"subject": f"邮件 #{i}", "sender": f"u{i}@x.com", "body_excerpt": f"内容 {i}"}
         for i in range(5)
     ]
 
     start = time.time()
-    results = drafter.draft_batch(emails)  # type: ignore[arg-type]
+    results = drafter.draft_batch(emails)
     elapsed = time.time() - start
 
     assert len(results) == 5
@@ -96,7 +96,7 @@ def test_s2_draft_spam_blocked_by_default() -> Any:
     from my_ai_employee.ai.classifier import EmailCategory
     from my_ai_employee.ai.drafter import EmailDrafter, SpamBlockedError
 
-    drafter = EmailDrafter(router=_make_router_mock())  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=_make_router_mock())
 
     with pytest.raises(SpamBlockedError):
         drafter.draft(

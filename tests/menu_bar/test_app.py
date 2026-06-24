@@ -472,7 +472,7 @@ def test_app_accepts_custom_note_confirm_service(fake_rumps: None) -> None:
             self.confirm_calls.append(apple_note_id)
 
     custom = _CustomConfirmService()
-    app = NotesMenuBarApp(note_confirm_service=custom)  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=custom)
     assert app._note_confirm_service is custom
     assert app._note_confirm_service.get_pending_confirm_count() == 7
 
@@ -530,7 +530,7 @@ def test_refresh_pending_confirm_count_updates_badge(fake_rumps: None) -> None:
         def confirm_note(self, apple_note_id: str) -> None:
             return None
 
-    app = NotesMenuBarApp(note_confirm_service=_StubConfirmService())  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=_StubConfirmService())
     # 触发刷新
     app._refresh_pending_confirm_count()
 
@@ -559,7 +559,7 @@ def test_on_show_pending_confirm_empty_notification(fake_rumps: None) -> None:
         def confirm_note(self, apple_note_id: str) -> None:
             return None
 
-    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())
     app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
 
     app_module._notification_func.assert_called_once()
@@ -604,7 +604,7 @@ def test_on_show_pending_confirm_non_empty_notification(fake_rumps: None) -> Non
         def confirm_note(self, apple_note_id: str) -> None:
             return None
 
-    app = NotesMenuBarApp(note_confirm_service=_NonEmptyConfirmService())  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=_NonEmptyConfirmService())
     app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
 
     app_module._notification_func.assert_called_once()
@@ -659,7 +659,7 @@ def test_on_confirm_first_success_flow(fake_rumps: None) -> None:
             self.confirm_calls.append(apple_note_id)
 
     svc = _PendingConfirmService()
-    app = NotesMenuBarApp(note_confirm_service=svc)  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=svc)
 
     # 触发 1-click 确认
     app._on_confirm_first(_FakeMenuItem("📥 确认第 1 条"))
@@ -703,7 +703,7 @@ def test_on_confirm_first_empty_returns_placeholder(fake_rumps: None) -> None:
         def confirm_note(self, apple_note_id: str) -> None:
             return None
 
-    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())  # type: ignore[arg-type]
+    app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())
     app._on_confirm_first(_FakeMenuItem("📥 确认第 1 条"))
 
     app_module._notification_func.assert_called_once()

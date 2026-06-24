@@ -92,10 +92,7 @@ class MCPClient:
             self.transport.close()
             raise
         # 解析工具列表
-        self.tools = [
-            t.get("name", "")  # type: ignore[union-attr]
-            for t in tools_resp.get("result", {}).get("tools", [])  # type: ignore[union-attr]
-        ]
+        self.tools = [t.get("name", "") for t in tools_resp.get("result", {}).get("tools", [])]
 
     def disconnect(self) -> None:
         """断开连接(幂等)."""
@@ -139,7 +136,7 @@ class MCPClient:
             try:
                 resp = self.transport.send(request)
                 self._validate_response(resp, method="tools/call")
-                result: dict[str, Any] = resp.get("result", {})  # type: ignore[assignment]
+                result: dict[str, Any] = resp.get("result", {})
                 return result
             except (MCPTimeoutError, MCPConnectionError) as e:
                 # 可恢复: 重试

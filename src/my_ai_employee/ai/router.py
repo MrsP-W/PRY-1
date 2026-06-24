@@ -71,7 +71,7 @@ class RouterStats:
     total_latency_ms: int = 0
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化为 dict(便于 JSON 化)."""
+        """序列化为 dict[Any, Any](便于 JSON 化)."""
         return {
             "primary_attempts": self.primary_attempts,
             "primary_successes": self.primary_successes,
@@ -108,7 +108,7 @@ class LLMRouter:
     def route(
         self,
         task_type: TaskType,
-        messages: list[dict],
+        messages: list[dict[Any, Any]],
         temperature: float = 0.3,
         max_tokens: int = 1024,
     ) -> LLMResponse:

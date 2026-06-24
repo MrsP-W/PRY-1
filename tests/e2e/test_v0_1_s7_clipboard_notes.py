@@ -53,7 +53,7 @@ class _FakeLLMRouter:
     def route(
         self,
         task_type: Any,
-        messages: list[dict],
+        messages: list[dict[Any, Any]],
         temperature: float = 0.3,
         max_tokens: int = 1024,
     ) -> _FakeLLMResponse:
@@ -168,7 +168,7 @@ def test_s7_private_note_skips_llm(
     assert len(llm.calls) == 0, f"业务阻断时 LLM 不应被调, 实际 calls={llm.calls}"
 
 
-# ===== S7.2 — 30 笔真插入 + 全 unique + list 验条数 =====
+# ===== S7.2 — 30 笔真插入 + 全 unique + list[Any] 验条数 =====
 
 
 @pytest.mark.e2e

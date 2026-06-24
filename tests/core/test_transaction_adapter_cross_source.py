@@ -48,7 +48,7 @@ def _expected_alipay_rows(filename: str) -> int:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
     from my_ai_employee.db.transactions import Transaction  # noqa: F401
@@ -60,7 +60,7 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture

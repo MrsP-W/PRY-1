@@ -183,7 +183,7 @@ class TestStateTransitions:
         """非法 str 状态 → PolicyLaneError."""
         board.add(entry)
         with pytest.raises(PolicyLaneError, match="status 非法"):
-            board.update("t1", status="bogus_status")  # type: ignore[arg-type]
+            board.update("t1", status="bogus_status")
 
     def test_update_with_invalid_type_raises(self, board: LaneBoard, entry: LaneEntry) -> None:
         """非 LaneStatus/str 状态 → PolicyLaneError."""
@@ -290,7 +290,7 @@ class TestQueries:
     def test_list_by_status_invalid_raises(self, board: LaneBoard) -> None:
         """list_by_status 非法 str → PolicyLaneError."""
         with pytest.raises(PolicyLaneError, match="status 非法"):
-            board.list_by_status("bogus")  # type: ignore[arg-type]
+            board.list_by_status("bogus")
 
     def test_list_by_status_wrong_type_raises(self, board: LaneBoard) -> None:
         """list_by_status 非 LaneStatus/str → PolicyLaneError."""

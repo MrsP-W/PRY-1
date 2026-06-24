@@ -38,7 +38,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + MerchantProfile + Transaction 2 ORM create_all."""
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
@@ -52,8 +52,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker."""
-    return sessionmaker(bind=engine, expire_on_commit=False)
+    """返回 sessionmaker[Any]."""
+    return sessionmaker[Any](bind=engine, expire_on_commit=False)
 
 
 @pytest.fixture

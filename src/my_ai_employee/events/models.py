@@ -1,4 +1,4 @@
-"""D4.3 — Events ORM Model + 4 个 StrEnum + JSONDict TypeDecorator.
+"""D4.3 — Events ORM Model + 4 个 StrEnum + JSONDict TypeDecorator[Any].
 
 参考 g004-events-reports-contract.md §Lane event contract:
   - event — typed name (EventType StrEnum, g004 不变量 1)
@@ -8,7 +8,7 @@
 
 设计:
   - 4 个 StrEnum 集中管理, ORM 字段用 str 类型(不强制 enum 校验 — 校验由 contract.assert_event_invariants 做)
-  - JSONDict TypeDecorator 参考 D3.2 JSONList (透明处理 dict ↔ JSON 文本)
+  - JSONDict TypeDecorator[Any] 参考 D3.2 JSONList (透明处理 dict[Any, Any] ↔ JSON 文本)
   - Event Model mirror schema.sql events (7 字段 + 1 UNIQUE + 6 索引)
   - 关系: 无 — events 表是事实流, 不外键关联其他表(subject_id 是软引用)
 """
@@ -25,31 +25,31 @@ from sqlalchemy.types import TypeDecorator
 
 from my_ai_employee.core.models import Base  # 复用 D3.2 Base (单 metadata)
 
-# ===== JSONDict TypeDecorator (mirror D3.2 JSONList 模式) =====
+# ===== JSONDict TypeDecorator[Any] (mirror D3.2 JSONList 模式) =====
 
 
-class JSONDict(TypeDecorator):  # type: ignore[misc]
-    """dict ↔ JSON 文本 TypeDecorator (D4.3 新增, 与 D3.2 JSONList 同模式).
+class JSONDict(TypeDecorator[Any]):
+    """dict[Any, Any] ↔ JSON 文本 TypeDecorator[Any] (D4.3 新增, 与 D3.2 JSONList 同模式).
 
     行为:
-        - DB → ORM: 文本 → dict (空字符串/None → {})
-        - ORM → DB: dict → JSON 文本 (None → None, 空 dict → "{}")
+        - DB → ORM: 文本 → dict[Any, Any] (空字符串/None → {})
+        - ORM → DB: dict[Any, Any] → JSON 文本 (None → None, 空 dict[Any, Any] → "{}")
 
-    为什么单独类: dict 与 list 业务语义不同(事件 payload vs 邮件收件人列表),
-    独立类名让 import 更清晰, TypeDecorator 内部逻辑可独立演进.
+    为什么单独类: dict[Any, Any] 与 list[Any] 业务语义不同(事件 payload vs 邮件收件人列表),
+    独立类名让 import 更清晰, TypeDecorator[Any] 内部逻辑可独立演进.
     """
 
     impl = Text
     cache_ok = True
 
     def process_bind_param(self, value, dialect):  # type: ignore[no-untyped-def, override]
-        """ORM → DB: dict 序列化为 JSON 文本. None → None."""
+        """ORM → DB: dict[Any, Any] 序列化为 JSON 文本. None → None."""
         if value is None:
             return None
         return json.dumps(value, ensure_ascii=False)
 
     def process_result_value(self, value, dialect):  # type: ignore[no-untyped-def, override]
-        """DB → ORM: JSON 文本 → dict. 空字符串/None 一律视作 {}."""
+        """DB → ORM: JSON 文本 → dict[Any, Any]. 空字符串/None 一律视作 {}."""
         if not value:
             return {}
         return json.loads(value)
@@ -179,7 +179,7 @@ class Event(Base):
     subject_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     fingerprint: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     event_metadata: Mapped[dict[str, Any]] = mapped_column(
-        JSONDict, nullable=False, default=dict, server_default="{}"
+        JSONDict, nullable=False, default=dict[Any, Any], server_default="{}"
     )
     created_at: Mapped[int] = mapped_column(Integer, nullable=False)
 

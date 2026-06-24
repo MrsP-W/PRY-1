@@ -8,7 +8,7 @@
 
   严判 helper (_validate_draft_subject / _validate_draft_body / _validate_draft_tone):
     - 边界值(契约 1 长度上下界)
-    - 非法类型(bool 子类陷阱 / None / list / int)
+    - 非法类型(bool 子类陷阱 / None / list[Any] / int)
     - 严判入口(契约 1 公共 API 自防御)
 
   解析 (_parse_draft_response):
@@ -17,7 +17,7 @@
     - 拒 markdown-wrapped JSON(契约 2 核心)
     - 拒非法 tone(契约 3 核心)
     - 拒长度越界(契约 1)
-    - 失败 case: 无 JSON / 非法 JSON / 顶层非 dict
+    - 失败 case: 无 JSON / 非法 JSON / 顶层非 dict[Any, Any]
 
   has_markdown_fence(契约 2 公共 API):
     - 3 种 fence 形式
@@ -37,8 +37,8 @@
 
   EmailDrafter.draft_batch:
     - 顺序串行 + 单条异常不阻塞
-    - dict 缺字段 → KeyError 透传(D4.6 范本)
-    - list 元素不是 dict → ValueError 入 list
+    - dict[Any, Any] 缺字段 → KeyError 透传(D4.6 范本)
+    - list[Any] 元素不是 dict[Any, Any] → ValueError 入 list[Any]
 
   DraftResult data class:
     - to_dict 序列化
@@ -61,6 +61,7 @@ import ast
 import json
 import sys
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -128,13 +129,13 @@ class TestDraftToneEnum:
     """3 类 tone 枚举(契约 3 锁定)."""
 
     def test_three_tones(self) -> None:
-        assert len(list(DraftTone)) == 3
+        assert len(list[Any](DraftTone)) == 3
         assert DraftTone.FORMAL == "FORMAL"
         assert DraftTone.FRIENDLY == "FRIENDLY"
         assert DraftTone.CONCISE == "CONCISE"
 
     def test_order_fixed(self) -> None:
-        """顺序固定(业务层按语气分组直接用 list(DraftTone) 排序)."""
+        """顺序固定(业务层按语气分组直接用 list[Any](DraftTone) 排序)."""
         assert [t.value for t in DraftTone] == ["FORMAL", "FRIENDLY", "CONCISE"]
 
     def test_strenum_string_behavior(self) -> None:
@@ -151,7 +152,7 @@ class TestDraftToneEnum:
 class TestDraftResultPostInit:
     """DraftResult __post_init__ 严判 5 字段(6/9 v1.0.2 P2-3)."""
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "Re: 测试主题",
             "body": "感谢您的来信, 项目进展顺利, 详情如下。",
@@ -235,16 +236,16 @@ class TestValidateDraftSubject:
     def test_rejects_non_str(self) -> None:
         """D4.4 P1 教训: type 错 → ValueError 透传."""
         with pytest.raises(ValueError, match="subject 必须是 str"):
-            validate_draft_subject(123)  # type: ignore[arg-type]
+            validate_draft_subject(123)
         with pytest.raises(ValueError, match="subject 必须是 str"):
-            validate_draft_subject(None)  # type: ignore[arg-type]
+            validate_draft_subject(None)
         with pytest.raises(ValueError, match="subject 必须是 str"):
-            validate_draft_subject(["A"])  # type: ignore[arg-type]
+            validate_draft_subject(["A"])
 
     def test_rejects_bool(self) -> None:
         """D4.4 P1 教训: 拒 bool 子类陷阱(isinstance(True, int) == True)."""
         with pytest.raises(ValueError, match="subject 必须是 str"):
-            validate_draft_subject(True)  # type: ignore[arg-type]
+            validate_draft_subject(True)
 
     def test_rejects_whitespace_only_subject(self) -> None:
         """6/9 v1.0.2 P1-2 修复: 仅按字符数校验会被纯空白绕过, 必须用 strip() 语义非空."""
@@ -295,11 +296,11 @@ class TestValidateDraftBody:
     def test_rejects_non_str(self) -> None:
         """D4.4 P1 教训: type 错 → ValueError 透传."""
         with pytest.raises(ValueError, match="body 必须是 str"):
-            validate_draft_body(123)  # type: ignore[arg-type]
+            validate_draft_body(123)
         with pytest.raises(ValueError, match="body 必须是 str"):
-            validate_draft_body(None)  # type: ignore[arg-type]
+            validate_draft_body(None)
         with pytest.raises(ValueError, match="body 必须是 str"):
-            validate_draft_body(["x"] * 10)  # type: ignore[arg-type]
+            validate_draft_body(["x"] * 10)
 
     def test_rejects_whitespace_only_body(self) -> None:
         """6/9 v1.0.2 P1-2 修复: 10 个空格 body(长度 10 达下边界)应被 strip() 严判拒收."""
@@ -349,11 +350,11 @@ class TestValidateDraftTone:
     def test_rejects_non_str_non_enum(self) -> None:
         """type 错 → ValueError 透传."""
         with pytest.raises(ValueError, match="tone 必须是"):
-            validate_draft_tone(123)  # type: ignore[arg-type]
+            validate_draft_tone(123)
         with pytest.raises(ValueError, match="tone 必须是"):
-            validate_draft_tone(None)  # type: ignore[arg-type]
+            validate_draft_tone(None)
         with pytest.raises(ValueError, match="tone 必须是"):
-            validate_draft_tone(["FORMAL"])  # type: ignore[arg-type]
+            validate_draft_tone(["FORMAL"])
 
 
 # ============================================================
@@ -390,9 +391,9 @@ class TestParseDraftResponse:
     def test_rejects_non_str_content(self) -> None:
         """type 错 → DrafterResponseError(业务异常)."""
         with pytest.raises(DrafterResponseError, match="LLM content 必须是 str"):
-            _parse_draft_response(123)  # type: ignore[arg-type]
+            _parse_draft_response(123)
         with pytest.raises(DrafterResponseError, match="LLM content 必须是 str"):
-            _parse_draft_response(None)  # type: ignore[arg-type]
+            _parse_draft_response(None)
 
     def test_rejects_markdown_fenced_json(self) -> None:
         """**契约 2 核心(6/9 P1-2)**: 拒外层 ```json ... ``` 包裹的 JSON."""
@@ -505,7 +506,7 @@ class TestParseDraftResponse:
     def test_rejects_non_dict_json(self) -> None:
         """JSON 顶层非 object(数组)→ DrafterResponseError.
 
-        6/9 P1-2 修复后: `[1,2,3]` 整段 json.loads 成功, 走到 dict 严判 → 顶层必须是 object.
+        6/9 P1-2 修复后: `[1,2,3]` 整段 json.loads 成功, 走到 dict[Any, Any] 严判 → 顶层必须是 object.
         (D4.7.1 初版: 数组不含 `{`, 平衡括号扫描失败 → no_balanced_json.)
         """
         with pytest.raises(DrafterResponseError, match="JSON 顶层必须是 object") as exc_info:
@@ -568,8 +569,8 @@ class TestHasMarkdownFence:
 
     def test_returns_false_for_non_str(self) -> None:
         """非 str 输入(留到 _parse_draft_response 上层抛 type 错)."""
-        assert has_markdown_fence(123) is False  # type: ignore[arg-type]
-        assert has_markdown_fence(None) is False  # type: ignore[arg-type]
+        assert has_markdown_fence(123) is False
+        assert has_markdown_fence(None) is False
 
     def test_returns_false_for_fence_in_body(self) -> None:
         """**6/9 P1-2 修复**: fence 在 body 字段内不算外层包裹 → False.
@@ -930,7 +931,7 @@ class TestEmailDrafterBatch:
         assert all(isinstance(r, DraftResult) for r in results)
 
     def test_batch_handles_non_dict(self) -> None:
-        """list 元素不是 dict → ValueError 入 list(D3.3.3 教训)."""
+        """list[Any] 元素不是 dict[Any, Any] → ValueError 入 list[Any](D3.3.3 教训)."""
         from typing import Any, cast
 
         mock_router = MagicMock()
@@ -940,7 +941,7 @@ class TestEmailDrafterBatch:
             list[dict[str, Any]],
             [
                 {"subject": "s", "sender": "x", "body_excerpt": "b"},
-                "not a dict",
+                "not a dict[Any, Any]",
             ],
         )
         results = drafter.draft_batch(emails)
@@ -949,7 +950,7 @@ class TestEmailDrafterBatch:
         assert isinstance(results[1], ValueError)
 
     def test_batch_handles_missing_keys(self) -> None:
-        """dict 缺字段 → KeyError 透传(D4.6 v1.0.2 P2-4 范本)."""
+        """dict[Any, Any] 缺字段 → KeyError 透传(D4.6 v1.0.2 P2-4 范本)."""
         mock_router = MagicMock()
         mock_router.route.return_value = _mock_router_response(_valid_draft_json())
         drafter = EmailDrafter(router=mock_router)
@@ -1301,7 +1302,7 @@ class TestContract3ToneEnumLocked:
 
     def test_draft_tone_exactly_3_values(self) -> None:
         """DraftTone 恰好 3 个值(锁定)."""
-        assert len(list(DraftTone)) == 3
+        assert len(list[Any](DraftTone)) == 3
 
     def test_draft_tone_values_locked(self) -> None:
         """3 个值固定 FORMAL / FRIENDLY / CONCISE(后续扩枚举需 B 类审批)."""
@@ -1439,7 +1440,7 @@ class TestDraftBatchV104PerEmailBoolStrict:
                     "sender": "x",
                     "body_excerpt": "b",
                     "email_category": "URGENT",
-                    "allow_spam_reply": "false",  # type: ignore[dict-item]
+                    "allow_spam_reply": "false",
                 },
             ],
         )
@@ -1465,7 +1466,7 @@ class TestDraftBatchV104PerEmailBoolStrict:
                     "sender": "x",
                     "body_excerpt": "b",
                     "email_category": "URGENT",
-                    "allow_spam_reply": 1,  # type: ignore[dict-item]
+                    "allow_spam_reply": 1,
                 },
             ],
         )
@@ -2150,7 +2151,7 @@ class TestDraftV106ToneValidationBeforeBlock:
     def test_invalid_tone_with_spam_raises_valueerror_before_block(self) -> None:
         """非法 tone("OOPS") + SPAM 场景: ValueError 在 SPAM 阻断之前抛, stats 不污染."""
         d = self._make_drafter()
-        stats_before = dict(d.stats())
+        stats_before = dict[Any, Any](d.stats())
         with pytest.raises(ValueError, match="tone 字符串必须"):
             d.draft(
                 subject="测试",
@@ -2161,7 +2162,7 @@ class TestDraftV106ToneValidationBeforeBlock:
                 allow_spam_reply=False,
             )
         # 关键: stats 不变(没有 SPAM 阻断 +1 副作用)
-        stats_after = dict(d.stats())
+        stats_after = dict[Any, Any](d.stats())
         assert stats_after == stats_before, (
             f"非法 tone 不应触发 SPAM 阻断, stats 不变. before={stats_before}, after={stats_after}"
         )
@@ -2187,7 +2188,7 @@ class TestDraftV106ToneValidationBeforeBlock:
     def test_invalid_tone_non_spam_raises_without_stat_change(self) -> None:
         """非法 tone + 非 SPAM 场景: 同样 ValueError, stats 不变(回归基线)."""
         d = self._make_drafter()
-        stats_before = dict(d.stats())
+        stats_before = dict[Any, Any](d.stats())
         with pytest.raises(ValueError):
             d.draft(
                 subject="测试",
@@ -2196,7 +2197,7 @@ class TestDraftV106ToneValidationBeforeBlock:
                 email_category="URGENT",
                 tone="OOPS",
             )
-        stats_after = dict(d.stats())
+        stats_after = dict[Any, Any](d.stats())
         assert stats_after == stats_before
 
     def test_valid_tone_with_spam_still_blocks_correctly(self) -> None:
@@ -2315,7 +2316,7 @@ class TestDraftBlockedCategoryV106AuditNewlineInjection:
 class TestDraftResultV106SpamReplyAuthorizedField:
     """6/9 v1.0.6 P2-1 修复: DraftResult.spam_reply_authorized 字段(Adapter 审计契约)."""
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "Re: 测试主题",
             "body": "感谢您的来信, 项目进展顺利, 详情如下。",
@@ -2382,7 +2383,7 @@ class TestDraftResultV106SpamReplyAuthorizedField:
 class TestDraftBlockedResultV106SpamReplyAuthorizedField:
     """6/9 v1.0.6 P2-1 修复: DraftBlockedResult.spam_reply_authorized 字段."""
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "(DRAFT-NO-REPLY) [SPAM] 测试",
             "body": "建议: 不回复\n\n" + "原因: 该邮件被 D4.6 分类为 SPAM, 进入业务阻断流程.\n" * 1,
@@ -2445,7 +2446,7 @@ class TestDraftSpamReplyIntentEnumV106:
 
     def test_two_intents(self) -> None:
         """枚举 2 个值(契约外增量, 排除 ACKNOWLEDGE)."""
-        assert len(list(DraftSpamReplyIntent)) == 2
+        assert len(list[Any](DraftSpamReplyIntent)) == 2
         assert DraftSpamReplyIntent.UNSUBSCRIBE == "UNSUBSCRIBE"
         assert DraftSpamReplyIntent.REJECT == "REJECT"
 
@@ -2974,7 +2975,7 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
                 "email_category": "SPAM",
                 "tone": DraftTone.FORMAL,
                 "allow_spam_reply": True,
-                "spam_reply_intent": "OOPS",  # type: ignore[dict-item]
+                "spam_reply_intent": "OOPS",
             }
         ]
         results = d.draft_batch(emails, allow_spam_reply=False)
@@ -3025,7 +3026,7 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
                 "email_category": "SPAM",
                 "tone": DraftTone.FORMAL,
                 "allow_spam_reply": False,  # 未授权
-                "spam_reply_intent": "REJECT",  # type: ignore[dict-item]  # 矛盾组合应拒
+                "spam_reply_intent": "REJECT",
             }
         ]
         results = d.draft_batch(emails, allow_spam_reply=True)
@@ -3043,7 +3044,7 @@ class TestDraftResultV107SpamReplyIntentField:
     与 spam_reply_authorized 强一致: True 必枚举, False 必 None。
     """
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "Re: 测试主题",
             "body": "感谢您的来信, 项目进展顺利, 详情如下。",
@@ -3109,7 +3110,7 @@ class TestDraftResultV107SpamReplyIntentField:
                 **{
                     **self._valid_kwargs(),
                     "spam_reply_authorized": True,
-                    "spam_reply_intent": "REJECT",  # type: ignore[arg-type]
+                    "spam_reply_intent": "REJECT",
                 }
             )
 
@@ -3120,7 +3121,7 @@ class TestDraftResultV107SpamReplyIntentField:
                 **{
                     **self._valid_kwargs(),
                     "spam_reply_authorized": True,
-                    "spam_reply_intent": 1,  # type: ignore[arg-type]
+                    "spam_reply_intent": 1,
                 }
             )
 
@@ -3153,7 +3154,7 @@ class TestDraftBlockedResultV107SpamReplyIntentField:
       - spam_reply_authorized=True + intent=None: 调用方显式授权但未指定 intent
     """
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "(DRAFT-NO-REPLY) [SPAM] 测试",
             "body": "建议: 不回复\n\n原因: 该邮件被 D4.6 分类为 SPAM.\n",
@@ -3211,7 +3212,7 @@ class TestDraftBlockedResultV107SpamReplyIntentField:
                 **{
                     **self._valid_kwargs(),
                     "spam_reply_authorized": True,
-                    "spam_reply_intent": "REJECT",  # type: ignore[arg-type]
+                    "spam_reply_intent": "REJECT",
                 }
             )
 
@@ -3260,7 +3261,7 @@ class TestDraftV107SpamReplyIntentValidation:
                 email_category="URGENT",
                 tone=DraftTone.FORMAL,
                 allow_spam_reply=False,
-                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+                spam_reply_intent="OOPS",
             )
 
     def test_invalid_type_intent_with_allow_false_raises(self) -> None:
@@ -3288,7 +3289,7 @@ class TestDraftV107SpamReplyIntentValidation:
                 email_category="URGENT",
                 tone=DraftTone.FORMAL,
                 allow_spam_reply=True,
-                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+                spam_reply_intent="OOPS",
             )
 
     def test_valid_intent_with_allow_false_rejected_before_block(self) -> None:
@@ -3393,7 +3394,7 @@ class TestDraftBlockedCategoryV107SpamReplyIntentParam:
                 email_category="SPAM",
                 tone=DraftTone.FORMAL,
                 spam_reply_authorized=True,
-                spam_reply_intent="OOPS",  # type: ignore[arg-type]
+                spam_reply_intent="OOPS",
             )
 
     def test_invalid_type_raises(self) -> None:
@@ -3568,7 +3569,7 @@ class TestDraftBlockedResultV108StrongConsistency:
       - authorized=False →  intent 必为 None
     """
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "(DRAFT-NO-REPLY) [SPAM] 测试",
             "body": "建议: 不回复\n\n原因: 该邮件被 D4.6 分类为 SPAM.\n",
@@ -3791,7 +3792,7 @@ class TestDraftResultV108RawContentTruncate:
     截断到 500 字符(与文档契约一致).
     """
 
-    def _valid_kwargs(self) -> dict:
+    def _valid_kwargs(self) -> dict[Any, Any]:
         return {
             "subject": "Re: 测试主题",
             "body": "感谢您的来信, 项目进展顺利, 详情如下。",

@@ -23,7 +23,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     """InMemory SQLite + 临时建 transactions 完整 16 列表(D6.4 升级).
 
     用 SQLAlchemy create_all + Transaction model(沿 db/transactions.py)创建,
@@ -41,8 +41,8 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    """返回 sessionmaker(沿 policy/conftest 范本)."""
-    return sessionmaker(bind=engine)
+    """返回 sessionmaker[Any](沿 policy/conftest 范本)."""
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture

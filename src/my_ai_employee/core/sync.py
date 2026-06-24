@@ -93,7 +93,7 @@ class IMAPSync:
             6. 更新 SyncState.last_uid + last_sync_at + last_status
         """
         t0 = time.perf_counter()
-        source = self._connector.source_name  # type: ignore[attr-defined]
+        source = self._connector.source_name
         now_ms = int(datetime.now(UTC).timestamp() * 1000)
 
         # 1) 读 SyncState

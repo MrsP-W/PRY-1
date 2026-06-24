@@ -53,7 +53,7 @@ class EmailCategory(StrEnum):
     """5 类邮件标签(StrEnum, 与 LLM 输出严格 1:1).
 
     顺序固定(URGENT → TODO → FYI → SPAM → PERSONAL),
-    业务层做"按类别分组"时可直接用 `list(EmailCategory)` 排序。
+    业务层做"按类别分组"时可直接用 `list[Any](EmailCategory)` 排序。
     """
 
     URGENT = "URGENT"
@@ -106,7 +106,7 @@ class ClassificationResult:
     raw_content: str
 
     def to_dict(self) -> dict[str, Any]:
-        """序列化为 dict(便于 JSON 化)."""
+        """序列化为 dict[Any, Any](便于 JSON 化)."""
         return {
             "category": self.category.value,
             "confidence": self.confidence,
@@ -170,7 +170,7 @@ class EmailClassifier:
 
     def stats(self) -> dict[str, int]:
         """返回分类器统计(便于 mmx policy status 等可观测性子命令)."""
-        return dict(self._stats)
+        return dict[Any, Any](self._stats)
 
     def classify(
         self,
@@ -257,12 +257,12 @@ class EmailClassifier:
 
     def classify_batch(
         self,
-        emails: list[dict],
+        emails: list[dict[Any, Any]],
     ) -> list[ClassificationResult | ClassifierResponseError | LLMError | ValueError | KeyError]:
         """批量分类(顺序串行, 避免触发熔断).
 
         Args:
-            emails: list[dict], 每条 dict 必须包含 subject/sender/body_excerpt 3 key
+            emails: list[dict[Any, Any]], 每条 dict[Any, Any] 必须包含 subject/sender/body_excerpt 3 key
                    (类型不匹配 / 缺字段 → 异常入 results, 不静默吞掉, 不外抛)
 
         Returns:
@@ -270,11 +270,11 @@ class EmailClassifier:
               - 成功: ClassificationResult
               - 响应解析失败: ClassifierResponseError
               - LLM 全链失败: LLMError
-              - 编程错误(非 dict): ValueError
+              - 编程错误(非 dict[Any, Any]): ValueError
               - 编程错误(缺字段): KeyError
             异常透传,不静默吞掉(D3.3.3 教训)。
             D4.6 v1.0.2 P2-4: 补 ValueError | KeyError 到 type hint(原版只标 3 类,
-            实际 ValueError 已入 list, type hint 与实现不一致; KeyError 之前
+            实际 ValueError 已入 list[Any], type hint 与实现不一致; KeyError 之前
             会终止整批)。
         """
         results: list[
@@ -282,9 +282,11 @@ class EmailClassifier:
         ] = []
         for i, email in enumerate(emails):
             if not isinstance(email, dict):
-                results.append(ValueError(f"emails[{i}] 必须是 dict, 实际 {type(email).__name__}"))
+                results.append(
+                    ValueError(f"emails[{i}] 必须是 dict[Any, Any], 实际 {type(email).__name__}")
+                )
                 continue
-            # D4.6 v1.0.2 P2-4: 缺字段时 KeyError 收容入 list(原版 email[k] 抛
+            # D4.6 v1.0.2 P2-4: 缺字段时 KeyError 收容入 list[Any](原版 email[k] 抛
             # KeyError 会终止整批,违反"单条异常不阻塞"契约)
             missing_keys = [k for k in ("subject", "sender", "body_excerpt") if k not in email]
             if missing_keys:
@@ -305,8 +307,8 @@ class EmailClassifier:
 # ===== 模块内辅助函数 =====
 
 
-def system_to_message(content: str) -> dict:
-    """把 system prompt 字符串转 OpenAI 风格 message dict.
+def system_to_message(content: str) -> dict[Any, Any]:
+    """把 system prompt 字符串转 OpenAI 风格 message dict[Any, Any].
 
     严判: content 必须是原生 str(D4.5 P0 教训应用)。
     """
@@ -407,7 +409,7 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
       1. type() 严判 content 是 str
       2. 显式剥 markdown fence(```json ... ```)
       3. 平衡括号定位最外层 { ... }(允许任意字段顺序)
-      4. json.loads 严格解析(必须是 dict)
+      4. json.loads 严格解析(必须是 dict[Any, Any])
       5. 严判 "category" 字段: 必须是 str, 必须 ∈ _VALID_CATEGORIES
       6. 严判 "confidence" 字段: type() is int/float(拒 bool)+ math.isfinite() + 0-1 范围
 
@@ -443,7 +445,7 @@ def _parse_classification_response(content: str) -> tuple[EmailCategory, float]:
             reason=f"json_decode_error={type(e).__name__}",
         ) from e
 
-    # 4. 严判结构(必须是 dict)
+    # 4. 严判结构(必须是 dict[Any, Any])
     if not isinstance(data, dict):
         raise ClassifierResponseError(
             "JSON 顶层必须是 object",

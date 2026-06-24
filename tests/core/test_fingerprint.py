@@ -148,7 +148,7 @@ def test_fingerprint_input_validation_raises() -> None:
 
     # 4. amount 类型非法(bool 是 int 子类陷阱)
     with __import__("pytest").raises(TypeError, match="bool"):
-        normalize_fingerprint("2026-06-14", True, "星巴克")  # type: ignore[arg-type]
+        normalize_fingerprint("2026-06-14", True, "星巴克")
 
     # 5. amount 空字符串
     with __import__("pytest").raises(ValueError, match="amount 必填"):

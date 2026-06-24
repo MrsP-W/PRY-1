@@ -35,7 +35,7 @@ def _expected_wechat_rows(filename: str) -> int:
 
 
 @pytest.fixture
-def engine() -> Iterator:
+def engine() -> Iterator[Any]:
     eng = create_engine("sqlite:///:memory:")
     from my_ai_employee.core.models import Base
     from my_ai_employee.db.transactions import Transaction  # noqa: F401
@@ -47,7 +47,7 @@ def engine() -> Iterator:
 
 @pytest.fixture
 def session_factory(engine: Any) -> Any:
-    return sessionmaker(bind=engine)
+    return sessionmaker[Any](bind=engine)
 
 
 @pytest.fixture
@@ -271,7 +271,7 @@ def test_failed_items_tracks_value_error_per_row(adapter: Any) -> None:
     try:
         result = adapter.import_raw_transactions(raws, source="wechat")
     finally:
-        transaction_adapter.categorize = original_categorize  # type: ignore[assignment]
+        transaction_adapter.categorize = original_categorize
 
     # 行为契约:2 行 parsed + 1 行 failed + 1 行 inserted(loop 继续)
     assert result.parsed == 2
