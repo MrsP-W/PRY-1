@@ -79,14 +79,14 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.35` W3 真账单 `--max-rows 25` 阶梯验证已收口(本轮 docs-only · 承接 v0.2.34 spike-10 `aa2a937` · 阶梯验证范本 1 → 5 → 10 → 25 全部跑通 · spike-25 跑通 `parsed=25 inserted=15 categorized=15 duplicates=10 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(15) + duplicates(10) = parsed(25)` 公式成立)· 撞坑 #50 双层防御范本沿用(第一层 v0.2.34 启动前状态固化 + 第二层 v0.2.35 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 → 10)· 撞坑 #52 阶梯验证范本升级到 4 阶段 · 撞坑 #53 跨 spike 累计公式校验(全 spike 链路 Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 41 = 1+5+10+25 成立,这是"完整性证明")· docs-only 收口,无新代码改动);**下一步候选**:全量 49 笔 spike(需用户授权) / P1-1 mypy tests 13 errors(可选)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.35 十一类报告 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.31` 候选 review 汇总闭环已关闭(commit `1e932c7` · `scripts/summarize_transaction_candidate_review.py` 6 维度聚合 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀)|
-| **上上一阶段** | ✅ `v0.2.30` 候选导出硬化已关闭(commit `5167163` · `.gitignore` 增量 `transaction-candidate-review-summary*.md` + CLI 错误硬化 · 沿 v0.2.18 §3 范本)|
+| **当前阶段** | ✅ `v0.2.36` W3 真账单 `--max-rows 49` 全量入库已收口(选项 B 路径 · docs-only · 承接 v0.2.35 spike-25 `a6e2409` · 阶梯验证范本 1 → 5 → 10 → 25 → 49 五阶段全部跑通 · spike-49 跑通 `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(24) + duplicates(25) = parsed(49)` 公式成立)· 撞坑 #50 双层防御范本沿用(第一层 v0.2.34 启动前状态固化 + 第二层 v0.2.36 spike 跑完后二次纠偏)· 撞坑 #51 duplicates 链路逻辑沿用(L1 source 内 UNIQUE 单调递增 0 → 1 → 5 → 10 → 25)· 撞坑 #52 阶梯验证范本升级到 5 阶段 · 撞坑 #53 v2.0 跨 spike 累计公式校验 + 全量入库(Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 90 = 49 + 41 = 1+5+10+25+49 成立,这是"完整性证明"最高级形式)· 撞坑 #54(本轮新增)选项 B 优于选项 A 范本("带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性)· docs-only 收口,无新代码改动);**下一步候选**:P1-1 mypy tests 13 errors(纯工程债)/ outlook/gmail SMTP(等授权 + Keychain 凭据)/ 7/1 月度复盘 review v0.2.25-v0.2.36 十二类报告 / 8/1 v0.2.1 release tag 锚定评估 |
+| **上一阶段** | ✅ `v0.2.35` W3 真账单 `--max-rows 25` 阶梯验证 + 漂移小修已关闭(docs `a6e2409` + `d8e04e2` · 阶梯 4 阶段范本 + 撞坑 #53 跨 spike 累计公式 v1.0)|
+| **上上一阶段** | ✅ `v0.2.34` W3 真账单 `--max-rows 10` 阶梯验证已关闭(docs `bbb76a7` · 阶梯 3 阶段范本 + 撞坑 #52)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 123 files** |
-| **下一棒** | 全量 49 笔 spike(需用户授权)→ P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.35 十一类报告 → 8/1 v0.2.1 release tag 锚定评估 |
-| **后续锚点** | 7/1 月度复盘 12:00 → 17:00(八类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 125 files** / **88.77% coverage** |
+| **下一棒** | P1-1 mypy tests 13 errors(纯工程债)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.36 十二类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -114,6 +114,64 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-24 11:00 [v0.2.36 W3 真账单 `--max-rows 49` 全量入库收口(选项 B 路径) + 撞坑 #53 v2.0 累计公式 + #54 选项 B 优于 A 范本] — 收口
+
+**1. 本次修改内容**
+
+- **阶梯验证范本 1 → 5 → 10 → 25 → 49**(`--max-rows 49` spike · 选项 B 路径)
+  - **docs/v0.2.36-w3-spike-49-2026-06-24.md** · 新建收口报告
+  - **README.md** · 顶部状态 v0.2.35 → **v0.2.36** + 里程碑表 +1 行 + test count 链延伸至 2265 / 88.77%
+  - **SESSION-STATE.md** · 7 处更新(标题 + 状态行 + 决策节点 + 状态表 + 时间线 + 下一棒 + 签名)
+  - **本文件** · 顶部快照表 v0.2.35 → **v0.2.36** + 累计记录区新增 v0.2.36 收口记录
+- **撞坑 #54(本轮新增)选项 B 优于选项 A 范本**:沿用 v0.2.18 §3 撞坑史 6 类 + 撞坑 #18 风险门控 + 撞坑 #50 双层防御 + 撞坑 #51 链路逻辑三范本交叉应用 → "带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性
+- **撞坑 #53 v2.0(本轮升级)跨 spike 累计公式校验 + 全量入库**:5 阶段累计公式 + 全量入库验证 = 业务链路完整性证明的最高级形式(单阶段公式是必要条件,跨阶段公式是充分条件)
+- **撞坑 #50 第二层范本沿用**:v0.2.36 spike 跑完后做状态口径二次纠偏(本次 docs-only),沿用 [[v0.2.35-spike-25]] 范本
+
+**2. 决策点**
+
+- **决策 A:跑 `--max-rows 49` spike(选项 B 路径,用户推荐)**
+  - **依据**:撞坑 #18 风险门控范本 — 5 重防误发(ENV + confirm + count + max-rows + DB 路径)缺一不可
+  - **范本升级**:选项 B = "带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性
+  - **撞坑 #50 双层防御范本延伸**:docs 写精确 HEAD hash 是范本违反(撞坑 #50 第三层),脚本移除 max-rows 守护也是范本违反(撞坑 #18 第五层)
+  - **决策记录**:用户 6/24 11:00 选择选项 B(原文 "B")
+- **决策 B:docs-only 收口(本次 spike 不打 commit)**
+  - **依据**:v0.2.33-v0.2.36 docs-only 范本沿用(数据已入库但 docs-only commit 用于固化状态)
+  - **决策记录**:沿用 v0.2.34 spike-10 收口范本
+
+**3. 关键产出**
+
+- **docs/v0.2.36-w3-spike-49-2026-06-24.md** · 新建(7 段 + 阶梯 5 阶段表 + 撞坑 #54 范本)
+- **README.md** · 顶部状态 v0.2.35 → v0.2.36 + 14 commit 链 + 21 类撞坑
+- **SESSION-STATE.md** · 7 处更新(v0.2.35 → v0.2.36)
+- **MODIFICATION-LOG.md**(本文件)· 顶部快照表 + 累计记录区 +1 条新记录
+- **Agent Assistant 跨项目沉淀**:`L2_memory/v0.2.36-spike-49.md` · 待写(本轮提交后)
+- **9/9 质量门全绿**:2265 passed / 1 skipped / 88.77% coverage · mypy 0 errors / ruff check passed / ruff format 246 files / alembic --sql exit 0 / uv build OK / MD lint 0 errors / coverage spike 88.77% / spike-49 inserted(24) + duplicates(25) = parsed(49)
+
+**4. 撞坑沉淀**
+
+- **撞坑 #53 v2.0 升级**:`Σ(inserted) + Σ(duplicates) = Σ(max-rows)` 是阶梯验证的高级形式(单阶段公式是必要条件,跨阶段公式是充分条件,两者都成立 = 数据完整性证明)
+- **撞坑 #54 新增**:"带 max-rows 守护的全量入库" = 全量入库效果 + 边界自守可逆性;撞坑 #18 风险门控 + #50 双层防御 + #51 链路逻辑三范本交叉应用 → 任何"全量操作"都应优先选择"带守护的全量"
+- **撞坑 #50 第二层沿用**:docs-only 收口范本延续(本轮 spike 跑完后状态二次纠偏)
+- **撞坑 #52 阶梯范本升级到 5 阶段**:1 → 5 → 10 → 25 → 49 五阶段公式全成立 + `duplicates` 单调递增(0 → 1 → 5 → 10 → 25)
+
+**5. 沿用边界**
+
+- ✅ 选项 B `--max-rows 49` 严守(5 重防误发全过)
+- ❌ 不自动合并候选
+- ❌ 不真发 SMTP / ❌ 不 kickstart launchd
+- ❌ 不移动 `v0.1.0` tag(`2af775f` 未动)
+- ❌ 不打 v0.2.36 tag(8/1 锚定策略)
+- ✅ 14 commit 链(v0.2.25-v0.2.36 + v0.2.33 二次纠偏 + v0.2.35 漂移小修 + 本轮 v0.2.36 docs-only)
+- ✅ 2265 passed / 1 skipped / 88.77% coverage / 0 mypy / 0 ruff / 0 MD lint
+
+**6. 下一棒**
+
+- **P1-1 mypy tests 13 errors 修复** · 纯工程债 · 沿 v0.2.23 `cast(int, ...)` 范本
+- **outlook/gmail SMTP 真实发送 spike** · 沿 v0.2.2 #8 工厂模式 + OAuth/XOAUTH2 真链路 + D5.6.5 4 重防误发范本
+- **7/1 月度复盘** · 12:00 → 17:00 收官 · review v0.2.25-v0.2.36 十二类报告
+
+---
 
 ### 2026-06-24 [v0.2.35 `--max-rows 25` 阶梯验证 + 4 阶段范本 + 撞坑 #50 第二层 + #53 跨 spike 累计公式校验] — 收口
 

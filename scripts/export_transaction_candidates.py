@@ -142,7 +142,9 @@ def build_candidate_review_row(tx: Transaction, candidate: Transaction | None) -
     return row
 
 
-def _write_rows(rows: list[dict[str, Any]], *, output_format: str, output_path: Path | None) -> None:
+def _write_rows(
+    rows: list[dict[str, Any]], *, output_format: str, output_path: Path | None
+) -> None:
     if output_path is None:
         out = sys.stdout
         close_out = False
