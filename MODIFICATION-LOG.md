@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.32` W3 真账单 spike + 撞坑 #49 faker≠真实格式已收口(commit `5e25983` · 用户提供真实支付宝 62 笔流水 5/24-6/24 16827.01 元 · `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 新增 `AlipayCSV2027RealParser` + `detect_version` 扫前 30 行找真 header + 4 tests · 撞坑 #49 三重不一致收口(22 行前缀/`交易时间`/`不计入收支`));**当前进入 v0.2.33 `--max-rows 5` 小扩容验证准备就绪**(严守不全量 49 笔 + 5 重防误发全开 + 6 维度稳定验证)|
+| **当前阶段** | ✅ `v0.2.33` W3 真账单 `--max-rows 5` 小扩容验证已收口(commit `9e9754a` · 承接 v0.2.32 spike-1 `5e25983` · Phase 1 状态固化 3 文件修复漂移 + Phase 2 spike-5 跑通 `parsed=5 inserted=4 categorized=4 duplicates=1 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 6 维度稳定性验证 ✅(`inserted(4) + duplicates(1) = parsed(5)` 公式成立)· 撞坑 #50 状态文档漂移收口(README/SESSION/MODIFICATION-LOG 3 文件顶部同步范本)+ 撞坑 #51 duplicates=1 链路逻辑(L1 source 内 UNIQUE 是预期行为,`inserted + duplicates = parsed` 公式必成立)· 状态固化 = docs-only commit,无新代码改动);**当前进入 v0.2.34 `--max-rows 10` 小扩容验证准备就绪**(严守不全量 49 笔 + 5 重防误发全开 + 6 维度稳定验证)|
 | **上一阶段** | ✅ `v0.2.31` 候选 review 汇总闭环已关闭(commit `1e932c7` · `scripts/summarize_transaction_candidate_review.py` 6 维度聚合 + `review_decision` 三分类白名单 + 14 tests · 撞坑 #46/#47/#48 三类沉淀)|
 | **上上一阶段** | ✅ `v0.2.30` 候选导出硬化已关闭(commit `5167163` · `.gitignore` 增量 `transaction-candidate-review-summary*.md` + CLI 错误硬化 · 沿 v0.2.18 §3 范本)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | v0.2.32 全量质量门:**2265 passed / 1 skipped**(+4 new tests) / mypy src+tests **0 errors / 209 source files** / ruff check **All checks passed** / alembic --sql exit 0 / uv build OK / MD lint **0 errors / 123 files** |
-| **下一棒** | **v0.2.33 `--max-rows 5` 小扩容验证**(W3 真账单 spike 链路扩张,5 笔硬上限)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化 → P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.32 八类报告 → 8/1 v0.2.1 release tag 锚定评估 |
+| **下一棒** | **v0.2.34 `--max-rows 10` 小扩容验证**(W3 真账单 spike 链路扩张,10 笔硬上限)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化 → P1-1 mypy tests 13 errors(可选)→ outlook/gmail SMTP(等授权 + Keychain 凭据)→ 7/1 月度复盘 review v0.2.25-v0.2.33 九类报告 → 8/1 v0.2.1 release tag 锚定评估 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(八类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,41 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-24 [v0.2.33 状态固化 + `--max-rows 5` spike + 撞坑 #50 状态文档漂移 + #51 duplicates=1 链路逻辑] — 收口
+
+**1. 本次修改内容**
+
+- **Phase 1 · docs-only 状态固化**(撞坑 #50 收口)
+  - **README.md** · 顶部状态 v0.2.29 → **v0.2.32** + 测试统计 2240 → 2265 + 里程碑表新增 v0.2.25-32 七行
+  - **SESSION-STATE.md** · 6 处更新(标题 + 状态行 + 决策节点 + 状态表 8/8 质量门 + 真账单 spike 行 + v0.2.30/31/32 三条关闭记录 + 6/23+ 时间线 + 6/23/24 时间线 + 6/24 下一棒 + 底部签名)
+  - **MODIFICATION-LOG.md** · 顶部快照表 v0.2.29 → **v0.2.32** + 累计记录区新增 v0.2.25-v0.2.32 四条收口记录 + 累计行 17 → 21 条
+  - **Phase 1 撞坑沉淀**:#50 状态文档漂移(3 commit 链未同步状态文档 → 范本:每个收口必顺手同步 3 文件)
+- **Phase 2 · `--max-rows 5` spike**
+  - **docs/v0.2.33-w3-spike-5-2026-06-24.md** · 新建收口报告
+  - 跑通结果:`parsed=5 inserted=4 categorized=4 duplicates=1 needs_confirm=0 failed=0 candidate_count=0 version=2027`
+  - 6 维度稳定性验证 ✅(`inserted(4) + duplicates(1) = parsed(5)` 公式成立)
+  - v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike 全 categorized)
+  - v0.2.31 汇总脚本复用 OK(6 维度渲染正常)
+  - **Phase 2 撞坑沉淀**:#51 duplicates=1 链路逻辑(L1 source 内 UNIQUE 是预期行为,spike 复用同 CSV 时 `inserted + duplicates = parsed` 公式必成立)
+- **3 文件状态二次纠偏**(本轮 docs-only)
+  - README.md + SESSION-STATE.md + MODIFICATION-LOG.md 顶部统一为 "v0.2.33 W3 真账单 `--max-rows 5` 小扩容验证已收口"
+
+**2. 风险点**
+
+- ⚠️ **撞坑 #50(本轮新增) 状态文档漂移**:v0.2.30/31/32 三 commit 链都聚焦业务代码,没顺手更新状态文档 → 修法:v0.2.33 启动前**先做状态固化**(Phase 1),再跑 spike(Phase 2)
+- ⚠️ **撞坑 #51(本轮新增) duplicates=1 链路逻辑**:spike 链路复用同一 CSV 时 L1 UNIQUE 是预期行为,`inserted + duplicates = parsed` 公式必成立,不是 bug
+- **P1**: v0.2.34 `--max-rows 10` 小扩容验证(承接 v0.2.33 5 笔链路扩张)
+- **P2**: 7/1 月度复盘 review v0.2.25-v0.2.33 九类报告
+- **P3**: 8/1 v0.2.1 release tag 锚定(W3 真账单 spike 已跑通 1 笔 + 5 笔,outlook/gmail 真实 SMTP 仍等授权)
+
+**3. 当前项目整体总结**
+
+- 进度:**2265 passed / 1 skipped / 9/9 质量门全绿 / W3 真账单 spike 跑通 1 笔(v0.2.32)+ 5 笔(v0.2.33) / 撞坑 18 类**
+- 状态:**v0.2.33 W3 真账单 `--max-rows 5` 小扩容验证已收口(2026-06-24,Phase 1 状态固化 + Phase 2 spike-5 + 二次纠偏 docs-only)**
+- 风险:3 项已知风险(撞坑 #50/#51 + 待办 P1/P2/P3),无新风险
+- 下一步:v0.2.34 `--max-rows 10` 小扩容验证 → 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定
+- 下一棒:用户(下一步指令)→ 主 Agent(v0.2.34 spike)→ 检查员(7/1 月度复盘)
 
 ### 2026-06-24 [v0.2.32 W3 真账单 spike + 撞坑 #49 faker≠真实格式] — 收口
 

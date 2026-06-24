@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.32 W3 真账单 spike + 撞坑 #49 已收口(2026-06-24 · 当前 W3 真账单 `--max-rows 5` 小扩容验证准备就绪)
+# SESSION-STATE — v0.2.33 W3 真账单 `--max-rows 5` 小扩容验证已收口(2026-06-24 · 当前 v0.2.34 `--max-rows 10` 小扩容验证准备就绪)
 
 > **最后更新**:2026-06-24 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.32 W3 真账单 spike + 撞坑 #49 已收口**(6/24 · 真实 spike `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 承接 v0.2.31 候选 review 汇总闭环,用户提供真实支付宝 62 笔流水(5/24-6/24 / 16827.01 元)触发 W3 真账单 spike。**撞坑 #49 收口**:detect_version 扫前 30 行找真 header + 新增 `AlipayCSV2027RealParser` 处理真实字段格式(`交易时间` header / 22 行说明前缀 / `不计入收支` 第 3 type)+ 4 新增 tests。**8 现有 2024/2025/2026 tests 全绿**(向后兼容)。全量 dry-run 49 笔 / 16827.11 元(差 0.10 = 套餐关闭行)。v0.2.31 汇总脚本复用 OK)。**v0.2.32 / 6/24 实操授权候选**:v0.2.33 `--max-rows 5` 小扩容验证(5 笔硬上限 + 5 重防误发全开 + 6 维度稳定验证)/ outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped** · 撞坑累计 16 类(本轮新增 #46/#47/#48/#49)。边界:不真发邮件、不真导入账单(沿用 `--max-rows 5` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:✅ **v0.2.33 W3 真账单 `--max-rows 5` 小扩容验证已收口**(6/24 · spike-5 跑通 `parsed=5 inserted=4 categorized=4 duplicates=1 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 承接 v0.2.32 W3 真账单 spike + 撞坑 #49 收口(`AlipayCSV2027RealParser` + `detect_version` 扫前 30 行)。**v0.2.33 状态固化**:Phase 1 修复 README/SESSION-STATE/MODIFICATION-LOG 三文件漂移(v0.2.29 收口后状态停在 6/23,撞坑 #50 沉淀)→ Phase 2 跑 `--max-rows 5` spike → 6 维度稳定性验证 ✅(`inserted(4) + duplicates(1) = parsed(5)` 公式成立,撞坑 #51 沉淀)。v0.2.29 导出复用 OK(导出 1 行 = v0.2.27 spike 残留,本次 spike 全 categorized 无新增 needs_confirm)。v0.2.31 汇总脚本复用 OK(6 维度渲染正常)。**v0.2.33 / 6/24 实操授权候选**:v0.2.34 `--max-rows 10` 小扩容验证(10 笔硬上限 + 5 重防误发全开 + 6 维度稳定验证)/ outlook/gmail SMTP 仍等授权 + Keychain 凭据 + B 类白名单。**9/9 质量门全绿** · **2265 passed / 1 skipped** · 撞坑累计 18 类(本轮新增 #50/#51)。边界:不真发邮件、不真导入账单(沿用 `--max-rows 10` 严守)、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.32 W3 真账单 spike + 撞坑 #49 已收口(2026-06-24)**,**下一步进入 v0.2.33 `--max-rows 5` 小扩容验证准备就绪** — `--max-rows 5` spike 验证 6 维度(parsed/inserted/duplicates/needs_confirm/candidate_count/category)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
+**当前启动候选**:**v0.2.33 W3 真账单 `--max-rows 5` 小扩容验证已收口(2026-06-24)**,**下一步进入 v0.2.34 `--max-rows 10` 小扩容验证准备就绪** — `--max-rows 10` spike 验证 6 维度(parsed/inserted/duplicates/needs_confirm/candidate_count/category)+ 重跑 v0.2.29 导出 + v0.2.31 汇总看真实候选变化；outlook/gmail SMTP 真实 spike 仍等用户授权 + Keychain 凭据 + B 类白名单决策。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
