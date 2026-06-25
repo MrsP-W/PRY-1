@@ -236,8 +236,8 @@ coverage: ## 9 质量门 — pytest + 覆盖率 fail_under=80%(沿 v0.1 范本)
 
 .PHONY: alembic
 alembic: ## 9 质量门 — alembic upgrade head --sql 验证迁移可干净执行
-	@echo "$(BLUE)🗄️  alembic upgrade head --sql(验证 0011 幂等)$(RESET)"
-	@$(PYTHON) -m alembic upgrade head --sql 2>&1 | head -50
+	@echo "$(BLUE)🗄️  alembic upgrade head --sql(验证迁移可干净执行;v0.2.52 P2 修:先写临时文件再 head 避免 head 吃退出码)$(RESET)"
+	@$(PYTHON) -m alembic upgrade head --sql > /tmp/alembic_head.sql 2>&1 ; status=$$? ; head -50 /tmp/alembic_head.sql ; exit $$status
 
 .PHONY: alembic-upgrade-head
 alembic-upgrade-head: ## alembic upgrade head(真跑迁移)

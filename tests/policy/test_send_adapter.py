@@ -1549,3 +1549,103 @@ def test_smpt_provider_and_transport_mutually_exclusive() -> None:
             smtp_transport=transport,
             smtp_provider="qq",
         )
+
+
+def test_smtp_provider_mode_assigns_underlying_transport_not_connector() -> None:
+    """v0.2.52 P0 修复:smtp_provider 模式下 _smtp_transport 应是底层 SMTPTransport,
+    不是 SMTPConnector(否则 send_and_emit 调 connect(host,port,timeout) 会 TypeError)。
+
+    撞坑 #61 修复:原 v0.2.51 误把 SMTPConnector(高层封装,签名为 async connect() 无参)
+    塞进 _smtp_transport,运行时协议不匹配。修复:取 connector.transport(底层 SMTPTransport)。
+    """
+    from my_ai_employee.connectors.smtp import SMTPConnector, SmtpLibTransport
+
+    adapter = EmailSendAdapter(source="outlook", smtp_provider="outlook")
+    # 关键约束 1: _smtp_transport 必须是底层 SmtpLibTransport,不是 SMTPConnector
+    assert not isinstance(adapter._smtp_transport, SMTPConnector), (
+        "_smtp_transport 不应是 SMTPConnector(协议不匹配),应是底层 SMTPTransport"
+    )
+    assert isinstance(adapter._smtp_transport, SmtpLibTransport), (
+        f"_smtp_transport 应是 SmtpLibTransport 实例,实际 {type(adapter._smtp_transport).__name__}"
+    )
+    # 关键约束 1.5: 协议方法齐全(connect/login/send_message/quit)— SMTPTransport Protocol
+    # 不能 isinstance(Protocol),改用 hasattr 校验
+    for method in ("connect", "login", "send_message", "quit"):
+        assert hasattr(adapter._smtp_transport, method), f"_smtp_transport 缺协议方法 {method!r}"
+    # 关键约束 2: provider 默认配置字段已正确填充
+    assert adapter._smtp_provider == "outlook"
+    assert adapter._provider_default_host == "smtp.office365.com"
+    assert adapter._provider_default_port == 465
+    assert adapter._provider_default_email == "outlook@my-ai-employee.local"
+    # 关键约束 3: 协议校验 — connect(host, port, timeout=30.0) 不应抛 TypeError
+    # SmtpLibTransport 会尝试真连 outlook SMTP server,但我们只校验协议签名不抛 TypeError
+    from my_ai_employee.connectors.smtp import SmtpTransportError
+
+    try:
+        adapter._smtp_transport.connect(host="smtp.office365.com", port=465, timeout=0.001)
+    except (OSError, smtplib.SMTPException, TimeoutError, SmtpTransportError):
+        # 真连失败是预期(SmtpLibTransport 真去连 SMTP server),关键是没 TypeError
+        pass
+    finally:
+        # 沿 D3.3.3 范本:contextlib.suppress(Exception) 替代 try/except/pass
+        import contextlib
+
+        with contextlib.suppress(Exception):
+            adapter._smtp_transport.quit()
+
+
+def test_send_and_emit_smtp_provider_factory_end_to_end(
+    store: OutboxStore, smtp_transport: InMemorySmtpTransport, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """v0.2.52 P0 修复端到端验证:smtp_provider 模式下 send_and_emit 走完整 4 步路径。
+
+    修复前的 v0.2.51 会因 SMTPConnector.connect() 签名不匹配抛
+    TypeError: connect() got unexpected keyword argument 'timeout'。
+
+    修复后:取 connector.transport(InMemorySmtpTransport via monkeypatch)= 4 步全绿。
+    """
+    from my_ai_employee.connectors.smtp import SMTPProviderFactory
+
+    outbox_id = _insert_pending_entry(store, email_id=1003)
+    store.update_status(
+        outbox_id,
+        "approved",
+        from_status="pending_send",
+        last_approved_at_ms=int(time.time() * 1000),
+    )
+    smtp_transport.inject_status = SMTP_SEND_OK
+
+    # monkeypatch SMTPProviderFactory.create 注入 InMemorySmtpTransport(避免真连)
+    original_create = SMTPProviderFactory.create
+
+    def patched_create(provider: str, email: str, *, transport: Any = None) -> Any:
+        return original_create(provider, email, transport=smtp_transport)
+
+    monkeypatch.setattr(SMTPProviderFactory, "create", staticmethod(patched_create))
+
+    adapter = EmailSendAdapter(
+        source="test-send-provider",
+        outbox_store=store,
+        smtp_provider="outlook",  # 触发 SMTPProviderFactory 路径
+    )
+    # 验证 _smtp_transport 已被正确设为 InMemorySmtpTransport
+    assert adapter._smtp_transport is smtp_transport, (
+        "_smtp_transport 应等于 monkeypatch 注入的 InMemorySmtpTransport"
+    )
+    assert adapter._provider_default_host == "smtp.office365.com"
+    assert adapter._smtp_provider == "outlook"
+
+    # 跑完整 send_and_emit 4 步路径(关键修复验证 — 修复前会 TypeError)
+    report = adapter.send_and_emit(
+        outbox_id=outbox_id,
+        smtp_host="smtp.office365.com",
+        smtp_port=465,
+        smtp_username="test@outlook.com",
+        smtp_password="test_authcode_16",
+        email_message=_make_email_message(),
+    )
+    assert isinstance(report, SendDecisionReport)
+    assert report.send_succeeded is True
+    entry = store.by_id(outbox_id)
+    assert entry is not None
+    assert entry.status == "sent"

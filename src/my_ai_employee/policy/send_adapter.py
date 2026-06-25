@@ -654,22 +654,49 @@ class EmailSendAdapter:
         # 复用 outbox_adapter._validate_outbox_blacklist_store(type 严判 + is None fallback)
         self._blacklist_store = _validate_outbox_blacklist_store(blacklist_store)
 
-        # v0.2.51 接入 SMTPProviderFactory:smtp_provider 显式传 → 内部走工厂创建
+        # v0.2.51 接入 SMTPProviderFactory:smtp_provider 显式传 → 内部走工厂创建底层 transport
         # smtp_transport 与 smtp_provider 互斥(同传 → 严判 ValueError)
+        # v0.2.52 P0 修复(SMTPProviderFactory 协议不匹配):SMTPProviderFactory.create() 返回
+        # 高层 SMTPConnector(签名是 async connect() 无 host/port/timeout),不是 SMTPTransport。
+        # 正确做法:取 connector.transport(底层 SMTPTransport 实例)赋给 _smtp_transport —
+        # SMTPProviderFactory.create() 默认会注入 SmtpLibTransport(),所以 connector.transport
+        # 应为非 None;为 robustness 加 None fallback(显式新建 SmtpLibTransport())。
+        # 真实发件邮箱来源 = entry.sender_email(由 OutboxDispatcher 在 v0.2.51.1 注入),
+        # SMTPProviderFactory 的 email 字段仅用于严判通过,此处用 source 作占位。
         self._smtp_provider: str | None = None
+        self._provider_default_host: str | None = None
+        self._provider_default_port: int | None = None
+        self._provider_default_email: str | None = None
         if smtp_provider is not None:
             if smtp_transport is not None:
                 raise ValueError(
                     "smtp_provider 与 smtp_transport 互斥, 同传时冲突(沿 v0.2.51 B 类)"
                 )
-            from my_ai_employee.connectors.smtp import SMTPProviderFactory  # 延迟 import 避循环
-
-            # TODO(v0.2.51.1): 从 entry.sender_email 取实际 email,目前用 source 作占位
-            self._smtp_transport = SMTPProviderFactory.create(  # type: ignore[assignment]
-                provider=smtp_provider,
-                email=f"{source}@my-ai-employee.local",  # 占位 email,真实发件邮箱待 v0.2.51.1
+            from my_ai_employee.connectors.smtp import (  # 延迟 import 避循环
+                SmtpLibTransport,
+                SMTPProviderFactory,
             )
+
+            # 占位 email:仅供 SMTPProviderFactory 严判通过,真实发件邮箱待 v0.2.51.1
+            # OutboxDispatcher 用 entry.sender_email 覆盖(provider 默认值仅作配置参考)
+            placeholder_email = f"{source}@my-ai-employee.local"
+            connector = SMTPProviderFactory.create(
+                provider=smtp_provider,
+                email=placeholder_email,
+            )
+            # v0.2.52 P0 修复:取底层 SMTPTransport(SMTPConnector.transport 属性),
+            # 而非把 connector 塞进 _smtp_transport(协议不匹配)
+            underlying_transport = connector.transport
+            if underlying_transport is None:
+                # SMTPProviderFactory.create() 默认会注入 SmtpLibTransport(),但 D5.1-fix
+                # 修订后允许 transport=None 创建(防"假成功");此处显式 fallback 兜底
+                underlying_transport = SmtpLibTransport()
+            self._smtp_transport = underlying_transport
+            # 暴露 provider 默认配置(供 OutboxDispatcher / send_and_emit 参考)
             self._smtp_provider = smtp_provider
+            self._provider_default_host = connector.server_host
+            self._provider_default_port = int(connector.server_port)
+            self._provider_default_email = placeholder_email
 
     def build_lane_entry_id(self, run_id: str) -> str:
         """生成 LaneBoard entry_id: 'send:<source>:<run_id>'."""

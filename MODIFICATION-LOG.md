@@ -79,7 +79,12 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.47` 8/1 release tag 预检包已收口(docs-only · 撞坑 #58 8 项前置条件 + 1 缺口评估范本 · 5 步执行完成:8 项前置条件评估 7/8 实质满足 + 真实 SMTP spike 恢复包 + OutboxDispatcher × SMTPProviderFactory 接入复核 + 8/1 决策矩阵 + 状态入口同步);**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR) |
+| **当前阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25);承接 v0.2.51 5 步连击收口。v0.2.52 三件事:**① P0 撞坑 #61** `EmailSendAdapter` smtp_provider 模式误把 `SMTPConnector`(`async connect()` 无 host/port/timeout)塞进 `_smtp_transport` → 烟测 `TypeError: connect() got unexpected keyword argument 'timeout'`。修复:`__init__` 取 `connector.transport`(底层 `SMTPTransport`)赋给 `_smtp_transport` + 暴露 `_provider_default_host/port/email` 3 字段供 OutboxDispatcher 参考 + `SmtpLibTransport()` None fallback。**② P2 撞坑 #62** Makefile `alembic upgrade head --sql 2>&1 | head -50` `head` 会吃 alembic 退出码。修复:先写 `/tmp/alembic_head.sql` + `head -50` + `exit $?` 透传。**③ P1** SESSION-STATE/MODIFICATION-LOG 顶部漂移到 v0.2.51 → v0.2.52(README L7)。2 新测试(`test_smtp_provider_mode_assigns_underlying_transport_not_connector` + `test_send_and_emit_smtp_provider_factory_end_to_end`)+ 1 Makefile 修复;**下一步候选**:v0.2.52.1 OutboxDispatcher 自动路由 / 8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike |
+| **上一阶段** | ✅ `v0.2.51` SMTPProviderFactory 接入 + 5 步连击收口(2026-06-25 · 撞坑 #18 风险门控 + 撞坑 #59 凭据激活 docs-only + 撞坑 #60 preliminary 范本);6 commits(`b8373c8` + `e80cf21` + `e6e4b83` + `7d1877d` + `e20fc26` + `2f2c75c`)+ EmailSendAdapter smtp_provider 模式接入(后续被 v0.2.52 撞坑 #61 修复) |
+| **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
+| **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
+| **上上上上一阶段** | ✅ `v0.2.48` align release readiness state 漂移修复(2026-06-25 · docs-only) |
+| **上上上上上一阶段** | ✅ `v0.2.47` 8/1 release tag 预检包(2026-06-25 · docs-only · 撞坑 #58 8 项前置条件 + 1 缺口评估范本) |
 | **上一阶段** | ✅ `v0.2.46` 7/1 月度复盘提前执行版已收口(5 步执行完成:质量门全绿 + `reports/2026-07-monthly-review.md` + B 类三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后 + 状态入口同步)|
 | **上上一阶段** | ✅ `v0.2.45` 7/1 月度复盘准备增量包已收口(commit `1cae0f3` · 补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态)|
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
