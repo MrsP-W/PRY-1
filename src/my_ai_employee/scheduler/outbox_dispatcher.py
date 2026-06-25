@@ -324,9 +324,8 @@ class OutboxDispatcher:
             heartbeat if heartbeat is not None else Heartbeat(idle_threshold_ms=30_000)
         )
         # 4.5 v0.2.52.1 OutboxDispatcher 自动路由(provider 模式):
-        #    EmailSendAdapter v0.2.51 接入 SMTPProviderFactory 后,v0.2.52 暴露
-        #    _provider_default_host / _provider_default_port / _provider_default_email 3 字段。
-        #    OutboxDispatcher 构造后立刻从 adapter 读取这 3 字段(若 adapter 用了 provider 模式),
+        #    EmailSendAdapter v0.2.52.2 通过 smtp_provider / provider_defaults 只读属性暴露
+        #    provider 默认 host/port/email;OutboxDispatcher 构造后立刻同步(若 adapter 用了 provider 模式),
         #    后续运行时优先级 = provider 默认值(adapter 暴露)> 显式 smtp_host/port/username(password)。
         #    互斥严判:provider 默认 host 与显式 smtp_host 不一致 → ValueError(防 silent override)
         #    沿撞坑 #18 范本(5 路径严判) — 不传 provider = 走原 smtp_transport 路径(向后兼容)
@@ -335,14 +334,13 @@ class OutboxDispatcher:
         self._provider_default_email: str | None = None
         self._active_provider: str | None = None
         if send_adapter is not None:
-            adapter_provider = getattr(send_adapter, "_smtp_provider", None)
+            adapter_provider = send_adapter.smtp_provider
             if adapter_provider is not None:
                 self._active_provider = adapter_provider
-                self._provider_default_host = getattr(send_adapter, "_provider_default_host", None)
-                self._provider_default_port = getattr(send_adapter, "_provider_default_port", None)
-                self._provider_default_email = getattr(
-                    send_adapter, "_provider_default_email", None
-                )
+                provider_defaults = send_adapter.provider_defaults
+                self._provider_default_host = provider_defaults.host
+                self._provider_default_port = provider_defaults.port
+                self._provider_default_email = provider_defaults.email
                 # 严判冲突:显式 smtp_host/port 与 provider 默认值不一致 → ValueError
                 # (沿撞坑 #18 范本 — 严判不静默)
                 if (

@@ -1869,8 +1869,8 @@ def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> 
     """v0.2.52.1 路径 1:adapter 传 smtp_provider 后,OutboxDispatcher 构造时同步默认值。
 
     验证:
-      - _active_provider == adapter._smtp_provider
-      - _provider_default_host/port/email 从 adapter 暴露字段读取
+      - _active_provider == adapter.smtp_provider
+      - _provider_default_host/port/email 从 adapter.provider_defaults 同步
       - 构造时不传 smtp_host/port(用默认)→ 严判跳过冲突检查(默认值匹配默认占位)
     """
     from unittest.mock import patch
@@ -1891,10 +1891,11 @@ def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> 
             smtp_provider="outlook",
             outbox_store=store,
         )
-        # 验证 adapter 已暴露 provider 默认值
-        assert adapter_provider._smtp_provider == "outlook"
-        assert adapter_provider._provider_default_host == "smtp.office365.com"
-        assert adapter_provider._provider_default_port == 465
+        # 验证 adapter 只读属性已暴露 provider 默认值
+        assert adapter_provider.smtp_provider == "outlook"
+        defaults = adapter_provider.provider_defaults
+        assert defaults.host == "smtp.office365.com"
+        assert defaults.port == 465
         # 构造 OutboxDispatcher(显式 smtp_host/port 用默认值 → 严判跳过冲突检查)
         dispatcher_local = OutboxDispatcher(
             source="test-v0521",

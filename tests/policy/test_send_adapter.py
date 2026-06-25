@@ -1524,23 +1524,26 @@ def session_factory_for_test(store: OutboxStore):  # type: ignore[no-untyped-def
 # ===== v0.2.51 SMTPProviderFactory 接入(2 cases)=====
 
 
-def test_smpt_provider_factory_integration_backward_compatible() -> None:
+def test_smtp_provider_factory_integration_backward_compatible() -> None:
     """v0.2.51 不传 smtp_provider = 走原 smtp_transport 路径(向后兼容)。"""
     transport = SmtpLibTransport()
     adapter = EmailSendAdapter(source="qq", smtp_transport=transport)
-    assert adapter._smtp_provider is None
+    assert adapter.smtp_provider is None
+    assert adapter.provider_defaults.host is None
     assert adapter._smtp_transport is transport
 
 
-def test_smpt_provider_factory_integration_with_provider() -> None:
+def test_smtp_provider_factory_integration_with_provider() -> None:
     """v0.2.51 传 smtp_provider = 走 SMTPProviderFactory.create 路径。"""
     adapter = EmailSendAdapter(source="outlook", smtp_provider="outlook")
-    assert adapter._smtp_provider == "outlook"
-    # _smtp_transport 应为 SMTPConnector 实例(由工厂创建)
+    assert adapter.smtp_provider == "outlook"
+    # _smtp_transport 应为底层 SMTPTransport(SmtpLibTransport),不是 SMTPConnector
     assert adapter._smtp_transport is not None
+    assert adapter.provider_defaults.host == "smtp.office365.com"
+    assert adapter.provider_defaults.port == 465
 
 
-def test_smpt_provider_and_transport_mutually_exclusive() -> None:
+def test_smtp_provider_and_transport_mutually_exclusive() -> None:
     """v0.2.51 smtp_provider 与 smtp_transport 同传 → ValueError(撞坑 #18 范本)。"""
     transport = SmtpLibTransport()
     with pytest.raises(ValueError, match=r"smtp_provider 与 smtp_transport 互斥"):

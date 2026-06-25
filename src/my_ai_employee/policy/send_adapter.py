@@ -585,6 +585,24 @@ class SendFailureDecisionReport:
         _validate_outbox_recipient_email(self.recipient_email)
 
 
+# ===== Provider 默认配置(只读,供 OutboxDispatcher 同步)=====
+
+
+@dataclass(frozen=True, slots=True)
+class ProviderDefaults:
+    """SMTP provider 默认连接参数(只读快照,沿 v0.2.52.2 封装硬化).
+
+    Attributes:
+        host: provider 默认 SMTP host(未启用 provider 模式时为 None)
+        port: provider 默认 SMTP port(未启用 provider 模式时为 None)
+        email: provider 占位/默认发件邮箱(未启用 provider 模式时为 None)
+    """
+
+    host: str | None = None
+    port: int | None = None
+    email: str | None = None
+
+
 # ===== EmailSendAdapter 主类(5 依赖可注入, 三入口)=====
 
 
@@ -697,6 +715,20 @@ class EmailSendAdapter:
             self._provider_default_host = connector.server_host
             self._provider_default_port = int(connector.server_port)
             self._provider_default_email = placeholder_email
+
+    @property
+    def smtp_provider(self) -> str | None:
+        """当前 SMTP provider 名(qq/outlook/gmail);未启用 provider 模式时为 None."""
+        return self._smtp_provider
+
+    @property
+    def provider_defaults(self) -> ProviderDefaults:
+        """provider 默认 host/port/email 只读快照(供 OutboxDispatcher 同步,避免读私有字段)."""
+        return ProviderDefaults(
+            host=self._provider_default_host,
+            port=self._provider_default_port,
+            email=self._provider_default_email,
+        )
 
     def build_lane_entry_id(self, run_id: str) -> str:
         """生成 LaneBoard entry_id: 'send:<source>:<run_id>'."""
