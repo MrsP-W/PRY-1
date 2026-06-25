@@ -838,8 +838,23 @@
 
           <section id="reports" class="view">
             <div class="card card-pad">
-              <h1 class="headline">报告页 P0 占位</h1>
-              <p class="tiny">后续展示月度复盘、质量门趋势、撞坑清单和 release readiness。</p>
+              <h1 class="headline">报告页(本地报告清单 · 只读)</h1>
+              <p class="tiny" id="reports-source">本地报告清单 · 静态兜底</p>
+
+              <div class="filter-row" style="margin-top: 12px">
+                <button class="filter active" data-filter="all">全部</button>
+                <button class="filter" data-filter="doc">docs</button>
+                <button class="filter" data-filter="phase_report">reports</button>
+                <button class="filter" data-filter="spike">spike</button>
+                <button class="filter" data-filter="agent_output">agent-output</button>
+              </div>
+
+              <div class="reports-summary" id="reports-summary" style="margin-top: 12px">
+                <span class="tag">合计 <strong id="reports-count">0</strong></span>
+                <span class="tag">最近 <strong id="reports-latest-date">—</strong></span>
+              </div>
+
+              <div class="queue" id="reports-queue" style="margin-top: 16px"></div>
             </div>
           </section>
 
@@ -951,6 +966,45 @@
             counterparty: "支付宝",
             amount: 1299,
             kinds: "amount_spike",
+          },
+        ],
+      };
+
+      // ===== v0.2.53.9 报告页 fallback 数据 =====
+      const fallbackReports = {
+        count: 4,
+        items: [
+          {
+            path: "reports/2026-07-monthly-review.md",
+            type: "phase_report",
+            title: "2026-07 月度复盘 — 提前执行版",
+            date: "2026-07-01",
+            status: "done",
+            size_bytes: 4820,
+          },
+          {
+            path: "docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md",
+            type: "doc",
+            title: "v0.2.53.7 Dashboard opt-in 真实 Outbox",
+            date: "2026-06-25",
+            status: "done",
+            size_bytes: 6020,
+          },
+          {
+            path: "output/spike/spike_send_100_20260625_163607.md",
+            type: "spike",
+            title: "spike_send_100 spike — OutboxDispatcher 端到端发送",
+            date: "2026-06-25",
+            status: "done",
+            size_bytes: 3420,
+          },
+          {
+            path: "output/2026-06-17/端午连休准备.md",
+            type: "agent_output",
+            title: "端午连休准备 · 2026-06-17",
+            date: "2026-06-17",
+            status: "active",
+            size_bytes: 1280,
           },
         ],
       };
@@ -1143,23 +1197,124 @@
         }
       }
 
+      // ===== v0.2.53.9 报告页渲染 =====
+      let _currentReports = [];
+      let _currentReportFilter = "all";
+
+      function statusToTagTone(status) {
+        const map = {
+          done: "green",
+          active: "blue",
+          pending: "yellow",
+          failed: "red",
+          draft: "gray",
+          unknown: "gray",
+        };
+        return map[status] ?? "gray";
+      }
+
+      function statusToLabel(status) {
+        const map = {
+          done: "已完成",
+          active: "进行中",
+          pending: "待办",
+          failed: "失败",
+          draft: "草稿",
+          unknown: "未知",
+        };
+        return map[status] ?? status;
+      }
+
+      function formatBytes(n) {
+        if (!n || n < 1024) return `${n ?? 0} B`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+        return `${(n / 1024 / 1024).toFixed(1)} MB`;
+      }
+
+      function renderReports(payload, sourceLabel) {
+        setText("reports-source", `本地报告清单 · ${sourceLabel}`);
+        _currentReports = payload.items ?? [];
+        renderReportsList();
+        const counts = { doc: 0, phase_report: 0, spike: 0, agent_output: 0 };
+        for (const it of _currentReports) {
+          if (counts[it.type] !== undefined) counts[it.type] += 1;
+        }
+        setText("reports-count", payload.count ?? _currentReports.length);
+        const dates = _currentReports
+          .map((r) => r.date)
+          .filter((d) => d)
+          .sort();
+        setText("reports-latest-date", dates.length ? dates[dates.length - 1] : "—");
+        const total = (payload.count ?? _currentReports.length) || 0;
+        const badge = document.getElementById("badge-reports");
+        if (badge) badge.textContent = String(total);
+      }
+
+      function renderReportsList() {
+        const container = document.getElementById("reports-queue");
+        if (!container) return;
+        const filtered =
+          _currentReportFilter === "all"
+            ? _currentReports
+            : _currentReports.filter((r) => r.type === _currentReportFilter);
+        if (filtered.length === 0) {
+          container.innerHTML =
+            '<div class="queue-empty">暂无报告 · 启动 API 后自动扫描</div>';
+          return;
+        }
+        container.innerHTML = filtered
+          .map((r) => {
+            const tone = statusToTagTone(r.status);
+            const label = statusToLabel(r.status);
+            return `
+              <div class="queue-item">
+                <div style="flex:1; min-width:0">
+                  <div class="queue-title">${escapeHtml(r.title)}</div>
+                  <div class="queue-meta">
+                    <span class="tag ${tone}">${label}</span>
+                    <span class="tag">${escapeHtml(r.type)}</span>
+                    <span>${escapeHtml(r.date || "—")}</span>
+                    <span>${formatBytes(r.size_bytes)}</span>
+                  </div>
+                  <div class="queue-meta mono">${escapeHtml(r.path)}</div>
+                </div>
+              </div>
+            `;
+          })
+          .join("");
+      }
+
+      document.querySelectorAll(".filter-row .filter").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document
+            .querySelectorAll(".filter-row .filter")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          _currentReportFilter = btn.dataset.filter || "all";
+          renderReportsList();
+        });
+      });
+
       async function hydrateDashboard() {
         try {
-          const [status, tasks, outbox, notes, finance] = await Promise.all([
+          const [status, tasks, outbox, notes, finance, reports] = await Promise.all([
             fetchJson("/api/status"),
             fetchJson("/api/tasks/today"),
             fetchJson("/api/outbox?limit=10"),
             fetchJson("/api/notes/pending?limit=10"),
             fetchJson("/api/finance/anomalies?limit=10"),
+            fetchJson("/api/reports?limit=50"),
           ]);
           renderStatus(status);
           renderTasks(tasks, "来自本地只读 API");
           renderExtendedViews(outbox, notes, finance, true);
+          renderReports(reports, "本地只读 API · 文件系统扫描");
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
-          setApiState(true, "API 已连接 · 5 端点");
+          setApiState(true, "API 已连接 · 6 端点");
         } catch (_err) {
           renderTasks(fallbackTasks, "静态兜底数据");
           renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
+          renderReports(fallbackReports, "静态兜底 · 演示数据");
           setText("today-source", "今天 · 本地工作台 · API 未启动, 使用静态兜底");
           setApiState(false, "API 离线兜底");
         }

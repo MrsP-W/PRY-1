@@ -11,6 +11,7 @@ from my_ai_employee.core.keychain import (
     SERVICE_SMTP_QQ,
 )
 from my_ai_employee.dashboard.context import DashboardContext, safe_count, safe_list
+from my_ai_employee.dashboard.reports import safe_scan, scan_reports
 
 
 def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
@@ -107,3 +108,34 @@ def build_finance_anomalies_payload(ctx: DashboardContext, *, limit: int = 10) -
     items = safe_list(lambda: ctx.expense_service.get_recent_anomalies(limit))
     count = safe_count(ctx.expense_service.get_anomaly_count)
     return {"read_only": True, "count": count, "items": items}
+
+
+def build_reports_payload(
+    _ctx: DashboardContext, *, limit: int = 50, type_filter: str | None = None
+) -> dict[str, Any]:
+    """GET /api/reports — 本地报告清单(只读文件系统扫描).
+
+    Args:
+        _ctx: 保持与其他 build_* 一致签名(此端点不依赖 ctx 服务)
+        limit: 最大返回条数,[1,100] int
+        type_filter: 可选,仅返回指定 type(doc/phase_report/spike/agent_output)
+
+    Returns:
+        dict with: read_only, count, items[](path/type/title/date/status/size_bytes)
+    """
+    items = safe_scan(lambda: scan_reports(limit=limit, type_filter=type_filter))
+    return {
+        "read_only": True,
+        "count": len(items),
+        "items": [
+            {
+                "path": e.path,
+                "type": e.type,
+                "title": e.title,
+                "date": e.date,
+                "status": e.status,
+                "size_bytes": e.size_bytes,
+            }
+            for e in items
+        ],
+    }

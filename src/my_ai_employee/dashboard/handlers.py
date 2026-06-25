@@ -13,6 +13,7 @@ from my_ai_employee.dashboard.responses import (
     build_finance_anomalies_payload,
     build_notes_pending_payload,
     build_outbox_payload,
+    build_reports_payload,
     build_status_payload,
     build_tasks_today_payload,
 )
@@ -32,6 +33,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         query = parse_qs(parsed.query)
         limit_raw = query.get("limit", [None])[0]
         limit = parse_limit(limit_raw)
+        type_raw = query.get("type", [None])[0]
+        type_filter = type_raw.strip() if type_raw else None
         if path == "/health":
             self._send_json(HTTPStatus.OK, {"ok": True, "read_only": True})
             return
@@ -57,6 +60,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json(
                 HTTPStatus.OK,
                 build_finance_anomalies_payload(self.dashboard_context, limit=limit),
+            )
+            return
+        if path == "/api/reports":
+            self._send_json(
+                HTTPStatus.OK,
+                build_reports_payload(self.dashboard_context, limit=limit, type_filter=type_filter),
             )
             return
         self._send_json(
