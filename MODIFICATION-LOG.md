@@ -79,8 +79,9 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.52.1` OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)(2026-06-25);承接 v0.2.52 三件事收口(`91cbe96`)。v0.2.52.1 完成:OutboxDispatcher 构造后**自动从 adapter 读取 `_provider_default_*` 3 字段**(沿 v0.2.52 #61 暴露字段),运行时优先级 = provider 默认值(非 None) > 显式 smtp_host/port/username(构造时传),冲突时严判 ValueError(沿撞坑 #18 范本 5 路径严判,防 silent override)。3 新测试覆盖(`test_v0521_provider_mode_syncs_defaults_from_adapter` + `test_v0521_provider_mode_explicit_host_conflict_raises` + `test_v0521_no_provider_mode_backward_compatible`)。**9/9 质量门**:2270+3 = 2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 141 files 0 errors。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本) |
-| **上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
+| **当前阶段** | ✅ `v0.2.52.2` 状态口径同步 + EmailSendAdapter provider 封装硬化(2026-06-25);承接 v0.2.52.1 OutboxDispatcher 自动路由(`dd2e93f` · 撞坑 #63)。v0.2.52.2 完成:① docs(state) 三入口质量基线对齐(**2273 passed / 1 skipped / 88.82%** · MD lint **143 files** 0 errors);② `ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性,OutboxDispatcher 改读公共 API;③ 测试注释/拼写清理(`test_smpt_*` → `test_smtp_*`)。**9/9 质量门**:2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 143 files 0 errors。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本) |
+| **上一阶段** | ✅ `v0.2.52.1` OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)(2026-06-25 · `dd2e93f`,6 files,309+/-) |
+| **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
 | **上上上上一阶段** | ✅ `v0.2.48` align release readiness state 漂移修复(2026-06-25 · docs-only) |
@@ -90,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.47 全量质量门:**2265 passed / 1 skipped** / **88.76% coverage** / mypy strict **0 errors / 209 source files** / MD lint **138 files 0 errors** |
+| **质量基线** | v0.2.52.2 全量质量门:**2273 passed / 1 skipped** / **88.82% coverage** / mypy strict **0 errors / 209 source files** / MD lint **143 files 0 errors** |
 | **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -120,6 +121,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.52.2 状态口径同步 + provider 封装硬化] — 收口
+
+**1. 本次修改内容**
+
+- **docs(state)**:README L71/L114 · SESSION-STATE L27 · MODIFICATION-LOG L93 质量基线对齐(**2273 passed / 1 skipped / 88.82%** · MD lint **143 files** 0 errors,修正 141/138 漂移)。
+- **feat(send_adapter)**:新增 `ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性;`OutboxDispatcher` 改读公共 API,不再 `getattr` `_provider_default_*` 私有字段。
+- **test cleanup**:`test_smpt_*` → `test_smtp_*`;修正 SMTPConnector 过时注释(正确行为 = 底层 `SmtpLibTransport`)。
+
+**2. 风险点**
+
+- 私有字段 `_provider_default_*` 仍保留供内部赋值,外部应只用 `provider_defaults`(沿 v0.2.52.2 封装硬化)。
+- 真实 SMTP 送达仍未完成,8/1 `v0.2.1` tag 继续延后。
+- 本轮不真发邮件、不写凭据、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2273 passed / 1 skipped / 9/9 质量门全绿 / 88.82% coverage / 撞坑 63 类**
+- 当前阶段:v0.2.52.2 收口;承接 v0.2.52.1 撞坑 #63 OutboxDispatcher 自动路由。
+- 下一棒:8/1 v0.2.1 release tag 锚定复评;凭据可用后恢复真实 SMTP spike。
 
 ### 2026-06-25 [v0.2.46 7/1 月度复盘提前执行版] — 收口
 

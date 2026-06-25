@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)**(2026-06-25 · 承接 v0.2.52 三件事 `91cbe96`)。v0.2.52.1 完成:OutboxDispatcher 构造后**自动从 adapter 读取 `_provider_default_*` 3 字段**(沿 v0.2.52 #61 暴露字段),运行时优先级 = provider 默认值(非 None) > 显式 smtp_host/port/username(构造时传),冲突时严判 ValueError(沿撞坑 #18 范本 5 路径严判,防 silent override)。**3 新测试覆盖**(`test_v0521_provider_mode_syncs_defaults_from_adapter` + `test_v0521_provider_mode_explicit_host_conflict_raises` + `test_v0521_no_provider_mode_backward_compatible`)。**9/9 质量门**:2270+3 = 2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 141 files 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。**撞坑累计 63 类**(本轮新增 #63 OutboxDispatcher 5 路径严判)。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md](docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md)。
+> **状态**:✅ **v0.2.52.2 状态口径同步 + EmailSendAdapter provider 封装硬化**(2026-06-25 · 承接 v0.2.52.1 `dd2e93f`)。v0.2.52.2 完成:① **docs(state)** 三入口质量基线对齐(**2273 passed / 1 skipped / 88.82%** · MD lint **143 files** 0 errors);② **`ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性**,OutboxDispatcher 不再读 `_provider_default_*` 私有字段;③ **测试注释/拼写清理**(`test_smpt_*` → `test_smtp_*` · SMTPConnector 注释修正)。**9/9 质量门**:2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 143 files 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。**撞坑累计 63 类**(沿用 v0.2.52.1 #63)。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2265 passed / 1 skipped,覆盖率 88.76%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.82%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2265 passed / 1 skipped,覆盖率 88.76%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.82%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -226,6 +226,7 @@ make help
 | **v0.2.49** 7/8 月度复盘收官 docs(v0.2.42-v0.2.48 完整时间线 + B 类三态 + 8/1 tag 8 项前置条件 + 7/8 月度复盘交付物闭环) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.50** 8/1 tag 锚定评估 preliminary(preliminary ≠ 最终决策 · 撞坑 #60 范本应用 · 距 8/1 还有 5 周关键时间窗) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.76% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.52.2** 状态口径同步 + provider 封装硬化(`ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · docs 三入口 2273/88.82%/143 files MD lint · `test_smpt_*` 拼写修正) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 
