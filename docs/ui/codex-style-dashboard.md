@@ -4,7 +4,7 @@
 
 ## 结论
 
-P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。P2 已补充只读 API 连接:`/api/status` + `/api/tasks/today`。
+P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。P2 已补充只读 API 连接:五个端点 status / tasks / outbox / notes / finance。
 
 ## 产物
 
@@ -17,10 +17,10 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 | 页面 | P0 覆盖 | 说明 |
 |------|---------|------|
 | 今日 | ✅ + API | 待办摘要、任务线程、安全门控 |
-| 邮件 | ✅ | 草稿预览、审批按钮、真实发送禁用态 |
+| 邮件 | ✅ + API | 草稿列表、审批按钮、真实发送禁用态 |
 | 系统 | ✅ + API | 质量门、Provider、Git、审批门 |
-| 笔记 | 占位 | P1/P2 再接 NoteConfirmService |
-| 财务 | 占位 | P1/P2 再接异常检测与候选 review |
+| 笔记 | ✅ + API | Notes 待确认列表 |
+| 财务 | ✅ + API | 异常检测列表 |
 | 报告 | 占位 | 后续展示月度复盘、撞坑清单、质量门趋势 |
 
 ## 评审检查点
@@ -34,8 +34,8 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 ## 推荐下一步
 
 1. 运行 `make dashboard-api`。
-2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 `API 已连接`。
-3. 下一步再扩展 `/api/outbox`、`/api/notes/pending`、`/api/finance/anomalies`。
+2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 `API 已连接 · 5 端点`。
+3. 下一步:`OutboxDraftServiceImpl` 接真实 OutboxStore 数据。
 
 ## 暂不做
 

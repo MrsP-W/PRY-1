@@ -581,7 +581,7 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill">v0.2.53.3</span>
+          <span class="pill">v0.2.53.5</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -594,10 +594,10 @@
         <aside>
           <div class="nav-title">工作区</div>
           <nav class="nav" aria-label="主导航">
-            <button class="active" data-view="today">今日 <span class="badge">6</span></button>
-            <button data-view="mail">邮件 <span class="badge">3</span></button>
-            <button data-view="notes">笔记 <span class="badge">2</span></button>
-            <button data-view="finance">财务 <span class="badge">1</span></button>
+            <button class="active" data-view="today">今日 <span class="badge" id="badge-today">6</span></button>
+            <button data-view="mail">邮件 <span class="badge" id="badge-mail">3</span></button>
+            <button data-view="notes">笔记 <span class="badge" id="badge-notes">2</span></button>
+            <button data-view="finance">财务 <span class="badge" id="badge-finance">1</span></button>
             <button data-view="calendar">日程 <span class="badge">0</span></button>
             <button data-view="reports">报告 <span class="badge">8</span></button>
             <button data-view="system">系统 <span class="badge">7/8</span></button>
@@ -687,7 +687,7 @@
                     <span>当前结果</span>
                     <span class="tiny" id="result-source">静态兜底数据</span>
                   </div>
-                  <div class="queue">
+                  <div class="queue" id="today-queue">
                     <div class="queue-item">
                       <div>
                         <div class="queue-title">供应商付款确认邮件</div>
@@ -710,9 +710,9 @@
 
           <section id="mail" class="view">
             <div class="card card-pad">
-              <p class="tiny">邮件审批 · diff + approval</p>
+              <p class="tiny" id="mail-source">邮件审批 · diff + approval · 静态兜底</p>
               <h1 class="headline">草稿可以保存，<span>真实发送仍被拦截</span></h1>
-              <div class="queue" style="margin-top: 16px">
+              <div class="queue" id="mail-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
                     <div class="queue-title">供应商付款确认 · URGENT</div>
@@ -792,15 +792,40 @@
 
           <section id="notes" class="view">
             <div class="card card-pad">
-              <h1 class="headline">笔记页 P0 占位</h1>
-              <p class="tiny">P1 再接入 NoteConfirmService；P0 只验证导航和信息密度。</p>
+              <p class="tiny" id="notes-source">Notes 待确认 · 静态兜底</p>
+              <h1 class="headline">笔记候选，<span>确认后才写入 L2</span></h1>
+              <div class="queue" id="notes-queue" style="margin-top: 16px">
+                <div class="queue-item">
+                  <div>
+                    <div class="queue-title">L2 跨源候选</div>
+                    <div class="queue-meta">工作 · 待确认</div>
+                  </div>
+                  <span class="tag">确认</span>
+                </div>
+                <div class="queue-item">
+                  <div>
+                    <div class="queue-title">会议纪要待归档</div>
+                    <div class="queue-meta">个人 · 待确认</div>
+                  </div>
+                  <span class="tag">确认</span>
+                </div>
+              </div>
             </div>
           </section>
 
           <section id="finance" class="view">
             <div class="card card-pad">
-              <h1 class="headline">财务页 P0 占位</h1>
-              <p class="tiny">P1/P2 再接入异常检测与候选 review；P0 保持假数据。</p>
+              <p class="tiny" id="finance-source">财务异常 · 静态兜底</p>
+              <h1 class="headline">异常可标记，<span>真实导入仍被拦截</span></h1>
+              <div class="queue" id="finance-queue" style="margin-top: 16px">
+                <div class="queue-item">
+                  <div>
+                    <div class="queue-title">支付宝 ¥1,299.00</div>
+                    <div class="queue-meta">2026-06-25 · amount_spike</div>
+                  </div>
+                  <span class="tag red">风险</span>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -850,14 +875,14 @@
               <span>docs/v0.2.53-codex-style-ui-design-2026-06-25.md</span>
               <span>docs/v0.2-launch-plan.md</span>
               <span>docs/ui/codex-style-dashboard.md</span>
-              <span>docs/v0.2.53.2-dashboard-readonly-api-2026-06-25.md</span>
+              <span>docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md</span>
             </div>
           </div>
 
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              启动 `make dashboard-api` 后刷新本页,即可看到 `/api/status` 与 `/api/tasks/today` 的只读数据。
+              启动 `make dashboard-api` 后刷新本页,即可看到 status/tasks/outbox/notes/finance 五个只读端点数据;API 离线时自动回退静态假数据。
             </div>
           </div>
         </section>
@@ -887,6 +912,63 @@
           { id: "finance_anomaly", count: 1 },
         ],
       };
+
+      const fallbackOutbox = {
+        count: 3,
+        items: [
+          {
+            outbox_id: 1,
+            subject: "供应商付款确认 · URGENT",
+            status: "pending_send",
+            priority: "urgent",
+            to: "finance-vendor@example.com",
+            provider: "outlook",
+          },
+          {
+            outbox_id: 2,
+            subject: "月结资料补充 · TODO",
+            status: "draft",
+            priority: "normal",
+            to: "accounting@example.com",
+            provider: "qq",
+          },
+        ],
+      };
+
+      const fallbackNotes = {
+        count: 2,
+        items: [
+          { apple_note_id: "note-1", title: "L2 跨源候选", folder: "工作", needs_confirm: 1 },
+          { apple_note_id: "note-2", title: "会议纪要待归档", folder: "个人", needs_confirm: 1 },
+        ],
+      };
+
+      const fallbackFinance = {
+        count: 1,
+        items: [
+          {
+            date: "2026-06-25",
+            counterparty: "支付宝",
+            amount: 1299,
+            kinds: "amount_spike",
+          },
+        ],
+      };
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;");
+      }
+
+      function formatAmount(amount) {
+        if (typeof amount === "number") {
+          return `¥${amount.toLocaleString("zh-CN")}`;
+        }
+        return escapeHtml(amount);
+      }
 
       function setText(id, value) {
         const el = document.getElementById(id);
@@ -931,8 +1013,94 @@
         setText("metric-mail", String(mail));
         setText("metric-notes", String(notes));
         setText("metric-finance", String(finance));
+        setText("badge-today", String(total));
+        setText("badge-mail", String(mail));
+        setText("badge-notes", String(notes));
+        setText("badge-finance", String(finance));
         setText("risk-summary", finance > 0 ? `${finance} 个需要先看风险` : "暂无高风险项");
         setText("result-source", sourceLabel);
+      }
+
+      function renderList(containerId, items, renderItem, emptyMessage) {
+        const container = document.getElementById(containerId);
+        if (!container) {
+          return;
+        }
+        if (!items || items.length === 0) {
+          container.innerHTML = `<div class="queue-item"><div><div class="queue-title">${escapeHtml(emptyMessage)}</div><div class="queue-meta">暂无待处理项</div></div></div>`;
+          return;
+        }
+        container.innerHTML = items.map(renderItem).join("");
+      }
+
+      function renderOutboxItem(item) {
+        const priority = item.priority ?? "normal";
+        const status = item.status ?? "draft";
+        const tagText = status === "pending_send" ? "待审批" : "可保存";
+        const tagClass = status === "pending_send" ? "" : "green";
+        const metaParts = [
+          item.to ? `to: ${item.to}` : "",
+          item.provider ? `provider: ${item.provider}` : "",
+          priority ? `priority: ${priority}` : "",
+          status ? `status: ${status}` : "",
+        ].filter(Boolean);
+        const meta = metaParts.join(" · ") || "outbox 草稿";
+        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><span class="tag ${tagClass}">${escapeHtml(tagText)}</span></div>`;
+      }
+
+      function renderNotesItem(item) {
+        const folder = item.folder ? `${item.folder} · ` : "";
+        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><span class="tag">确认</span></div>`;
+      }
+
+      function renderFinanceItem(item) {
+        const title = `${item.counterparty ?? "未知"} ${formatAmount(item.amount)}`;
+        const meta = [item.date, item.kinds].filter(Boolean).join(" · ") || "财务异常";
+        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><span class="tag red">风险</span></div>`;
+      }
+
+      function renderTodayQueueItem(kind, item) {
+        if (kind === "mail") {
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.subject ?? "邮件草稿")}</div><div class="queue-meta">邮件草稿 · ${escapeHtml(item.status ?? "pending")}</div></div><span class="tag">先审</span></div>`;
+        }
+        if (kind === "notes") {
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "Notes 候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
+        }
+        const title = `${item.counterparty ?? "异常"} ${formatAmount(item.amount)}`;
+        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(item.kinds ?? "财务异常")}</div></div><span class="tag red">风险</span></div>`;
+      }
+
+      function renderTodayQueue(outbox, notes, finance) {
+        const mixed = [];
+        (outbox.items ?? []).slice(0, 2).forEach((item) => mixed.push(renderTodayQueueItem("mail", item)));
+        (finance.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("finance", item)));
+        (notes.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("notes", item)));
+        const container = document.getElementById("today-queue");
+        if (!container) {
+          return;
+        }
+        if (mixed.length === 0) {
+          container.innerHTML =
+            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">outbox / notes / finance 均为空</div></div></div>';
+          return;
+        }
+        container.innerHTML = mixed.join("");
+      }
+
+      function renderExtendedViews(outbox, notes, finance, fromApi) {
+        const sourceSuffix = fromApi ? "来自本地只读 API" : "静态兜底";
+        setText("mail-source", `邮件审批 · diff + approval · ${sourceSuffix}`);
+        setText("notes-source", `Notes 待确认 · ${sourceSuffix}`);
+        setText("finance-source", `财务异常 · ${sourceSuffix}`);
+        renderList("mail-queue", outbox.items ?? [], renderOutboxItem, "暂无邮件草稿");
+        renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无 Notes 候选");
+        renderList("finance-queue", finance.items ?? [], renderFinanceItem, "暂无财务异常");
+        renderTodayQueue(outbox, notes, finance);
+        if (fromApi) {
+          setText("badge-mail", String(outbox.count ?? (outbox.items ?? []).length));
+          setText("badge-notes", String(notes.count ?? (notes.items ?? []).length));
+          setText("badge-finance", String(finance.count ?? (finance.items ?? []).length));
+        }
       }
 
       function renderStatus(payload) {
@@ -977,16 +1145,21 @@
 
       async function hydrateDashboard() {
         try {
-          const [status, tasks] = await Promise.all([
+          const [status, tasks, outbox, notes, finance] = await Promise.all([
             fetchJson("/api/status"),
             fetchJson("/api/tasks/today"),
+            fetchJson("/api/outbox?limit=10"),
+            fetchJson("/api/notes/pending?limit=10"),
+            fetchJson("/api/finance/anomalies?limit=10"),
           ]);
           renderStatus(status);
           renderTasks(tasks, "来自本地只读 API");
+          renderExtendedViews(outbox, notes, finance, true);
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
-          setApiState(true, "API 已连接");
+          setApiState(true, "API 已连接 · 5 端点");
         } catch (_err) {
           renderTasks(fallbackTasks, "静态兜底数据");
+          renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
           setText("today-source", "今天 · 本地工作台 · API 未启动, 使用静态兜底");
           setApiState(false, "API 离线兜底");
         }
