@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.7 Dashboard opt-in 真实 Outbox**(2026-06-25 · `DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O)。**质量门**:**2324 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(219 files) / ruff 全绿 / format 233 files / **MD lint 155 files** 0 errors。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不默认读取 Keychain 明文(需显式 env 门控)、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.7 Dashboard opt-in 真实 Outbox**(2026-06-25 · `DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O)。**质量门**:**2324 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(219 files) / ruff 全绿 / format 233 files / **MD lint 156 files** 0 errors。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不默认读取 Keychain 明文(需显式 env 门控)、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -236,7 +236,9 @@ make help
 | **v0.2.53.5** Dashboard HTML 接扩展 API(5 端点 hydrate · 邮件/笔记/财务页 · 离线兜底) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.6** OutboxDraftServiceImpl 接真实 OutboxStore(pending_send+approved 只读查询 · 不输出 body · +7 tests · 2300 passed / 88.54%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.7** Dashboard opt-in 真实 Outbox(`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 注入 Impl · 失败降级 Stub · +24 tests · 2324 passed / 88.50% · 撞坑 #65 opt-in 4 阶段范本) | ✅ 6/25 落地 | 2026-06-25 |
-| **v0.2.54** 8/1 tag 复评 + SMTP 就绪检查(7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 docs-only | 2026-06-25 |
+| **v0.2.54** 8/1 tag 锚定评估(**docs-only 评估线 · 非 Codex UI 主开发版本** · 7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 评估收口 | 2026-06-25 |
+
+> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.7**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
 
 ---
 

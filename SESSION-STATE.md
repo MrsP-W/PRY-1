@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.53.7 Dashboard opt-in 真实 Outbox(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.7 Dashboard opt-in 真实 Outbox 已落地** — `DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O(不打开 DB / 不读 Keychain)。**质量门**:**2324 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(**219 files**) / ruff + format 全绿 / MD lint **155 files** 0 errors。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.7 Dashboard opt-in 真实 Outbox 已落地** — `DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O(不打开 DB / 不读 Keychain)。**质量门**:**2324 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(**219 files**) / ruff + format 全绿 / MD lint **156 files** 0 errors。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | **2300 passed / 1 skipped** · **88.54%** coverage · mypy --strict 0 errors(218 files) · MD lint **155 files** 0 errors |
+| 8/8 质量门 | **2324 passed / 1 skipped** · **88.50%** coverage · mypy --strict 0 errors(219 files) · MD lint **156 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

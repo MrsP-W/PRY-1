@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.7` Dashboard opt-in 真实 Outbox(2026-06-25):`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O · 撞坑 #65 opt-in 4 阶段范本(env 门控 / 默认零 I/O / 失败降级 / 不可变更新)。**2324 passed / 1 skipped / 88.50%** / mypy 0 errors / **219 files** / MD lint **155 files**。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点 |
+| **当前阶段** | ✅ `v0.2.53.7` Dashboard opt-in 真实 Outbox(2026-06-25):`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O · 撞坑 #65 opt-in 4 阶段范本(env 门控 / 默认零 I/O / 失败降级 / 不可变更新)。**2324 passed / 1 skipped / 88.50%** / mypy 0 errors / **219 files** / MD lint **156 files**。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点 |
 | **上一阶段** | ✅ `v0.2.53.6` OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
@@ -91,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.7:**2324 passed / 1 skipped** / **88.50%** / mypy strict 0 / **219 files** / MD lint **155 files** |
+| **质量基线** | v0.2.53.7:**2324 passed / 1 skipped** / **88.50%** / mypy strict 0 / **219 files** / MD lint **156 files** |
 | **下一棒** | OutboxDraftServiceImpl 接 OutboxStore;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
