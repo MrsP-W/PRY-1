@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.47 8/1 release tag 预检包已收口**(2026-06-25 · 撞坑 #58 8 项前置条件 + 1 缺口评估范本)。承接 v0.2.46 7/1 月度复盘提前执行版 + **撞坑 #58(本轮新增)8 项前置条件 + 1 缺口评估范本**:**8 项正式评估 7/8 实质满足,唯一缺口 = outlook/gmail 真实 SMTP 送达(沿 v0.2.44 跳过授权码)**;**真实 SMTP spike 恢复包**含 6 步骤 checklist + 4 步骤命令模板 + 安全护栏(不写入真实凭据 / 不读 Keychain 明文);**OutboxDispatcher × SMTPProviderFactory 接入状态复核** = spike_send_100 已接入 / EmailSendAdapter + OutboxDispatcher 未接入(不阻塞 8/1 tag 决策);**8/1 v0.2.1 release tag 决策矩阵** = 自动打 tag ❌ / 继续延后 ✅ / 降级 v0.2.1-rc1 🟡(推荐继续延后到 8/1 当天检查员强制截点重新评估)。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md](docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md)。
+> **状态**:✅ **v0.2.51 SMTPProviderFactory 接入 + 5 步连击收口**(2026-06-25 · 撞坑 #18 风险门控 + 撞坑 #59 凭据激活 docs-only 收口)。承接 v0.2.47 8/1 release tag 预检包 + **v0.2.49 - v0.2.51 5 步连击完成**:① v0.2.49 月度复盘收官 docs(commit `b8373c8`)② Agent Assistant drift commit `e80cf21` ③ v0.2.49 SMTP spike 收口 docs-only(commit `e6e4b83` · 撞坑 #59 凭据激活范本)④ v0.2.50 8/1 tag preliminary(commit `7d1877d`)⑤ v0.2.51 EmailSendAdapter SMTPProviderFactory 接入(commit `e20fc26` · smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖)。**撞坑 #59(本轮新增)凭据激活 docs-only 收口范本** = docs-only 包(执行入口)+ 真实 spike(凭据后执行);**OutboxDispatcher 自动路由**留待 v0.2.51.1(单 commit 节奏)。8/1 v0.2.1 tag readiness = 7/8 实质满足 + 1 缺口(outlook/gmail 真实 SMTP)。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike / v0.2.51.1 OutboxDispatcher 自动路由。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.49-monthly-review-closure-2026-06-25.md](docs/v0.2.49-monthly-review-closure-2026-06-25.md) + [docs/v0.2.49-real-smtp-spike-recovery-2026-06-25.md](docs/v0.2.49-real-smtp-spike-recovery-2026-06-25.md) + [docs/v0.2.50-8-1-tag-anchor-evaluation-preliminary-2026-06-25.md](docs/v0.2.50-8-1-tag-anchor-evaluation-preliminary-2026-06-25.md)。
 
 ---
 
@@ -222,6 +222,10 @@ make help
 | **v0.2.45** 7/1 月度复盘准备增量包(补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态 · tag 前置条件从 6/8 更新为 7/8 实质满足 + SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.46** 7/1 月度复盘提前执行版(质量门全绿 + B 类事项三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.47** 8/1 release tag 预检包(撞坑 #58 8 项前置条件 + 1 缺口评估范本 + 真实 SMTP spike 恢复 checklist + OutboxDispatcher × SMTPProviderFactory 接入复核 · `make lint` 138 files 0 errors) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.48** align release readiness state(3 文件顶部口径同步到 v0.2.47 · README L7 + SESSION-STATE L1/L4/L12 + MODIFICATION-LOG L82/L83/L84/L87 + 138 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.49** 7/8 月度复盘收官 docs(v0.2.42-v0.2.48 完整时间线 + B 类三态 + 8/1 tag 8 项前置条件 + 7/8 月度复盘交付物闭环) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.50** 8/1 tag 锚定评估 preliminary(preliminary ≠ 最终决策 · 撞坑 #60 范本应用 · 距 8/1 还有 5 周关键时间窗) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.76% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 
