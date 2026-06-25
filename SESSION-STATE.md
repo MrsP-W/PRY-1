@@ -1,4 +1,4 @@
-# SESSION-STATE — v0.2.52 SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)(2026-06-25)
+# SESSION-STATE — v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)(2026-06-25)
 
 > **最后更新**:2026-06-25 11:20 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
 > **状态**:✅ **v0.2.47 8/1 release tag 预检包已收口**(docs-only · 撞坑 #58 新范本)。**执行结果**:完成 5 步"8/1 发版准备 + SMTP 延后恢复包";8 项前置条件正式评估 = **7/8 实质满足,唯一缺口 = outlook/gmail 真实 SMTP 送达**;真实 SMTP spike 恢复包含 6 步骤 checklist + 4 步骤命令模板 + 安全护栏;OutboxDispatcher × SMTPProviderFactory 接入复核(spike 已接入 / EmailSendAdapter 未接入 / 不阻塞 8/1)。**质量门**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 138 files / 0 errors。**8/1 v0.2.1 tag 决策矩阵**:自动打 tag ❌ / 继续延后 ✅(推荐) / 降级 v0.2.1-rc1 🟡。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md`。

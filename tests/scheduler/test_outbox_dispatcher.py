@@ -1862,3 +1862,100 @@ def test_run_once_non_urgent_preserves_priority_and_created_at_order(
         f"  实际顺序: {sent_subjects}\n"
         f"  B2.2 不应破坏非临近场景的 priority DESC 排序"
     )
+
+
+# ===== v0.2.52.1 OutboxDispatcher 自动路由(撞坑 #18 范本 5 路径严判,+3 tests)=====
+def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> None:
+    """v0.2.52.1 路径 1:adapter 传 smtp_provider 后,OutboxDispatcher 构造时同步默认值。
+
+    验证:
+      - _active_provider == adapter._smtp_provider
+      - _provider_default_host/port/email 从 adapter 暴露字段读取
+      - 构造时不传 smtp_host/port(用默认)→ 严判跳过冲突检查(默认值匹配默认占位)
+    """
+    from unittest.mock import patch
+
+    from my_ai_employee.connectors.smtp import SMTPProviderFactory
+
+    # 注入 InMemorySmtpTransport 替代真实 SMTPConnector.transport
+    smtp_transport_local = InMemorySmtpTransport()
+    original_create = SMTPProviderFactory.create
+
+    def patched_create(provider: str, email: str, *, transport: Any = None) -> Any:
+        return original_create(provider, email, transport=smtp_transport_local)
+
+    with patch.object(SMTPProviderFactory, "create", staticmethod(patched_create)):
+        # 构造 store 与 adapter(provider 模式)
+        adapter_provider = EmailSendAdapter(
+            source="outlook",
+            smtp_provider="outlook",
+            outbox_store=store,
+        )
+        # 验证 adapter 已暴露 provider 默认值
+        assert adapter_provider._smtp_provider == "outlook"
+        assert adapter_provider._provider_default_host == "smtp.office365.com"
+        assert adapter_provider._provider_default_port == 465
+        # 构造 OutboxDispatcher(显式 smtp_host/port 用默认值 → 严判跳过冲突检查)
+        dispatcher_local = OutboxDispatcher(
+            source="test-v0521",
+            send_adapter=adapter_provider,
+            outbox_store=store,
+            heartbeat=Heartbeat(idle_threshold_ms=30_000),
+            batch_size=10,
+        )
+        # 验证 dispatcher 同步了 provider 默认值
+        assert dispatcher_local._active_provider == "outlook"
+        assert dispatcher_local._provider_default_host == "smtp.office365.com"
+        assert dispatcher_local._provider_default_port == 465
+        assert dispatcher_local._provider_default_email == "outlook@my-ai-employee.local"
+
+
+def test_v0521_provider_mode_explicit_host_conflict_raises(store: OutboxStore) -> None:
+    """v0.2.52.1 路径 5:provider 默认 host 与显式 smtp_host 不一致 → ValueError。
+
+    沿撞坑 #18 严判不静默范本(防 silent override)。
+    """
+    from unittest.mock import patch
+
+    from my_ai_employee.connectors.smtp import SMTPProviderFactory
+
+    smtp_transport_local = InMemorySmtpTransport()
+    original_create = SMTPProviderFactory.create
+
+    def patched_create(provider: str, email: str, *, transport: Any = None) -> Any:
+        return original_create(provider, email, transport=smtp_transport_local)
+
+    with patch.object(SMTPProviderFactory, "create", staticmethod(patched_create)):
+        adapter_provider = EmailSendAdapter(
+            source="outlook",
+            smtp_provider="outlook",
+            outbox_store=store,
+        )
+        # 显式传错误 smtp_host(与 provider 默认 office365.com 不一致)→ ValueError
+        with pytest.raises(ValueError, match=r"smtp_host 与 provider 默认 host 冲突"):
+            OutboxDispatcher(
+                source="test-v0521-conflict",
+                send_adapter=adapter_provider,
+                outbox_store=store,
+                smtp_host="smtp.qq.com",  # 故意冲突
+                smtp_port=465,
+                smtp_username="test@outlook.com",
+                smtp_password="test_authcode_16",
+                heartbeat=Heartbeat(idle_threshold_ms=30_000),
+                batch_size=10,
+            )
+
+
+def test_v0521_no_provider_mode_backward_compatible(dispatcher: Any) -> None:
+    """v0.2.52.1 路径 3:不传 provider = 走原 smtp_transport 路径(向后兼容)。
+
+    验证:
+      - _active_provider is None
+      - _provider_default_host/port/email 全 None
+      - 构造时不报错(沿 v0.2.51 backward compat)
+    """
+    # dispatcher fixture 自动激活,验证构造成功且 provider 默认字段全 None
+    assert dispatcher._active_provider is None
+    assert dispatcher._provider_default_host is None
+    assert dispatcher._provider_default_port is None
+    assert dispatcher._provider_default_email is None

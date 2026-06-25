@@ -323,6 +323,48 @@ class OutboxDispatcher:
         self._heartbeat = (
             heartbeat if heartbeat is not None else Heartbeat(idle_threshold_ms=30_000)
         )
+        # 4.5 v0.2.52.1 OutboxDispatcher 自动路由(provider 模式):
+        #    EmailSendAdapter v0.2.51 接入 SMTPProviderFactory 后,v0.2.52 暴露
+        #    _provider_default_host / _provider_default_port / _provider_default_email 3 字段。
+        #    OutboxDispatcher 构造后立刻从 adapter 读取这 3 字段(若 adapter 用了 provider 模式),
+        #    后续运行时优先级 = provider 默认值(adapter 暴露)> 显式 smtp_host/port/username(password)。
+        #    互斥严判:provider 默认 host 与显式 smtp_host 不一致 → ValueError(防 silent override)
+        #    沿撞坑 #18 范本(5 路径严判) — 不传 provider = 走原 smtp_transport 路径(向后兼容)
+        self._provider_default_host: str | None = None
+        self._provider_default_port: int | None = None
+        self._provider_default_email: str | None = None
+        self._active_provider: str | None = None
+        if send_adapter is not None:
+            adapter_provider = getattr(send_adapter, "_smtp_provider", None)
+            if adapter_provider is not None:
+                self._active_provider = adapter_provider
+                self._provider_default_host = getattr(send_adapter, "_provider_default_host", None)
+                self._provider_default_port = getattr(send_adapter, "_provider_default_port", None)
+                self._provider_default_email = getattr(
+                    send_adapter, "_provider_default_email", None
+                )
+                # 严判冲突:显式 smtp_host/port 与 provider 默认值不一致 → ValueError
+                # (沿撞坑 #18 范本 — 严判不静默)
+                if (
+                    self._provider_default_host is not None
+                    and smtp_host != "smtp.test.local"
+                    and smtp_host != self._provider_default_host
+                ):
+                    raise ValueError(
+                        f"smtp_host 与 provider 默认 host 冲突(撞坑 #18 范本 严判):"
+                        f"smtp_host={smtp_host!r} provider_default_host="
+                        f"{self._provider_default_host!r} provider={adapter_provider!r}"
+                    )
+                if (
+                    self._provider_default_port is not None
+                    and smtp_port != 465
+                    and smtp_port != self._provider_default_port
+                ):
+                    raise ValueError(
+                        f"smtp_port 与 provider 默认 port 冲突(撞坑 #18 范本 严判):"
+                        f"smtp_port={smtp_port} provider_default_port="
+                        f"{self._provider_default_port} provider={adapter_provider!r}"
+                    )
         # 4. D5.5 内存退避状态(per-outbox_id → {cf, last_failed_at})
         #    - 失败时记录 consecutive_send_failures + last_failed_at_ms
         #    - 成功时清空(避免历史 cf 干扰)
@@ -718,9 +760,16 @@ class OutboxDispatcher:
         # 5. 构造 EmailMessage(异常窄化 4 类,沿 D3.3.3 范本不接基类 Exception)
         # D5.6.2 P1.1 修复:From 必须用 smtp_username(已认证邮箱),不再硬编码 .test.local
         # QQ SMTP 等会拒收 From 与认证账户不一致的邮件
+        # v0.2.52.1 自动路由:From 字段优先级 = provider_default_email(非 None 时)>
+        #   smtp_username(fallback)— 沿撞坑 #18 严判不静默范本
+        from_address = (
+            self._provider_default_email
+            if self._provider_default_email is not None
+            else self._smtp_username
+        )
         try:
             msg = EmailMessage()
-            msg["From"] = self._smtp_username  # 已认证邮箱(必须非空,严判在 __init__)
+            msg["From"] = from_address  # 已认证邮箱(provider 默认或构造传入)
             msg["To"] = entry.recipient_email
             msg["Subject"] = entry.subject
             msg.set_content(entry.body)
@@ -738,11 +787,23 @@ class OutboxDispatcher:
         # 6. 调 send_and_emit — 异常按 D5.3 映射分流
         # D5.6.1 P0 修复:从 self._smtp_* 读,不再硬编码 smtp.test.local / @test.local / 占位密码
         # v0.2 B4.3:返回类型改 union(SendDecisionReport | SendBlockedDecisionReport)
+        # v0.2.52.1 自动路由:smtp_host/port 优先级 = provider_default_host/port(非 None 时)
+        #   > self._smtp_host/port(fallback)— 沿撞坑 #18 严判不静默范本
+        effective_host = (
+            self._provider_default_host
+            if self._provider_default_host is not None
+            else self._smtp_host
+        )
+        effective_port = (
+            self._provider_default_port
+            if self._provider_default_port is not None
+            else self._smtp_port
+        )
         try:
             report: SendDecisionReport | SendBlockedDecisionReport = adapter.send_and_emit(
                 outbox_id=entry.id,
-                smtp_host=self._smtp_host,
-                smtp_port=self._smtp_port,
+                smtp_host=effective_host,
+                smtp_port=effective_port,
                 smtp_username=self._smtp_username,
                 smtp_password=self._smtp_password,
                 email_message=msg,
