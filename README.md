@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.44 跳过授权码 + 真实 SMTP spike 延后已收口**(2026-06-25 · 用户明确“跳过授权码”)。**决策结果**:不继续卡 Outlook/Gmail 真实发信凭据;保留 v0.2.43 provider 白名单与 5 重防误发门控;真实 SMTP spike 等未来凭据可用再跑。**已验证**:Outlook/Gmail Keychain 凭据均 missing;Outlook InMemory 预演 sent=1;未设置 `SMTP_REAL_NETWORK=1` 时真实发送硬拦截,未触网。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:7/1 月度复盘准备 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.44-skip-smtp-authcode-2026-06-25.md](docs/v0.2.44-skip-smtp-authcode-2026-06-25.md)。
+> **状态**:✅ **v0.2.45 7/1 月度复盘准备增量包已收口**(2026-06-25 · 承接 6/20 版复盘包)。**修复结果**:新增 6/25 增量复盘包,把 v0.2.36 W3 真账单全量入库、v0.2.42 mypy strict 0 errors、v0.2.43 SMTP provider 白名单解封、v0.2.44 跳过授权码/真实 SMTP 延后纳入 7/1 复盘输入。**当前 tag 前置条件**:W3 已完成;SMTP provider 已解封;真实 SMTP 送达因授权码跳过继续延后;v0.2.1 release tag 8/1 仍不打。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:7/1 当天执行月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.45-7-1-monthly-review-update-2026-06-25.md](docs/v0.2.45-7-1-monthly-review-update-2026-06-25.md)。
 
 ---
 
@@ -219,6 +219,7 @@ make help
 | **v0.2.42** mypy `--strict` 43 errors 清零 + 硬门锁死(Makefile 取消 `|| echo` 放行 · `mypy --strict src tests` 0 errors / 209 files · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.43** outlook/gmail SMTP provider 白名单解封(`spike_send_100.py --smtp-provider {qq,outlook,gmail}` · provider-aware Keychain 能力对齐 · 不真发邮件 · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.44** 跳过授权码 + 真实 SMTP spike 延后(用户明确“跳过授权码” · Keychain missing + InMemory sent=1 + SMTP_REAL_NETWORK 硬拦截实测 · 下一棒转 7/1 月度复盘准备) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.45** 7/1 月度复盘准备增量包(补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态 · tag 前置条件从 6/8 更新为 7/8 实质满足 + SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 

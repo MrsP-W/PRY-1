@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.44 跳过授权码 + 真实 SMTP spike 延后已收口(2026-06-25)
+# SESSION-STATE — v0.2.45 7/1 月度复盘准备增量包已收口(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.44 跳过授权码 + 真实 SMTP spike 延后已收口**(6/25 · 用户明确“跳过授权码”)。**决策结果**:不继续卡 Outlook/Gmail 真实发信凭据;保留 v0.2.43 provider 白名单与 5 重防误发门控;真实 SMTP spike 转为后续凭据可用时再跑。**已验证**:Outlook/Gmail Keychain 凭据均 missing;Outlook InMemory 预演 sent=1;未设置 `SMTP_REAL_NETWORK=1` 时真实发送硬拦截,未触网。**质量门**:docs-only,`make lint` 0 errors。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:7/1 月度复盘准备/8月 v0.2.1 release tag 锚定评估。
+> **状态**:✅ **v0.2.45 7/1 月度复盘准备增量包已收口**(6/25 · 承接 v0.2.16 6/20 版复盘包)。**修复结果**:新增 6/25 增量复盘包,把 v0.2.36 W3 真账单全量入库、v0.2.42 mypy strict 0 errors、v0.2.43 SMTP provider 白名单解封、v0.2.44 跳过授权码/真实 SMTP 延后纳入 7/1 复盘输入。**当前 tag 前置条件**:W3 已完成;SMTP provider 已解封;真实 SMTP 送达因授权码跳过继续延后;v0.2.1 release tag 8/1 仍不打。**质量门**:docs-only,`make lint` 0 errors。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:7/1 当天执行月度复盘/8月 v0.2.1 release tag 锚定评估。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.44 跳过授权码 + 真实 SMTP spike 延后已收口(2026-06-25)**,**下一步候选**:7/1 月度复盘准备/8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等未来凭据可用再恢复。
+**当前启动候选**:**v0.2.45 7/1 月度复盘准备增量包已收口(2026-06-25)**,**下一步候选**:7/1 当天执行月度复盘/8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等未来凭据可用再恢复。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
