@@ -1575,11 +1575,12 @@ def test_smtp_provider_mode_assigns_underlying_transport_not_connector() -> None
     # 不能 isinstance(Protocol),改用 hasattr 校验
     for method in ("connect", "login", "send_message", "quit"):
         assert hasattr(adapter._smtp_transport, method), f"_smtp_transport 缺协议方法 {method!r}"
-    # 关键约束 2: provider 默认配置字段已正确填充
-    assert adapter._smtp_provider == "outlook"
-    assert adapter._provider_default_host == "smtp.office365.com"
-    assert adapter._provider_default_port == 465
-    assert adapter._provider_default_email == "outlook@my-ai-employee.local"
+    # 关键约束 2: provider 默认配置字段已正确填充(v0.2.52.3 公共 API 一致性)
+    assert adapter.smtp_provider == "outlook"
+    defaults = adapter.provider_defaults
+    assert defaults.host == "smtp.office365.com"
+    assert defaults.port == 465
+    assert defaults.email == "outlook@my-ai-employee.local"
     # 关键约束 3: 协议校验 — connect(host, port, timeout=30.0) 不应抛 TypeError
     # SmtpLibTransport 会尝试真连 outlook SMTP server,但我们只校验协议签名不抛 TypeError
     from my_ai_employee.connectors.smtp import SmtpTransportError
@@ -1635,8 +1636,9 @@ def test_send_and_emit_smtp_provider_factory_end_to_end(
     assert adapter._smtp_transport is smtp_transport, (
         "_smtp_transport 应等于 monkeypatch 注入的 InMemorySmtpTransport"
     )
-    assert adapter._provider_default_host == "smtp.office365.com"
-    assert adapter._smtp_provider == "outlook"
+    # v0.2.52.3 公共 API 一致性:沿 ProviderDefaults 封装硬化范本
+    assert adapter.provider_defaults.host == "smtp.office365.com"
+    assert adapter.smtp_provider == "outlook"
 
     # 跑完整 send_and_emit 4 步路径(关键修复验证 — 修复前会 TypeError)
     report = adapter.send_and_emit(

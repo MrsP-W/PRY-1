@@ -92,6 +92,7 @@ from my_ai_employee.policy.exceptions import (
 from my_ai_employee.policy.heartbeat import Heartbeat, Liveness
 from my_ai_employee.policy.send_adapter import (
     EmailSendAdapter,
+    ProviderDefaults,  # v0.2.52.3: 公共 API 暴露给测试用,封装 provider 默认值只读快照
     SendBlockedDecisionReport,  # v0.2 B4.3:union return type 引入
     SendDecisionReport,
 )
@@ -392,6 +393,28 @@ class OutboxDispatcher:
                 "OutboxStore(session_factory),D5.4 单元测试用真实 OutboxStore 注入"
             )
         return self._outbox_store
+
+    # ===== 公共 API(只读访问器,封装 provider 默认值只读快照)=====
+
+    @property
+    def active_provider(self) -> str | None:
+        """当前激活的 SMTP provider 名(qq/outlook/gmail);未启用 provider 模式时为 None.
+
+        v0.2.52.3 暴露公共 API:测试与外部观察者无需读私有字段 `_active_provider`。
+        """
+        return self._active_provider
+
+    @property
+    def provider_defaults(self) -> ProviderDefaults:
+        """provider 默认 host/port/email 只读快照(供下游参考,避免读私有字段).
+
+        v0.2.52.3 暴露公共 API:与 EmailSendAdapter.provider_defaults 对称封装。
+        """
+        return ProviderDefaults(
+            host=self._provider_default_host,
+            port=self._provider_default_port,
+            email=self._provider_default_email,
+        )
 
     # ===== 主循环 =====
 

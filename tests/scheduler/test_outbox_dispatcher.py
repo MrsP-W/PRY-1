@@ -1868,9 +1868,13 @@ def test_run_once_non_urgent_preserves_priority_and_created_at_order(
 def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> None:
     """v0.2.52.1 路径 1:adapter 传 smtp_provider 后,OutboxDispatcher 构造时同步默认值。
 
+    v0.2.52.3 公共 API 一致性:沿 v0.2.52.2 ProviderDefaults 封装硬化范本,
+    dispatcher 暴露 `active_provider` / `provider_defaults` 公共属性,
+    测试通过公共 API 验证,不再读私有字段 `_active_provider` / `_provider_default_*`。
+
     验证:
-      - _active_provider == adapter.smtp_provider
-      - _provider_default_host/port/email 从 adapter.provider_defaults 同步
+      - dispatcher.active_provider == adapter.smtp_provider
+      - dispatcher.provider_defaults.host/port/email 从 adapter.provider_defaults 同步
       - 构造时不传 smtp_host/port(用默认)→ 严判跳过冲突检查(默认值匹配默认占位)
     """
     from unittest.mock import patch
@@ -1893,9 +1897,9 @@ def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> 
         )
         # 验证 adapter 只读属性已暴露 provider 默认值
         assert adapter_provider.smtp_provider == "outlook"
-        defaults = adapter_provider.provider_defaults
-        assert defaults.host == "smtp.office365.com"
-        assert defaults.port == 465
+        adapter_defaults = adapter_provider.provider_defaults
+        assert adapter_defaults.host == "smtp.office365.com"
+        assert adapter_defaults.port == 465
         # 构造 OutboxDispatcher(显式 smtp_host/port 用默认值 → 严判跳过冲突检查)
         dispatcher_local = OutboxDispatcher(
             source="test-v0521",
@@ -1904,11 +1908,14 @@ def test_v0521_provider_mode_syncs_defaults_from_adapter(store: OutboxStore) -> 
             heartbeat=Heartbeat(idle_threshold_ms=30_000),
             batch_size=10,
         )
-        # 验证 dispatcher 同步了 provider 默认值
-        assert dispatcher_local._active_provider == "outlook"
-        assert dispatcher_local._provider_default_host == "smtp.office365.com"
-        assert dispatcher_local._provider_default_port == 465
-        assert dispatcher_local._provider_default_email == "outlook@my-ai-employee.local"
+        # v0.2.52.3 验证 dispatcher 通过公共 API 暴露 provider 默认值(沿 ProviderDefaults 封装硬化)
+        assert dispatcher_local.active_provider == "outlook"
+        dispatcher_defaults = dispatcher_local.provider_defaults
+        assert dispatcher_defaults.host == "smtp.office365.com"
+        assert dispatcher_defaults.port == 465
+        assert dispatcher_defaults.email == "outlook@my-ai-employee.local"
+        # 与 adapter 的 provider_defaults 完全一致(双端对称封装范本)
+        assert dispatcher_defaults == adapter_defaults
 
 
 def test_v0521_provider_mode_explicit_host_conflict_raises(store: OutboxStore) -> None:
@@ -1950,13 +1957,17 @@ def test_v0521_provider_mode_explicit_host_conflict_raises(store: OutboxStore) -
 def test_v0521_no_provider_mode_backward_compatible(dispatcher: Any) -> None:
     """v0.2.52.1 路径 3:不传 provider = 走原 smtp_transport 路径(向后兼容)。
 
+    v0.2.52.3 公共 API 一致性:验证通过公共属性 `active_provider` / `provider_defaults` 暴露 None,
+    不再读私有字段 `_active_provider` / `_provider_default_*`。
+
     验证:
-      - _active_provider is None
-      - _provider_default_host/port/email 全 None
+      - dispatcher.active_provider is None
+      - dispatcher.provider_defaults.host/port/email 全 None
       - 构造时不报错(沿 v0.2.51 backward compat)
     """
     # dispatcher fixture 自动激活,验证构造成功且 provider 默认字段全 None
-    assert dispatcher._active_provider is None
-    assert dispatcher._provider_default_host is None
-    assert dispatcher._provider_default_port is None
-    assert dispatcher._provider_default_email is None
+    assert dispatcher.active_provider is None
+    defaults = dispatcher.provider_defaults
+    assert defaults.host is None
+    assert defaults.port is None
+    assert defaults.email is None
