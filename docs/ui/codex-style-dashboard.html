@@ -1,0 +1,884 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>我的AI员工 · Codex 风格工作台 P0</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --panel: #171a21;
+        --panel-2: #20242d;
+        --panel-3: #252b36;
+        --line: #303746;
+        --text: #f4f6fa;
+        --muted: #9aa4b2;
+        --faint: #6f7988;
+        --blue: #5b8cff;
+        --green: #35c759;
+        --yellow: #ffb020;
+        --red: #ff5c5c;
+        --purple: #b48cff;
+        --shadow: 0 20px 70px rgb(0 0 0 / 35%);
+        --radius: 18px;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "SF Pro Text", "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        background:
+          radial-gradient(circle at 20% 10%, rgb(91 140 255 / 18%), transparent 28%),
+          radial-gradient(circle at 85% 5%, rgb(180 140 255 / 14%), transparent 25%),
+          var(--bg);
+        color: var(--text);
+      }
+
+      button {
+        font: inherit;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-rows: 58px minmax(0, 1fr) 64px;
+        width: min(1440px, calc(100vw - 32px));
+        height: calc(100vh - 32px);
+        margin: 16px auto;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 24px;
+        background: rgb(15 17 21 / 82%);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(22px);
+      }
+
+      header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 0 18px;
+        border-bottom: 1px solid var(--line);
+        background: rgb(23 26 33 / 85%);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 260px;
+      }
+
+      .avatar {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        place-items: center;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--blue), var(--purple));
+        font-size: 18px;
+      }
+
+      .brand-title {
+        font-weight: 760;
+        letter-spacing: -0.02em;
+      }
+
+      .brand-subtitle {
+        margin-top: 2px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .status-strip {
+        display: flex;
+        flex: 1;
+        justify-content: center;
+        gap: 8px;
+        min-width: 0;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        min-height: 28px;
+        padding: 5px 10px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 999px;
+        background: rgb(255 255 255 / 4%);
+        color: var(--muted);
+        font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--faint);
+      }
+
+      .dot.green {
+        background: var(--green);
+      }
+
+      .dot.yellow {
+        background: var(--yellow);
+      }
+
+      .dot.red {
+        background: var(--red);
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 12px;
+        padding: 9px 12px;
+        background: var(--panel-2);
+        color: var(--text);
+        cursor: pointer;
+      }
+
+      .btn.primary {
+        border-color: rgb(91 140 255 / 60%);
+        background: linear-gradient(135deg, rgb(91 140 255 / 95%), rgb(91 140 255 / 55%));
+      }
+
+      .btn.danger {
+        border-color: rgb(255 92 92 / 24%);
+        color: #ffb4b4;
+      }
+
+      .btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: 220px minmax(460px, 1fr) 340px;
+        min-height: 0;
+      }
+
+      aside,
+      main,
+      .inspector {
+        min-height: 0;
+      }
+
+      aside {
+        padding: 16px;
+        border-right: 1px solid var(--line);
+        background: rgb(23 26 33 / 72%);
+      }
+
+      .nav-title {
+        margin: 6px 0 10px;
+        color: var(--faint);
+        font-size: 12px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .nav {
+        display: grid;
+        gap: 6px;
+      }
+
+      .nav button {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        border: 0;
+        border-radius: 14px;
+        padding: 11px 12px;
+        background: transparent;
+        color: var(--muted);
+        cursor: pointer;
+        text-align: left;
+      }
+
+      .nav button.active {
+        background: rgb(91 140 255 / 14%);
+        color: var(--text);
+      }
+
+      .badge {
+        min-width: 22px;
+        border-radius: 999px;
+        padding: 2px 7px;
+        background: rgb(255 255 255 / 8%);
+        color: var(--muted);
+        font-size: 12px;
+        text-align: center;
+      }
+
+      .nav button.active .badge {
+        background: rgb(91 140 255 / 25%);
+        color: #dce6ff;
+      }
+
+      .side-card {
+        margin-top: 18px;
+        padding: 14px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: var(--radius);
+        background: rgb(255 255 255 / 4%);
+      }
+
+      .side-card h3,
+      .card h3,
+      .inspector h3 {
+        margin: 0 0 10px;
+        font-size: 14px;
+      }
+
+      .tiny {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      main {
+        overflow: auto;
+        padding: 18px;
+      }
+
+      .view {
+        display: none;
+      }
+
+      .view.active {
+        display: block;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 240px;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .card {
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: var(--radius);
+        background: rgb(23 26 33 / 82%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 4%);
+      }
+
+      .card-pad {
+        padding: 16px;
+      }
+
+      .headline {
+        margin: 0;
+        font-size: clamp(24px, 3vw, 34px);
+        letter-spacing: -0.04em;
+      }
+
+      .headline span {
+        color: var(--blue);
+      }
+
+      .summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin-top: 18px;
+      }
+
+      .metric {
+        padding: 12px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 14px;
+        background: var(--panel-2);
+      }
+
+      .metric-value {
+        font-size: 22px;
+        font-weight: 760;
+      }
+
+      .metric-label {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .thread {
+        display: grid;
+        gap: 12px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 36px minmax(0, 1fr);
+        gap: 12px;
+      }
+
+      .step-icon {
+        display: grid;
+        width: 36px;
+        height: 36px;
+        place-items: center;
+        border-radius: 14px;
+        background: var(--panel-2);
+      }
+
+      .step-body {
+        padding: 14px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 16px;
+        background: var(--panel);
+      }
+
+      .step-title {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 8px;
+        font-weight: 720;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .chip {
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 999px;
+        padding: 5px 9px;
+        background: rgb(255 255 255 / 5%);
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .chip.ok {
+        color: #bdf8ca;
+      }
+
+      .chip.warn {
+        color: #ffe0a3;
+      }
+
+      .queue {
+        display: grid;
+        gap: 10px;
+      }
+
+      .queue-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding: 13px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 16px;
+        background: var(--panel);
+      }
+
+      .queue-title {
+        overflow: hidden;
+        font-weight: 700;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .queue-meta {
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tag {
+        align-self: start;
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: rgb(255 176 32 / 12%);
+        color: #ffd68a;
+        font-size: 12px;
+      }
+
+      .tag.green {
+        background: rgb(53 199 89 / 13%);
+        color: #bdf8ca;
+      }
+
+      .tag.red {
+        background: rgb(255 92 92 / 13%);
+        color: #ffb4b4;
+      }
+
+      .draft {
+        margin-top: 14px;
+        padding: 16px;
+        border: 1px solid rgb(255 255 255 / 9%);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, rgb(32 36 45 / 86%), rgb(23 26 33 / 86%));
+      }
+
+      .draft pre {
+        overflow: auto;
+        margin: 12px 0 0;
+        color: #d7deea;
+        font: 13px/1.7 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+
+      .gate-list {
+        display: grid;
+        gap: 8px;
+      }
+
+      .gate {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 14px;
+        background: rgb(255 255 255 / 4%);
+      }
+
+      .gate strong {
+        font-size: 13px;
+      }
+
+      .health-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .inspector {
+        overflow: auto;
+        padding: 16px;
+        border-left: 1px solid var(--line);
+        background: rgb(23 26 33 / 72%);
+      }
+
+      .inspector-section {
+        margin-bottom: 14px;
+        padding: 14px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: var(--radius);
+        background: rgb(255 255 255 / 4%);
+      }
+
+      .evidence {
+        display: grid;
+        gap: 8px;
+      }
+
+      .evidence a,
+      .evidence span {
+        display: block;
+        overflow: hidden;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 12px;
+        padding: 9px 10px;
+        color: #d7deea;
+        font-size: 12px;
+        text-decoration: none;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 0 18px;
+        border-top: 1px solid var(--line);
+        background: rgb(23 26 33 / 86%);
+      }
+
+      .log {
+        display: flex;
+        gap: 8px;
+        min-width: 0;
+        color: var(--muted);
+        font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+
+      .log span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      @media (max-width: 1080px) {
+        .workspace {
+          grid-template-columns: 180px minmax(0, 1fr);
+        }
+
+        .inspector {
+          display: none;
+        }
+
+        .summary-grid,
+        .health-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 760px) {
+        .shell {
+          width: 100vw;
+          height: 100vh;
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .status-strip,
+        .header-actions,
+        aside {
+          display: none;
+        }
+
+        .workspace,
+        .hero {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <header>
+        <div class="brand">
+          <div class="avatar">职</div>
+          <div>
+            <div class="brand-title">我的AI员工</div>
+            <div class="brand-subtitle">Codex 风格本地工作台 · P0 静态原型</div>
+          </div>
+        </div>
+        <div class="status-strip" aria-label="系统状态">
+          <span class="pill"><span class="dot green"></span>本地运行</span>
+          <span class="pill"><span class="dot green"></span>质量门全绿</span>
+          <span class="pill"><span class="dot yellow"></span>SMTP 未解锁</span>
+          <span class="pill"><span class="dot red"></span>Keychain missing</span>
+          <span class="pill">v0.2.53 P0</span>
+        </div>
+        <div class="header-actions">
+          <button class="btn">查看证据</button>
+          <button class="btn primary">处理最高风险项</button>
+        </div>
+      </header>
+
+      <div class="workspace">
+        <aside>
+          <div class="nav-title">工作区</div>
+          <nav class="nav" aria-label="主导航">
+            <button class="active" data-view="today">今日 <span class="badge">6</span></button>
+            <button data-view="mail">邮件 <span class="badge">3</span></button>
+            <button data-view="notes">笔记 <span class="badge">2</span></button>
+            <button data-view="finance">财务 <span class="badge">1</span></button>
+            <button data-view="calendar">日程 <span class="badge">0</span></button>
+            <button data-view="reports">报告 <span class="badge">8</span></button>
+            <button data-view="system">系统 <span class="badge">7/8</span></button>
+            <button data-view="settings">设置 <span class="badge">P0</span></button>
+          </nav>
+
+          <div class="side-card">
+            <h3>推荐下一步</h3>
+            <div class="tiny">
+              先审 1 封邮件草稿，再看 1 条财务异常。真实发送保持禁用，直到凭据和网络门控都明确解锁。
+            </div>
+          </div>
+
+          <div class="side-card">
+            <h3>边界</h3>
+            <div class="tiny">
+              假数据 · 不接真实 DB · 不读 Keychain 明文 · 不发 SMTP · 不启动 launchd。
+            </div>
+          </div>
+        </aside>
+
+        <main>
+          <section id="today" class="view active">
+            <div class="hero">
+              <div class="card card-pad">
+                <p class="tiny">今天 · 本地工作台</p>
+                <h1 class="headline">6 个待处理项，<span>1 个需要先看风险</span></h1>
+                <div class="summary-grid">
+                  <div class="metric">
+                    <div class="metric-value">3</div>
+                    <div class="metric-label">邮件草稿待审</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-value">2</div>
+                    <div class="metric-label">Notes 候选</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-value">1</div>
+                    <div class="metric-label">财务异常</div>
+                  </div>
+                  <div class="metric">
+                    <div class="metric-value">7/8</div>
+                    <div class="metric-label">Tag readiness</div>
+                  </div>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <h3>安全门控</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>真实 SMTP</strong><span class="tag red">禁用</span></div>
+                  <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
+                  <div class="gate"><strong>Keychain</strong><span class="tag red">missing</span></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="thread">
+              <div class="step">
+                <div class="step-icon">你</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <span>用户指令</span>
+                    <span class="tiny">09:40</span>
+                  </div>
+                  <div>处理今天邮件、笔记候选和财务异常；高风险动作先给计划，等待确认。</div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">计</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <span>计划</span>
+                    <span class="tag">等待审批</span>
+                  </div>
+                  <div>先审最高风险邮件草稿 → 复核账单异常 → 确认 Notes 候选 → 输出今日摘要。</div>
+                  <div class="chips">
+                    <span class="chip ok">不真实发送</span>
+                    <span class="chip ok">不写 Keychain</span>
+                    <span class="chip warn">需要用户确认邮件草稿</span>
+                  </div>
+                </div>
+              </div>
+              <div class="step">
+                <div class="step-icon">结</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <span>当前结果</span>
+                    <span class="tiny">假数据示例</span>
+                  </div>
+                  <div class="queue">
+                    <div class="queue-item">
+                      <div>
+                        <div class="queue-title">供应商付款确认邮件</div>
+                        <div class="queue-meta">收件人白名单通过，黑名单通过，SMTP 缺凭据</div>
+                      </div>
+                      <span class="tag">先审</span>
+                    </div>
+                    <div class="queue-item">
+                      <div>
+                        <div class="queue-title">支付宝异常支出 ¥1,299.00</div>
+                        <div class="queue-meta">高于历史均值 2.8 倍，需要人工标记</div>
+                      </div>
+                      <span class="tag red">风险</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="mail" class="view">
+            <div class="card card-pad">
+              <p class="tiny">邮件审批 · diff + approval</p>
+              <h1 class="headline">草稿可以保存，<span>真实发送仍被拦截</span></h1>
+              <div class="queue" style="margin-top: 16px">
+                <div class="queue-item">
+                  <div>
+                    <div class="queue-title">供应商付款确认 · URGENT</div>
+                    <div class="queue-meta">to: finance-vendor@example.com · provider: outlook · priority: high</div>
+                  </div>
+                  <span class="tag">待审批</span>
+                </div>
+                <div class="queue-item">
+                  <div>
+                    <div class="queue-title">月结资料补充 · TODO</div>
+                    <div class="queue-meta">to: accounting@example.com · provider: qq · priority: normal</div>
+                  </div>
+                  <span class="tag green">可保存</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="draft">
+              <h3>AI 草稿预览</h3>
+              <pre>主题：请确认 6 月供应商付款资料
+
+你好，
+
+我已整理 6 月付款资料，当前缺少 2 张发票附件。请在今天 17:00 前补充确认。
+
+本邮件为草稿预览，真实发送需要用户审批 + Keychain 凭据 + SMTP_REAL_NETWORK 显式开启。</pre>
+              <div class="chips">
+                <button class="btn">保存草稿</button>
+                <button class="btn">退回重写</button>
+                <button class="btn primary">1-click 审批</button>
+                <button class="btn danger" disabled>真实发送：门控未满足</button>
+              </div>
+            </div>
+          </section>
+
+          <section id="system" class="view">
+            <div class="card card-pad">
+              <p class="tiny">系统健康 · workspace aware</p>
+              <h1 class="headline">可以安全继续，<span>但不能真实发送</span></h1>
+            </div>
+            <div class="health-grid" style="margin-top: 14px">
+              <div class="card card-pad">
+                <h3>质量门</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>pytest</strong><span class="tag green">2273 passed</span></div>
+                  <div class="gate"><strong>mypy --strict</strong><span class="tag green">0 errors</span></div>
+                  <div class="gate"><strong>make lint</strong><span class="tag green">待本轮复跑</span></div>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <h3>Provider</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>IMAP</strong><span class="tag green">可用</span></div>
+                  <div class="gate"><strong>SMTP provider</strong><span class="tag green">factory ready</span></div>
+                  <div class="gate"><strong>SMTP_REAL_NETWORK</strong><span class="tag red">off</span></div>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <h3>Git</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>branch</strong><span class="tag green">main</span></div>
+                  <div class="gate"><strong>tag</strong><span class="tag">v0.1.0 anchored</span></div>
+                  <div class="gate"><strong>v0.2.x tag</strong><span class="tag red">不打</span></div>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <h3>审批门</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>Keychain 写入</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>launchd/kickstart</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>真实账单导入</strong><span class="tag">仅人工触发</span></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="notes" class="view">
+            <div class="card card-pad">
+              <h1 class="headline">笔记页 P0 占位</h1>
+              <p class="tiny">P1 再接入 NoteConfirmService；P0 只验证导航和信息密度。</p>
+            </div>
+          </section>
+
+          <section id="finance" class="view">
+            <div class="card card-pad">
+              <h1 class="headline">财务页 P0 占位</h1>
+              <p class="tiny">P1/P2 再接入异常检测与候选 review；P0 保持假数据。</p>
+            </div>
+          </section>
+
+          <section id="calendar" class="view">
+            <div class="card card-pad">
+              <h1 class="headline">日程页 P0 占位</h1>
+              <p class="tiny">当前没有日程冲突；后续可接 CalDAV 只读摘要。</p>
+            </div>
+          </section>
+
+          <section id="reports" class="view">
+            <div class="card card-pad">
+              <h1 class="headline">报告页 P0 占位</h1>
+              <p class="tiny">后续展示月度复盘、质量门趋势、撞坑清单和 release readiness。</p>
+            </div>
+          </section>
+
+          <section id="settings" class="view">
+            <div class="card card-pad">
+              <h1 class="headline">设置页 P0 占位</h1>
+              <p class="tiny">设置页只展示 present/missing，不展示凭据明文。</p>
+            </div>
+          </section>
+        </main>
+
+        <section class="inspector" aria-label="上下文检查器">
+          <div class="inspector-section">
+            <h3>上下文检查器</h3>
+            <div class="tiny">
+              选中任务后，这里展示草稿、风险门控、证据文件和下一步动作。P0 暂用固定假数据。
+            </div>
+          </div>
+
+          <div class="inspector-section">
+            <h3>风险门控</h3>
+            <div class="gate-list">
+              <div class="gate"><strong>收件人白名单</strong><span class="tag green">通过</span></div>
+              <div class="gate"><strong>黑名单检查</strong><span class="tag green">通过</span></div>
+              <div class="gate"><strong>Keychain</strong><span class="tag red">missing</span></div>
+              <div class="gate"><strong>真实网络</strong><span class="tag red">off</span></div>
+            </div>
+          </div>
+
+          <div class="inspector-section">
+            <h3>证据文件</h3>
+            <div class="evidence">
+              <span>docs/v0.2.53-codex-style-ui-design-2026-06-25.md</span>
+              <span>docs/v0.2-launch-plan.md</span>
+              <span>docs/ui/codex-style-dashboard.md</span>
+            </div>
+          </div>
+
+          <div class="inspector-section">
+            <h3>下一步动作</h3>
+            <div class="tiny">
+              用户评审 P0 → 调整信息架构 → 再决定 P1 菜单栏升级或 P2 本地 Web Dashboard。
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <footer>
+        <div class="log">
+          <span>执行日志(折叠):</span>
+          <span>make lint ⏳</span>
+          <span>真实 SMTP blocked ✅</span>
+          <span>Keychain plaintext hidden ✅</span>
+        </div>
+        <button class="btn">展开日志</button>
+      </footer>
+    </div>
+
+    <script>
+      const buttons = document.querySelectorAll(".nav button");
+      const views = document.querySelectorAll(".view");
+
+      buttons.forEach((button) => {
+        button.addEventListener("click", () => {
+          const target = button.dataset.view;
+          buttons.forEach((item) => item.classList.remove("active"));
+          views.forEach((view) => view.classList.remove("active"));
+          button.classList.add("active");
+          document.getElementById(target).classList.add("active");
+        });
+      });
+    </script>
+  </body>
+</html>
