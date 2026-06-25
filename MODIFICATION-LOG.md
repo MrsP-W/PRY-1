@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.7` Dashboard opt-in 真实 Outbox(2026-06-25):`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O · 撞坑 #65 opt-in 4 阶段范本(env 门控 / 默认零 I/O / 失败降级 / 不可变更新)。**2324 passed / 1 skipped / 88.50%** / mypy 0 errors / **219 files** / MD lint **156 files**。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.6` OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25) |
+| **当前阶段** | ✅ `v0.2.53.8` Dashboard opt-in 真实 Notes + Expense(2026-06-25):共享 session_factory · `NoteConfirmServiceImpl` + `ExpenseServiceImpl` · 单项失败降级 Stub · +10 tests · 9/9 质量门全绿。**2330 passed / 1 skipped / 88.46%** / MD lint **157 files**。**下一棒**:`/api/reports` / Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.7` Dashboard opt-in 真实 Outbox(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,8 +91,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.7:**2324 passed / 1 skipped** / **88.50%** / mypy strict 0 / **219 files** / MD lint **156 files** |
-| **下一棒** | OutboxDraftServiceImpl 接 OutboxStore;outlook/gmail Keychain SMTP;8/1 截点 |
+| **质量基线** | v0.2.53.8:**2330 passed / 1 skipped** / **88.46%** / mypy strict 0 / **219 files** / MD lint **157 files** |
+| **下一棒** | `/api/reports` 只读端点;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -121,6 +121,25 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.8 Dashboard opt-in 真实 Notes + Expense] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**:共享 `_try_build_real_session_factory` · 注入 `NoteConfirmServiceImpl` + `ExpenseServiceImpl` · `with_note_confirm` / `with_expense`。
+- **tests**: `tests/dashboard/test_context.py` +10(30 total)。
+- **docs**: `docs/v0.2.53.8-dashboard-opt-in-notes-expense-2026-06-25.md` + 三入口同步。
+
+**2. 风险点**
+
+- ⚠️ Expense anomaly 检测有 5 分钟缓存(沿 ExpenseServiceImpl 范本);Dashboard 刷新可能略滞后。
+- ⚠️ 仍需 `DASHBOARD_REAL_DB=1` 显式授权才读 Keychain DB 密码。
+- **边界**:只读 GET · 不写 Keychain · 不真发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2330 passed / 1 skipped / 88.46% coverage**。
+- 下一棒:`/api/reports`;outlook/gmail Keychain;8/1 截点。
 
 ### 2026-06-25 [v0.2.53.7 Dashboard opt-in 真实 Outbox] — 收口
 

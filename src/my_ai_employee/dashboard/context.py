@@ -6,6 +6,11 @@ v0.2.53.7 opt-in 真实数据:
       `OutboxDraftServiceImpl(OutboxStore(session_factory))`
     - 任何失败(Keychain 缺密码 / DB 不存在 / SQLCipher 错 / 网络错)静默降级 Stub,
       不阻塞 Dashboard 启动
+
+v0.2.53.8 扩展:
+    - 同一 env 门控 + 同一 session_factory,继续注入
+      `NoteConfirmServiceImpl(NoteStore)` 与 `ExpenseServiceImpl`(只读 anomaly 链路)
+    - 各服务独立 try/except;单项失败不影响其余服务降级
 """
 
 from __future__ import annotations
@@ -20,6 +25,7 @@ from my_ai_employee import __version__
 from my_ai_employee.menu_bar.expense_service import ExpenseService, ExpenseServiceStub
 from my_ai_employee.menu_bar.note_confirm_service import (
     NoteConfirmService,
+    NoteConfirmServiceImpl,
     NoteConfirmServiceStub,
 )
 from my_ai_employee.menu_bar.outbox_draft_service import (
@@ -33,7 +39,7 @@ KeychainProbe = Callable[[str], bool]
 
 # v0.2.53.7 opt-in 真实 DB env 门控
 #   - 未设或 "0" / "false" / "no" → 默认全 Stub(沿 v0.2.53.6 行为)
-#   - "1" / "true" / "yes" → 尝试注入 OutboxDraftServiceImpl(OutboxStore(...))
+#   - "1" / "true" / "yes" → 尝试注入 Outbox / NoteConfirm / Expense 真实 Impl
 _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
 
 
@@ -41,10 +47,10 @@ _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
 class QualityGateSnapshot:
     """质量门只读快照(不跑 CI,沿菜单栏系统健康范本)."""
 
-    pytest: str = "2300 passed / 1 skipped"
-    coverage: str = "88.54%"
+    pytest: str = "2330 passed / 1 skipped"
+    coverage: str = "88.46%"
     mypy: str = "0 errors"
-    lint: str = "155 files 0 errors"
+    lint: str = "157 files 0 errors"
 
 
 @dataclass(slots=True)
@@ -65,21 +71,31 @@ class DashboardContext:
 
     @classmethod
     def default(cls) -> DashboardContext:
-        """默认上下文 — 默认全 Stub;`DASHBOARD_REAL_DB=1` 时 opt-in 真实 Outbox.
+        """默认上下文 — 默认全 Stub;`DASHBOARD_REAL_DB=1` 时 opt-in 真实服务.
 
-        边界(沿 v0.2.53.6 + v0.2.53.7):
+        边界(沿 v0.2.53.6 + v0.2.53.7 + v0.2.53.8):
             - 未设 env → 全 Stub(行为不变)
-            - 设 env 但失败(Keychain 缺密码 / DB 不存在 / 错密码等)→ 静默降级 Stub
-            - 设 env 且成功 → OutboxDraftServiceImpl(OutboxStore(session_factory))
-              只读查询 pending_send + approved,不含 body
-            - NoteConfirmService / ExpenseService 仍 Stub(v0.2.53.8 候选)
+            - 设 env 但 session_factory 失败 → 全 Stub
+            - session_factory 成功 → 分别尝试 Outbox / NoteConfirm / Expense Impl
+              (单项失败静默降级 Stub,不阻塞其余服务)
+            - Outbox 只读 pending_send + approved,不含 body
             - 不真发 SMTP / 不写 DB / 不移动 v0.1.0 tag / 不打 v0.2.x tag
         """
         ctx = cls()
-        if _is_real_db_enabled():
-            real_service = _try_build_real_outbox_drafts()
-            if real_service is not None:
-                ctx = ctx.with_outbox_drafts(real_service)
+        if not _is_real_db_enabled():
+            return ctx
+        session_factory = _try_build_real_session_factory()
+        if session_factory is None:
+            return ctx
+        outbox = _try_build_outbox_from_session_factory(session_factory)
+        if outbox is not None:
+            ctx = ctx.with_outbox_drafts(outbox)
+        note_confirm = _try_build_note_confirm_from_session_factory(session_factory)
+        if note_confirm is not None:
+            ctx = ctx.with_note_confirm(note_confirm)
+        expense = _try_build_expense_from_session_factory(session_factory)
+        if expense is not None:
+            ctx = ctx.with_expense(expense)
         return ctx
 
     def with_outbox_drafts(self, service: OutboxDraftService) -> DashboardContext:
@@ -94,6 +110,30 @@ class DashboardContext:
             keychain_probe=self.keychain_probe,
         )
 
+    def with_note_confirm(self, service: NoteConfirmService) -> DashboardContext:
+        """返回替换 note_confirm_service 的新 ctx(不可变更新)."""
+        return DashboardContext(
+            expense_service=self.expense_service,
+            note_confirm_service=service,
+            outbox_draft_service=self.outbox_draft_service,
+            version=self.version,
+            quality_gates=self.quality_gates,
+            git_head_resolver=self.git_head_resolver,
+            keychain_probe=self.keychain_probe,
+        )
+
+    def with_expense(self, service: ExpenseService) -> DashboardContext:
+        """返回替换 expense_service 的新 ctx(不可变更新)."""
+        return DashboardContext(
+            expense_service=service,
+            note_confirm_service=self.note_confirm_service,
+            outbox_draft_service=self.outbox_draft_service,
+            version=self.version,
+            quality_gates=self.quality_gates,
+            git_head_resolver=self.git_head_resolver,
+            keychain_probe=self.keychain_probe,
+        )
+
 
 def _is_real_db_enabled() -> bool:
     """`DASHBOARD_REAL_DB=1` opt-in 判定 — 仅识别 truthy 字面量,避免意外触发."""
@@ -101,11 +141,11 @@ def _is_real_db_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
-def _try_build_real_outbox_drafts() -> OutboxDraftService | None:
-    """尝试构造真实 OutboxDraftServiceImpl;失败返回 None(降级 Stub).
+def _try_build_real_session_factory() -> Any | None:
+    """打开 SQLCipher DB 并返回 sessionmaker;失败返回 None(降级 Stub).
 
     失败模式(全部静默降级):
-        - ImportError:缺少依赖(理论上不会,沿现有依赖)
+        - ImportError:缺少依赖
         - PermissionError / OSError:Keychain 不可访问或 DB 锁
         - FileNotFoundError:DB 文件不存在(首次未 init_schema)
         - sqlcipher3.DatabaseError:密码错
@@ -116,7 +156,6 @@ def _try_build_real_outbox_drafts() -> OutboxDraftService | None:
 
         from my_ai_employee.core.db import Database
         from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine
-        from my_ai_employee.db.outbox import OutboxStore
     except ImportError:
         return None
     try:
@@ -124,11 +163,64 @@ def _try_build_real_outbox_drafts() -> OutboxDraftService | None:
             engine = make_sqlalchemy_engine(db)
         if engine is None:
             return None
-        session_factory = sessionmaker(bind=engine, expire_on_commit=False)
-        store = OutboxStore(session_factory)
-        return OutboxDraftServiceImpl(store)
+        return sessionmaker(bind=engine, expire_on_commit=False)
     except Exception:  # noqa: BLE001 — 任何失败都降级 Stub,不阻塞 Dashboard
         return None
+
+
+def _try_build_outbox_from_session_factory(session_factory: Any) -> OutboxDraftService | None:
+    try:
+        from my_ai_employee.db.outbox import OutboxStore
+
+        return OutboxDraftServiceImpl(OutboxStore(session_factory))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _try_build_note_confirm_from_session_factory(
+    session_factory: Any,
+) -> NoteConfirmService | None:
+    try:
+        from my_ai_employee.db.notes import NoteStore
+
+        return NoteConfirmServiceImpl(NoteStore(session_factory))
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _try_build_expense_from_session_factory(session_factory: Any) -> ExpenseService | None:
+    try:
+        from my_ai_employee.core.anomaly_detector import RuleBasedAnomalyDetector
+        from my_ai_employee.core.expense_service import ExpenseServiceImpl
+        from my_ai_employee.db.merchant_profile import MerchantProfileStore
+        from my_ai_employee.db.notes import NoteStore
+        from my_ai_employee.db.transactions import TransactionStore
+
+        note_store = NoteStore(session_factory)
+        tx_store = TransactionStore(session_factory)
+        profile_store = MerchantProfileStore(session_factory, transaction_store=tx_store)
+        detector = RuleBasedAnomalyDetector(
+            transaction_store=tx_store,
+            merchant_profile_store=profile_store,
+        )
+        return ExpenseServiceImpl(
+            note_store=note_store,
+            tx_store=tx_store,
+            anomaly_detector=detector,
+        )
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _try_build_real_outbox_drafts() -> OutboxDraftService | None:
+    """尝试构造真实 OutboxDraftServiceImpl;失败返回 None(降级 Stub).
+
+    沿 v0.2.53.7 公开 API 保留;内部复用 `_try_build_real_session_factory`.
+    """
+    session_factory = _try_build_real_session_factory()
+    if session_factory is None:
+        return None
+    return _try_build_outbox_from_session_factory(session_factory)
 
 
 def _default_git_head() -> str:
