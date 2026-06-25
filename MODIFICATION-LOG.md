@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.52.3` 测试侧公共 API 一致性(2026-06-25);承接 v0.2.52.2 EmailSendAdapter provider 封装硬化(`0955f2e` feat + `a278ccc` docs)。v0.2.52.3 完成:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化范本);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段;③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**9/9 质量门**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint **144 files** 0 errors。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理 |
-| **上一阶段** | ✅ `v0.2.52.2` 状态口径同步 + EmailSendAdapter provider 封装硬化(2026-06-25 · `0955f2e` feat + `a278ccc` docs,2 commits) |
+| **当前阶段** | ✅ `v0.2.53` Codex 风格 UI P0 静态原型启动(2026-06-25);承接 v0.2.52.3 测试侧公共 API 一致性(`1bba897` feat + `851ec9a` docs + `e9917b1` drift-fix,3 commits)。v0.2.53 完成:① UI/UX 设计沉淀 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53;③ P0 静态原型 `docs/ui/codex-style-dashboard.html` + 说明 MD。本轮**纯 docs-only** · 无代码改动 · 代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿 / **MD lint 146 files 0 errors**。**撞坑累计 64 类**(沿用 #64)。**下一步候选**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike |
+| **上一阶段** | ✅ `v0.2.52.3` 测试侧公共 API 一致性 + 143→144 漂移小修(2026-06-25 · `1bba897` feat + `851ec9a` docs + `e9917b1` drift-fix,3 commits) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.52.3 全量质量门:**2273 passed / 1 skipped** / **88.84% coverage**(微涨 0.02pp)/ mypy strict **0 errors / 209 source files** / MD lint **144 files 0 errors** |
+| **质量基线** | v0.2.53 全量质量门:**2273 passed / 1 skipped** / **88.84% coverage**(沿用 v0.2.52.3)/ mypy strict **0 errors / 209 source files** / MD lint **146 files 0 errors**(本轮 +2 docs 静态原型)|
 | **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -121,6 +121,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53 Codex 风格 UI P0 静态原型] — 收口
+
+**1. 本次修改内容**
+
+- **docs(plan)**:UI/UX 设计沉淀 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md` + 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53。
+- **docs(ui)**:P0 静态原型 `docs/ui/codex-style-dashboard.html` + 说明 MD(三页:今日页/邮件审批页/系统健康页,纯假数据,无依赖)。
+- **docs(state)**:三入口同步(README L7 + SESSION-STATE L1 + MODIFICATION-LOG L82/L94/L125)。
+
+**2. 风险点**
+
+- 本轮**纯 docs-only**,无代码改动,不引入新依赖(无 React/Vite/Tauri/Electron)。
+- 不接真实 DB/IMAP/SMTP/Keychain,静态页面中危险动作只展示禁用态。
+- 不做 SaaS 化、不上传个人数据。
+- 本轮不真发邮件、不读取 Keychain 明文、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2273 passed / 1 skipped / 9/9 质量门全绿 / 88.84% coverage / 撞坑 64 类**(沿用 v0.2.52.3)
+- 当前阶段:v0.2.53 P0 静态原型启动;承接 v0.2.52.3 公共 API 一致性。
+- 下一棒:用户评审 P0 信息架构 → P1 rumps 菜单栏升级;8/1 v0.2.1 tag 锚定复评;凭据可用后恢复真实 SMTP spike。
 
 ### 2026-06-25 [v0.2.52.3 测试侧公共 API 一致性] — 收口
 

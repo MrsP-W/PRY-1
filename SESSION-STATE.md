@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.52.3 公共 API 一致性 + 测试迁移到只读属性(2026-06-25)
+# SESSION-STATE — v0.2.53 Codex 风格 UI P0 静态原型启动(2026-06-25)
 
-> **最后更新**:2026-06-25 13:00 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.52.3 测试侧公共 API 一致性已收口**(2026-06-25 · 承接 v0.2.52.2 `0955f2e` + `a278ccc` · 沿 v0.2.52 #61+#62+#63 范本)。**本轮**:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段;③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**质量门全绿(实测)**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff check + format 全绿 / alembic upgrade head --sql exit 0(沿 #62 修复)/ uv build OK / make lint **144 files** 0 errors。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**8/1 v0.2.1 tag 决策**:继续延后(唯一缺口:outlook/gmail 真实 SMTP 送达 / Keychain 凭据未就绪)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。承接报告:`docs/v0.2.52.3-public-api-consistency-2026-06-25.md`。
+> **最后更新**:2026-06-25 15:16 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:🟢 **v0.2.53 Codex 风格 UI P0 已启动**(2026-06-25 · 承接 v0.2.52.3 公共 API 一致性基线)。**本轮**:① UI/UX 设计稿 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53 Codex 风格 UI 工作台计划;③ 新建 P0 静态原型 `docs/ui/codex-style-dashboard.html` + `docs/ui/codex-style-dashboard.md`。**本轮质量门(实测)**:`make lint` **146 files 0 errors**。代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿。**下一步**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级。边界:不真发邮件、不写入真实凭据、不读取 Keychain 明文、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.52.3 测试侧公共 API 一致性已收口(2026-06-25)**;承接 v0.2.52.2 EmailSendAdapter provider 封装硬化(`0955f2e` · 沿 v0.2.52.2 ProviderDefaults 范本)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理(8/1 docs-only 复评前)。
+**当前启动候选**:**v0.2.53 Codex 风格 UI P0 已启动(2026-06-25)**;承接 v0.2.52.3 公共 API 一致性基线,先做静态原型验证信息架构。**下一步候选**:用户评审 P0 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -22,9 +22,9 @@
 | v0.2.2 #5 commit 5 收口锚 | `6a0549e feat(deps): v0.2.2 #5 OAuth 2.0 Phase 2 commit 5/5 pyproject 加 msal+google-auth+google-auth-oauthlib` |
 | 当前 HEAD | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | 分支 | `main` |
-| 工作区 | clean ✅(以 `git status --short` 为准) |
+| 工作区 | 有本轮 UI P0 未提交变更(以 `git status --short` 为准) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | 全绿(**2273 passed / 1 skipped** · **88.84%** coverage · MD lint **144 files** 0 errors) |
+| 8/8 质量门 | 代码基线沿用 **2273 passed / 1 skipped** · **88.84%** coverage;本轮 MD lint **146 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

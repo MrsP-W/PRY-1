@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.52.3 测试侧公共 API 一致性**(2026-06-25 · 承接 v0.2.52.2 `0955f2e` + `a278ccc`)。v0.2.52.3 完成:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化范本);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段(测试侧);③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**9/9 质量门**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint **144 files** 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53 Codex 风格 UI P0 启动**(2026-06-25 · 承接 v0.2.52.3 公共 API 一致性基线)。本轮完成:① UI/UX 设计沉淀 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53 Codex 风格 UI 工作台计划;③ 新建 P0 静态原型 `docs/ui/codex-style-dashboard.html` + `docs/ui/codex-style-dashboard.md`。**本轮质量门**:`make lint` **146 files 0 errors**。代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -228,6 +228,7 @@ make help
 | **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.76% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.2** 状态口径同步 + provider 封装硬化(`ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · docs 三入口 2273/88.82%/143 files MD lint · `test_smpt_*` 拼写修正) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.3** 测试侧公共 API 一致性(OutboxDispatcher 暴露 `active_provider` + `provider_defaults` 公共属性 · 5 处私有属性断言迁移到公共 API · docs 三入口 2273/**88.84%** / **144 files** MD lint · 撞坑 #64 公共 API 迁移范本) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.53** Codex 风格 UI P0 启动(设计稿 + v0.2 launch plan 纳入 + `docs/ui/` 静态 HTML 原型 + 原型说明 · 不新增依赖 · 不接真实 DB/SMTP/Keychain · `make lint` **146 files** 0 errors) | ✅ 6/25 P0 启动 | 2026-06-25 |
 
 ---
 
@@ -277,6 +278,8 @@ make help
 | [docs/week2-mvp.md](docs/week2-mvp.md) | Week 2 计划（D6-D10：财务 + 笔记）|
 | [docs/v0.1-launch-plan.md](docs/v0.1-launch-plan.md) | v0.1 启动规划(D6/D7/D9/D10 4 子阶段 + 收口)|
 | [docs/v0.2-launch-plan.md](docs/v0.2-launch-plan.md) | v0.2 启动规划(6 子阶段预映射 + 5 决策 + 完成定义)|
+| [docs/v0.2.53-codex-style-ui-design-2026-06-25.md](docs/v0.2.53-codex-style-ui-design-2026-06-25.md) | **🆕 v0.2.53 Codex 风格 UI 设计稿(本地工作台 + P0/P1/P2 路线)** |
+| [docs/ui/codex-style-dashboard.md](docs/ui/codex-style-dashboard.md) | **🆕 Codex 风格工作台 P0 静态原型说明(今日 / 邮件 / 系统)** |
 | [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 | [docs/v0.1.0-status-snapshot-2026-06-17.md](docs/v0.1.0-status-snapshot-2026-06-17.md) | **🆕 v0.1.0 tag 状态快照(释放/锁定/后期启动 3 维度复核)** |
 | [reports/v0.2.1-closure-2026-06-17.md](reports/v0.2.1-closure-2026-06-17.md) | **🆕 v0.2.1 docs 收口报告(9 commits 链 + 6 候选全部实化 + 5 关键教训 + v0.2.2+ 启动候选)** |
