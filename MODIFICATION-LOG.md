@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.6` OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25):Stub → Impl 只读查询 · `pending_send + approved` · `created_at ASC` · 8 字段元数据(不返回 body)· 4 不做原则(不默认读 Keychain / 不返回 body / 不写操作 / 不真发邮件)· 9/9 质量门全绿。**2300 passed / 1 skipped / 88.54%** / mypy 0 errors / 218 files / MD lint **155 files**。**下一棒**:v0.2.53.7 Dashboard opt-in 真实数据(需用户授权)/ Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.5` Dashboard HTML 接扩展 API(2026-06-25) |
+| **当前阶段** | ✅ `v0.2.53.7` Dashboard opt-in 真实 Outbox(2026-06-25):`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O · 撞坑 #65 opt-in 4 阶段范本(env 门控 / 默认零 I/O / 失败降级 / 不可变更新)。**2324 passed / 1 skipped / 88.50%** / mypy 0 errors / **219 files** / MD lint **155 files**。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.6` OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.6:**2300 passed / 1 skipped** / **88.54%** / mypy strict 0 / 218 files / MD lint **155 files** |
+| **质量基线** | v0.2.53.7:**2324 passed / 1 skipped** / **88.50%** / mypy strict 0 / **219 files** / MD lint **155 files** |
 | **下一棒** | OutboxDraftServiceImpl 接 OutboxStore;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -121,6 +121,28 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.7 Dashboard opt-in 真实 Outbox] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**:`DashboardContext.default()` 加 env 门控(`DASHBOARD_REAL_DB=1` truthy 判定)· 自动尝试构造 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub。
+- **feat(dashboard)**:`with_outbox_drafts(service)` 不可变更新范本(沿 #64 公共 API)。
+- **test(dashboard)**:新增 `tests/dashboard/test_context.py` · 24 tests(A1 env 门控 / A2 默认行为 / A2 opt-in 路径 / A2 失败降级 / A3 边界 / 不可变更新)。
+- **docs**:`docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md` 收口报告 + 撞坑 #65 4 阶段范本。
+
+**2. 风险点**
+
+- ⚠️ **env 门控识别 truthy 字面量**(`1`/`true`/`yes`/`on`),其他任意值不触发。
+- ⚠️ **失败静默降级**(任何异常 → `None` → Stub),需观测日志确认 opt-in 生效。
+- ⚠️ `DashboardContext.default()` opt-in 路径会触发 DB I/O(Keychain 间接读取),需用户**显式授权**后才执行。
+- **边界**:env 未设 → 零 I/O · opt-in 失败 → Stub · opt-in 成功 → 只读 · 不输出 body · 不写 DB · 不真发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2324 passed / 1 skipped / 9/9 质量门全绿 / 88.50% coverage / 撞坑累计 65 类**(本轮新增 #65 opt-in 范本)
+- 当前阶段:v0.2.53.7 收口;承接 v0.2.53.6 OutboxDraftServiceImpl。
+- 下一棒:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 范本);Keychain SMTP;8/1 截点。
 
 ### 2026-06-25 [v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore] — 收口
 

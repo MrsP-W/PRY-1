@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25)
+# SESSION-STATE — v0.2.53.7 Dashboard opt-in 真实 Outbox(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore 已落地** — pending_send+approved 只读查询;Dashboard 列表安全 dict 不含 body;默认仍 Stub,不自动打开真实 DB/Keychain。**质量门**:**2300 passed / 1 skipped / 88.54%** / mypy --strict 0 errors(218 files) / ruff + format 全绿 / MD lint **155 files** 0 errors。**下一棒**:显式授权后 Dashboard 默认注入真实 OutboxDraftServiceImpl / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.7 Dashboard opt-in 真实 Outbox 已落地** — `DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 自动尝试注入 `OutboxDraftServiceImpl(OutboxStore(session_factory))` · 失败静默降级 Stub 不阻塞启动 · 默认行为零 I/O(不打开 DB / 不读 Keychain)。**质量门**:**2324 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(**219 files**) / ruff + format 全绿 / MD lint **155 files** 0 errors。**下一棒**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore 已落地(2026-06-25)**。**下一步候选**:显式授权后 DashboardContext 默认注入真实 OutboxDraftServiceImpl / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.7 Dashboard opt-in 真实 Outbox 已落地(2026-06-25)**。**下一步候选**:v0.2.53.8 NoteConfirmService + ExpenseService 真实数据接入(沿 #65 opt-in 范本)/ outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
