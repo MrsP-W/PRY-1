@@ -7,6 +7,7 @@ D9.6.1 实施：ClipboardCaptureService 业务层 3 入口(沿 D4.7.3 v1.0.6 同
 v0.2.2 候选 #2 实施:NoteConfirmService 接口 + Stub + Real(NoteStore 接入),
              菜单栏新增 "  📝 Notes待确认 (N)" 1-click 确认入口。
 v0.2.53 P1 实施:Codex 信息架构菜单栏升级 + OutboxDraftService Stub。
+v0.2.53.6 实施:OutboxDraftServiceImpl 接 OutboxStore 只读查询。
 v0.2.2 启动候选 #6 实施:badge 实时刷新 polling(沿 D5 业务调度范本,
              独立 daemon thread 30s 间隔调 _refresh_*_count, 0 = 禁用)。
 """
@@ -25,6 +26,7 @@ from my_ai_employee.menu_bar.note_confirm_service import (
 )
 from my_ai_employee.menu_bar.outbox_draft_service import (
     OutboxDraftService,
+    OutboxDraftServiceImpl,
     OutboxDraftServiceStub,
 )
 from my_ai_employee.menu_bar.tcc import TCCPermissionError, open_privacy_settings
@@ -39,6 +41,7 @@ __all__ = [
     "NoteConfirmServiceStub",
     "NotesMenuBarApp",
     "OutboxDraftService",
+    "OutboxDraftServiceImpl",
     "OutboxDraftServiceStub",
     "TCCPermissionError",
     "open_privacy_settings",

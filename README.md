@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.5 Dashboard HTML 接扩展 API**(2026-06-25 · 静态 HTML hydrate 5 端点 · outbox/notes/finance 页 · API 离线兜底)。**质量门**:**2293 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(217 files) / ruff 全绿 / format 231 files / **MD lint 153 files** 0 errors。**下一棒**:`OutboxDraftServiceImpl` 接真实数据 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore**(2026-06-25 · pending_send+approved 只读查询 · Dashboard 安全 dict 不含 body · 默认不自动读 Keychain/DB)。**质量门**:**2300 passed / 1 skipped / 88.54%** / mypy --strict 0 errors(218 files) / ruff 全绿 / format 232 files / **MD lint 155 files** 0 errors。**下一棒**:显式授权后 Dashboard 默认注入真实 OutboxDraftServiceImpl / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不默认读取 Keychain 明文、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -234,6 +234,7 @@ make help
 | **v0.2.53.3** Dashboard HTML 接只读 API(静态 HTML hydrate 两端点 + file 原型 CORS/OPTIONS + API 离线兜底 · 2286 passed / 88.46% / MD lint 152 files) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.4** Dashboard 只读 API 扩展(`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` · +7 tests · 2293 passed / 88.49%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.5** Dashboard HTML 接扩展 API(5 端点 hydrate · 邮件/笔记/财务页 · 离线兜底) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.53.6** OutboxDraftServiceImpl 接真实 OutboxStore(pending_send+approved 只读查询 · 不输出 body · +7 tests · 2300 passed / 88.54%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.54** 8/1 tag 复评 + SMTP 就绪检查(7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 docs-only | 2026-06-25 |
 
 ---
@@ -289,6 +290,7 @@ make help
 | [docs/v0.2.53.3-dashboard-html-api-bridge-2026-06-25.md](docs/v0.2.53.3-dashboard-html-api-bridge-2026-06-25.md) | **🆕 v0.2.53.3 静态 Dashboard 接只读 API + 离线兜底** |
 | [docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md](docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md) | **🆕 v0.2.53.4 只读 API 扩展(outbox/notes/finance)** |
 | [docs/v0.2.53.5-dashboard-html-extended-api-bridge-2026-06-25.md](docs/v0.2.53.5-dashboard-html-extended-api-bridge-2026-06-25.md) | **🆕 v0.2.53.5 静态 HTML 接 5 端点 + 离线兜底** |
+| [docs/v0.2.53.6-outbox-draft-service-impl-2026-06-25.md](docs/v0.2.53.6-outbox-draft-service-impl-2026-06-25.md) | **🆕 v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore** |
 | [docs/ui/codex-style-dashboard.md](docs/ui/codex-style-dashboard.md) | **🆕 Codex 风格工作台 P0/P2 静态原型说明(今日 / 邮件 / 系统 + API)** |
 | [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 | [docs/v0.1.0-status-snapshot-2026-06-17.md](docs/v0.1.0-status-snapshot-2026-06-17.md) | **🆕 v0.1.0 tag 状态快照(释放/锁定/后期启动 3 维度复核)** |

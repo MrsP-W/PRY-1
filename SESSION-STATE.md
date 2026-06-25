@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.5 Dashboard HTML 接扩展 API(2026-06-25)
+# SESSION-STATE — v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.5 Dashboard HTML 接扩展 API 已落地** — 静态 HTML hydrate 5 端点(status/tasks/outbox/notes/finance);邮件/笔记/财务页列表 + 今日队列;API 未启动时回退静态假数据。**质量门**:**2293 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(217 files) / ruff + format 全绿 / MD lint **153 files** 0 errors。**下一棒**:`OutboxDraftServiceImpl` 接真实数据 / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore 已落地** — pending_send+approved 只读查询;Dashboard 列表安全 dict 不含 body;默认仍 Stub,不自动打开真实 DB/Keychain。**质量门**:**2300 passed / 1 skipped / 88.54%** / mypy --strict 0 errors(218 files) / ruff + format 全绿 / MD lint **155 files** 0 errors。**下一棒**:显式授权后 Dashboard 默认注入真实 OutboxDraftServiceImpl / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.5 Dashboard HTML 接扩展 API 已落地(2026-06-25)**。**下一步候选**:`OutboxDraftServiceImpl` 接 `OutboxStore.by_status` / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore 已落地(2026-06-25)**。**下一步候选**:显式授权后 DashboardContext 默认注入真实 OutboxDraftServiceImpl / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | **2286 passed / 1 skipped** · **88.46%** coverage · mypy --strict 0 errors(217 files) · MD lint **152 files** 0 errors |
+| 8/8 质量门 | **2300 passed / 1 skipped** · **88.54%** coverage · mypy --strict 0 errors(218 files) · MD lint **155 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

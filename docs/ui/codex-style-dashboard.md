@@ -35,7 +35,7 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 
 1. 运行 `make dashboard-api`。
 2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 `API 已连接 · 5 端点`。
-3. 下一步:`OutboxDraftServiceImpl` 接真实 OutboxStore 数据。
+3. 下一步:显式授权后让 DashboardContext 默认注入真实 `OutboxDraftServiceImpl`。
 
 ## 暂不做
 
