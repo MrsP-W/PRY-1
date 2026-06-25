@@ -1,10 +1,10 @@
-# Codex 风格工作台 P0 静态原型
+# Codex 风格工作台 P0/P2 静态原型
 
-> 范围:只做静态 UI 原型,使用假数据;不接真实 DB、不发 SMTP、不写 Keychain、不启动 launchd。
+> 范围:静态 UI 原型 + 本地只读 API 预览;不发 SMTP、不写 Keychain、不启动 launchd。
 
 ## 结论
 
-P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。
+P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。P2 已补充只读 API 连接:`/api/status` + `/api/tasks/today`。
 
 ## 产物
 
@@ -16,9 +16,9 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 
 | 页面 | P0 覆盖 | 说明 |
 |------|---------|------|
-| 今日 | ✅ | 待办摘要、任务线程、安全门控 |
+| 今日 | ✅ + API | 待办摘要、任务线程、安全门控 |
 | 邮件 | ✅ | 草稿预览、审批按钮、真实发送禁用态 |
-| 系统 | ✅ | 质量门、Provider、Git、审批门 |
+| 系统 | ✅ + API | 质量门、Provider、Git、审批门 |
 | 笔记 | 占位 | P1/P2 再接 NoteConfirmService |
 | 财务 | 占位 | P1/P2 再接异常检测与候选 review |
 | 报告 | 占位 | 后续展示月度复盘、撞坑清单、质量门趋势 |
@@ -33,9 +33,9 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 
 ## 推荐下一步
 
-1. 先人工打开 `docs/ui/codex-style-dashboard.html` 评审信息架构。
-2. 若方向确认,进入 P1:只优化现有 rumps 菜单结构。
-3. P1 稳定后,再评估 P2:本地 Web Dashboard 只读 API + ApprovalGate 写动作。
+1. 运行 `make dashboard-api`。
+2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 `API 已连接`。
+3. 下一步再扩展 `/api/outbox`、`/api/notes/pending`、`/api/finance/anomalies`。
 
 ## 暂不做
 

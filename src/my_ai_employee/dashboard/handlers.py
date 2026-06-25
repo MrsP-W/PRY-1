@@ -12,6 +12,7 @@ from my_ai_employee.dashboard.context import DashboardContext
 from my_ai_employee.dashboard.responses import build_status_payload, build_tasks_today_payload
 
 _JSON_CONTENT_TYPE = "application/json; charset=utf-8"
+_CORS_FILE_ORIGIN = "null"
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -45,6 +46,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_DELETE(self) -> None:  # noqa: N802
         self._method_not_allowed()
 
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        """允许静态 file:// 原型读取本地只读 GET API."""
+        self.send_response(HTTPStatus.NO_CONTENT.value)
+        self._send_common_headers(content_length=0)
+        self.send_header("Allow", "GET, OPTIONS")
+        self.end_headers()
+
     def _method_not_allowed(self) -> None:
         self._send_json(
             HTTPStatus.METHOD_NOT_ALLOWED,
@@ -54,11 +62,18 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status.value)
-        self.send_header("Content-Type", _JSON_CONTENT_TYPE)
-        self.send_header("Content-Length", str(len(body)))
-        self.send_header("X-Read-Only-Api", "true")
+        self._send_common_headers(content_length=len(body))
         self.end_headers()
         self.wfile.write(body)
+
+    def _send_common_headers(self, *, content_length: int) -> None:
+        self.send_header("Content-Type", _JSON_CONTENT_TYPE)
+        self.send_header("Content-Length", str(content_length))
+        self.send_header("X-Read-Only-Api", "true")
+        self.send_header("Access-Control-Allow-Origin", _CORS_FILE_ORIGIN)
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Vary", "Origin")
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002
         """静默默认 access log(测试/本地不刷屏)."""

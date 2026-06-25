@@ -119,6 +119,11 @@
         white-space: nowrap;
       }
 
+      .pill.live {
+        border-color: rgb(91 140 255 / 34%);
+        color: #dce6ff;
+      }
+
       .dot {
         width: 7px;
         height: 7px;
@@ -568,15 +573,16 @@
           <div class="avatar">职</div>
           <div>
             <div class="brand-title">我的AI员工</div>
-            <div class="brand-subtitle">Codex 风格本地工作台 · P0 静态原型</div>
+            <div class="brand-subtitle">Codex 风格本地工作台 · P2 只读 API 预览</div>
           </div>
         </div>
         <div class="status-strip" aria-label="系统状态">
           <span class="pill"><span class="dot green"></span>本地运行</span>
-          <span class="pill"><span class="dot green"></span>质量门全绿</span>
-          <span class="pill"><span class="dot yellow"></span>SMTP 未解锁</span>
-          <span class="pill"><span class="dot red"></span>Keychain missing</span>
-          <span class="pill">v0.2.53 P0</span>
+          <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
+          <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
+          <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
+          <span class="pill">v0.2.53.3</span>
+          <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
           <button class="btn">查看证据</button>
@@ -617,23 +623,23 @@
           <section id="today" class="view active">
             <div class="hero">
               <div class="card card-pad">
-                <p class="tiny">今天 · 本地工作台</p>
-                <h1 class="headline">6 个待处理项，<span>1 个需要先看风险</span></h1>
+                <p class="tiny" id="today-source">今天 · 本地工作台 · 尝试连接 127.0.0.1:8765</p>
+                <h1 class="headline"><span id="total-tasks">6</span> 个待处理项，<span id="risk-summary">1 个需要先看风险</span></h1>
                 <div class="summary-grid">
                   <div class="metric">
-                    <div class="metric-value">3</div>
+                    <div class="metric-value" id="metric-mail">3</div>
                     <div class="metric-label">邮件草稿待审</div>
                   </div>
                   <div class="metric">
-                    <div class="metric-value">2</div>
+                    <div class="metric-value" id="metric-notes">2</div>
                     <div class="metric-label">Notes 候选</div>
                   </div>
                   <div class="metric">
-                    <div class="metric-value">1</div>
+                    <div class="metric-value" id="metric-finance">1</div>
                     <div class="metric-label">财务异常</div>
                   </div>
                   <div class="metric">
-                    <div class="metric-value">7/8</div>
+                    <div class="metric-value" id="metric-readiness">7/8</div>
                     <div class="metric-label">Tag readiness</div>
                   </div>
                 </div>
@@ -641,9 +647,9 @@
               <div class="card card-pad">
                 <h3>安全门控</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>真实 SMTP</strong><span class="tag red">禁用</span></div>
+                  <div class="gate"><strong>真实 SMTP</strong><span class="tag red" id="gate-smtp">禁用</span></div>
                   <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
-                  <div class="gate"><strong>Keychain</strong><span class="tag red">missing</span></div>
+                  <div class="gate"><strong>Keychain</strong><span class="tag red" id="gate-keychain">missing</span></div>
                 </div>
               </div>
             </div>
@@ -679,7 +685,7 @@
                 <div class="step-body">
                   <div class="step-title">
                     <span>当前结果</span>
-                    <span class="tiny">假数据示例</span>
+                    <span class="tiny" id="result-source">静态兜底数据</span>
                   </div>
                   <div class="queue">
                     <div class="queue-item">
@@ -751,9 +757,9 @@
               <div class="card card-pad">
                 <h3>质量门</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>pytest</strong><span class="tag green">2273 passed</span></div>
-                  <div class="gate"><strong>mypy --strict</strong><span class="tag green">0 errors</span></div>
-                  <div class="gate"><strong>make lint</strong><span class="tag green">待本轮复跑</span></div>
+                  <div class="gate"><strong>pytest</strong><span class="tag green" id="system-pytest">2273 passed</span></div>
+                  <div class="gate"><strong>mypy --strict</strong><span class="tag green" id="system-mypy">0 errors</span></div>
+                  <div class="gate"><strong>make lint</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
                 </div>
               </div>
               <div class="card card-pad">
@@ -761,13 +767,14 @@
                 <div class="gate-list">
                   <div class="gate"><strong>IMAP</strong><span class="tag green">可用</span></div>
                   <div class="gate"><strong>SMTP provider</strong><span class="tag green">factory ready</span></div>
-                  <div class="gate"><strong>SMTP_REAL_NETWORK</strong><span class="tag red">off</span></div>
+                  <div class="gate"><strong>SMTP_REAL_NETWORK</strong><span class="tag red" id="system-smtp-real">off</span></div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3>Git</h3>
                 <div class="gate-list">
                   <div class="gate"><strong>branch</strong><span class="tag green">main</span></div>
+                  <div class="gate"><strong>HEAD</strong><span class="tag" id="system-head">unknown</span></div>
                   <div class="gate"><strong>tag</strong><span class="tag">v0.1.0 anchored</span></div>
                   <div class="gate"><strong>v0.2.x tag</strong><span class="tag red">不打</span></div>
                 </div>
@@ -832,8 +839,8 @@
             <div class="gate-list">
               <div class="gate"><strong>收件人白名单</strong><span class="tag green">通过</span></div>
               <div class="gate"><strong>黑名单检查</strong><span class="tag green">通过</span></div>
-              <div class="gate"><strong>Keychain</strong><span class="tag red">missing</span></div>
-              <div class="gate"><strong>真实网络</strong><span class="tag red">off</span></div>
+              <div class="gate"><strong>Keychain</strong><span class="tag red" id="inspect-keychain">missing</span></div>
+              <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">off</span></div>
             </div>
           </div>
 
@@ -843,13 +850,14 @@
               <span>docs/v0.2.53-codex-style-ui-design-2026-06-25.md</span>
               <span>docs/v0.2-launch-plan.md</span>
               <span>docs/ui/codex-style-dashboard.md</span>
+              <span>docs/v0.2.53.2-dashboard-readonly-api-2026-06-25.md</span>
             </div>
           </div>
 
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              用户评审 P0 → 调整信息架构 → 再决定 P1 菜单栏升级或 P2 本地 Web Dashboard。
+              启动 `make dashboard-api` 后刷新本页,即可看到 `/api/status` 与 `/api/tasks/today` 的只读数据。
             </div>
           </div>
         </section>
@@ -858,7 +866,7 @@
       <footer>
         <div class="log">
           <span>执行日志(折叠):</span>
-          <span>make lint ⏳</span>
+          <span id="footer-api">API 检测中</span>
           <span>真实 SMTP blocked ✅</span>
           <span>Keychain plaintext hidden ✅</span>
         </div>
@@ -867,8 +875,122 @@
     </div>
 
     <script>
+      const API_BASE = "http://127.0.0.1:8765";
       const buttons = document.querySelectorAll(".nav button");
       const views = document.querySelectorAll(".view");
+
+      const fallbackTasks = {
+        total: 6,
+        tasks: [
+          { id: "mail_drafts", count: 3 },
+          { id: "notes_confirm", count: 2 },
+          { id: "finance_anomaly", count: 1 },
+        ],
+      };
+
+      function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) {
+          el.textContent = value;
+        }
+      }
+
+      function setTag(id, value, tone = "green") {
+        const el = document.getElementById(id);
+        if (!el) {
+          return;
+        }
+        el.textContent = value;
+        el.classList.remove("green", "red");
+        if (tone) {
+          el.classList.add(tone);
+        }
+      }
+
+      function setApiState(online, message) {
+        const dot = document.getElementById("api-dot");
+        if (dot) {
+          dot.classList.remove("green", "yellow", "red");
+          dot.classList.add(online ? "green" : "yellow");
+        }
+        setText("api-status", message);
+        setText("footer-api", message);
+      }
+
+      function taskCount(tasks, id) {
+        return tasks.find((task) => task.id === id)?.count ?? 0;
+      }
+
+      function renderTasks(payload, sourceLabel) {
+        const tasks = payload.tasks ?? fallbackTasks.tasks;
+        const mail = taskCount(tasks, "mail_drafts");
+        const notes = taskCount(tasks, "notes_confirm");
+        const finance = taskCount(tasks, "finance_anomaly");
+        const total = payload.total ?? mail + notes + finance;
+        setText("total-tasks", String(total));
+        setText("metric-mail", String(mail));
+        setText("metric-notes", String(notes));
+        setText("metric-finance", String(finance));
+        setText("risk-summary", finance > 0 ? `${finance} 个需要先看风险` : "暂无高风险项");
+        setText("result-source", sourceLabel);
+      }
+
+      function renderStatus(payload) {
+        const quality = payload.quality_gates ?? {};
+        const providers = payload.providers ?? {};
+        const keychain = providers.keychain ?? {};
+        const approval = payload.approval_gates ?? {};
+        const presentCount = ["smtp_qq", "smtp_outlook", "smtp_gmail"].filter(
+          (name) => keychain[name] === "present",
+        ).length;
+        const realSmtp = approval.real_smtp === true;
+        setText("system-head", payload.git_head ?? "unknown");
+        setText("system-pytest", quality.pytest ?? "unknown");
+        setText("system-mypy", quality.mypy ?? "unknown");
+        setText("system-lint", quality.lint ?? "unknown");
+        setText("header-quality", quality.pytest ? "质量门已读取" : "质量门未知");
+        setTag("gate-smtp", realSmtp ? "可发送" : "禁用", realSmtp ? "green" : "red");
+        setTag("system-smtp-real", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-real-network", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
+        setTag("gate-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
+        setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
+        setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");
+        setText("header-keychain", `${presentCount}/3 Keychain`);
+      }
+
+      async function fetchJson(path) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 1200);
+        try {
+          const response = await fetch(`${API_BASE}${path}`, {
+            method: "GET",
+            signal: controller.signal,
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+          return await response.json();
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      async function hydrateDashboard() {
+        try {
+          const [status, tasks] = await Promise.all([
+            fetchJson("/api/status"),
+            fetchJson("/api/tasks/today"),
+          ]);
+          renderStatus(status);
+          renderTasks(tasks, "来自本地只读 API");
+          setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
+          setApiState(true, "API 已连接");
+        } catch (_err) {
+          renderTasks(fallbackTasks, "静态兜底数据");
+          setText("today-source", "今天 · 本地工作台 · API 未启动, 使用静态兜底");
+          setApiState(false, "API 离线兜底");
+        }
+      }
 
       buttons.forEach((button) => {
         button.addEventListener("click", () => {
@@ -879,6 +1001,8 @@
           document.getElementById(target).classList.add("active");
         });
       });
+
+      hydrateDashboard();
     </script>
   </body>
 </html>

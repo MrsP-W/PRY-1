@@ -104,8 +104,16 @@ def running_server(dashboard_ctx: DashboardContext) -> Generator[str, None, None
 
 
 def test_http_api_status(running_server: str) -> None:
-    status, body = _fetch_json(f"{running_server}/api/status")
+    req = urllib.request.Request(  # noqa: S310
+        f"{running_server}/api/status",
+        headers={"Origin": "null"},
+    )
+    with urllib.request.urlopen(req, timeout=2) as resp:  # noqa: S310 — 测试 localhost
+        status = resp.status
+        cors_origin = resp.headers["Access-Control-Allow-Origin"]
+        body = json.loads(resp.read().decode("utf-8"))
     assert status == 200
+    assert cors_origin == "null"
     assert body["read_only"] is True
     assert "quality_gates" in body
 
@@ -132,6 +140,18 @@ def test_http_post_not_allowed(running_server: str) -> None:
     with pytest.raises(urllib.error.HTTPError) as exc:
         urllib.request.urlopen(req, timeout=2)
     assert exc.value.code == 405
+
+
+def test_http_options_for_static_file_dashboard(running_server: str) -> None:
+    req = urllib.request.Request(  # noqa: S310
+        f"{running_server}/api/status",
+        headers={"Origin": "null"},
+        method="OPTIONS",
+    )
+    with urllib.request.urlopen(req, timeout=2) as resp:  # noqa: S310 — 测试 localhost
+        assert resp.status == 204
+        assert resp.headers["Access-Control-Allow-Origin"] == "null"
+        assert resp.headers["Allow"] == "GET, OPTIONS"
 
 
 def test_handler_factory_binds_context(dashboard_ctx: DashboardContext) -> None:
