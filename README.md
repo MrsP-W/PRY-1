@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53 Codex 风格 UI P0 启动**(2026-06-25 · 承接 v0.2.52.3 公共 API 一致性基线)。本轮完成:① UI/UX 设计沉淀 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53 Codex 风格 UI 工作台计划;③ 新建 P0 静态原型 `docs/ui/codex-style-dashboard.html` + `docs/ui/codex-style-dashboard.md`。**本轮质量门**:`make lint` **146 files 0 errors**。代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.1 Codex UI P1 菜单栏升级 + v0.2.54 8/1/SMTP 复评收口**(2026-06-25 · 承接 v0.2.53 P0)。本轮完成:① P1 rumps Codex 信息架构(`menu_bar/app.py` + `OutboxDraftService` Stub · +5 tests);② 8/1 tag 锚定复评 `docs/v0.2.54-8-1-tag-anchor-evaluation-2026-06-25.md`(7/8 · #2 仍缺);③ SMTP 就绪检查(Keychain qq present / outlook+gmail missing · InMemory sent=1 复跑);④ 撞坑 #64 P2 结论(`_smtp_transport` 协议层不迁移)。**质量门**:**2278 passed / 1 skipped / 88.68% coverage** / mypy --strict 0 errors / ruff 全绿 / **MD lint 150 files** 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一棒**:outlook/gmail Keychain 凭据 → 真实 SMTP spike / P2 Web Dashboard 只读 API / 8/1 12:00+ 检查员截点。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -229,6 +229,8 @@ make help
 | **v0.2.52.2** 状态口径同步 + provider 封装硬化(`ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · docs 三入口 2273/88.82%/143 files MD lint · `test_smpt_*` 拼写修正) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.3** 测试侧公共 API 一致性(OutboxDispatcher 暴露 `active_provider` + `provider_defaults` 公共属性 · 5 处私有属性断言迁移到公共 API · docs 三入口 2273/**88.84%** / **144 files** MD lint · 撞坑 #64 公共 API 迁移范本) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53** Codex 风格 UI P0 启动(设计稿 + v0.2 launch plan 纳入 + `docs/ui/` 静态 HTML 原型 + 原型说明 · 不新增依赖 · 不接真实 DB/SMTP/Keychain · `make lint` **146 files** 0 errors) | ✅ 6/25 P0 启动 | 2026-06-25 |
+| **v0.2.53.1** Codex UI P1 菜单栏升级(Codex IA · OutboxDraftService Stub · 打开工作台/系统健康 · +5 tests) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.54** 8/1 tag 复评 + SMTP 就绪检查(7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 docs-only | 2026-06-25 |
 
 ---
 

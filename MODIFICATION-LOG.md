@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53` Codex 风格 UI P0 静态原型启动(2026-06-25);承接 v0.2.52.3 测试侧公共 API 一致性(`1bba897` feat + `851ec9a` docs + `e9917b1` drift-fix,3 commits)。v0.2.53 完成:① UI/UX 设计沉淀 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53;③ P0 静态原型 `docs/ui/codex-style-dashboard.html` + 说明 MD。本轮**纯 docs-only** · 无代码改动 · 代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿 / **MD lint 146 files 0 errors**。**撞坑累计 64 类**(沿用 #64)。**下一步候选**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike |
-| **上一阶段** | ✅ `v0.2.52.3` 测试侧公共 API 一致性 + 143→144 漂移小修(2026-06-25 · `1bba897` feat + `851ec9a` docs + `e9917b1` drift-fix,3 commits) |
+| **当前阶段** | ✅ `v0.2.53.1` P1 菜单栏 + `v0.2.54` 8/1/SMTP 复评(2026-06-25):P1 Codex IA(`outbox_draft_service.py` + `app.py` +5 tests);8/1 复评 7/8;SMTP 就绪 qq present/outlook+gmail missing;InMemory sent=1。**2278 passed / 1 skipped / 88.68%** / mypy --strict 0 / **MD lint 150 files**。**撞坑 64 类**(#64 P2:`_smtp_transport` 不迁移)。**下一棒**:outlook/gmail Keychain → 真实 SMTP / P2 Dashboard / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53` Codex UI P0 静态原型(2026-06-25 · docs-only · c94da7f 链) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,8 +91,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53 全量质量门:**2273 passed / 1 skipped** / **88.84% coverage**(沿用 v0.2.52.3)/ mypy strict **0 errors / 209 source files** / MD lint **146 files 0 errors**(本轮 +2 docs 静态原型)|
-| **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
+| **质量基线** | v0.2.53.1 全量质量门:**2278 passed / 1 skipped** / **88.68% coverage** / mypy strict **0 errors / 209 source files** / MD lint **150 files 0 errors** |
+| **下一棒** | outlook/gmail Keychain → 真实 SMTP spike;P2 Web Dashboard;8/1 12:00+ 检查员截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -121,6 +121,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.1 P1 菜单栏 + v0.2.54 8/1/SMTP 复评] — 收口
+
+**1. 本次修改内容**
+
+- **feat(menu_bar)**:P1 Codex IA — `OutboxDraftService` Stub + `app.py` 菜单重构(今日待处理/打开工作台/系统健康) + `tests/menu_bar/test_app.py` +5 tests。
+- **docs**:8/1 复评 `docs/v0.2.54-8-1-tag-anchor-evaluation-2026-06-25.md` + SMTP 就绪 `docs/v0.2.54-smtp-spike-readiness-2026-06-25.md` + P1 报告 `docs/v0.2.53.1-menu-bar-p1-2026-06-25.md`。
+- **docs(state)**:README + SESSION-STATE + MODIFICATION-LOG 三入口同步。
+
+**2. 风险点**
+
+- OutboxDraftService 仍为 Stub(邮件草稿 badge 恒 0),D10 需接 OutboxStore。
+- 8/1 tag 仍 **7/8**,#2 outlook/gmail Keychain **missing**,未跑真实 SMTP。
+- 撞坑 #64 P2:`_smtp_transport` 协议 identity 断言保留私有访问,不强行暴露公共 API。
+- 不真发邮件、不写凭据、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2278 passed / 1 skipped / 9/9 质量门全绿 / 88.68% / 撞坑 64 类**
+- 当前阶段:v0.2.53.1 P1 + v0.2.54 复评收口。
+- 下一棒:outlook/gmail Keychain → 真实 SMTP spike;P2 Web Dashboard;8/1 检查员截点。
 
 ### 2026-06-25 [v0.2.53 Codex 风格 UI P0 静态原型] — 收口
 

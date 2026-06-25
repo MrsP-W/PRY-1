@@ -244,8 +244,8 @@ def test_poll_badge_count_initial_refresh() -> None:
     app._stop_hotkey_poll.set()
     t.join(timeout=2.0)
     assert svc.call_count >= 1, f"polling 应至少调 1 次,实际 {svc.call_count}"
-    badge_title = _find_badge_title(app.menu, "📥 待确认")
-    assert badge_title == "📥 待确认 (7)"
+    badge_title = _find_badge_title(app.menu, "  📝 Notes待确认")
+    assert badge_title == "  📝 Notes待确认 (7)"
 
 
 def test_poll_badge_count_polls_periodically(fake_rumps: None) -> None:
@@ -318,8 +318,8 @@ def test_poll_badge_count_updates_badge_on_change(fake_rumps: None) -> None:
     time.sleep(0.2)
     app._stop_hotkey_poll.set()
     t.join(timeout=2.0)
-    badge_after = _find_badge_title(app.menu, "📥 待确认")
-    assert badge_after == "📥 待确认 (9)", f"改 count 后 badge 应为 (9),实际 {badge_after}"
+    badge_after = _find_badge_title(app.menu, "  📝 Notes待确认")
+    assert badge_after == "  📝 Notes待确认 (9)", f"改 count 后 badge 应为 (9),实际 {badge_after}"
 
 
 def test_poll_badge_count_default_interval_is_30s(fake_rumps: None) -> None:
@@ -361,10 +361,10 @@ def test_poll_badge_count_refreshes_both_badges(fake_rumps: None) -> None:
     app._refresh_pending_confirm_count()
     app._refresh_anomaly_count()
     # 验 2 个 badge 都更新
-    pending_badge = _find_badge_title(app.menu, "📥 待确认")
-    anomaly_badge = _find_badge_title(app.menu, "⚠️ 异常告警")
-    assert pending_badge == "📥 待确认 (5)"
-    assert anomaly_badge == "⚠️ 异常告警 (3)"
+    pending_badge = _find_badge_title(app.menu, "  📝 Notes待确认")
+    anomaly_badge = _find_badge_title(app.menu, "  💰 财务异常")
+    assert pending_badge == "  📝 Notes待确认 (5)"
+    assert anomaly_badge == "  💰 财务异常 (3)"
 
 
 def test_poll_badge_count_thread_is_daemon(fake_rumps: None) -> None:

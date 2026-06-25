@@ -174,25 +174,26 @@ def test_app_invalid_service_raises(fake_rumps: None) -> None:
 
 
 def test_app_title_format_initial(fake_rumps: None) -> None:
-    """D9.3:T4 title 格式 "📝 Notes (N)"."""
+    """D9.3:T4 / v0.2.53 P1 title 格式 "🧑‍💼 我的AI员工 (N)"."""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
-    assert app.title == "📝 Notes (0)"
+    assert app.title == "🧑‍💼 我的AI员工 (0)"
 
 
 # ===== T5. 4 菜单项注册 =====
 
 
 def test_app_menu_items_registered(fake_rumps: None) -> None:
-    """D9.3:T5 菜单项 4 个 + 1 分隔符."""
+    """D9.3:T5 / v0.2.53 P1 菜单项注册."""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
     menu = app.menu
-    # menu 可能是 list[str] 或 rumps.Menu(取决于 rumps.clicked 装饰是否触发)
-    # 把所有项转 str 检查更鲁棒
     menu_strs = [str(m) for m in menu]
+    assert any("📋 今日待处理" in s for s in menu_strs), f"menu 缺 '今日待处理', 实际 {menu}"
+    assert any("打开工作台" in s for s in menu_strs), f"menu 缺 '打开工作台', 实际 {menu}"
+    assert any("系统健康" in s for s in menu_strs), f"menu 缺 '系统健康', 实际 {menu}"
     assert any("立即同步" in s for s in menu_strs), f"menu 缺 '立即同步', 实际 {menu}"
     assert any("打开 Notes" in s for s in menu_strs), f"menu 缺 '打开 Notes', 实际 {menu}"
     assert any("授权引导" in s for s in menu_strs), f"menu 缺 '授权引导', 实际 {menu}"
@@ -498,12 +499,12 @@ def test_app_invalid_note_confirm_service_raises(fake_rumps: None) -> None:
 
 
 def test_app_pending_confirm_menu_items_registered(fake_rumps: None) -> None:
-    """v0.2.2 #2:T16 menu 含 '📥 待确认' + '📥 确认第 1 条' 2 新菜单项."""
+    """v0.2.2 #2 / v0.2.53 P1:T16 menu 含 Notes待确认 + 确认第 1 条."""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
     menu_strs = [str(m) for m in app.menu]
-    assert any("📥 待确认" in s for s in menu_strs), f"menu 缺 '📥 待确认', 实际 {menu_strs}"
+    assert any("Notes待确认" in s for s in menu_strs), f"menu 缺 Notes待确认, 实际 {menu_strs}"
     assert any("📥 确认第 1 条" in s for s in menu_strs), (
         f"menu 缺 '📥 确认第 1 条', 实际 {menu_strs}"
     )
@@ -537,8 +538,8 @@ def test_refresh_pending_confirm_count_updates_badge(fake_rumps: None) -> None:
     # 验证 menu 中"📥 待确认" 项更新到 (3)
     # 修复(v0.2.2 #2): rumps.Menu(真实 NSApp)iter 出来是 str keys,改 MenuItem.title 不会改 keys;
     # 必须同时检查 list[str] 形态(替换 str)和 MenuItem 形态(改 .title)
-    found = _assert_menu_badge_updated(app.menu, "📥 待确认", "3")
-    assert found, "未找到 '📥 待确认' 菜单项"
+    found = _assert_menu_badge_updated(app.menu, "  📝 Notes待确认", "3")
+    assert found, "未找到 'Notes待确认' 菜单项"
 
 
 # ===== T18. _on_show_pending_confirm 空列表 → "暂无待确认" notification =====
@@ -560,7 +561,7 @@ def test_on_show_pending_confirm_empty_notification(fake_rumps: None) -> None:
             return None
 
     app = NotesMenuBarApp(note_confirm_service=_EmptyConfirmService())
-    app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
+    app._on_show_pending_confirm(_FakeMenuItem("  📝 Notes待确认"))
 
     app_module._notification_func.assert_called_once()
     call_args = app_module._notification_func.call_args
@@ -605,7 +606,7 @@ def test_on_show_pending_confirm_non_empty_notification(fake_rumps: None) -> Non
             return None
 
     app = NotesMenuBarApp(note_confirm_service=_NonEmptyConfirmService())
-    app._on_show_pending_confirm(_FakeMenuItem("📥 待确认"))
+    app._on_show_pending_confirm(_FakeMenuItem("  📝 Notes待确认"))
 
     app_module._notification_func.assert_called_once()
     call_args = app_module._notification_func.call_args
@@ -681,8 +682,8 @@ def test_on_confirm_first_success_flow(fake_rumps: None) -> None:
     # 验 menu badge 已被刷新到 (1)
     # 修复(v0.2.2 #2): rumps.Menu 形态下, iter 出来是 OrderedDict 的 str keys
     # (改 MenuItem.title 不会改 keys); 必须用 _assert_menu_badge_updated 同时支持 2 种形态
-    found_badge = _assert_menu_badge_updated(app.menu, "📥 待确认", "1")
-    assert found_badge, "未找到 '📥 待确认' 菜单项"
+    found_badge = _assert_menu_badge_updated(app.menu, "  📝 Notes待确认", "1")
+    assert found_badge, "未找到 'Notes待确认' 菜单项"
 
 
 # ===== T21. _on_confirm_first 空列表 → "暂无待确认" notification =====
@@ -710,3 +711,111 @@ def test_on_confirm_first_empty_returns_placeholder(fake_rumps: None) -> None:
     call_args = app_module._notification_func.call_args
     assert call_args[0][0] == "📥 1-click 确认"
     assert call_args[0][1] == "暂无待确认"
+
+
+# ===== v0.2.53 P1 — Codex 菜单栏升级测试 T22-T26 =====
+
+
+def test_app_uses_default_outbox_draft_stub(fake_rumps: None) -> None:
+    """v0.2.53 P1:T22 默认 OutboxDraftServiceStub 注入."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar.outbox_draft_service import OutboxDraftServiceStub
+
+    app = NotesMenuBarApp()
+    assert isinstance(app._outbox_draft_service, OutboxDraftServiceStub)
+    assert app._outbox_draft_service.get_pending_draft_count() == 0
+
+
+def test_app_title_reflects_pending_total(fake_rumps: None) -> None:
+    """v0.2.53 P1:T23 title 数字 = 邮件草稿 + Notes + 财务异常."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    class _DraftSvc:
+        def get_pending_draft_count(self) -> int:
+            return 2
+
+    class _ConfirmSvc:
+        def get_pending_confirm_count(self) -> int:
+            return 3
+
+        def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
+        def confirm_note(self, apple_note_id: str) -> None:
+            return None
+
+    class _ExpenseSvc:
+        def get_total_notes_count(self) -> int:
+            return 0
+
+        def get_unsynced_count(self) -> int:
+            return 0
+
+        def get_recent_note_titles(self, limit: int = 5) -> list[str]:
+            return []
+
+        def is_clipboard_listener_running(self) -> bool:
+            return False
+
+        def get_tcc_authorization_status(self) -> bool:
+            return False
+
+        def get_anomaly_count(self) -> int:
+            return 1
+
+        def get_recent_anomalies(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
+    app = NotesMenuBarApp(
+        expense_service=_ExpenseSvc(),
+        note_confirm_service=_ConfirmSvc(),
+        outbox_draft_service=_DraftSvc(),
+    )
+    assert app.title == "🧑‍💼 我的AI员工 (6)"
+
+
+def test_on_open_dashboard_subprocess(
+    fake_rumps: None, fake_subprocess: list[dict[str, Any]]
+) -> None:
+    """v0.2.53 P1:T24 打开工作台 → open docs/ui/codex-style-dashboard.html."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    app = NotesMenuBarApp()
+    app._on_open_dashboard(_FakeMenuItem("打开工作台"))
+
+    assert len(fake_subprocess) == 1
+    call_args = fake_subprocess[0]["args"][0]
+    assert call_args[0] == "open"
+    assert call_args[1].endswith("docs/ui/codex-style-dashboard.html")
+
+
+def test_on_system_health_notification(fake_rumps: None, monkeypatch: pytest.MonkeyPatch) -> None:
+    """v0.2.53 P1:T25 系统健康 → notification 含质量门基线."""
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+    from my_ai_employee.menu_bar import app as app_module
+
+    monkeypatch.setattr(
+        subprocess,
+        "run",
+        lambda *a, **kw: MagicMock(returncode=0, stdout="abc123\n", stderr=""),
+    )
+    app = NotesMenuBarApp()
+    app._on_system_health(_FakeMenuItem("系统健康"))
+
+    app_module._notification_func.assert_called_once()
+    call_args = app_module._notification_func.call_args
+    assert call_args[0][0] == "系统健康"
+    assert "2273 passed" in call_args[0][2]
+    assert "abc123" in call_args[0][2]
+
+
+def test_app_invalid_outbox_draft_service_raises(fake_rumps: None) -> None:
+    """v0.2.53 P1:T26 缺 get_pending_draft_count → TypeError."""
+
+    class _BadDraft:
+        pass
+
+    from my_ai_employee.menu_bar import NotesMenuBarApp
+
+    with pytest.raises(TypeError, match="outbox_draft_service 必须实现"):
+        NotesMenuBarApp(outbox_draft_service=_BadDraft())  # type: ignore[arg-type]

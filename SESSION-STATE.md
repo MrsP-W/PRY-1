@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53 Codex 风格 UI P0 静态原型启动(2026-06-25)
+# SESSION-STATE — v0.2.53.1 P1 菜单栏 + v0.2.54 8/1/SMTP 复评(2026-06-25)
 
-> **最后更新**:2026-06-25 15:16 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:🟢 **v0.2.53 Codex 风格 UI P0 已启动**(2026-06-25 · 承接 v0.2.52.3 公共 API 一致性基线)。**本轮**:① UI/UX 设计稿 `docs/v0.2.53-codex-style-ui-design-2026-06-25.md`;② 项目开发计划纳入 `docs/v0.2-launch-plan.md` §v0.2.53 Codex 风格 UI 工作台计划;③ 新建 P0 静态原型 `docs/ui/codex-style-dashboard.html` + `docs/ui/codex-style-dashboard.md`。**本轮质量门(实测)**:`make lint` **146 files 0 errors**。代码质量基线沿用 v0.2.52.3:**2273 passed / 1 skipped / 88.84% coverage** / mypy --strict 0 errors / ruff 全绿。**下一步**:用户评审 P0 信息架构 → P1 rumps 菜单栏升级。边界:不真发邮件、不写入真实凭据、不读取 Keychain 明文、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **最后更新**:2026-06-25 16:40 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:🟢 **v0.2.53.1 P1 + v0.2.54 复评收口**(2026-06-25)。**本轮**:① P1 rumps Codex 菜单栏(`OutboxDraftService` Stub + 今日待处理 IA);② 8/1 tag 复评 7/8(#2 outlook/gmail SMTP 仍缺);③ SMTP 就绪(Keychain qq present / outlook+gmail missing · InMemory sent=1);④ 撞坑 #64 P2 结论(协议层 `_smtp_transport` 不迁移)。**质量门**:**2278 passed / 1 skipped / 88.68%** / mypy --strict 0 errors / MD lint **150 files** 0 errors。**下一棒**:outlook/gmail Keychain → 真实 SMTP spike / P2 Web Dashboard / 8/1 12:00+ 检查员截点。边界:不真发邮件、不写入凭据、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53 Codex 风格 UI P0 已启动(2026-06-25)**;承接 v0.2.52.3 公共 API 一致性基线,先做静态原型验证信息架构。**下一步候选**:用户评审 P0 → P1 rumps 菜单栏升级 / 8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。
+**当前启动候选**:**v0.2.53.1 P1 菜单栏 + v0.2.54 复评已收口(2026-06-25)**。**下一步候选**:outlook/gmail Keychain 凭据 → 真实 SMTP spike(沿 v0.2.54 就绪包)/ P2 本地 Web Dashboard 只读 API / 8/1 12:00+ 检查员强制截点(沿 v0.2.54 撞坑 #60 范本)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
