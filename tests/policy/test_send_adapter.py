@@ -47,6 +47,7 @@ from my_ai_employee.connectors.smtp import (  # noqa: E402
     SMTP_SEND_PERMANENT_BOUNCE,
     SMTP_SEND_TRANSPORT_ERROR,
     InMemorySmtpTransport,
+    SmtpLibTransport,
 )
 from my_ai_employee.core import keychain  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
@@ -1518,3 +1519,33 @@ def session_factory_for_test(store: OutboxStore):  # type: ignore[no-untyped-def
     """
     # OutboxStore.__init__ 接受 session_factory,反射取出
     return store._session_factory
+
+
+# ===== v0.2.51 SMTPProviderFactory 接入(2 cases)=====
+
+
+def test_smpt_provider_factory_integration_backward_compatible() -> None:
+    """v0.2.51 不传 smtp_provider = 走原 smtp_transport 路径(向后兼容)。"""
+    transport = SmtpLibTransport()
+    adapter = EmailSendAdapter(source="qq", smtp_transport=transport)
+    assert adapter._smtp_provider is None
+    assert adapter._smtp_transport is transport
+
+
+def test_smpt_provider_factory_integration_with_provider() -> None:
+    """v0.2.51 传 smtp_provider = 走 SMTPProviderFactory.create 路径。"""
+    adapter = EmailSendAdapter(source="outlook", smtp_provider="outlook")
+    assert adapter._smtp_provider == "outlook"
+    # _smtp_transport 应为 SMTPConnector 实例(由工厂创建)
+    assert adapter._smtp_transport is not None
+
+
+def test_smpt_provider_and_transport_mutually_exclusive() -> None:
+    """v0.2.51 smtp_provider 与 smtp_transport 同传 → ValueError(撞坑 #18 范本)。"""
+    transport = SmtpLibTransport()
+    with pytest.raises(ValueError, match=r"smtp_provider 与 smtp_transport 互斥"):
+        EmailSendAdapter(
+            source="qq",
+            smtp_transport=transport,
+            smtp_provider="qq",
+        )

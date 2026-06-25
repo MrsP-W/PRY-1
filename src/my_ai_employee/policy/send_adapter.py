@@ -632,6 +632,8 @@ class EmailSendAdapter:
         heartbeat: Heartbeat | None = None,
         board: LaneBoard | None = None,
         blacklist_store: RecipientBlacklistStore | None = None,
+        smtp_provider: str
+        | None = None,  # v0.2.51: provider 名("qq"/"outlook"/"gmail") → 内部走 SMTPProviderFactory
     ) -> None:
         # D4.7.3 v1.0.5 P2-2 范本: source 严判 strip() 语义非空
         if not isinstance(source, str) or not source.strip():
@@ -651,6 +653,23 @@ class EmailSendAdapter:
         # 时 send_and_emit 入口前会调 is_blocked(entry.recipient_email) 二次校验
         # 复用 outbox_adapter._validate_outbox_blacklist_store(type 严判 + is None fallback)
         self._blacklist_store = _validate_outbox_blacklist_store(blacklist_store)
+
+        # v0.2.51 接入 SMTPProviderFactory:smtp_provider 显式传 → 内部走工厂创建
+        # smtp_transport 与 smtp_provider 互斥(同传 → 严判 ValueError)
+        self._smtp_provider: str | None = None
+        if smtp_provider is not None:
+            if smtp_transport is not None:
+                raise ValueError(
+                    "smtp_provider 与 smtp_transport 互斥, 同传时冲突(沿 v0.2.51 B 类)"
+                )
+            from my_ai_employee.connectors.smtp import SMTPProviderFactory  # 延迟 import 避循环
+
+            # TODO(v0.2.51.1): 从 entry.sender_email 取实际 email,目前用 source 作占位
+            self._smtp_transport = SMTPProviderFactory.create(  # type: ignore[assignment]
+                provider=smtp_provider,
+                email=f"{source}@my-ai-employee.local",  # 占位 email,真实发件邮箱待 v0.2.51.1
+            )
+            self._smtp_provider = smtp_provider
 
     def build_lane_entry_id(self, run_id: str) -> str:
         """生成 LaneBoard entry_id: 'send:<source>:<run_id>'."""
