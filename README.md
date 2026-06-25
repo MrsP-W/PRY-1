@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.1 Codex UI P1 菜单栏升级 + v0.2.54 8/1/SMTP 复评收口**(2026-06-25 · 承接 v0.2.53 P0)。本轮完成:① P1 rumps Codex 信息架构(`menu_bar/app.py` + `OutboxDraftService` Stub · +5 tests);② 8/1 tag 锚定复评 `docs/v0.2.54-8-1-tag-anchor-evaluation-2026-06-25.md`(7/8 · #2 仍缺);③ SMTP 就绪检查(Keychain qq present / outlook+gmail missing · InMemory sent=1 复跑);④ 撞坑 #64 P2 结论(`_smtp_transport` 协议层不迁移)。**质量门**:**2278 passed / 1 skipped / 88.68% coverage** / mypy --strict 0 errors / ruff 全绿 / **MD lint 150 files** 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一棒**:outlook/gmail Keychain 凭据 → 真实 SMTP spike / P2 Web Dashboard 只读 API / 8/1 12:00+ 检查员截点。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.2 P2 Dashboard 只读 API 骨架**(2026-06-25 · `/api/status` + `/api/tasks/today` · stdlib · 127.0.0.1)。**质量门**:**2285 passed / 1 skipped / 88.42%** / mypy --strict 0 errors / **MD lint 151 files** 0 errors。**下一棒**:静态 HTML 接 API / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 

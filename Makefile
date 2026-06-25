@@ -56,7 +56,7 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make coverage$(RESET) 9 质量门 — pytest + 覆盖率 fail_under=80%"
 	@echo "  $(GREEN)make alembic$(RESET)  9 质量门 — alembic upgrade head --sql 验证"
 	@echo "  $(GREEN)make build$(RESET)    9 质量门 — uv build 本地构建 wheel + sdist"
-	@echo "  $(GREEN)make ci$(RESET)       9 质量门 — 一键跑 9 质量门全链(沿 v0.1 范本)"
+	@echo "  $(GREEN)make dashboard-api$(RESET) v0.2.53.2 P2 — 本地 Dashboard 只读 API(127.0.0.1:8765)"
 	@echo "  $(GREEN)make info$(RESET)     显示项目信息（Python 版本 + 关键路径）"
 	@echo "  $(GREEN)make venv$(RESET)     创建项目本地 venv（uv venv, Python 3.12）"
 	@echo "  $(GREEN)make install$(RESET)  同步依赖到 venv（uv sync --extra dev）"
@@ -78,6 +78,11 @@ dev: ## 开发模式（hot reload）
 		--pattern='*.py' \
 		--recursive \
 		-- $(PYTHON) -m my_ai_employee.main
+
+.PHONY: dashboard-api
+dashboard-api: ## v0.2.53.2 P2 — 本地 Dashboard 只读 API
+	@echo "$(BLUE)🌐 Dashboard 只读 API(127.0.0.1:8765)$(RESET)"
+	@$(PYTHON) -m my_ai_employee.dashboard.server
 
 .PHONY: test
 test: ## 跑单元测试

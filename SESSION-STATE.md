@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.1 P1 菜单栏 + v0.2.54 8/1/SMTP 复评(2026-06-25)
+# SESSION-STATE — v0.2.53.2 P2 Dashboard 只读 API(2026-06-25)
 
-> **最后更新**:2026-06-25 16:40 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.1 P1 + v0.2.54 复评收口**(2026-06-25)。**本轮**:① P1 rumps Codex 菜单栏(`OutboxDraftService` Stub + 今日待处理 IA);② 8/1 tag 复评 7/8(#2 outlook/gmail SMTP 仍缺);③ SMTP 就绪(Keychain qq present / outlook+gmail missing · InMemory sent=1);④ 撞坑 #64 P2 结论(协议层 `_smtp_transport` 不迁移)。**质量门**:**2278 passed / 1 skipped / 88.68%** / mypy --strict 0 errors / MD lint **150 files** 0 errors。**下一棒**:outlook/gmail Keychain → 真实 SMTP spike / P2 Web Dashboard / 8/1 12:00+ 检查员截点。边界:不真发邮件、不写入凭据、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
+> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:🟢 **v0.2.53.2 P2 Dashboard 只读 API 骨架已落地** — `GET /api/status` + `/api/tasks/today` · stdlib `127.0.0.1:8765` · `make dashboard-api`。**质量门**:**2285 passed / 1 skipped / 88.42%**。**下一棒**:HTML 接 API / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.1 P1 菜单栏 + v0.2.54 复评已收口(2026-06-25)**。**下一步候选**:outlook/gmail Keychain 凭据 → 真实 SMTP spike(沿 v0.2.54 就绪包)/ P2 本地 Web Dashboard 只读 API / 8/1 12:00+ 检查员强制截点(沿 v0.2.54 撞坑 #60 范本)。
+**当前启动候选**:**v0.2.53.2 P2 Dashboard 只读 API 骨架已落地(2026-06-25)**。**下一步候选**:静态 HTML 接 `/api/status` + `/api/tasks/today` / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

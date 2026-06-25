@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.1` P1 菜单栏 + `v0.2.54` 8/1/SMTP 复评(2026-06-25):P1 Codex IA(`outbox_draft_service.py` + `app.py` +5 tests);8/1 复评 7/8;SMTP 就绪 qq present/outlook+gmail missing;InMemory sent=1。**2278 passed / 1 skipped / 88.68%** / mypy --strict 0 / **MD lint 150 files**。**撞坑 64 类**(#64 P2:`_smtp_transport` 不迁移)。**下一棒**:outlook/gmail Keychain → 真实 SMTP / P2 Dashboard / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53` Codex UI P0 静态原型(2026-06-25 · docs-only · c94da7f 链) |
+| **当前阶段** | ✅ `v0.2.53.2` P2 Dashboard 只读 API(2026-06-25):`dashboard/` stdlib · `/api/status` + `/api/tasks/today` · +7 tests · `make dashboard-api`。**2285 passed / 1 skipped / 88.42%** / MD lint **151 files**。**下一棒**:HTML 接 API / Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.1` P1 菜单栏 + `v0.2.54` 复评(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,8 +91,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.1 全量质量门:**2278 passed / 1 skipped** / **88.68% coverage** / mypy strict **0 errors / 209 source files** / MD lint **150 files 0 errors** |
-| **下一棒** | outlook/gmail Keychain → 真实 SMTP spike;P2 Web Dashboard;8/1 12:00+ 检查员截点 |
+| **质量基线** | v0.2.53.2:**2285 passed / 1 skipped** / **88.42%** / mypy strict 0 / MD lint **151 files** |
+| **下一棒** | 静态 HTML 接 Dashboard API;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -121,6 +121,24 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.2 P2 Dashboard 只读 API 骨架] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**:stdlib 只读 API — `/api/status` + `/api/tasks/today` + `make dashboard-api` + 7 tests。
+- **docs**: `docs/v0.2.53.2-dashboard-readonly-api-2026-06-25.md` + 设计稿 P2 勾选。
+- **chore**: `.cursor/rules/auto-commit.mdc`(用户「以后都自动 commit」)。
+
+**2. 风险点**
+
+- 仅 GET / 127.0.0.1;写动作留 ApprovalGate 后续。
+- OutboxDraftService 仍 Stub;status Keychain 只查 present/missing。
+
+**3. 当前项目整体总结**
+
+- 进度:**2285 passed / 1 skipped / 9/9 全绿 / 88.42%**
+- 下一棒:HTML 接 API;Keychain SMTP;8/1 截点。
 
 ### 2026-06-25 [v0.2.53.1 P1 菜单栏 + v0.2.54 8/1/SMTP 复评] — 收口
 

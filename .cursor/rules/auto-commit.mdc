@@ -1,0 +1,24 @@
+---
+description: 完成任务后自动 git commit（用户 2026-06-25 指令）
+alwaysApply: true
+---
+
+# 自动 Commit
+
+用户已明确：**以后都自动 commit**（本项目覆盖全局「需用户明确要求才 commit」规则）。
+
+## 何时 commit
+
+- 完成代码实现、测试、docs(state) 同步等**有实质改动**的任务后，**自动** stage + commit。
+- 纯问答、只读检查、无文件改动：**不 commit**。
+
+## 如何做
+
+1. `git status` / `git diff` — 只 stage **与本次任务相关**的文件；排除无关改动、`.env`、真实凭据、临时 spike 产物（除非用户要求入库且已脱敏）。
+2. 写 1–2 句 commit message（说明 why）。
+3. `git commit`（HEREDOC）；hook 失败则修问题后**新 commit**，不 amend（除非 user rules 允许）。
+4. **默认不 push**；仅用户明确要求或 diff-tab push 动作时才 push。
+
+## 沿用
+
+- 不写 MODIFICATION-LOG 除非触发 CLAUDE.md 五类条件；但 feat/docs 收口仍建议同步三入口（README / SESSION-STATE / MODIFICATION-LOG）。
