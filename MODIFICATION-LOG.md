@@ -79,12 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.46` 7/1 月度复盘提前执行版已收口(5 步执行完成:质量门全绿 + `reports/2026-07-monthly-review.md` + B 类三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后 + 状态入口同步);**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 未来凭据可用后恢复 1 封真实 SMTP spike |
-| **上一阶段** | ✅ `v0.2.45` 7/1 月度复盘准备增量包已收口(commit `1cae0f3` · 补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态)|
-| **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
+| **当前阶段** | ✅ `v0.2.47` 8/1 release tag 预检包已收口(docs-only · 撞坑 #58 8 项前置条件 + 1 缺口评估范本 · 5 步执行完成:8 项前置条件评估 7/8 实质满足 + 真实 SMTP spike 恢复包 + OutboxDispatcher × SMTPProviderFactory 接入复核 + 8/1 决策矩阵 + 状态入口同步);**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR) |
+| **上一阶段** | ✅ `v0.2.46` 7/1 月度复盘提前执行版已收口(5 步执行完成:质量门全绿 + `reports/2026-07-monthly-review.md` + B 类三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后 + 状态入口同步)|
+| **上上一阶段** | ✅ `v0.2.45` 7/1 月度复盘准备增量包已收口(commit `1cae0f3` · 补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态)|
+| **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.46 全量质量门:**2265 passed / 1 skipped** / **88.76% coverage** / mypy strict **0 errors / 209 source files** / MD lint **137 files 0 errors** |
+| **质量基线** | v0.2.47 全量质量门:**2265 passed / 1 skipped** / **88.76% coverage** / mypy strict **0 errors / 209 source files** / MD lint **138 files 0 errors** |
 | **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 

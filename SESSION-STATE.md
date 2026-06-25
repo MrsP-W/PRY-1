@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.46 7/1 月度复盘提前执行版已收口(2026-06-25)
+# SESSION-STATE — v0.2.47 8/1 release tag 预检包已收口(2026-06-25 · 撞坑 #58 8 项前置条件 + 1 缺口评估范本)
 
-> **最后更新**:2026-06-25 08:35 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.46 7/1 月度复盘提前执行版已收口**。**执行结果**:完成 5 步计划:基线检查、月度复盘报告、B 类三态归档、8/1 `v0.2.1` release tag readiness、状态入口同步。**质量门**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors。**当前 tag 前置条件**:7/8 实质满足;真实 SMTP 送达因授权码跳过继续延后;8/1 前若仍无 1 封真实 SMTP spike 成功记录,继续不打 `v0.2.1` tag。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`reports/2026-07-monthly-review.md`。
+> **最后更新**:2026-06-25 11:20 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.47 8/1 release tag 预检包已收口**(docs-only · 撞坑 #58 新范本)。**执行结果**:完成 5 步"8/1 发版准备 + SMTP 延后恢复包";8 项前置条件正式评估 = **7/8 实质满足,唯一缺口 = outlook/gmail 真实 SMTP 送达**;真实 SMTP spike 恢复包含 6 步骤 checklist + 4 步骤命令模板 + 安全护栏;OutboxDispatcher × SMTPProviderFactory 接入复核(spike 已接入 / EmailSendAdapter 未接入 / 不阻塞 8/1)。**质量门**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 138 files / 0 errors。**8/1 v0.2.1 tag 决策矩阵**:自动打 tag ❌ / 继续延后 ✅(推荐) / 降级 v0.2.1-rc1 🟡。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md`。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.46 7/1 月度复盘提前执行版已收口(2026-06-25)**,**下一步候选**:8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等未来凭据可用再恢复。
+**当前启动候选**:**v0.2.47 8/1 release tag 预检包已收口(2026-06-25 · 撞坑 #58 8 项前置条件 + 1 缺口评估范本)**,**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
