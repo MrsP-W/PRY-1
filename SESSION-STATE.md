@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)(2026-06-25)
 
-> **最后更新**:2026-06-25 11:20 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.47 8/1 release tag 预检包已收口**(docs-only · 撞坑 #58 新范本)。**执行结果**:完成 5 步"8/1 发版准备 + SMTP 延后恢复包";8 项前置条件正式评估 = **7/8 实质满足,唯一缺口 = outlook/gmail 真实 SMTP 送达**;真实 SMTP spike 恢复包含 6 步骤 checklist + 4 步骤命令模板 + 安全护栏;OutboxDispatcher × SMTPProviderFactory 接入复核(spike 已接入 / EmailSendAdapter 未接入 / 不阻塞 8/1)。**质量门**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 138 files / 0 errors。**8/1 v0.2.1 tag 决策矩阵**:自动打 tag ❌ / 继续延后 ✅(推荐) / 降级 v0.2.1-rc1 🟡。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md`。
+> **最后更新**:2026-06-25 11:50 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)已收口**(2026-06-25 · `dd2e93f` · 6 files / 309+/-)。**承接**:v0.2.52 三件事收口(`91cbe96` · 7 files / 353+/-)。**撞坑 #63 5 路径严判**:① 路径 1 provider + 默认值可用 → OutboxDispatcher 同步 `_provider_default_*` 3 字段;② 路径 2 provider + 默认值缺失 → fallback 路径 3;③ 路径 3 显式 smtp_host/port/username/password(向后兼容);④ 路径 4 完全没传 → ValueError 严判;⑤ 路径 5 优先级冲突 → ValueError(防 silent override)。**3 新测试覆盖**(`test_v0521_provider_mode_syncs_defaults_from_adapter` + `test_v0521_provider_mode_explicit_host_conflict_raises` + `test_v0521_no_provider_mode_backward_compatible`)。**质量门全绿(实测)**:2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff check + format 全绿 / alembic upgrade head --sql exit 0(沿 v0.2.52 #62 修复)/ uv build OK / make lint 141 files 0 errors。**撞坑累计 63 类**(本轮新增 #63)。**8/1 v0.2.1 tag 决策**:沿 v0.2.50 撞坑 #60 preliminary 范本,继续延后(唯一缺口:outlook/gmail 真实 SMTP 送达 / Keychain 凭据未就绪)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md`。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.47 8/1 release tag 预检包已收口(2026-06-25 · 撞坑 #58 8 项前置条件 + 1 缺口评估范本)**,**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR)。
+**当前启动候选**:**v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)已收口(2026-06-25 · `dd2e93f` · 6 files / 309+/-)**;承接 v0.2.52 三件事收口(`91cbe96`)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ v0.2.52 #61 SMTPConnector 协议修复已落入 v0.2.52(本轮 v0.2.52.1 撞坑 #63 自动路由进一步深化,无单独立项)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -123,6 +123,9 @@
 | 6/24 | 周三 | **v0.2.31 候选 review 汇总闭环 + v0.2.32 W3 真账单 spike + 撞坑 #49 收口**(用户提供真实支付宝 62 笔流水 5/24-6/24 16827.01 元)· `--max-rows 1` 跑通 `parsed=1 inserted=1 categorized=1 version=2027` · 撞坑 #49 faker≠真实格式(22 行前缀/`交易时间`/`不计入收支`)· 新增 2027 real parser + 4 tests · **2265 passed / 1 skipped / 0 mypy / 0 ruff / 0 MD lint** · HEAD `5e25983` | ✅ |
 | 6/24 | 周三 | **v0.2.33 状态口径二次纠偏 + v0.2.34 spike-10 + v0.2.35 spike-25 + v0.2.35 漂移小修**(阶梯 1→5→10→25 四阶段范本 + 撞坑 #50 第二层 + #52 阶梯 + #53 累计公式 v1.0)· 14 commit 链 · docs-only 4 commits | ✅ |
 | 6/24 | 周三(上午)| **v0.2.36 W3 真账单 `--max-rows 49` 全量入库收口(选项 B 路径 · docs-only)** — spike-49 跑通 `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 阶梯 1→5→10→25→49 五阶段范本 + 撞坑 #53 v2.0 累计公式(Σ(inserted) + Σ(duplicates) = Σ(max-rows) = 90 = 49 + 41 = 1+5+10+25+49 ✅)+ 撞坑 #54 选项 B 优于选项 A 范本 · 9/9 质量门全绿(2265 passed / 1 skipped / 88.77% coverage · ruff format 1 修复 export 脚本)· docs-only 收口 3 文件顶部 + 新增 docs/v0.2.36-w3-spike-49-2026-06-24.md · 不真发邮件 · 不真导入新账单(沿用 `--max-rows` 严守 · 选项 B 守护范本)· 不 kickstart launchd · 不移动 v0.1.0 tag · 不打 v0.2.x tag | ✅ |
+| 6/25 | 周四 | **v0.2.42-v0.2.51 mypy --strict / W3 spike docs 链路 10 commit** — 撞坑 #55 v4.0 四重锁死范本(命令 + 配置 + Makefile + 严格模式)/ 撞坑 #56 AST 注入顺序陷阱 / 撞坑 #57 ast.unparse 注释丢失 / 撞坑 #58 MD022 33 文件批量修复 / 撞坑 #50 风险门控 | ✅ |
+| 6/25 | 周四 | **v0.2.52 SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步**(`91cbe96` · 7 files / 353+/-)· 9/9 质量门全绿(2270 passed / 1 skipped / 88.81% / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 141 files 0 errors)| ✅ |
+| 6/25 | 周四 | **v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)收口**(`dd2e93f` · 6 files / 309+/-)· 5 路径严判(路径 1 provider + 默认值可用 / 路径 2 缺失 fallback / 路径 3 显式 / 路径 4 完全没传 / 路径 5 冲突严判)· 3 新测试覆盖(同步默认值 + 冲突严判 + 向后兼容)· 9/9 质量门全绿(2273 passed / 1 skipped / 88.82% / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 141 files 0 errors)· 撞坑累计 63 类(本轮新增 #63)· 状态三入口同步(R1/README + S/SESSION-STATE + M/MODIFICATION-LOG 顶部 v0.2.52 → v0.2.52.1)· 沿 v0.2.52 撞坑 #50 三层范本 + 撞坑 #51 漂移审查机制 | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 
@@ -182,6 +185,8 @@
 - **v0.2.1 #3/#4/#5 docs-only 校准报告**: `我的AI员工/reports/v0.2.1-candidates-closure-2026-06-18.md`
 - **v0.2.1+ L2 跨源写入**: `我的AI员工/reports/v0.2.1-l2-cross-source-write-2026-06-17.md`
 - **v0.2.1 启动候选清单**: `我的AI员工/docs/v0.2.1-candidates-2026-06-17.md`
+- **v0.2.52 SMTPProviderFactory 协议不匹配修复收口报告**: `我的AI员工/docs/v0.2.52-smtp-provider-factory-protocol-mismatch-2026-06-25.md`(撞坑 #61+#62+P1 状态三入口同步)
+- **v0.2.52.1 OutboxDispatcher 自动路由收口报告**: `我的AI员工/docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md`(撞坑 #63 5 路径严判)
 - **v0.2 launch plan 整体收口**: `我的AI员工/reports/v0.2-closure-2026-06-18.md`(13 子阶段双链锚定 · 57 主项目 commits · 撞坑恢复范本)
 - **v0.2.2 #8 SMTPProviderFactory 收口**: `我的AI员工/reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md`(撞坑恢复 commit · 10 new tests)
 - **v0.2.4 状态漂移审查机制入库**: `我的AI员工/docs/v0.2.4-drift-review-mechanism-2026-06-18.md`(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)
