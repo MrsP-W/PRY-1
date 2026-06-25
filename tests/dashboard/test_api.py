@@ -13,7 +13,13 @@ import pytest
 
 from my_ai_employee.dashboard.context import DashboardContext, QualityGateSnapshot
 from my_ai_employee.dashboard.handlers import handler_factory
-from my_ai_employee.dashboard.responses import build_status_payload, build_tasks_today_payload
+from my_ai_employee.dashboard.responses import (
+    build_finance_anomalies_payload,
+    build_notes_pending_payload,
+    build_outbox_payload,
+    build_status_payload,
+    build_tasks_today_payload,
+)
 from my_ai_employee.dashboard.server import create_server
 
 
@@ -21,13 +27,30 @@ class _CountingDraft:
     def get_pending_draft_count(self) -> int:
         return 2
 
+    def list_pending_drafts(self, limit: int = 10) -> list[dict[str, Any]]:
+        return [
+            {
+                "outbox_id": 101,
+                "subject": "供应商付款确认",
+                "status": "pending_send",
+                "priority": "urgent",
+            }
+        ][:limit]
+
 
 class _CountingConfirm:
     def get_pending_confirm_count(self) -> int:
         return 3
 
     def list_pending_confirm(self, limit: int = 10) -> list[dict[str, Any]]:
-        return []
+        return [
+            {
+                "apple_note_id": "note-1",
+                "title": "L2 候选",
+                "folder": "工作",
+                "needs_confirm": 1,
+            }
+        ][:limit]
 
     def confirm_note(self, apple_note_id: str) -> None:
         return None
@@ -53,7 +76,14 @@ class _CountingExpense:
         return 1
 
     def get_recent_anomalies(self, limit: int = 10) -> list[dict[str, Any]]:
-        return []
+        return [
+            {
+                "date": "2026-06-25",
+                "counterparty": "支付宝",
+                "amount": 1299,
+                "kinds": "amount_spike",
+            }
+        ][:limit]
 
 
 @pytest.fixture
@@ -84,6 +114,36 @@ def test_build_tasks_today_payload_counts(dashboard_ctx: DashboardContext) -> No
     assert payload["tasks"][0]["count"] == 2
     assert payload["tasks"][1]["count"] == 3
     assert payload["tasks"][2]["count"] == 1
+
+
+def test_build_outbox_payload_items(dashboard_ctx: DashboardContext) -> None:
+    payload = build_outbox_payload(dashboard_ctx)
+    assert payload["read_only"] is True
+    assert payload["count"] == 2
+    assert len(payload["items"]) == 1
+    assert payload["items"][0]["outbox_id"] == 101
+
+
+def test_build_notes_pending_payload_items(dashboard_ctx: DashboardContext) -> None:
+    payload = build_notes_pending_payload(dashboard_ctx)
+    assert payload["count"] == 3
+    assert payload["items"][0]["apple_note_id"] == "note-1"
+
+
+def test_build_finance_anomalies_payload_items(dashboard_ctx: DashboardContext) -> None:
+    payload = build_finance_anomalies_payload(dashboard_ctx)
+    assert payload["count"] == 1
+    assert payload["items"][0]["counterparty"] == "支付宝"
+
+
+def test_parse_limit_clamps() -> None:
+    from my_ai_employee.dashboard.context import parse_limit
+
+    assert parse_limit(None) == 10
+    assert parse_limit("5") == 5
+    assert parse_limit("0") == 1
+    assert parse_limit("999") == 100
+    assert parse_limit("bad") == 10
 
 
 def _fetch_json(url: str) -> tuple[int, dict[str, Any]]:
@@ -123,6 +183,27 @@ def test_http_api_tasks_today(running_server: str) -> None:
     assert status == 200
     assert body["total"] == 6
     assert len(body["tasks"]) == 3
+
+
+def test_http_api_outbox(running_server: str) -> None:
+    status, body = _fetch_json(f"{running_server}/api/outbox?limit=5")
+    assert status == 200
+    assert body["count"] == 2
+    assert body["items"][0]["subject"] == "供应商付款确认"
+
+
+def test_http_api_notes_pending(running_server: str) -> None:
+    status, body = _fetch_json(f"{running_server}/api/notes/pending")
+    assert status == 200
+    assert body["count"] == 3
+    assert body["items"][0]["title"] == "L2 候选"
+
+
+def test_http_api_finance_anomalies(running_server: str) -> None:
+    status, body = _fetch_json(f"{running_server}/api/finance/anomalies")
+    assert status == 200
+    assert body["count"] == 1
+    assert body["items"][0]["amount"] == 1299
 
 
 def test_http_api_not_found(running_server: str) -> None:

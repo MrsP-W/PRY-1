@@ -134,7 +134,10 @@ _NOTE_CONFIRM_SERVICE_METHODS: tuple[str, ...] = (
     "confirm_note",
 )
 
-_OUTBOX_DRAFT_SERVICE_METHODS: tuple[str, ...] = ("get_pending_draft_count",)
+_OUTBOX_DRAFT_SERVICE_METHODS: tuple[str, ...] = (
+    "get_pending_draft_count",
+    "list_pending_drafts",
+)
 
 
 def _validate_outbox_draft_service(obj: object) -> None:
@@ -143,7 +146,7 @@ def _validate_outbox_draft_service(obj: object) -> None:
         return
     if not all(hasattr(obj, m) for m in _OUTBOX_DRAFT_SERVICE_METHODS):
         raise TypeError(
-            f"outbox_draft_service 必须实现 OutboxDraftService 1 方法接口,"
+            f"outbox_draft_service 必须实现 OutboxDraftService 2 方法接口,"
             f" 实际 type={type(obj).__name__}"
         )
 

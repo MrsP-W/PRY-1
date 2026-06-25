@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.3 Dashboard HTML 接只读 API(2026-06-25)
+# SESSION-STATE — v0.2.53.4 Dashboard 只读 API 扩展(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.3 Dashboard HTML 接只读 API 已落地** — 静态 `docs/ui/codex-style-dashboard.html` 自动 hydrate `GET /api/status` + `/api/tasks/today`,API 未启动时回退静态假数据;API 增加 file 原型 CORS/OPTIONS。**质量门**:**2286 passed / 1 skipped / 88.46%** / mypy --strict 0 errors(217 files) / ruff + format 全绿 / MD lint **152 files** 0 errors。**下一棒**:`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` 只读端点 / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.4 Dashboard 只读 API 扩展已落地** — 新增 `GET /api/outbox` + `/api/notes/pending` + `/api/finance/anomalies`(只读 · `limit` 1–100 · Stub 数据);`OutboxDraftService` 扩展 `list_pending_drafts`。**质量门**:**2293 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(217 files) / ruff + format 全绿 / MD lint **152 files** 0 errors。**下一棒**:静态 HTML 邮件/笔记/财务页接新端点 / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.3 Dashboard HTML 接只读 API 已落地(2026-06-25)**。**下一步候选**:`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` 只读端点 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.4 Dashboard 只读 API 扩展已落地(2026-06-25)**。**下一步候选**:静态 HTML 邮件/笔记/财务页接新端点 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

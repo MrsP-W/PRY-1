@@ -10,7 +10,7 @@ from my_ai_employee.core.keychain import (
     SERVICE_SMTP_OUTLOOK,
     SERVICE_SMTP_QQ,
 )
-from my_ai_employee.dashboard.context import DashboardContext, safe_count
+from my_ai_employee.dashboard.context import DashboardContext, safe_count, safe_list
 
 
 def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
@@ -86,3 +86,24 @@ def build_tasks_today_payload(ctx: DashboardContext) -> dict[str, Any]:
         "total": total,
         "tasks": tasks,
     }
+
+
+def build_outbox_payload(ctx: DashboardContext, *, limit: int = 10) -> dict[str, Any]:
+    """GET /api/outbox — 邮件草稿队列(只读)."""
+    items = safe_list(lambda: ctx.outbox_draft_service.list_pending_drafts(limit))
+    count = safe_count(ctx.outbox_draft_service.get_pending_draft_count)
+    return {"read_only": True, "count": count, "items": items}
+
+
+def build_notes_pending_payload(ctx: DashboardContext, *, limit: int = 10) -> dict[str, Any]:
+    """GET /api/notes/pending — Notes 待确认列表(只读)."""
+    items = safe_list(lambda: ctx.note_confirm_service.list_pending_confirm(limit))
+    count = safe_count(ctx.note_confirm_service.get_pending_confirm_count)
+    return {"read_only": True, "count": count, "items": items}
+
+
+def build_finance_anomalies_payload(ctx: DashboardContext, *, limit: int = 10) -> dict[str, Any]:
+    """GET /api/finance/anomalies — 财务异常列表(只读)."""
+    items = safe_list(lambda: ctx.expense_service.get_recent_anomalies(limit))
+    count = safe_count(ctx.expense_service.get_anomaly_count)
+    return {"read_only": True, "count": count, "items": items}

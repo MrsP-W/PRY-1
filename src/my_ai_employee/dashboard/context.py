@@ -5,6 +5,7 @@ from __future__ import annotations
 import subprocess
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
 
 from my_ai_employee import __version__
 from my_ai_employee.menu_bar.expense_service import ExpenseService, ExpenseServiceStub
@@ -93,3 +94,27 @@ def safe_count(getter: Callable[[], int]) -> int:
         return int(getter())
     except Exception:  # noqa: BLE001 — API 层不崩
         return 0
+
+
+def safe_list(getter: Callable[[], list[Any]]) -> list[Any]:
+    """列表查询静默降级 → []."""
+    try:
+        result = getter()
+        return list(result) if isinstance(result, list) else []
+    except Exception:  # noqa: BLE001 — API 层不崩
+        return []
+
+
+def parse_limit(raw: str | None, *, default: int = 10, maximum: int = 100) -> int:
+    """解析 ?limit= 查询参数(严判范围)."""
+    if raw is None or raw == "":
+        return default
+    try:
+        value = int(raw)
+    except ValueError:
+        return default
+    if value < 1:
+        return 1
+    if value > maximum:
+        return maximum
+    return value

@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.2` P2 Dashboard 只读 API(2026-06-25):`dashboard/` stdlib · `/api/status` + `/api/tasks/today` · +7 tests · `make dashboard-api`。**2285 passed / 1 skipped / 88.42%** / MD lint **151 files**。**下一棒**:HTML 接 API / Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.1` P1 菜单栏 + `v0.2.54` 复评(2026-06-25) |
+| **当前阶段** | ✅ `v0.2.53.4` Dashboard 只读 API 扩展(2026-06-25):`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` · `OutboxDraftService.list_pending_drafts` · +7 tests · 9/9 质量门全绿。**2293 passed / 1 skipped / 88.49%** / MD lint **152 files**。**下一棒**:HTML 接新端点 / Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.3` Dashboard HTML 接只读 API(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,8 +91,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.2:**2285 passed / 1 skipped** / **88.42%** / mypy strict 0 / MD lint **151 files** |
-| **下一棒** | 静态 HTML 接 Dashboard API;outlook/gmail Keychain SMTP;8/1 截点 |
+| **质量基线** | v0.2.53.4:**2293 passed / 1 skipped** / **88.49%** / mypy strict 0 / MD lint **152 files** |
+| **下一棒** | 静态 HTML 接 outbox/notes/finance 端点;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -121,6 +121,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.4 Dashboard 只读 API 扩展] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**:新增只读端点 `/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` · `limit` 1–100 · CORS/OPTIONS 沿用 v0.2.53.3。
+- **feat(menu_bar)**: `OutboxDraftService.list_pending_drafts` + `app.py` 2 方法接口校验。
+- **tests**: `tests/dashboard/test_api.py` +7 · `tests/menu_bar/test_app.py` mock 补全。
+- **docs**: `docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md` + v0.2.53.2 端点表更新。
+
+**2. 风险点**
+
+- ⚠️ `OutboxDraftServiceImpl` 仍为 Stub,下一棒接 `OutboxStore.by_status`。
+- ⚠️ 静态 HTML 尚未 hydrate 新三端点(v0.2.53.5 候选)。
+- **边界**:只读 GET · 不写 Keychain · 不真发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2293 passed / 1 skipped / 9/9 质量门全绿 / 88.49% coverage**。
+- 下一棒:静态 HTML 邮件/笔记/财务页接 API;outlook/gmail Keychain;8/1 截点。
 
 ### 2026-06-25 [v0.2.53.2 P2 Dashboard 只读 API 骨架] — 收口
 

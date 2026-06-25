@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.3 Dashboard HTML 接只读 API**(2026-06-25 · 静态 HTML hydrate `/api/status` + `/api/tasks/today` · file 原型 CORS/OPTIONS · API 离线兜底)。**质量门**:**2286 passed / 1 skipped / 88.46%** / mypy --strict 0 errors(217 files) / ruff 全绿 / format 231 files / **MD lint 152 files** 0 errors。**下一棒**:`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` 只读端点 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.4 Dashboard 只读 API 扩展**(2026-06-25 · `/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` · `OutboxDraftService.list_pending_drafts` · `limit` 1–100)。**质量门**:**2293 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(217 files) / ruff 全绿 / format 231 files / **MD lint 152 files** 0 errors。**下一棒**:静态 HTML 邮件/笔记/财务页接新端点 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -232,6 +232,7 @@ make help
 | **v0.2.53.1** Codex UI P1 菜单栏升级(Codex IA · OutboxDraftService Stub · 打开工作台/系统健康 · +5 tests) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.2** P2 Dashboard 只读 API 骨架(`/api/status` + `/api/tasks/today` · stdlib `ThreadingHTTPServer` · `127.0.0.1` · 无新依赖 · 8 tests) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.3** Dashboard HTML 接只读 API(静态 HTML hydrate 两端点 + file 原型 CORS/OPTIONS + API 离线兜底 · 2286 passed / 88.46% / MD lint 152 files) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.53.4** Dashboard 只读 API 扩展(`/api/outbox` + `/api/notes/pending` + `/api/finance/anomalies` · +7 tests · 2293 passed / 88.49%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.54** 8/1 tag 复评 + SMTP 就绪检查(7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 docs-only | 2026-06-25 |
 
 ---
@@ -285,6 +286,7 @@ make help
 | [docs/v0.2.53-codex-style-ui-design-2026-06-25.md](docs/v0.2.53-codex-style-ui-design-2026-06-25.md) | **🆕 v0.2.53 Codex 风格 UI 设计稿(本地工作台 + P0/P1/P2 路线)** |
 | [docs/v0.2.53.2-dashboard-readonly-api-2026-06-25.md](docs/v0.2.53.2-dashboard-readonly-api-2026-06-25.md) | **🆕 v0.2.53.2 P2 Dashboard 只读 API 骨架(`/api/status` + `/api/tasks/today`)** |
 | [docs/v0.2.53.3-dashboard-html-api-bridge-2026-06-25.md](docs/v0.2.53.3-dashboard-html-api-bridge-2026-06-25.md) | **🆕 v0.2.53.3 静态 Dashboard 接只读 API + 离线兜底** |
+| [docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md](docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md) | **🆕 v0.2.53.4 只读 API 扩展(outbox/notes/finance)** |
 | [docs/ui/codex-style-dashboard.md](docs/ui/codex-style-dashboard.md) | **🆕 Codex 风格工作台 P0/P2 静态原型说明(今日 / 邮件 / 系统 + API)** |
 | [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 | [docs/v0.1.0-status-snapshot-2026-06-17.md](docs/v0.1.0-status-snapshot-2026-06-17.md) | **🆕 v0.1.0 tag 状态快照(释放/锁定/后期启动 3 维度复核)** |

@@ -7,16 +7,19 @@
 
 from __future__ import annotations
 
-from typing import Final, Protocol
+from typing import Any, Final, Protocol
 
 
 class OutboxDraftService(Protocol):
-    """菜单栏 outbox 草稿待审批计数接口."""
+    """菜单栏 / Dashboard outbox 草稿待审批接口."""
 
     def get_pending_draft_count(self) -> int: ...
 
+    def list_pending_drafts(self, limit: int = 10) -> list[dict[str, Any]]: ...
+
 
 _PENDING_DRAFT_DEFAULT: Final[int] = 0
+_LIST_PENDING_DRAFTS_DEFAULT: Final[list[dict[str, Any]]] = []
 
 
 class OutboxDraftServiceStub:
@@ -32,6 +35,9 @@ class OutboxDraftServiceStub:
 
     def get_pending_draft_count(self) -> int:
         return _PENDING_DRAFT_DEFAULT
+
+    def list_pending_drafts(self, limit: int = 10) -> list[dict[str, Any]]:
+        return list(_LIST_PENDING_DRAFTS_DEFAULT)[: max(0, limit)]
 
 
 __all__ = ["OutboxDraftService", "OutboxDraftServiceStub"]

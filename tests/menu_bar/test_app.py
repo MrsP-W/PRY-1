@@ -734,6 +734,9 @@ def test_app_title_reflects_pending_total(fake_rumps: None) -> None:
         def get_pending_draft_count(self) -> int:
             return 2
 
+        def list_pending_drafts(self, limit: int = 10) -> list[dict[str, Any]]:
+            return []
+
     class _ConfirmSvc:
         def get_pending_confirm_count(self) -> int:
             return 3

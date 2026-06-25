@@ -6,10 +6,16 @@ import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
-from my_ai_employee.dashboard.context import DashboardContext
-from my_ai_employee.dashboard.responses import build_status_payload, build_tasks_today_payload
+from my_ai_employee.dashboard.context import DashboardContext, parse_limit
+from my_ai_employee.dashboard.responses import (
+    build_finance_anomalies_payload,
+    build_notes_pending_payload,
+    build_outbox_payload,
+    build_status_payload,
+    build_tasks_today_payload,
+)
 
 _JSON_CONTENT_TYPE = "application/json; charset=utf-8"
 _CORS_FILE_ORIGIN = "null"
@@ -23,6 +29,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+        query = parse_qs(parsed.query)
+        limit_raw = query.get("limit", [None])[0]
+        limit = parse_limit(limit_raw)
         if path == "/health":
             self._send_json(HTTPStatus.OK, {"ok": True, "read_only": True})
             return
@@ -31,6 +40,24 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if path == "/api/tasks/today":
             self._send_json(HTTPStatus.OK, build_tasks_today_payload(self.dashboard_context))
+            return
+        if path == "/api/outbox":
+            self._send_json(
+                HTTPStatus.OK,
+                build_outbox_payload(self.dashboard_context, limit=limit),
+            )
+            return
+        if path == "/api/notes/pending":
+            self._send_json(
+                HTTPStatus.OK,
+                build_notes_pending_payload(self.dashboard_context, limit=limit),
+            )
+            return
+        if path == "/api/finance/anomalies":
+            self._send_json(
+                HTTPStatus.OK,
+                build_finance_anomalies_payload(self.dashboard_context, limit=limit),
+            )
             return
         self._send_json(
             HTTPStatus.NOT_FOUND,
