@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.43` outlook/gmail SMTP provider 白名单解封已收口(`spike_send_100.py --smtp-provider {qq,outlook,gmail}`;provider-aware Keychain 写入/检查/删除能力对齐;测试严判 help 必须含 `{qq,outlook,gmail}`;不真发邮件;`make test` **2265 passed / 1 skipped / 88.76% coverage**;`make mypy` **0 errors / 209 source files**;ruff check 0;ruff format --check 0);**下一步候选**:真实 SMTP spike(等 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 二次确认)/ 7/1 月度复盘 review v0.2.25-v0.2.43 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.42` mypy `--strict` 43 errors 清零 + 硬门锁死已关闭(commit `97b779b` · 43 errors→0 · Makefile 失败即阻塞)|
+| **当前阶段** | ✅ `v0.2.44` 跳过授权码 + 真实 SMTP spike 延后已收口(用户明确“跳过授权码”;Outlook/Gmail Keychain 凭据均 missing;Outlook InMemory 预演 sent=1;未设置 `SMTP_REAL_NETWORK=1` 时真实发送硬拦截;不真发邮件;docs-only `make lint` 0 errors);**下一步候选**:7/1 月度复盘准备 / 8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等未来凭据可用再恢复 |
+| **上一阶段** | ✅ `v0.2.43` outlook/gmail SMTP provider 白名单解封已关闭(commit `82a746a` · `{qq}` → `{qq,outlook,gmail}` · provider-aware Keychain 能力对齐)|
 | **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.43 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / **88.76% coverage** |
-| **下一棒** | 真实 SMTP spike(等 Keychain 凭据 + `SMTP_REAL_NETWORK=1` + 二次确认)→ 7/1 月度复盘 review v0.2.25-v0.2.43 → 8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | v0.2.43 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / **88.76% coverage**;v0.2.44 docs-only `make lint` 0 |
+| **下一棒** | 7/1 月度复盘准备 → 8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.44 跳过授权码 + 真实 SMTP spike 延后] — 收口
+
+**1. 本次修改内容**
+
+- 用户明确“跳过授权码”,本轮不继续卡 Outlook/Gmail 真实发信凭据。
+- 保留 v0.2.43 provider 白名单解封与 5 重防误发门控;真实 SMTP spike 转后续凭据可用时再跑。
+- 新增 `docs/v0.2.44-skip-smtp-authcode-2026-06-25.md`,同步 README / SESSION-STATE / 本文件顶部快照。
+
+**2. 风险点**
+
+- 未完成真实 SMTP 送达验证,因此 8/1 release tag 锚定时需把“真实 SMTP spike 是否恢复”作为检查项。
+- 不写入 Keychain 凭据、不设置 `SMTP_REAL_NETWORK=1`,避免绕过用户凭据边界。
+- Outlook/Gmail provider 代码路径已解封,但真实服务商策略仍需未来凭据可用时验证。
+
+**3. 当前项目整体总结**
+
+- Keychain 检查:`com.myaiemployee.smtp.outlook missing` / `com.myaiemployee.smtp.gmail missing`。
+- 无触网预演:Outlook InMemory sent=1;报告 `/tmp/my_ai_employee_smtp_preflight_outlook_next/spike_send_100_20260625_082132.md`。
+- 安全门控:真实发送在未设置 `SMTP_REAL_NETWORK=1` 时硬拦截,未触网。
+- 下一棒:7/1 月度复盘准备 → 8/1 v0.2.1 release tag 锚定评估。
 
 ### 2026-06-25 [v0.2.43 outlook/gmail SMTP provider 白名单解封] — 收口
 
