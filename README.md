@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.46 7/1 月度复盘提前执行版已收口**(2026-06-25 08:35 CST)。**执行结果**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors;B 类事项已三态归档;8/1 `v0.2.1` release tag readiness 判定为 7/8 实质满足但真实 SMTP 送达继续延后。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 未来凭据可用后恢复 1 封真实 SMTP spike。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [reports/2026-07-monthly-review.md](reports/2026-07-monthly-review.md)。
+> **状态**:✅ **v0.2.47 8/1 release tag 预检包已收口**(2026-06-25 · 撞坑 #58 8 项前置条件 + 1 缺口评估范本)。承接 v0.2.46 7/1 月度复盘提前执行版 + **撞坑 #58(本轮新增)8 项前置条件 + 1 缺口评估范本**:**8 项正式评估 7/8 实质满足,唯一缺口 = outlook/gmail 真实 SMTP 送达(沿 v0.2.44 跳过授权码)**;**真实 SMTP spike 恢复包**含 6 步骤 checklist + 4 步骤命令模板 + 安全护栏(不写入真实凭据 / 不读 Keychain 明文);**OutboxDispatcher × SMTPProviderFactory 接入状态复核** = spike_send_100 已接入 / EmailSendAdapter + OutboxDispatcher 未接入(不阻塞 8/1 tag 决策);**8/1 v0.2.1 release tag 决策矩阵** = 自动打 tag ❌ / 继续延后 ✅ / 降级 v0.2.1-rc1 🟡(推荐继续延后到 8/1 当天检查员强制截点重新评估)。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+) / 未来凭据可用后恢复真实 SMTP spike / OutboxDispatcher SMTPProviderFactory 接入(单独 PR)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag(8/1 锚定策略)。详见 [docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md](docs/v0.2.47-8-1-release-tag-readiness-2026-06-25.md)。
 
 ---
 
@@ -221,6 +221,7 @@ make help
 | **v0.2.44** 跳过授权码 + 真实 SMTP spike 延后(用户明确“跳过授权码” · Keychain missing + InMemory sent=1 + SMTP_REAL_NETWORK 硬拦截实测 · 下一棒转 7/1 月度复盘准备) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.45** 7/1 月度复盘准备增量包(补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态 · tag 前置条件从 6/8 更新为 7/8 实质满足 + SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.46** 7/1 月度复盘提前执行版(质量门全绿 + B 类事项三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.47** 8/1 release tag 预检包(撞坑 #58 8 项前置条件 + 1 缺口评估范本 + 真实 SMTP spike 恢复 checklist + OutboxDispatcher × SMTPProviderFactory 接入复核 · `make lint` 138 files 0 errors) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 
