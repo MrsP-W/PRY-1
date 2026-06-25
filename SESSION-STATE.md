@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.45 7/1 月度复盘准备增量包已收口(2026-06-25)
+# SESSION-STATE — v0.2.46 7/1 月度复盘提前执行版已收口(2026-06-25)
 
-> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.45 7/1 月度复盘准备增量包已收口**(6/25 · 承接 v0.2.16 6/20 版复盘包)。**修复结果**:新增 6/25 增量复盘包,把 v0.2.36 W3 真账单全量入库、v0.2.42 mypy strict 0 errors、v0.2.43 SMTP provider 白名单解封、v0.2.44 跳过授权码/真实 SMTP 延后纳入 7/1 复盘输入。**当前 tag 前置条件**:W3 已完成;SMTP provider 已解封;真实 SMTP 送达因授权码跳过继续延后;v0.2.1 release tag 8/1 仍不打。**质量门**:docs-only,`make lint` 0 errors。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。下一步候选:7/1 当天执行月度复盘/8月 v0.2.1 release tag 锚定评估。
+> **最后更新**:2026-06-25 08:35 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.46 7/1 月度复盘提前执行版已收口**。**执行结果**:完成 5 步计划:基线检查、月度复盘报告、B 类三态归档、8/1 `v0.2.1` release tag readiness、状态入口同步。**质量门**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors。**当前 tag 前置条件**:7/8 实质满足;真实 SMTP 送达因授权码跳过继续延后;8/1 前若仍无 1 封真实 SMTP spike 成功记录,继续不打 `v0.2.1` tag。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。报告:`reports/2026-07-monthly-review.md`。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.45 7/1 月度复盘准备增量包已收口(2026-06-25)**,**下一步候选**:7/1 当天执行月度复盘/8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等未来凭据可用再恢复。
+**当前启动候选**:**v0.2.46 7/1 月度复盘提前执行版已收口(2026-06-25)**,**下一步候选**:8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等未来凭据可用再恢复。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -133,7 +133,7 @@
 5. ✅ **D8 改进项延后**(2026-06-20 关闭 — `f0d8bd3` feat + docs closure · 沿 [[d4.7.4-v1.0.3-deferred]] 范本 · B 类自动解封)
 6. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist)
 7. **P1-1 mypy tests 13 errors 修复**(纯工程债,撞坑 #31 6/22 实测命中,沿 v0.2.23 cast(int, ...) 范本)
-8. **7/1 月度复盘** — B 类延后清单重新评估(D4.7.4 v1.0.3 已实化,剩 5 候选待评估)+ 状态漂移审查机制实战 + v0.2.1 release tag 锚定策略复审
+8. ✅ **7/1 月度复盘提前执行** — B 类延后清单已三态归档(D4.7.4 v1.0.3 / W3 / mypy strict / SMTP provider 白名单已完成;真实 SMTP 送达继续延后)+ 状态漂移审查机制实战 + v0.2.1 release tag readiness 7/8 实质满足但暂不打 tag
 9. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 全量跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
 
 ## 🔒 端午不休息期间禁止触碰(范围收窄)
@@ -163,6 +163,7 @@
 ## 📂 关键文件指针
 
 - **本文件**: `我的AI员工/SESSION-STATE.md`
+- **2026-07 月度复盘提前执行版**: `我的AI员工/reports/2026-07-monthly-review.md`
 - **v0.2.1 docs 收口报告**: `我的AI员工/reports/v0.2.1-closure-2026-06-17.md`
 - **v0.2.2 P0 收口报告**: `我的AI员工/reports/v0.2.2-p0-l2-emit-2026-06-17.md`
 - **v0.2.2 #2 收口报告**: `我的AI员工/reports/v0.2.2-p2-1click-confirm-ui-2026-06-17.md`

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.45 7/1 月度复盘准备增量包已收口**(2026-06-25 · 承接 6/20 版复盘包)。**修复结果**:新增 6/25 增量复盘包,把 v0.2.36 W3 真账单全量入库、v0.2.42 mypy strict 0 errors、v0.2.43 SMTP provider 白名单解封、v0.2.44 跳过授权码/真实 SMTP 延后纳入 7/1 复盘输入。**当前 tag 前置条件**:W3 已完成;SMTP provider 已解封;真实 SMTP 送达因授权码跳过继续延后;v0.2.1 release tag 8/1 仍不打。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:7/1 当天执行月度复盘 / 8/1 v0.2.1 release tag 锚定评估。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [docs/v0.2.45-7-1-monthly-review-update-2026-06-25.md](docs/v0.2.45-7-1-monthly-review-update-2026-06-25.md)。
+> **状态**:✅ **v0.2.46 7/1 月度复盘提前执行版已收口**(2026-06-25 08:35 CST)。**执行结果**:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors;B 类事项已三态归档;8/1 `v0.2.1` release tag readiness 判定为 7/8 实质满足但真实 SMTP 送达继续延后。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 未来凭据可用后恢复 1 封真实 SMTP spike。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。详见 [reports/2026-07-monthly-review.md](reports/2026-07-monthly-review.md)。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2225 passed / 1 skipped,覆盖率 88.85%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(2265 passed / 1 skipped,覆盖率 88.76%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2225 passed / 1 skipped,覆盖率 88.85%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(2265 passed / 1 skipped,覆盖率 88.76%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -220,6 +220,7 @@ make help
 | **v0.2.43** outlook/gmail SMTP provider 白名单解封(`spike_send_100.py --smtp-provider {qq,outlook,gmail}` · provider-aware Keychain 能力对齐 · 不真发邮件 · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.44** 跳过授权码 + 真实 SMTP spike 延后(用户明确“跳过授权码” · Keychain missing + InMemory sent=1 + SMTP_REAL_NETWORK 硬拦截实测 · 下一棒转 7/1 月度复盘准备) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.45** 7/1 月度复盘准备增量包(补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态 · tag 前置条件从 6/8 更新为 7/8 实质满足 + SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.46** 7/1 月度复盘提前执行版(质量门全绿 + B 类事项三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 
@@ -262,6 +263,7 @@ make help
 | 文档 | 用途 |
 |------|------|
 | [docs/v0.1-release-notes.md](docs/v0.1-release-notes.md) | **🎯 v0.1.0 发布说明(8 段结构,D10.5 收口)** |
+| [reports/2026-07-monthly-review.md](reports/2026-07-monthly-review.md) | **🎯 2026-07 月度复盘提前执行版(v0.2.46 · 5 步执行 + B 类三态 + 8/1 tag readiness)** |
 | [reports/v0.1-e2e-scenarios.md](reports/v0.1-e2e-scenarios.md) | **🎯 9 端到端场景 spike 汇总(D10.4)** |
 | [docs/architecture.md](docs/architecture.md) | 5 层架构 + 关键决策 + 适配器契约 + 数据流示例 |
 | [docs/week1-mvp.md](docs/week1-mvp.md) | Week 1 计划（D1-D5：邮件 + 日程）|

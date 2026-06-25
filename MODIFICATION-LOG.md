@@ -79,13 +79,13 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.45` 7/1 月度复盘准备增量包已收口(补齐 v0.2.36 W3 全量入库 + v0.2.42 mypy strict 0 + v0.2.43 SMTP provider 白名单 + v0.2.44 跳过授权码/真实 SMTP 延后;tag 前置条件由 6/8 更新为 7/8 实质满足 + SMTP 送达延后;docs-only `make lint` 0 errors);**下一步候选**:7/1 当天执行月度复盘 / 8/1 v0.2.1 release tag 锚定评估 |
-| **上一阶段** | ✅ `v0.2.44` 跳过授权码 + 真实 SMTP spike 延后已关闭(commit `6ac1480` · Keychain missing + InMemory sent=1 + SMTP_REAL_NETWORK 硬拦截)|
+| **当前阶段** | ✅ `v0.2.46` 7/1 月度复盘提前执行版已收口(5 步执行完成:质量门全绿 + `reports/2026-07-monthly-review.md` + B 类三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后 + 状态入口同步);**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 未来凭据可用后恢复 1 封真实 SMTP spike |
+| **上一阶段** | ✅ `v0.2.45` 7/1 月度复盘准备增量包已收口(commit `1cae0f3` · 补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态)|
 | **上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.43 全量质量门:**2265 passed / 1 skipped** / mypy strict **0 errors / 209 source files** / ruff check **All checks passed** / ruff format --check **246 files already formatted** / **88.76% coverage**;v0.2.45 docs-only `make lint` 0 |
-| **下一棒** | 7/1 当天执行月度复盘 → 8/1 v0.2.1 release tag 锚定评估;真实 SMTP spike 等凭据可用再恢复 |
+| **质量基线** | v0.2.46 全量质量门:**2265 passed / 1 skipped** / **88.76% coverage** / mypy strict **0 errors / 209 source files** / MD lint **137 files 0 errors** |
+| **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -114,6 +114,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.46 7/1 月度复盘提前执行版] — 收口
+
+**1. 本次修改内容**
+
+- 新增 `reports/2026-07-monthly-review.md`,完成 5 步计划:基线检查、月度复盘报告、B 类事项三态归档、8/1 `v0.2.1` release tag readiness、状态入口同步。
+- 同步 `README.md` / `SESSION-STATE.md` / 本文件顶部快照。
+- 质量门实测:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors。
+
+**2. 风险点**
+
+- 今天是 2026-06-25,本报告是 7/1 月度复盘提前执行版;若 7/1 前真实 SMTP 凭据恢复,需补跑 1 封 spike 并回填 readiness。
+- 真实 SMTP 送达仍未完成,8/1 `v0.2.1` tag 不能自动执行。
+- 本轮不真发邮件、不写凭据、不 kickstart launchd、不移动 `v0.1.0` tag、不打 `v0.2.x` tag。
+
+**3. 当前项目整体总结**
+
+- B 类事项三态:已完成 B1/B2/B4 + W3 + mypy strict;继续延后 B3 release tag 与 B5 真实 SMTP spike;本轮无取消项。
+- 8/1 tag readiness:7/8 实质满足,唯一关键缺口是真实 SMTP 送达。
+- 下一棒:未来凭据可用时恢复 1 封真实 SMTP spike;否则 8/1 继续锚定复评且不打 tag。
 
 ### 2026-06-25 [v0.2.45 7/1 月度复盘准备增量包] — 收口
 
