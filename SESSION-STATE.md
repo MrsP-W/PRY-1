@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.8 Dashboard opt-in 真实 Notes + Expense(2026-06-25)
+# SESSION-STATE — v0.2.53.9 GET /api/reports + HTML 报告页 hydrate(2026-06-25)
 
 > **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.8 Dashboard opt-in 真实 Notes + Expense 已落地** — 沿 `DASHBOARD_REAL_DB=1` 共享 session_factory 注入 `NoteConfirmServiceImpl` + `ExpenseServiceImpl`;单项失败静默降级 Stub;默认零 I/O。**质量门**:**2330 passed / 1 skipped / 88.46%** / mypy --strict 0 errors(**219 files**) / ruff + format 全绿 / MD lint **157 files** 0 errors。**下一棒**:`/api/reports` 只读端点 / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.9 GET /api/reports + HTML 报告页 hydrate 已落地** — 扫描 `docs/` + `reports/` + `output/` 3 类目录,提取 6 字段元数据(path/type/title/date/status/size_bytes)+ 报告页 filter 按钮 + 离线兜底;无 DB 依赖,纯文件系统;`fallbackReports` 演示数据。**质量门**:**2364 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(**221 files**) / ruff + format 全绿 / MD lint **157 files** 0 errors。**下一棒**:v0.2.53.10 spike 详情页 / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.8 Dashboard opt-in 真实 Notes + Expense 已落地(2026-06-25)**。**下一步候选**:`/api/reports` 只读端点 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.9 GET /api/reports + HTML 报告页 hydrate 已落地(2026-06-25)**。**下一步候选**:v0.2.53.10 spike 详情页 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
