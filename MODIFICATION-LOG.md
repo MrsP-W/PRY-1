@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.5` Dashboard HTML 接扩展 API(2026-06-25):5 端点 hydrate · 邮件/笔记/财务页 · 离线兜底 · 9/9 质量门全绿。**2293 passed / 1 skipped / 88.49%** / MD lint **153 files**。**下一棒**:OutboxDraftServiceImpl 真实数据 / Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.4` Dashboard 只读 API 扩展(2026-06-25) |
+| **当前阶段** | ✅ `v0.2.53.6` OutboxDraftServiceImpl 接真实 OutboxStore(2026-06-25):Stub → Impl 只读查询 · `pending_send + approved` · `created_at ASC` · 8 字段元数据(不返回 body)· 4 不做原则(不默认读 Keychain / 不返回 body / 不写操作 / 不真发邮件)· 9/9 质量门全绿。**2300 passed / 1 skipped / 88.54%** / mypy 0 errors / 218 files / MD lint **155 files**。**下一棒**:v0.2.53.7 Dashboard opt-in 真实数据(需用户授权)/ Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.5` Dashboard HTML 接扩展 API(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
 | **上上上一阶段** | ✅ `v0.2.49` 月度复盘收官 docs + 真实 SMTP spike 收口包(2026-06-25 · docs-only · 撞坑 #59 凭据激活范本) |
@@ -91,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.4:**2293 passed / 1 skipped** / **88.49%** / mypy strict 0 / MD lint **152 files** |
+| **质量基线** | v0.2.53.6:**2300 passed / 1 skipped** / **88.54%** / mypy strict 0 / 218 files / MD lint **155 files** |
 | **下一棒** | OutboxDraftServiceImpl 接 OutboxStore;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -121,6 +121,28 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.6 OutboxDraftServiceImpl 接真实 OutboxStore] — 收口
+
+**1. 本次修改内容**
+
+- **feat(menu_bar)**:新增 `OutboxDraftServiceImpl(outbox_store)` · Stub → Impl 只读查询。
+- **导出**:`menu_bar/__init__.py` 导出 `OutboxDraftServiceImpl`。
+- **测试**:`tests/menu_bar/test_outbox_draft_service.py` 新增 7 tests(Stub / Impl / 真实 OutboxStore 三层覆盖)。
+- **docs**:`docs/v0.2.53.6-outbox-draft-service-impl-2026-06-25.md` 收口报告。
+
+**2. 风险点**
+
+- ⚠️ **不默认读取 Keychain DB 密码**(本轮特别强调,默认不切真实 DB)。
+- ⚠️ **不返回邮件 body**(只返回 8 字段元数据,避免泄漏)。
+- ⚠️ Dashboard `default()` 仍注 Stub,真实数据需用户显式授权 + env 门控(沿 v0.2.53.7 候选)。
+- **边界**:只读查询 · 不输出邮件正文 · 不默认读取 Keychain 明文 · 不写 DB · 不真发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2300 passed / 1 skipped / 9/9 质量门全绿 / 88.54% coverage / 撞坑累计 64+(待确认 v0.2.53.6 是否有新增)**。
+- 当前阶段:v0.2.53.6 收口;承接 v0.2.53.5 静态 HTML 接 5 端点。
+- 下一棒:v0.2.53.7 Dashboard opt-in 真实数据(需用户授权);Notes/Finance 真实数据(并行);outlook/gmail Keychain;8/1 截点。
 
 ### 2026-06-25 [v0.2.53.5 Dashboard HTML 接扩展 API] — 收口
 
