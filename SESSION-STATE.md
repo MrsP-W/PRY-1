@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.52.2 状态口径同步 + EmailSendAdapter provider 封装硬化(2026-06-25)
+# SESSION-STATE — v0.2.52.3 公共 API 一致性 + 测试迁移到只读属性(2026-06-25)
 
-> **最后更新**:2026-06-25 12:30 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
-> **状态**:✅ **v0.2.52.2 状态口径同步 + EmailSendAdapter provider 封装硬化已收口**(2026-06-25 · 承接 v0.2.52.1 `dd2e93f` · 撞坑 #63)。**本轮**:① docs(state) 三入口质量基线对齐(**2273 passed / 1 skipped / 88.82%** · MD lint **143 files** 0 errors);② `ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性,OutboxDispatcher 改读公共 API;③ 测试注释/拼写清理(`test_smpt_*` → `test_smtp_*`)。**质量门全绿(实测)**:2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff check + format 全绿 / alembic upgrade head --sql exit 0 / uv build OK / make lint 143 files 0 errors。**撞坑累计 63 类**(沿用 #63)。**8/1 v0.2.1 tag 决策**:继续延后(唯一缺口:outlook/gmail 真实 SMTP 送达 / Keychain 凭据未就绪)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。承接报告:`docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md`。
+> **最后更新**:2026-06-25 13:00 CST · **项目**:我的AI员工 · **当前 HEAD 以 `git rev-parse --short HEAD` 为准`
+> **状态**:✅ **v0.2.52.3 测试侧公共 API 一致性已收口**(2026-06-25 · 承接 v0.2.52.2 `0955f2e` + `a278ccc` · 沿 v0.2.52 #61+#62+#63 范本)。**本轮**:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段;③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**质量门全绿(实测)**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff check + format 全绿 / alembic upgrade head --sql exit 0(沿 #62 修复)/ uv build OK / make lint 143 files 0 errors。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**8/1 v0.2.1 tag 决策**:继续延后(唯一缺口:outlook/gmail 真实 SMTP 送达 / Keychain 凭据未就绪)。边界:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。承接报告:`docs/v0.2.52.3-public-api-consistency-2026-06-25.md`。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.52.2 状态口径同步 + provider 封装硬化已收口(2026-06-25)**;承接 v0.2.52.1 OutboxDispatcher 自动路由(`dd2e93f` · 撞坑 #63)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。
+**当前启动候选**:**v0.2.52.3 测试侧公共 API 一致性已收口(2026-06-25)**;承接 v0.2.52.2 EmailSendAdapter provider 封装硬化(`0955f2e` · 沿 v0.2.52.2 ProviderDefaults 范本)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评(检查员强制截点 12:00+ · 沿 v0.2.50 撞坑 #60 preliminary 范本)/ 未来凭据 Keychain 就绪后恢复真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理(8/1 docs-only 复评前)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | clean ✅(以 `git status --short` 为准) |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | 全绿(**2273 passed / 1 skipped** · **88.82%** coverage · MD lint **143 files** 0 errors) |
+| 8/8 质量门 | 全绿(**2273 passed / 1 skipped** · **88.84%** coverage · MD lint **143 files** 0 errors) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |
@@ -126,7 +126,8 @@
 | 6/25 | 周四 | **v0.2.42-v0.2.51 mypy --strict / W3 spike docs 链路 10 commit** — 撞坑 #55 v4.0 四重锁死范本(命令 + 配置 + Makefile + 严格模式)/ 撞坑 #56 AST 注入顺序陷阱 / 撞坑 #57 ast.unparse 注释丢失 / 撞坑 #58 MD022 33 文件批量修复 / 撞坑 #50 风险门控 | ✅ |
 | 6/25 | 周四 | **v0.2.52 SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步**(`91cbe96` · 7 files / 353+/-)· 9/9 质量门全绿(2270 passed / 1 skipped / 88.81% / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 141 files 0 errors)| ✅ |
 | 6/25 | 周四 | **v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)收口**(`dd2e93f` · 6 files / 309+/-)· 5 路径严判(路径 1 provider + 默认值可用 / 路径 2 缺失 fallback / 路径 3 显式 / 路径 4 完全没传 / 路径 5 冲突严判)· 3 新测试覆盖(同步默认值 + 冲突严判 + 向后兼容)· 9/9 质量门全绿(2273 passed / 1 skipped / 88.82% / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 141 files 0 errors)· 撞坑累计 63 类(本轮新增 #63)· 状态三入口同步(R1/README + S/SESSION-STATE + M/MODIFICATION-LOG 顶部 v0.2.52 → v0.2.52.1)· 沿 v0.2.52 撞坑 #50 三层范本 + 撞坑 #51 漂移审查机制 | ✅ |
-| 6/25 | 周四 | **v0.2.52.2 状态口径同步 + provider 封装硬化收口** · docs(state) 三入口 2273/88.82%/143 files MD lint · `ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · `test_smpt_*` 拼写修正 · 9/9 质量门全绿(2273 passed / 1 skipped / 88.82%) | ✅ |
+| 6/25 | 周四 | **v0.2.52.2 状态口径同步 + provider 封装硬化收口**(`0955f2e` feat + `a278ccc` docs)· `ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性 · OutboxDispatcher 改读公共 API · `test_smpt_*` 拼写修正 · 9/9 质量门全绿(2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / MD lint 143 files 0 errors)| ✅ |
+| 6/25 | 周四 | **v0.2.52.3 测试侧公共 API 一致性收口** · OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 范本)· 5 处私有属性断言迁移到公共 API(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段 · 与 EmailSendAdapter.provider_defaults 双端对称封装 · 9/9 质量门全绿(**2273 passed / 1 skipped / 88.84%** 微涨 0.02pp / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 143 files 0 errors)· 撞坑累计 **64 类**(本轮新增 #64 公共 API 迁移范本)· 状态三入口同步(R1/README + S/SESSION-STATE + M/MODIFICATION-LOG 顶部 v0.2.52.2 → v0.2.52.3)· 沿 v0.2.52.2 撞坑 #63 范本 | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 
@@ -188,6 +189,7 @@
 - **v0.2.1 启动候选清单**: `我的AI员工/docs/v0.2.1-candidates-2026-06-17.md`
 - **v0.2.52 SMTPProviderFactory 协议不匹配修复收口报告**: `我的AI员工/docs/v0.2.52-smtp-provider-factory-protocol-mismatch-2026-06-25.md`(撞坑 #61+#62+P1 状态三入口同步)
 - **v0.2.52.1 OutboxDispatcher 自动路由收口报告**: `我的AI员工/docs/v0.2.52.1-outbox-dispatcher-auto-routing-2026-06-25.md`(撞坑 #63 5 路径严判)
+- **v0.2.52.3 公共 API 一致性收口报告**: `我的AI员工/docs/v0.2.52.3-public-api-consistency-2026-06-25.md`(撞坑 #64 公共 API 迁移范本 + 5 处断言迁移)
 - **v0.2 launch plan 整体收口**: `我的AI员工/reports/v0.2-closure-2026-06-18.md`(13 子阶段双链锚定 · 57 主项目 commits · 撞坑恢复范本)
 - **v0.2.2 #8 SMTPProviderFactory 收口**: `我的AI员工/reports/v0.2.2-p8-smtp-provider-factory-2026-06-18.md`(撞坑恢复 commit · 10 new tests)
 - **v0.2.4 状态漂移审查机制入库**: `我的AI员工/docs/v0.2.4-drift-review-mechanism-2026-06-18.md`(4 机制 + 7/1 月度复盘 checklist + 撞坑恢复 3 步范本)

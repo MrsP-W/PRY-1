@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:✅ **v0.2.52.2 状态口径同步 + EmailSendAdapter provider 封装硬化**(2026-06-25 · 承接 v0.2.52.1 `dd2e93f`)。v0.2.52.2 完成:① **docs(state)** 三入口质量基线对齐(**2273 passed / 1 skipped / 88.82%** · MD lint **143 files** 0 errors);② **`ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性**,OutboxDispatcher 不再读 `_provider_default_*` 私有字段;③ **测试注释/拼写清理**(`test_smpt_*` → `test_smtp_*` · SMTPConnector 注释修正)。**9/9 质量门**:2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 143 files 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)。**撞坑累计 63 类**(沿用 v0.2.52.1 #63)。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
+> **状态**:✅ **v0.2.52.3 测试侧公共 API 一致性**(2026-06-25 · 承接 v0.2.52.2 `0955f2e` + `a278ccc`)。v0.2.52.3 完成:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化范本);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段(测试侧);③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**9/9 质量门**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 143 files 0 errors。HEAD 以 `git rev-parse --short HEAD` 为准。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**沿用边界**:不真发邮件、不写入真实凭据、不 kickstart launchd、不移动 `v0.1.0` tag(`2af775f`)、不打 `v0.2.x` tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.82%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.84%,fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.82%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.84%,fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -227,6 +227,7 @@ make help
 | **v0.2.50** 8/1 tag 锚定评估 preliminary(preliminary ≠ 最终决策 · 撞坑 #60 范本应用 · 距 8/1 还有 5 周关键时间窗) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.76% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.2** 状态口径同步 + provider 封装硬化(`ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · docs 三入口 2273/88.82%/143 files MD lint · `test_smpt_*` 拼写修正) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.52.3** 测试侧公共 API 一致性(OutboxDispatcher 暴露 `active_provider` + `provider_defaults` 公共属性 · 5 处私有属性断言迁移到公共 API · docs 三入口 2273/**88.84%** / 143 files MD lint · 撞坑 #64 公共 API 迁移范本) | ✅ 6/25 落地 | 2026-06-25 |
 
 ---
 
