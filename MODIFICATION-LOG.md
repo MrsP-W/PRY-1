@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.52.3` 测试侧公共 API 一致性(2026-06-25);承接 v0.2.52.2 EmailSendAdapter provider 封装硬化(`0955f2e` feat + `a278ccc` docs)。v0.2.52.3 完成:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化范本);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段;③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**9/9 质量门**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint 143 files 0 errors。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理 |
+| **当前阶段** | ✅ `v0.2.52.3` 测试侧公共 API 一致性(2026-06-25);承接 v0.2.52.2 EmailSendAdapter provider 封装硬化(`0955f2e` feat + `a278ccc` docs)。v0.2.52.3 完成:① OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 封装硬化范本);② **5 处私有属性断言迁移到公共 API**(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段;③ 与 `EmailSendAdapter.provider_defaults` 双端对称封装。**9/9 质量门**:**2273 passed / 1 skipped / 88.84% coverage**(微涨 0.02pp)/ mypy --strict 0 errors / 209 files / ruff 全绿 / alembic SQL 完整 / MD lint **144 files** 0 errors。**撞坑累计 64 类**(本轮新增 #64 公共 API 迁移范本)。**下一步候选**:8/1 v0.2.1 release tag 锚定复评 / 凭据 Keychain 就绪后真实 SMTP spike(沿 v0.2.49 #59 凭据激活范本)/ 沿撞坑 #64 范本继续 P2 测试清理 |
 | **上一阶段** | ✅ `v0.2.52.2` 状态口径同步 + EmailSendAdapter provider 封装硬化(2026-06-25 · `0955f2e` feat + `a278ccc` docs,2 commits) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
@@ -91,7 +91,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.52.3 全量质量门:**2273 passed / 1 skipped** / **88.84% coverage**(微涨 0.02pp)/ mypy strict **0 errors / 209 source files** / MD lint **143 files 0 errors** |
+| **质量基线** | v0.2.52.3 全量质量门:**2273 passed / 1 skipped** / **88.84% coverage**(微涨 0.02pp)/ mypy strict **0 errors / 209 source files** / MD lint **144 files 0 errors** |
 | **下一棒** | 8/1 v0.2.1 release tag 锚定复评;真实 SMTP spike 等凭据可用再恢复 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
