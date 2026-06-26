@@ -22,6 +22,11 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from my_ai_employee import __version__
+
+# v0.2.53.18 BusinessWriter 集成(沿 v0.2.53.14 §8 DashboardContext 集成)
+#   - 默认 None → 解析为 BusinessWriterStub(撞坑 #65 默认 Stub 边界)
+#   - with_business_writer() 不可变更新(沿 #64 公共 API 范本)
+from my_ai_employee.dashboard.business_writer import BusinessWriter, BusinessWriterStub
 from my_ai_employee.menu_bar.expense_service import ExpenseService, ExpenseServiceStub
 from my_ai_employee.menu_bar.note_confirm_service import (
     NoteConfirmService,
@@ -64,6 +69,9 @@ class DashboardContext:
     outbox_draft_service: OutboxDraftService = field(
         default_factory=OutboxDraftServiceStub.get_default_stub
     )
+    business_writer: BusinessWriter | None = field(
+        default=None  # 默认 None 表示使用 BusinessWriterStub.get_default_stub()
+    )
     version: str = __version__
     quality_gates: QualityGateSnapshot = field(default_factory=QualityGateSnapshot)
     git_head_resolver: GitHeadResolver = field(default=lambda: _default_git_head())
@@ -104,6 +112,7 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=service,
+            business_writer=self.business_writer,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -116,6 +125,7 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=service,
             outbox_draft_service=self.outbox_draft_service,
+            business_writer=self.business_writer,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -128,11 +138,37 @@ class DashboardContext:
             expense_service=service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
+            business_writer=self.business_writer,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
             keychain_probe=self.keychain_probe,
         )
+
+    def with_business_writer(self, writer: BusinessWriter | None) -> DashboardContext:
+        """返回替换 business_writer 的新 ctx(不可变更新,沿 #64 公共 API 范本).
+
+        Args:
+            writer: BusinessWriter 实例,None 表示还原为默认 BusinessWriterStub.
+        """
+        return DashboardContext(
+            expense_service=self.expense_service,
+            note_confirm_service=self.note_confirm_service,
+            outbox_draft_service=self.outbox_draft_service,
+            business_writer=writer if writer is not None else BusinessWriterStub(),
+            version=self.version,
+            quality_gates=self.quality_gates,
+            git_head_resolver=self.git_head_resolver,
+            keychain_probe=self.keychain_probe,
+        )
+
+    def resolve_business_writer(self) -> BusinessWriter:
+        """解析 business_writer — None 时返回 BusinessWriterStub(撞坑 #65 默认 Stub).
+
+        Returns:
+            BusinessWriter 实例(始终非 None).
+        """
+        return self.business_writer if self.business_writer is not None else BusinessWriterStub()
 
 
 def _is_real_db_enabled() -> bool:
