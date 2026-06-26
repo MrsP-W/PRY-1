@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调**(2026-06-26 · Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` 拒写原因 · API 离线静态兜底 · 全路径 `write_executed=false`)。**质量门**:**2399 passed / 1 skipped / 88.51%** / mypy --strict 0 errors(**223 files**) / ruff 全绿 / format 237 files / **MD lint 161 files** 0 errors。**下一棒**:business writer 设计 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.20 HTML 实写 audit log 落档设计(2026-06-26 · 6 阶段路线收口)** — v0.2.53.15-18 实施完成(BusinessWriter Protocol + Stub + Impl + DashboardContext 集成)+ v0.2.53.19-20 docs-only 设计稿(handler 路径 4 + HTML 实写流程)。**质量门**:**2475 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(**114 files**) / ruff + format 全绿 / MD lint **164 files** 0 errors。**下一棒**:v0.2.53.21 handler 接入 BusinessWriter dry-run / Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2399 passed / 1 skipped / 88.51% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2475 passed / 1 skipped / 88.50% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2399 passed / 1 skipped / 88.51% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2475 passed / 1 skipped / 88.50% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -241,9 +241,15 @@ make help
 | **v0.2.53.10** 报告预览 + 搜索(`/api/reports/preview` 8KB 截断 · 路径白名单 · HTML 搜索 + 点击预览 · +9 tests · 2373 passed / 88.48%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.11** ApprovalGate 写操作设计(`POST /api/approval-gate/actions` 契约 · 默认禁写 · env+confirm 双门控 · 全路径 `write_executed=false` · +24 tests · 2397 passed / 88.53%) | ✅ 6/26 落地 | 2026-06-26 |
 | **v0.2.53.12** ApprovalGate dry-run 按钮联调(HTML 队列 dry-run · inspector 拒写原因 · API 离线兜底 · +2 tests · 2399 passed / 88.53%) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.15** BusinessWriter Protocol + Stub + AuditContext + WriteResult/Decision(`approval_gate_passed` / `would_allow` 字段契约 · actor ≤ 80 / reason ≤ 240 严判 · +29 tests · 2428 passed / 88.58% · 撞坑 #65 沿用) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.16** AnomalyDismissalService Protocol + Stub + 0015 alembic migration(anomaly_dismissals 表 + UNIQUE anomaly_id + idx_dismissed_at DESC + AnomalyDismissal ORM + head 推 0015 · +18 tests · 2446 passed / 88.50% · 撞坑 #65 沿用) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.17** BusinessWriterImpl 接入骨架(默认 raise NotImplementedError · dry_run would_allow=False · 4 类动作方法占位 · +20 tests · 2466 passed / 88.50%) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.18** DashboardContext.with_business_writer() + resolve_business_writer()(默认 None → Stub · 不可变更新 · pass None 还原 Stub · +9 tests · 2475 passed / 88.50%) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.19** ApprovalGate handler 路径 4 启用设计稿(4 道门 + 4 类动作实际写入流程 + 7 错误码扩展 · docs-only · 实际启用留 8/1 后) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.20** HTML 实写 audit log 落档设计稿(3 类实写流程 + approval_gate_audits 表 + HTML inspector 升级 + 离线兜底 · docs-only · 实际启用留 8/1 后) | ✅ 6/26 落地 | 2026-06-26 |
 | **v0.2.54** 8/1 tag 锚定评估(**docs-only 评估线 · 非 Codex UI 主开发版本** · 7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 评估收口 | 2026-06-25 |
 
-> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.12**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
+> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.20**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
 
 ---
 

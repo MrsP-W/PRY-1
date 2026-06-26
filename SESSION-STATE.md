@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.12 ApprovalGate dry-run 按钮联调(2026-06-26)
+# SESSION-STATE — v0.2.53.20 HTML 实写 audit log 落档设计(2026-06-26)
 
 > **最后更新**:2026-06-26 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调 已落地** — Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` · API 离线静态兜底 · 全路径 `write_executed=false`。**质量门**:**2399 passed / 1 skipped / 88.51%** / mypy --strict 0 errors(**223 files**) / ruff + format 全绿 / MD lint **161 files** 0 errors。**下一棒**:business writer 设计 / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.20 HTML 实写 audit log 落档设计稿(6 阶段路线收口)** — v0.2.53.15-18 实施完成(BusinessWriter Protocol + Stub + Impl + DashboardContext 集成)+ v0.2.53.19-20 docs-only 设计稿(handler 路径 4 + HTML 实写流程 + 审计 log)。**质量门**:**2475 passed / 1 skipped / 88.50%** / mypy --strict 0 errors(**114 files**) / ruff + format 全绿 / MD lint **164 files** 0 errors。**下一棒**:v0.2.53.21 handler 接入 BusinessWriter dry-run / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.12 ApprovalGate dry-run 按钮联调 已落地(2026-06-26)**。**下一步候选**:business writer 设计 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.20 HTML 实写 audit log 落档设计 已落地(2026-06-26 · 6 阶段路线收口)**。**下一步候选**:v0.2.53.21 handler 接入 BusinessWriter dry-run / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2399 passed / 1 skipped** · **88.51%** coverage · mypy --strict 0 errors(**223 files**) · MD lint **161 files** 0 errors |
+| 核心质量门 | **2475 passed / 1 skipped** · **88.50%** coverage · mypy --strict 0 errors(**114 files**) · MD lint **164 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |
@@ -128,6 +128,12 @@
 | 6/25 | 周四 | **v0.2.52.1 OutboxDispatcher 自动路由(provider 默认值同步 + 冲突严判,撞坑 #63)收口**(`dd2e93f` · 6 files / 309+/-)· 5 路径严判(路径 1 provider + 默认值可用 / 路径 2 缺失 fallback / 路径 3 显式 / 路径 4 完全没传 / 路径 5 冲突严判)· 3 新测试覆盖(同步默认值 + 冲突严判 + 向后兼容)· 9/9 质量门全绿(2273 passed / 1 skipped / 88.82% / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint 141 files 0 errors)· 撞坑累计 63 类(本轮新增 #63)· 状态三入口同步(R1/README + S/SESSION-STATE + M/MODIFICATION-LOG 顶部 v0.2.52 → v0.2.52.1)· 沿 v0.2.52 撞坑 #50 三层范本 + 撞坑 #51 漂移审查机制 | ✅ |
 | 6/25 | 周四 | **v0.2.52.2 状态口径同步 + provider 封装硬化收口**(`0955f2e` feat + `a278ccc` docs)· `ProviderDefaults` dataclass + `smtp_provider`/`provider_defaults` 只读属性 · OutboxDispatcher 改读公共 API · `test_smpt_*` 拼写修正 · 9/9 质量门全绿(2273 passed / 1 skipped / 88.82% coverage / mypy --strict 0 errors / 209 files / MD lint 143 files 0 errors)| ✅ |
 | 6/25 | 周四 | **v0.2.52.3 测试侧公共 API 一致性收口** · OutboxDispatcher 暴露公共 `active_provider` + `provider_defaults` 属性(沿 v0.2.52.2 ProviderDefaults 范本)· 5 处私有属性断言迁移到公共 API(`test_outbox_dispatcher.py` 3 处 + `test_send_adapter.py` 2 处)· 不再读 `_active_provider` / `_provider_default_*` 私有字段 · 与 EmailSendAdapter.provider_defaults 双端对称封装 · 9/9 质量门全绿(**2273 passed / 1 skipped / 88.84%** 微涨 0.02pp / mypy --strict 0 errors / 209 files / ruff 全绿 / alembic exit 0 / uv build OK / make lint **144 files** 0 errors)· 撞坑累计 **64 类**(本轮新增 #64 公共 API 迁移范本)· 状态三入口同步(R1/README + S/SESSION-STATE + M/MODIFICATION-LOG 顶部 v0.2.52.2 → v0.2.52.3)· 沿 v0.2.52.2 撞坑 #63 范本 | ✅ |
+| 6/26 | 周五 | **v0.2.53.15 BusinessWriter Protocol + Stub + AuditContext + WriteResult/Decision 落地**(`approval_gate_passed` / `would_allow` 字段契约 · actor ≤ 80 / reason ≤ 240 严判 + 边界值测试 · 4 类动作 NotImplementedError 占位 · `896025e` · 3 files / +558 -1 · 9 质量门全绿 **2428 passed / 88.58%** / mypy --strict 0 / 110 files / MD lint 162 files / 撞坑 #65 沿用) | ✅ |
+| 6/26 | 周五 | **v0.2.53.16 AnomalyDismissalService Protocol + Stub + 0015 alembic migration + AnomalyDismissal ORM**(`anomaly_dismissals` 表 + UNIQUE anomaly_id + idx_dismissed_at DESC + Stub 严判类型/长度 + head 推 0015 + 13 张表 baseline + 8 migration 测试修复 · `dc1544b` · 8 files / +551 -9 · 9 质量门全绿 **2446 passed / 88.50%** / mypy --strict 0 / 113 files / MD lint 162 files / 撞坑 #65 沿用) | ✅ |
+| 6/26 | 周五 | **v0.2.53.17 BusinessWriterImpl 接入骨架**(默认 raise NotImplementedError · dry_run would_allow=False · 4 类动作方法占位 + 异常收容 · `cdd619e` · 2 files / +379 -0 · 9 质量门全绿 **2466 passed / 88.50%** / mypy --strict 0 / 114 files / MD lint 162 files / 撞坑 #65 + v0.2.53.8 单项降级沿用) | ✅ |
+| 6/26 | 周五 | **v0.2.53.18 DashboardContext.with_business_writer() + resolve_business_writer() 集成**(默认 None → Stub · 不可变更新(沿 #64 范本)+ pass None 还原 Stub · `4463796` · 2 files / +146 -0 · 9 质量门全绿 **2475 passed / 88.50%** / mypy --strict 0 / 114 files / MD lint 162 files / 撞坑 #65 + #64 沿用) | ✅ |
+| 6/26 | 周五 | **v0.2.53.19 ApprovalGate handler 路径 4 启用设计稿**(`4ee2a7f` · 1 file / +248 -0 · docs-only · 4 道门 + 4 类动作实际写入流程 + 7 错误码扩展 + 审计字段 + 实际写入留 8/1 后) | ✅ |
+| 6/26 | 周五 | **v0.2.53.20 HTML 实写 audit log 落档设计稿**(`91a8f45` · 1 file / +250 -0 · docs-only · 3 类实写流程 + approval_gate_audits 表 + HTML inspector 升级 + 离线兜底 + 实际启用留 8/1 后 · 6 阶段路线收口) | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 
