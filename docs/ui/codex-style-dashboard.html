@@ -1035,6 +1035,9 @@
                 <div class="gate"><strong>目标</strong><span class="tiny" id="dry-run-target">—</span></div>
                 <div class="gate"><strong>HTTP</strong><span class="tag" id="dry-run-http">—</span></div>
                 <div class="gate"><strong>write_executed</strong><span class="tag green" id="dry-run-executed">false</span></div>
+                <div class="gate"><strong>双门</strong><span class="tag" id="dry-run-approval-gate" data-tone="red">未通过</span></div>
+                <div class="gate"><strong>Writer</strong><span class="tag" id="dry-run-writer-enabled" data-tone="red">未启用</span></div>
+                <div class="gate"><strong>would_allow</strong><span class="tag" id="dry-run-would-allow" data-tone="red">false</span></div>
               </div>
               <p class="tiny" id="dry-run-reason" style="margin: 10px 0 0">点击 Mail / Notes / Finance 队列中的 dry-run 按钮,只展示拒写原因,不写 DB。</p>
               <pre id="dry-run-detail"></pre>
@@ -1402,17 +1405,27 @@
         const httpLabel = httpStatus === null || httpStatus === undefined ? "offline" : String(httpStatus);
         setTag("dry-run-http", httpLabel, dryRunHttpTone(httpStatus));
         setTag("dry-run-executed", payload.write_executed === true ? "true" : "false", payload.write_executed === true ? "red" : "green");
+        // v0.2.53.22 HTML inspector 升级:approval_gate_passed / writer_enabled / would_allow 三 badge
+        const gatePassed = payload.approval_gate_passed === true;
+        setTag("dry-run-approval-gate", gatePassed ? "通过" : "未通过", gatePassed ? "green" : "red");
+        const writerEnabled = payload.writer_enabled === true;
+        setTag("dry-run-writer-enabled", writerEnabled ? "已启用" : "未启用", writerEnabled ? "green" : "red");
+        const wouldAllow = payload.would_allow === true;
+        setTag("dry-run-would-allow", wouldAllow ? "true" : "false", wouldAllow ? "green" : "red");
         const reason = payload.reason ?? payload.error ?? "无拒写原因";
         setText("dry-run-reason", reason);
         const detail = {
           error: payload.error ?? null,
           reason: payload.reason ?? null,
           write_enabled: payload.write_enabled ?? null,
+          writer_enabled: payload.writer_enabled ?? null,
           write_executed: payload.write_executed ?? false,
           approval_gate_passed: payload.approval_gate_passed ?? false,
           would_allow: payload.would_allow ?? false,
           dry_run: payload.dry_run ?? true,
           required: payload.required ?? [],
+          business_writer_error: payload.business_writer_error ?? null,
+          business_writer_reason: payload.business_writer_reason ?? null,
           action_contract: payload.action_contract ?? null,
           audit: payload.audit ?? null,
         };
