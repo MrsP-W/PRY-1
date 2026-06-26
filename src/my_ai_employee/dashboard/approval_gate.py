@@ -18,33 +18,13 @@ from collections.abc import Mapping
 from http import HTTPStatus
 from typing import Any, Final
 
+from my_ai_employee.dashboard.action_contracts import ACTION_CONTRACTS, is_supported_action
+
 CONTRACT_VERSION: Final = "v0.2.53.11"
 DASHBOARD_WRITE_API_ENV: Final = "DASHBOARD_WRITE_API"
 CONFIRM_TEXT: Final = "CONFIRM_WRITE"
 
 _TRUTHY: Final = {"1", "true", "yes", "on"}
-_ACTION_CONTRACTS: Final[dict[str, dict[str, str]]] = {
-    "outbox.approve": {
-        "target_type": "outbox",
-        "description": "审批邮件草稿,未来从 pending_send 推到 approved。",
-        "future_effect": "DB status update only; Dispatcher 仍需独立 SMTP 门控。",
-    },
-    "outbox.cancel": {
-        "target_type": "outbox",
-        "description": "取消邮件草稿,未来从 pending_send/approved 推到 cancelled。",
-        "future_effect": "DB status update only; 不触发 SMTP。",
-    },
-    "notes.confirm": {
-        "target_type": "note",
-        "description": "确认 Apple Notes 候选,未来清除 needs_confirm。",
-        "future_effect": "DB note status update only。",
-    },
-    "finance.dismiss_anomaly": {
-        "target_type": "finance_anomaly",
-        "description": "忽略财务异常提示,未来写入本地审计/忽略标记。",
-        "future_effect": "DB audit marker only; 不导入账单。",
-    },
-}
 
 
 def is_dashboard_write_api_enabled() -> bool:
@@ -65,7 +45,7 @@ def list_action_contracts() -> list[dict[str, str]]:
             "future_effect": contract["future_effect"],
             "required_confirm_text": CONFIRM_TEXT,
         }
-        for action, contract in sorted(_ACTION_CONTRACTS.items())
+        for action, contract in sorted(ACTION_CONTRACTS.items())
     ]
 
 
@@ -124,7 +104,7 @@ def evaluate_approval_action_request(
             dry_run=dry_run,
             payload=payload,
         )
-    if action not in _ACTION_CONTRACTS:
+    if not is_supported_action(action):
         return _decision(
             HTTPStatus.BAD_REQUEST,
             error="unsupported_action",
@@ -175,13 +155,14 @@ def evaluate_approval_action_request(
     return _decision(
         HTTPStatus.NOT_IMPLEMENTED,
         error="write_not_implemented",
-        reason="ApprovalGate 契约已通过,但 v0.2.53.11 只做设计与禁写骨架,未接业务写入。",
+        reason="ApprovalGate 双门已通过,但 BusinessWriter 未启用,未接业务写入。",
         write_enabled=enabled,
         action=action,
         target_id=target_id,
         dry_run=dry_run,
         payload=payload,
-        would_allow=True,
+        would_allow=False,
+        approval_gate_passed=True,
     )
 
 
@@ -196,8 +177,9 @@ def _decision(
     dry_run: bool,
     payload: Mapping[str, Any],
     would_allow: bool = False,
+    approval_gate_passed: bool = False,
 ) -> tuple[HTTPStatus, dict[str, Any]]:
-    contract = _ACTION_CONTRACTS.get(action)
+    contract = ACTION_CONTRACTS.get(action)
     action_contract: dict[str, str] | None = None
     if contract is not None:
         action_contract = {
@@ -213,6 +195,7 @@ def _decision(
             "write_enabled": write_enabled,
             "write_executed": False,
             "would_allow": would_allow,
+            "approval_gate_passed": approval_gate_passed,
             "dry_run": dry_run,
             "error": error,
             "reason": reason,

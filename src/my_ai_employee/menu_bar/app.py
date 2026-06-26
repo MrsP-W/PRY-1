@@ -65,6 +65,7 @@ from my_ai_employee.menu_bar.outbox_draft_service import (
     OutboxDraftServiceStub,
 )
 from my_ai_employee.menu_bar.tcc import TCCPermissionError
+from my_ai_employee.quality_snapshot import format_system_health_body
 
 # rumps.App 基类提取为模块级变量(测试可 monkeypatch 替换,避免 NSApp 拉起)
 # Python 类继承在 class 定义时解析基类,直接 `class X(rumps.App):` 不可 mock
@@ -469,14 +470,7 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             cwd=str(_DASHBOARD_HTML.parents[2]),
         )
         head_str = head.stdout.strip() if head.returncode == 0 else "unknown"
-        body = (
-            "pytest: 2273 passed / 1 skipped\n"
-            "coverage: ≥88.84%\n"
-            "mypy --strict: 0 errors\n"
-            "ruff + format + lint: 全绿\n"
-            f"HEAD: {head_str}\n"
-            "SMTP 真实发送: 未解锁(需 Keychain + SMTP_REAL_NETWORK)"
-        )
+        body = format_system_health_body(git_head=head_str)
         _notification_func("系统健康", "9/9 质量门基线(只读快照)", body[:200])
 
     @_clicked_decorator("📋 今日待处理")  # type: ignore[untyped-decorator]

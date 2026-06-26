@@ -34,11 +34,8 @@ from __future__ import annotations
 import time
 from typing import TYPE_CHECKING, Any
 
+from my_ai_employee.dashboard.action_contracts import is_supported_action
 from my_ai_employee.dashboard.business_writer import (
-    ACTION_FINANCE_DISMISS_ANOMALY,
-    ACTION_NOTES_CONFIRM,
-    ACTION_OUTBOX_APPROVE,
-    ACTION_OUTBOX_CANCEL,
     AuditContext,
     WriteDecision,
     WriteResult,
@@ -98,12 +95,7 @@ class BusinessWriterImpl:
             - required 列出当前还缺什么
         """
         try:
-            if action not in {
-                ACTION_OUTBOX_APPROVE,
-                ACTION_OUTBOX_CANCEL,
-                ACTION_NOTES_CONFIRM,
-                ACTION_FINANCE_DISMISS_ANOMALY,
-            }:
+            if not is_supported_action(action):
                 return WriteDecision(
                     action=action,
                     target_id=target_id,

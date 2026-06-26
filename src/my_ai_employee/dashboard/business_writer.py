@@ -25,20 +25,15 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import ClassVar, Literal, Protocol
 
-# --- 4 类动作白名单(与 v0.2.53.11 ApprovalGate 契约对齐) ---
-
-ACTION_OUTBOX_APPROVE: str = "outbox.approve"
-ACTION_OUTBOX_CANCEL: str = "outbox.cancel"
-ACTION_NOTES_CONFIRM: str = "notes.confirm"
-ACTION_FINANCE_DISMISS_ANOMALY: str = "finance.dismiss_anomaly"
-
-# 白名单 tuple(供 Protocol 白名单严判沿用)
-SUPPORTED_ACTIONS: tuple[str, ...] = (
+from my_ai_employee.dashboard.action_contracts import (
+    ACTION_FINANCE_DISMISS_ANOMALY,
+    ACTION_NOTES_CONFIRM,
     ACTION_OUTBOX_APPROVE,
     ACTION_OUTBOX_CANCEL,
-    ACTION_NOTES_CONFIRM,
-    ACTION_FINANCE_DISMISS_ANOMALY,
+    SUPPORTED_ACTIONS,
 )
+
+# --- 4 类动作白名单(与 action_contracts 共用) ---
 
 
 @dataclass(frozen=True, slots=True)
@@ -247,3 +242,17 @@ class BusinessWriterStub:
     def get_default_stub(cls) -> BusinessWriterStub:
         """默认 Stub 工厂(沿 `OutboxDraftServiceStub.get_default_stub` 范本)."""
         return cls()
+
+
+__all__ = [
+    "ACTION_FINANCE_DISMISS_ANOMALY",
+    "ACTION_NOTES_CONFIRM",
+    "ACTION_OUTBOX_APPROVE",
+    "ACTION_OUTBOX_CANCEL",
+    "SUPPORTED_ACTIONS",
+    "AuditContext",
+    "BusinessWriter",
+    "BusinessWriterStub",
+    "WriteDecision",
+    "WriteResult",
+]

@@ -38,6 +38,7 @@ from my_ai_employee.menu_bar.outbox_draft_service import (
     OutboxDraftServiceImpl,
     OutboxDraftServiceStub,
 )
+from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES, QualityGateSnapshot
 
 GitHeadResolver = Callable[[], str]
 KeychainProbe = Callable[[str], bool]
@@ -46,16 +47,6 @@ KeychainProbe = Callable[[str], bool]
 #   - 未设或 "0" / "false" / "no" → 默认全 Stub(沿 v0.2.53.6 行为)
 #   - "1" / "true" / "yes" → 尝试注入 Outbox / NoteConfirm / Expense 真实 Impl
 _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
-
-
-@dataclass(frozen=True, slots=True)
-class QualityGateSnapshot:
-    """质量门只读快照(不跑 CI,沿菜单栏系统健康范本)."""
-
-    pytest: str = "2399 passed / 1 skipped"
-    coverage: str = "88.53%"
-    mypy: str = "0 errors"
-    lint: str = "161 files 0 errors"
 
 
 @dataclass(slots=True)
@@ -73,7 +64,7 @@ class DashboardContext:
         default=None  # 默认 None 表示使用 BusinessWriterStub.get_default_stub()
     )
     version: str = __version__
-    quality_gates: QualityGateSnapshot = field(default_factory=QualityGateSnapshot)
+    quality_gates: QualityGateSnapshot = field(default_factory=lambda: DEFAULT_QUALITY_GATES)
     git_head_resolver: GitHeadResolver = field(default=lambda: _default_git_head())
     keychain_probe: KeychainProbe = field(default=lambda s: _default_keychain_probe(s))
 
@@ -324,3 +315,12 @@ def parse_limit(raw: str | None, *, default: int = 10, maximum: int = 100) -> in
     if value > maximum:
         return maximum
     return value
+
+
+__all__ = [
+    "DashboardContext",
+    "QualityGateSnapshot",
+    "parse_limit",
+    "safe_count",
+    "safe_list",
+]

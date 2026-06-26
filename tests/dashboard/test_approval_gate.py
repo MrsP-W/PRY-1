@@ -151,7 +151,8 @@ class TestApprovalGateContract:
         )
         assert status.value == 501
         assert payload["error"] == "write_not_implemented"
-        assert payload["would_allow"] is True
+        assert payload["would_allow"] is False
+        assert payload["approval_gate_passed"] is True
         assert payload["write_executed"] is False
         assert payload["audit"]["actor"] == "tester"
 

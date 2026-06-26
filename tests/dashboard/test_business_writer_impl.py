@@ -28,7 +28,7 @@ class TestBusinessWriterImplConstruction:
 
     def test_with_session_factory_only(self) -> None:
         """只传 session_factory OK."""
-        writer = BusinessWriterImpl(session_factory=None)  # type: ignore[arg-type]
+        writer = BusinessWriterImpl(session_factory=None)
         assert writer is not None
 
     def test_with_all_deps_none(self) -> None:
