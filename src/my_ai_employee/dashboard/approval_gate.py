@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 from collections.abc import Mapping
+from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, Final
 
@@ -30,6 +31,108 @@ CONFIRM_TEXT: Final = "CONFIRM_WRITE"
 BUSINESS_WRITER_ENABLED_ENV: Final = "BUSINESS_WRITER_ENABLED"
 
 _TRUTHY: Final = {"1", "true", "yes", "on"}
+
+
+@dataclass(frozen=True, slots=True)
+class _ParsedActionRequest:
+    action: str
+    target_id: str
+    dry_run: bool
+
+
+def _parse_action_request(
+    payload: Mapping[str, Any],
+    *,
+    write_enabled: bool,
+) -> tuple[_ParsedActionRequest | None, tuple[HTTPStatus, dict[str, Any]] | None]:
+    """解析并校验 action/target_id/dry_run + 第一道门(write API).
+
+    Returns:
+        `(fields, None)` 成功; `(None, error_decision)` 校验失败。
+    """
+    action = _text_field(payload, "action")
+    target_id = _target_id(payload)
+    dry_run_raw = payload.get("dry_run", True)
+    if type(dry_run_raw) is not bool:
+        return None, _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="invalid_dry_run",
+            reason="dry_run 必须是 bool。",
+            write_enabled=write_enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=True,
+            payload=payload,
+        )
+    dry_run = dry_run_raw
+
+    if not action:
+        return None, _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_action",
+            reason="缺少 action。",
+            write_enabled=write_enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    if not is_supported_action(action):
+        return None, _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="unsupported_action",
+            reason=f"不支持的 action: {action}",
+            write_enabled=write_enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    if not target_id:
+        return None, _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_target_id",
+            reason="缺少 target_id。",
+            write_enabled=write_enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    if not write_enabled:
+        return None, _decision(
+            HTTPStatus.FORBIDDEN,
+            error="write_disabled",
+            reason=f"默认禁写;需显式设置 {DASHBOARD_WRITE_API_ENV}=1。",
+            write_enabled=write_enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    return _ParsedActionRequest(action=action, target_id=target_id, dry_run=dry_run), None
+
+
+def _require_confirm_text(
+    payload: Mapping[str, Any],
+    *,
+    parsed: _ParsedActionRequest,
+    write_enabled: bool,
+) -> tuple[HTTPStatus, dict[str, Any]] | None:
+    """第二道门:confirm_text 校验;通过返回 None."""
+    confirm_text = _text_field(payload, "confirm_text")
+    if confirm_text != CONFIRM_TEXT:
+        return _decision(
+            HTTPStatus.FORBIDDEN,
+            error="confirmation_required",
+            reason=f"需 confirm_text={CONFIRM_TEXT}。",
+            write_enabled=write_enabled,
+            action=parsed.action,
+            target_id=parsed.target_id,
+            dry_run=parsed.dry_run,
+            payload=payload,
+        )
+    return None
 
 
 def is_dashboard_write_api_enabled() -> bool:
@@ -94,89 +197,22 @@ def evaluate_approval_action_request(
     """
 
     enabled = is_dashboard_write_api_enabled() if write_enabled is None else write_enabled
-    action = _text_field(payload, "action")
-    target_id = _target_id(payload)
-    dry_run_raw = payload.get("dry_run", True)
-    if type(dry_run_raw) is not bool:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="invalid_dry_run",
-            reason="dry_run 必须是 bool。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=True,
-            payload=payload,
-        )
-    dry_run = dry_run_raw
-
-    if not action:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="missing_action",
-            reason="缺少 action。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-    if not is_supported_action(action):
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="unsupported_action",
-            reason=f"不支持的 action: {action}",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-    if not target_id:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="missing_target_id",
-            reason="缺少 target_id。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-
-    if not enabled:
-        return _decision(
-            HTTPStatus.FORBIDDEN,
-            error="write_disabled",
-            reason=f"默认禁写;需显式设置 {DASHBOARD_WRITE_API_ENV}=1。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-
-    confirm_text = _text_field(payload, "confirm_text")
-    if confirm_text != CONFIRM_TEXT:
-        return _decision(
-            HTTPStatus.FORBIDDEN,
-            error="confirmation_required",
-            reason=f"需 confirm_text={CONFIRM_TEXT}。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
+    parsed, err = _parse_action_request(payload, write_enabled=enabled)
+    if err is not None:
+        return err
+    assert parsed is not None
+    confirm_err = _require_confirm_text(payload, parsed=parsed, write_enabled=enabled)
+    if confirm_err is not None:
+        return confirm_err
 
     return _decision(
         HTTPStatus.NOT_IMPLEMENTED,
         error="write_not_implemented",
         reason="ApprovalGate 双门已通过,但 BusinessWriter 未启用,未接业务写入。",
         write_enabled=enabled,
-        action=action,
-        target_id=target_id,
-        dry_run=dry_run,
+        action=parsed.action,
+        target_id=parsed.target_id,
+        dry_run=parsed.dry_run,
         payload=payload,
         would_allow=False,
         approval_gate_passed=True,
@@ -208,80 +244,13 @@ def evaluate_writer_dry_run(
     """
     enabled = is_dashboard_write_api_enabled() if write_enabled is None else write_enabled
     writer_on = is_business_writer_enabled() if writer_enabled is None else writer_enabled
-    action = _text_field(payload, "action")
-    target_id = _target_id(payload)
-    dry_run_raw = payload.get("dry_run", True)
-    if type(dry_run_raw) is not bool:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="invalid_dry_run",
-            reason="dry_run 必须是 bool。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=True,
-            payload=payload,
-        )
-    dry_run = dry_run_raw
-
-    if not action:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="missing_action",
-            reason="缺少 action。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-    if not is_supported_action(action):
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="unsupported_action",
-            reason=f"不支持的 action: {action}",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-    if not target_id:
-        return _decision(
-            HTTPStatus.BAD_REQUEST,
-            error="missing_target_id",
-            reason="缺少 target_id。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-
-    if not enabled:
-        return _decision(
-            HTTPStatus.FORBIDDEN,
-            error="write_disabled",
-            reason=f"默认禁写;需显式设置 {DASHBOARD_WRITE_API_ENV}=1。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
-
-    confirm_text = _text_field(payload, "confirm_text")
-    if confirm_text != CONFIRM_TEXT:
-        return _decision(
-            HTTPStatus.FORBIDDEN,
-            error="confirmation_required",
-            reason=f"需 confirm_text={CONFIRM_TEXT}。",
-            write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
-            payload=payload,
-        )
+    parsed, err = _parse_action_request(payload, write_enabled=enabled)
+    if err is not None:
+        return err
+    assert parsed is not None
+    confirm_err = _require_confirm_text(payload, parsed=parsed, write_enabled=enabled)
+    if confirm_err is not None:
+        return confirm_err
 
     # 路径 3:env+confirm 通过,writer 未启用 → 501 write_not_implemented
     if not writer_on:
@@ -290,27 +259,28 @@ def evaluate_writer_dry_run(
             error="write_not_implemented",
             reason="ApprovalGate 双门已通过,但 BusinessWriter 未启用,未接业务写入。",
             write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
+            action=parsed.action,
+            target_id=parsed.target_id,
+            dry_run=parsed.dry_run,
             payload=payload,
             would_allow=False,
             approval_gate_passed=True,
         )
 
     # 路径 3.5-dry_run_false:实际写入路径留 8/1 后
-    if not dry_run:
+    if not parsed.dry_run:
         return _decision(
             HTTPStatus.NOT_IMPLEMENTED,
             error="real_write_disabled",
             reason="实际写入路径留 v0.2.53.19 后 + 用户明确授权。",
             write_enabled=enabled,
-            action=action,
-            target_id=target_id,
-            dry_run=dry_run,
+            action=parsed.action,
+            target_id=parsed.target_id,
+            dry_run=parsed.dry_run,
             payload=payload,
             would_allow=False,
             approval_gate_passed=True,
+            writer_enabled=True,
         )
 
     # 路径 3.5 dry_run=True:writer dry-run 入口(handler._merge_writer_dry_run 进一步合并)
@@ -319,9 +289,9 @@ def evaluate_writer_dry_run(
         error=None,
         reason="ApprovalGate 三门已通过(write + confirm + writer),进入 writer dry-run。",
         write_enabled=enabled,
-        action=action,
-        target_id=target_id,
-        dry_run=dry_run,
+        action=parsed.action,
+        target_id=parsed.target_id,
+        dry_run=parsed.dry_run,
         payload=payload,
         would_allow=False,  # 由 writer.dry_run 决定(handler 合并后覆盖)
         approval_gate_passed=True,

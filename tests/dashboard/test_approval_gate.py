@@ -19,10 +19,12 @@ from typing import Any
 import pytest
 
 from my_ai_employee.dashboard.approval_gate import (
+    BUSINESS_WRITER_ENABLED_ENV,
     CONFIRM_TEXT,
     DASHBOARD_WRITE_API_ENV,
     build_approval_gate_status,
     evaluate_approval_action_request,
+    evaluate_writer_dry_run,
     is_dashboard_write_api_enabled,
     list_action_contracts,
 )
@@ -34,6 +36,7 @@ from my_ai_employee.dashboard.responses import build_status_payload
 @pytest.fixture(autouse=True)
 def _clean_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     monkeypatch.delenv(DASHBOARD_WRITE_API_ENV, raising=False)
+    monkeypatch.delenv(BUSINESS_WRITER_ENABLED_ENV, raising=False)
     yield
 
 
@@ -226,3 +229,102 @@ class TestApprovalGateHttp:
         status, payload = _post_json(f"{http_server}/api/status", {})
         assert status == 405
         assert payload["error"] == "method_not_allowed"
+
+
+class TestApprovalGateWriterDryRunHttp:
+    """v0.2.53.22 handler 走 evaluate_writer_dry_run 第三道门 HTTP 测试."""
+
+    def test_post_env_confirm_writer_off_501(
+        self, http_server: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "notes.confirm",
+                "target_id": "note-1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+        )
+        assert status == 501
+        assert payload["error"] == "write_not_implemented"
+        assert payload["approval_gate_passed"] is True
+        assert payload["write_executed"] is False
+        assert "business_writer_error" not in payload
+
+    def test_post_all_gates_dry_run_ok_200(
+        self, http_server: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "outbox.approve",
+                "target_id": "123",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+        )
+        assert status == 200
+        assert payload["error"] is None
+        assert payload["writer_enabled"] is True
+        assert payload["approval_gate_passed"] is True
+        assert payload["write_executed"] is False
+        assert payload["business_writer_error"] == "write_not_implemented"
+        assert payload["would_allow"] is False
+
+    def test_post_all_gates_real_write_disabled_501(
+        self, http_server: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "outbox.approve",
+                "target_id": "123",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": False,
+            },
+        )
+        assert status == 501
+        assert payload["error"] == "real_write_disabled"
+        assert payload["write_executed"] is False
+        assert "business_writer_error" not in payload
+
+
+class TestEvaluateWriterDryRunContract:
+    """evaluate_writer_dry_run 单元测试(沿 v0.2.53.22 决策矩阵)."""
+
+    def test_writer_dry_run_path_3_5_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        status, payload = evaluate_writer_dry_run(
+            {
+                "action": "outbox.approve",
+                "target_id": "1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            }
+        )
+        assert status.value == 200
+        assert payload["writer_enabled"] is True
+        assert payload["approval_gate_passed"] is True
+        assert payload["write_executed"] is False
+
+    def test_real_write_disabled_when_dry_run_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        status, payload = evaluate_writer_dry_run(
+            {
+                "action": "outbox.approve",
+                "target_id": "1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": False,
+            }
+        )
+        assert status.value == 501
+        assert payload["error"] == "real_write_disabled"
+        assert payload["write_executed"] is False

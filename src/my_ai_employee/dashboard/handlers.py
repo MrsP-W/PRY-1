@@ -12,7 +12,7 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from my_ai_employee.dashboard.approval_gate import evaluate_approval_action_request
+from my_ai_employee.dashboard.approval_gate import evaluate_writer_dry_run
 from my_ai_employee.dashboard.business_writer import (
     SUPPORTED_ACTIONS,
     AuditContext,
@@ -111,13 +111,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if error_status is not None:
                 self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
                 return
-            status, decision = evaluate_approval_action_request(payload)
-            # v0.2.53.21 handler dry-run 接入 BusinessWriter(沿 v0.2.53.14 §8 + v0.2.53.19)
-            # 边界:
-            #   - 仅当 ApprovalGate 双门通过(approval_gate_passed=True) + dry_run=True 才合并 writer.dry_run
-            #   - 默认 writer 为 BusinessWriterStub(would_allow=False)
-            #   - 仍保证 write_executed=False(实际写入留 8/1 后 + 路径 4 启用)
-            decision = self._merge_writer_dry_run(payload, decision, status)
+            status, decision = evaluate_writer_dry_run(payload)
+            # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
+            if status == HTTPStatus.OK:
+                decision = self._merge_writer_dry_run(payload, decision)
             self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
             return
         self._method_not_allowed()
@@ -126,7 +123,6 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self,
         payload: dict[str, Any],
         decision: dict[str, Any],
-        status: HTTPStatus,
     ) -> dict[str, Any]:
         """v0.2.53.21 handler dry-run 接入 BusinessWriter — 合并 writer.dry_run 结果到 ApprovalGate 决策.
 

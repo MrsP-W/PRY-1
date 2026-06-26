@@ -19,25 +19,31 @@ from my_ai_employee.dashboard.business_writer import (
     WriteResult,
 )
 from my_ai_employee.dashboard.context import DashboardContext
-
-# ===== 测试用 handler(简化版,避免 BaseHTTPRequestHandler 复杂性)=====
-
-
-class _FakeHandler:
-    """模拟 DashboardHandler 的关键字段."""
-
-    def __init__(self, ctx: DashboardContext) -> None:
-        self.dashboard_context = ctx
+from my_ai_employee.dashboard.handlers import DashboardHandler
 
 
-# 直接测 _merge_writer_dry_run
-def _make_handler(ctx: DashboardContext) -> Any:
+def _make_handler(ctx: DashboardContext) -> DashboardHandler:
     """构造带 ctx 的 handler 用于 _merge_writer_dry_run 测试."""
-    from my_ai_employee.dashboard.handlers import DashboardHandler
-
     handler = DashboardHandler.__new__(DashboardHandler)
     handler.dashboard_context = ctx
     return handler
+
+
+def _decision(**overrides: Any) -> dict[str, Any]:
+    """构造 merge 测试用 decision dict."""
+    base: dict[str, Any] = {
+        "approval_gate_passed": True,
+        "dry_run": True,
+        "error": None,
+        "would_allow": False,
+        "write_executed": False,
+        "required": [],
+        "action": "outbox.approve",
+        "target_id": "123",
+        "audit": {"actor": "local_dashboard", "reason": "", "source": "dashboard"},
+    }
+    base.update(overrides)
+    return base
 
 
 class TestMergeWriterDryRunGuard:
@@ -47,18 +53,14 @@ class TestMergeWriterDryRunGuard:
         """approval_gate_passed=False → 不合并(decision 不变)."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": False,
-            "dry_run": True,
-            "error": "write_disabled",
-            "would_allow": False,
-            "write_executed": False,
-            "required": ["DASHBOARD_WRITE_API=1"],
-            "action": None,
-            "target_id": None,
-            "audit": {"actor": "local_dashboard", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(
+            approval_gate_passed=False,
+            error="write_disabled",
+            required=["DASHBOARD_WRITE_API=1"],
+            action=None,
+            target_id=None,
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged == decision
         assert "business_writer_error" not in merged
 
@@ -66,54 +68,24 @@ class TestMergeWriterDryRunGuard:
         """dry_run=False → 不合并(实际写入路径,留 8/1 后)."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": False,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": ["DASHBOARD_WRITE_API=1"],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {"actor": "local_dashboard", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(dry_run=False, required=["DASHBOARD_WRITE_API=1"])
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged == decision
 
     def test_no_merge_when_action_unsupported(self) -> None:
         """action 不在白名单 → 不合并."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": [],
-            "action": "unknown.action",
-            "target_id": "123",
-            "audit": {"actor": "local_dashboard", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(action="unknown.action")
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged == decision
 
     def test_no_merge_when_target_id_empty(self) -> None:
         """target_id 空 → 不合并."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": [],
-            "action": "outbox.approve",
-            "target_id": "",
-            "audit": {"actor": "local_dashboard", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(target_id="")
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged == decision
 
 
@@ -124,26 +96,15 @@ class TestMergeWriterDryRunWithStub:
         """默认 Stub writer dry_run 返回 would_allow=False."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": ["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {"actor": "local_dashboard", "reason": "用户点击审批", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
-        # Stub would_allow=False
+        decision = _decision(
+            required=["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
+            audit={"actor": "local_dashboard", "reason": "用户点击审批", "source": "dashboard"},
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged["would_allow"] is False
-        # business_writer_error="write_not_implemented"
         assert merged["business_writer_error"] == "write_not_implemented"
-        # required 合并新增
         assert "BUSINESS_WRITER_ENABLED=1" in merged["required"]
         assert "business_writer_implementation" in merged["required"]
-        # write_executed 保持 False(沿 v0.2.53.11 不变式)
         assert merged["write_executed"] is False
 
 
@@ -192,24 +153,15 @@ class TestMergeWriterDryRunWithMockWriter:
         """Mock writer dry_run 返回 would_allow=True 时合并."""
         ctx = DashboardContext().with_business_writer(self._MockAllowWriter())
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": ["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {"actor": "test_user", "reason": "unit_test", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(
+            required=["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
+            audit={"actor": "test_user", "reason": "unit_test", "source": "dashboard"},
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged["would_allow"] is True
         assert merged["business_writer_error"] is None
         assert merged["business_writer_reason"] == "mock: writer 就绪"
-        # required 新增 writer_ready
         assert "writer_ready" in merged["required"]
-        # write_executed 仍 False
         assert merged["write_executed"] is False
 
 
@@ -232,19 +184,11 @@ class TestMergeWriterDryRunExceptionIsolation:
         """writer 抛 RuntimeError → decision 不变(approval_gate 决策优先)."""
         ctx = DashboardContext().with_business_writer(self._BrokenWriter())
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": ["DASHBOARD_WRITE_API=1"],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {"actor": "test_user", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
-        # decision 不变(异常隔离)
+        decision = _decision(
+            required=["DASHBOARD_WRITE_API=1"],
+            audit={"actor": "test_user", "reason": "", "source": "dashboard"},
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged == decision
 
 
@@ -264,18 +208,12 @@ class TestMergeWriterDryRunAll4Actions:
         """4 类动作都通过白名单 + 触发 writer dry_run."""
         ctx = DashboardContext()
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": [],
-            "action": action,
-            "target_id": "test_target",
-            "audit": {"actor": "test_user", "reason": "test", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
+        decision = _decision(
+            action=action,
+            target_id="test_target",
+            audit={"actor": "test_user", "reason": "test", "source": "dashboard"},
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged["business_writer_error"] == "write_not_implemented"
         assert "BUSINESS_WRITER_ENABLED=1" in merged["required"]
 
@@ -289,19 +227,10 @@ class TestMergeWriterDryRunWriteExecutedInvariant:
             TestMergeWriterDryRunWithMockWriter._MockAllowWriter()
         )
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": [],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {"actor": "test_user", "reason": "", "source": "dashboard"},
-        }
-        merged = handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
-        # 即使 writer would_allow=True,write_executed 仍 False(dry-run 不真写)
+        decision = _decision(
+            audit={"actor": "test_user", "reason": "", "source": "dashboard"},
+        )
+        merged = handler._merge_writer_dry_run({}, decision)
         assert merged["would_allow"] is True
         assert merged["write_executed"] is False
 
@@ -335,23 +264,14 @@ class TestMergeWriterDryRunAuditContext:
 
         ctx = DashboardContext().with_business_writer(_CaptureWriter())
         handler = _make_handler(ctx)
-        decision = {
-            "approval_gate_passed": True,
-            "dry_run": True,
-            "error": None,
-            "would_allow": False,
-            "write_executed": False,
-            "required": [],
-            "action": "outbox.approve",
-            "target_id": "123",
-            "audit": {
+        decision = _decision(
+            audit={
                 "actor": "custom_actor",
                 "reason": "custom reason",
                 "source": "cli",
             },
-        }
-        handler._merge_writer_dry_run({}, decision, None)  # type: ignore[arg-type]
-        # captured audit 应包含 actor / reason / source
+        )
+        handler._merge_writer_dry_run({}, decision)
         assert len(captured_audit) == 1
         audit = captured_audit[0]
         assert audit.actor == "custom_actor"
