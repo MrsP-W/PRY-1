@@ -224,8 +224,15 @@ def evaluate_writer_dry_run(
     *,
     write_enabled: bool | None = None,
     writer_enabled: bool | None = None,
+    writer_impl_injected: bool | None = None,
 ) -> tuple[HTTPStatus, dict[str, Any]]:
     """v0.2.53.22 第三道门判定 — env+confirm 通过 + writer 启用时,返回可合并到 dry-run 的 200 决策.
+
+    v0.2.53.29 扩展:
+        - 新增 `writer_impl_injected` 参数(测试注入;None 时读 env)
+        - payload 暴露 3 字段(business_writer_env_enabled / impl_injected / ready)
+        - 路径 3 (501 write_not_implemented) 文案边界化:env 已开但 Impl 未注入时
+          reason 明确为「writer env only,需 DASHBOARD_REAL_DB=1 + session 成功」
 
     决策矩阵(沿 v0.2.53.19 §6.2):
         - 路径 1 (DASHBOARD_WRITE_API 未设):           403 write_disabled
@@ -238,6 +245,7 @@ def evaluate_writer_dry_run(
         payload: 同 evaluate_approval_action_request 的 JSON object body.
         write_enabled: 测试注入;None 时读 `DASHBOARD_WRITE_API`.
         writer_enabled: 测试注入;None 时读 `BUSINESS_WRITER_ENABLED`.
+        writer_impl_injected: 测试注入;None 时读 env(仅做文案边界提示,不影响 status code).
 
     Returns:
         `(HTTPStatus, payload)`. 所有返回都保证 `write_executed=False`.
@@ -254,6 +262,7 @@ def evaluate_writer_dry_run(
 
     # 路径 3:env+confirm 通过,writer 未启用 → 501 write_not_implemented
     if not writer_on:
+        # v0.2.53.29 路径 3 default:env 未开 → 沿默认文案
         return _decision(
             HTTPStatus.NOT_IMPLEMENTED,
             error="write_not_implemented",
@@ -265,6 +274,32 @@ def evaluate_writer_dry_run(
             payload=payload,
             would_allow=False,
             approval_gate_passed=True,
+            writer_env_enabled=writer_on,
+            writer_impl_injected=writer_impl_injected,
+        )
+
+    # v0.2.53.29 路径 3.5-pre:env 已开 + Impl 未注入(可能因 DASHBOARD_REAL_DB 未开 /
+    #   session_factory 失败 / BusinessWriterImpl 构造失败) → 501 env_only marker,
+    #   文案明确指出需 DASHBOARD_REAL_DB=1 + session 成功 + Impl 构造成功。
+    # 触发条件:caller 显式传 writer_impl_injected=False(沿 handler 透传 ctx)
+    if writer_impl_injected is False:
+        return _decision(
+            HTTPStatus.NOT_IMPLEMENTED,
+            error="write_not_implemented",
+            reason=(
+                "ApprovalGate 双门已通过,但 BusinessWriter env 已开且 Impl 未注入;"
+                "需 DASHBOARD_REAL_DB=1 + session 成功 + BusinessWriterImpl 构造成功。"
+            ),
+            write_enabled=enabled,
+            action=parsed.action,
+            target_id=parsed.target_id,
+            dry_run=parsed.dry_run,
+            payload=payload,
+            would_allow=False,
+            approval_gate_passed=True,
+            writer_enabled=writer_on,
+            writer_env_enabled=writer_on,
+            writer_impl_injected=writer_impl_injected,
         )
 
     # 路径 3.5-dry_run_false:实际写入路径留 8/1 后
@@ -281,6 +316,8 @@ def evaluate_writer_dry_run(
             would_allow=False,
             approval_gate_passed=True,
             writer_enabled=True,
+            writer_env_enabled=True,
+            writer_impl_injected=writer_impl_injected,
         )
 
     # 路径 3.5 dry_run=True:writer dry-run 入口(handler._merge_writer_dry_run 进一步合并)
@@ -296,6 +333,8 @@ def evaluate_writer_dry_run(
         would_allow=False,  # 由 writer.dry_run 决定(handler 合并后覆盖)
         approval_gate_passed=True,
         writer_enabled=True,
+        writer_env_enabled=True,
+        writer_impl_injected=writer_impl_injected,
     )
 
 
@@ -312,7 +351,15 @@ def _decision(
     would_allow: bool = False,
     approval_gate_passed: bool = False,
     writer_enabled: bool = False,
+    writer_env_enabled: bool | None = None,
+    writer_impl_injected: bool | None = None,
 ) -> tuple[HTTPStatus, dict[str, Any]]:
+    """构造 ApprovalGate 决策 payload.
+
+    v0.2.53.29 扩展:
+        - payload 暴露 3 字段(business_writer_env_enabled / impl_injected / ready)
+        - writer_impl_injected=None 时表示未追踪(默认 writer_env 不开路径);不为 None 时计算 ready = env AND injected
+    """
     contract = ACTION_CONTRACTS.get(action)
     action_contract: dict[str, str] | None = None
     if contract is not None:
@@ -328,6 +375,8 @@ def _decision(
     if not writer_enabled:
         required.append(BUSINESS_WRITER_ENABLED_ENV + "=1")
         required.append("business_writer_implementation")
+    # v0.2.53.29 计算 ready(沿 v0.2.53.28 语义,context.is_business_writer_ready = env AND injected)
+    writer_ready = bool(writer_env_enabled) and bool(writer_impl_injected)
     return (
         status,
         {
@@ -335,6 +384,9 @@ def _decision(
             "read_only": True,
             "write_enabled": write_enabled,
             "writer_enabled": writer_enabled,
+            "business_writer_env_enabled": bool(writer_env_enabled),
+            "business_writer_impl_injected": bool(writer_impl_injected),
+            "business_writer_ready": writer_ready,
             "write_executed": False,
             "would_allow": would_allow,
             "approval_gate_passed": approval_gate_passed,

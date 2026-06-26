@@ -699,7 +699,7 @@
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
           <span class="pill"><span class="dot" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 检测中</span></span>
-          <span class="pill">v0.2.53.26</span>
+          <span class="pill">v0.2.53.29</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -899,7 +899,7 @@
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>审批门(三门联调 · v0.2.53.26)</h3>
+                <h3>审批门(三门联调 · v0.2.53.28 system + v0.2.53.29 inspector)</h3>
                 <div class="gate-list">
                   <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag" id="system-gate-first">检测中</span></div>
                   <div class="gate"><strong>第二道 confirm_text</strong><span class="tag" id="system-gate-second">每动作需 confirm</span></div>
@@ -1060,7 +1060,9 @@
                 <div class="gate"><strong>HTTP</strong><span class="tag" id="dry-run-http">—</span></div>
                 <div class="gate"><strong>write_executed</strong><span class="tag green" id="dry-run-executed">false</span></div>
                 <div class="gate"><strong>双门</strong><span class="tag" id="dry-run-approval-gate" data-tone="red">未通过</span></div>
-                <div class="gate"><strong>Writer</strong><span class="tag" id="dry-run-writer-enabled" data-tone="red">未启用</span></div>
+                <div class="gate"><strong>Writer env</strong><span class="tag" id="dry-run-writer-env" data-tone="red">—</span></div>
+                <div class="gate"><strong>Writer Impl</strong><span class="tag" id="dry-run-writer-impl" data-tone="red">—</span></div>
+                <div class="gate"><strong>Writer ready</strong><span class="tag" id="dry-run-writer-ready" data-tone="red">—</span></div>
                 <div class="gate"><strong>would_allow</strong><span class="tag" id="dry-run-would-allow" data-tone="red">false</span></div>
               </div>
               <p class="tiny" id="dry-run-reason" style="margin: 10px 0 0">点击 Mail / Notes / Finance 队列中的 dry-run 按钮,只展示拒写原因,不写 DB。</p>
@@ -1487,8 +1489,13 @@
         // v0.2.53.22 HTML inspector 升级:approval_gate_passed / writer_enabled / would_allow 三 badge
         const gatePassed = payload.approval_gate_passed === true;
         setTag("dry-run-approval-gate", gatePassed ? "通过" : "未通过", gatePassed ? "green" : "red");
-        const writerEnabled = payload.writer_enabled === true;
-        setTag("dry-run-writer-enabled", writerEnabled ? "已启用" : "未启用", writerEnabled ? "green" : "red");
+        // v0.2.53.29 inspector 升级:writer 拆为 3 badge(env / Impl / ready)
+        const writerEnv = payload.business_writer_env_enabled === true;
+        const writerImpl = payload.business_writer_impl_injected === true;
+        const writerReady = payload.business_writer_ready === true;
+        setTag("dry-run-writer-env", writerEnv ? "已开" : "未开", writerEnv ? "green" : "red");
+        setTag("dry-run-writer-impl", writerImpl ? "已注入" : "未注入", writerImpl ? "green" : "red");
+        setTag("dry-run-writer-ready", writerReady ? "true" : "false", writerReady ? "green" : "red");
         const wouldAllow = payload.would_allow === true;
         setTag("dry-run-would-allow", wouldAllow ? "true" : "false", wouldAllow ? "green" : "red");
         const reason = payload.reason ?? payload.error ?? "无拒写原因";
@@ -1498,6 +1505,9 @@
           reason: payload.reason ?? null,
           write_enabled: payload.write_enabled ?? null,
           writer_enabled: payload.writer_enabled ?? null,
+          business_writer_env_enabled: payload.business_writer_env_enabled ?? null,
+          business_writer_impl_injected: payload.business_writer_impl_injected ?? null,
+          business_writer_ready: payload.business_writer_ready ?? null,
           write_executed: payload.write_executed ?? false,
           approval_gate_passed: payload.approval_gate_passed ?? false,
           would_allow: payload.would_allow ?? false,

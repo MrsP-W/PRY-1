@@ -357,3 +357,156 @@ class TestEvaluateWriterDryRunContract:
         assert status.value == 501
         assert payload["error"] == "real_write_disabled"
         assert payload["write_executed"] is False
+
+
+class TestEvaluateWriterDryRunThreeField:
+    """v0.2.53.29 evaluate_writer_dry_run 暴露 3 字段测试(env / impl / ready).
+
+    边界:
+        - default:env=False / impl=False / ready=False + 文案默认(无 DASHBOARD_REAL_DB 提示)
+        - env_only:env=True / impl=False / ready=False + 文案边界化(需 DASHBOARD_REAL_DB=1)
+        - all_open:env=True / impl=True / ready=True + 200 OK
+        - writer_impl_injected=None:沿用默认文案(bool(None)=False)
+    """
+
+    def test_default_payload_exposes_3_fields_all_false(self) -> None:
+        """默认 403 响应也含 3 字段(全 False,沿 _decision 暴露)."""
+        status, payload = evaluate_approval_action_request(
+            {"action": "outbox.approve", "target_id": "1"}
+        )
+        assert status.value == 403
+        assert payload["business_writer_env_enabled"] is False
+        assert payload["business_writer_impl_injected"] is False
+        assert payload["business_writer_ready"] is False
+
+    def test_env_only_marker_in_reason(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """env 已开 + Impl 未注入 → 501 + reason 包含「BusinessWriter env 已开且 Impl 未注入」边界文案."""
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        status, payload = evaluate_writer_dry_run(
+            {
+                "action": "notes.confirm",
+                "target_id": "note-1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+            writer_enabled=True,
+            writer_impl_injected=False,
+        )
+        assert status.value == 501
+        assert payload["error"] == "write_not_implemented"
+        assert "BusinessWriter env 已开且 Impl 未注入" in payload["reason"]
+        assert "DASHBOARD_REAL_DB=1" in payload["reason"]
+        assert payload["business_writer_env_enabled"] is True
+        assert payload["business_writer_impl_injected"] is False
+        assert payload["business_writer_ready"] is False
+
+    def test_impl_injected_payload_3_fields_all_true(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """env + Impl 都注入 → ready=True + 3 字段全 True + 200 OK."""
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        status, payload = evaluate_writer_dry_run(
+            {
+                "action": "outbox.approve",
+                "target_id": "1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+            writer_enabled=True,
+            writer_impl_injected=True,
+        )
+        assert status.value == 200
+        assert payload["business_writer_env_enabled"] is True
+        assert payload["business_writer_impl_injected"] is True
+        assert payload["business_writer_ready"] is True
+        assert payload["approval_gate_passed"] is True
+
+    def test_writer_impl_injected_none_uses_200_default(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """writer_impl_injected=None(默认) → 走默认 200 路径(不触发 env_only 边界).
+
+        边界(沿撞坑 #65 + v0.2.53.22):
+            - writer_impl_injected is False → env_only marker(501)
+            - writer_impl_injected is None → 沿默认 200(caller 没追踪,沿用原行为)
+        """
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        status, payload = evaluate_writer_dry_run(
+            {
+                "action": "notes.confirm",
+                "target_id": "note-1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+            writer_enabled=True,
+            # writer_impl_injected 默认 None
+        )
+        assert status.value == 200
+        # None 不算 env_only → 走默认 200 路径(三门已通过文案)
+        assert "BusinessWriter env 已开且 Impl 未注入" not in payload["reason"]
+        assert "ApprovalGate 三门已通过" in payload["reason"]
+        # bool(None)=False,所以 3 字段仍全 False
+        assert payload["business_writer_impl_injected"] is False
+        assert payload["business_writer_ready"] is False
+
+
+class TestApprovalGateWriterDryRunHttpThreeField:
+    """v0.2.53.29 HTTP POST 暴露 3 字段测试(handler 透传 ctx)."""
+
+    def test_post_default_forbidden_payload_exposes_3_fields(self, http_server: str) -> None:
+        """403 默认禁写响应也含 3 字段(全 False)."""
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {"action": "outbox.approve", "target_id": "1"},
+        )
+        assert status == 403
+        assert payload["error"] == "write_disabled"
+        assert payload["business_writer_env_enabled"] is False
+        assert payload["business_writer_impl_injected"] is False
+        assert payload["business_writer_ready"] is False
+
+    def test_post_env_only_marker_in_http_reason(
+        self, http_server: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """HTTP POST:env 开 + ctx 默认 stub(impl=False)→ 501 + 边界文案."""
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "notes.confirm",
+                "target_id": "note-1",
+                "confirm_text": CONFIRM_TEXT,
+                "dry_run": True,
+            },
+        )
+        assert status == 501
+        assert payload["error"] == "write_not_implemented"
+        # handler ctx.is_business_writer_impl_injected() == False (默认 stub)
+        assert "BusinessWriter env 已开且 Impl 未注入" in payload["reason"]
+        assert "DASHBOARD_REAL_DB=1" in payload["reason"]
+        assert payload["business_writer_env_enabled"] is True
+        assert payload["business_writer_impl_injected"] is False
+        assert payload["business_writer_ready"] is False
+
+    def test_post_all_gates_payload_exposes_3_fields(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """HTTP POST:env + Impl 都注入(handler ctx)→ ready=True + 3 字段全 True + 200 OK."""
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        ctx = DashboardContext().with_business_writer(BusinessWriterImpl())
+        for base_url in _serve_dashboard(ctx):
+            status, payload = _post_json(
+                f"{base_url}/api/approval-gate/actions",
+                {
+                    "action": "outbox.approve",
+                    "target_id": "1",
+                    "confirm_text": CONFIRM_TEXT,
+                    "dry_run": True,
+                },
+            )
+        assert status == 200
+        assert payload["business_writer_env_enabled"] is True
+        assert payload["business_writer_impl_injected"] is True
+        assert payload["business_writer_ready"] is True
+        assert payload["approval_gate_passed"] is True
+        assert payload["write_executed"] is False

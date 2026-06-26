@@ -111,8 +111,15 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if error_status is not None:
                 self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
                 return
-            writer_ready = self.dashboard_context.is_business_writer_ready()
-            status, decision = evaluate_writer_dry_run(payload, writer_enabled=writer_ready)
+            # v0.2.53.29 POST 传 3 字段(env / impl / ready)给 evaluate_writer_dry_run,
+            # 让响应 payload 暴露 3 字段,前端 inspector 可逐字段展示 + 501 文案边界化
+            writer_env = self.dashboard_context.is_business_writer_env_enabled()
+            writer_impl = self.dashboard_context.is_business_writer_impl_injected()
+            status, decision = evaluate_writer_dry_run(
+                payload,
+                writer_enabled=writer_env,
+                writer_impl_injected=writer_impl,
+            )
             # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
             if status == HTTPStatus.OK:
                 decision = self._merge_writer_dry_run(decision)
