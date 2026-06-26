@@ -105,7 +105,10 @@ def session_factory(db_with_schema: Database) -> Any:
 
 
 def test_twelve_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 12 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile, mirror schema.sql)。"""
+    """Base.metadata 注册了 13 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile + 1 v0.2.53.16 anomaly_dismissals, mirror schema.sql)。"""
+    from my_ai_employee.db.anomaly_dismissals import (
+        AnomalyDismissal,  # noqa: F401  # 触发 anomaly_dismissals 表注册(v0.2.53.16)
+    )
     from my_ai_employee.db.blacklist import (
         RecipientBlacklist,  # noqa: F401  # 触发 recipient_blacklist 表注册(B4.1)
     )
@@ -128,6 +131,7 @@ def test_twelve_models_registered_in_metadata() -> None:
             "notes",
             "recipient_blacklist",
             "merchant_profile",
+            "anomaly_dismissals",
         ]
     )
 
