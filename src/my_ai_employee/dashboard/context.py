@@ -48,6 +48,12 @@ KeychainProbe = Callable[[str], bool]
 #   - "1" / "true" / "yes" → 尝试注入 Outbox / NoteConfirm / Expense 真实 Impl
 _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
 
+# v0.2.53.27 opt-in BusinessWriterImpl env 门控(沿 DASHBOARD_REAL_DB=1 范本)
+#   - 未设或 "0" / "false" / "no" → 默认 BusinessWriterStub(沿 v0.2.53.18 行为)
+#   - "1" / "true" / "yes" → 尝试注入 BusinessWriterImpl(session_factory)
+#   - 单项失败静默降级 Stub(沿 v0.2.53.8 单项失败降级范本)
+_BUSINESS_WRITER_ENABLED_ENV = "BUSINESS_WRITER_ENABLED"
+
 
 @dataclass(slots=True)
 class DashboardContext:
@@ -95,6 +101,15 @@ class DashboardContext:
         expense = _try_build_expense_from_session_factory(session_factory)
         if expense is not None:
             ctx = ctx.with_expense(expense)
+        # v0.2.53.27 opt-in BusinessWriterImpl(沿 DASHBOARD_REAL_DB=1 范本)
+        #   - BUSINESS_WRITER_ENABLED 未设 → 保持默认 BusinessWriterStub(沿 v0.2.53.18)
+        #   - 已设 + session_factory 可用 → 尝试注入 Impl
+        #   - 任一失败 → 静默降级 Stub(沿 v0.2.53.8 单项失败降级)
+        #   - write_executed 恒 False(沿 v0.2.53.11 不变式,Impl 默认 raise)
+        if _is_business_writer_enabled():
+            writer = _try_build_business_writer_from_session_factory(session_factory)
+            if writer is not None:
+                ctx = ctx.with_business_writer(writer)
         return ctx
 
     def with_outbox_drafts(self, service: OutboxDraftService) -> DashboardContext:
@@ -168,6 +183,18 @@ def _is_real_db_enabled() -> bool:
     return raw in {"1", "true", "yes", "on"}
 
 
+def _is_business_writer_enabled() -> bool:
+    """`BUSINESS_WRITER_ENABLED=1` opt-in 判定 — 仅识别 truthy 字面量,避免意外触发.
+
+    边界(沿 v0.2.53.27):
+        - 未设 → 默认 BusinessWriterStub(沿 v0.2.53.18 行为不变)
+        - 设 truthy → DashboardContext.default() 尝试注入 BusinessWriterImpl
+        - 与 `DASHBOARD_REAL_DB` 解耦:即使 DB opt-in 未开,也可显式开 writer(opt-in 失败 → Stub)
+    """
+    raw = os.environ.get(_BUSINESS_WRITER_ENABLED_ENV, "").strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 def _try_build_real_session_factory() -> Any | None:
     """打开 SQLCipher DB 并返回 sessionmaker;失败返回 None(降级 Stub).
 
@@ -236,6 +263,25 @@ def _try_build_expense_from_session_factory(session_factory: Any) -> ExpenseServ
             anomaly_detector=detector,
         )
     except Exception:  # noqa: BLE001
+        return None
+
+
+def _try_build_business_writer_from_session_factory(
+    session_factory: Any,
+) -> Any | None:
+    """v0.2.53.27 opt-in BusinessWriterImpl 构造 — 失败返回 None 降级 Stub.
+
+    边界(沿 v0.2.53.27 + v0.2.53.17 + v0.2.53.18):
+        - 构造只注入 session_factory(其他依赖可选,None 表示不接)
+        - 任一 ImportError / Exception → 静默降级 None(由 caller 走默认 Stub)
+        - 不接 SMTP / 不读 Keychain 明文 / 不真写 DB
+        - Impl 4 类动作方法默认 raise NotImplementedError(handler 路径 4 启用前)
+    """
+    try:
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+
+        return BusinessWriterImpl(session_factory=session_factory)
+    except Exception:  # noqa: BLE001 — 单项失败静默降级,不阻塞 Dashboard
         return None
 
 

@@ -808,7 +808,7 @@ def test_on_system_health_notification(fake_rumps: None, monkeypatch: pytest.Mon
     app_module._notification_func.assert_called_once()
     call_args = app_module._notification_func.call_args
     assert call_args[0][0] == "系统健康"
-    assert "2496 passed" in call_args[0][2]
+    assert "2506 passed" in call_args[0][2]
     assert "abc123" in call_args[0][2]
 
 
