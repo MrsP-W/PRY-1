@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.53.12 ApprovalGate dry-run 按钮联调(2026-06-26)
 
 > **最后更新**:2026-06-26 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调 已落地** — Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` · API 离线静态兜底 · 全路径 `write_executed=false`。**质量门**:**2399 passed / 1 skipped / 88.53%** / mypy --strict 0 errors(**223 files**) / ruff + format 全绿 / MD lint **161 files** 0 errors。**下一棒**:business writer 设计 / Keychain SMTP / 8/1 截点。
+> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调 已落地** — Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` · API 离线静态兜底 · 全路径 `write_executed=false`。**质量门**:**2399 passed / 1 skipped / 88.51%** / mypy --strict 0 errors(**223 files**) / ruff + format 全绿 / MD lint **161 files** 0 errors。**下一棒**:business writer 设计 / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2399 passed / 1 skipped** · **88.53%** coverage · mypy --strict 0 errors(**223 files**) · MD lint **161 files** 0 errors |
+| 核心质量门 | **2399 passed / 1 skipped** · **88.51%** coverage · mypy --strict 0 errors(**223 files**) · MD lint **161 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

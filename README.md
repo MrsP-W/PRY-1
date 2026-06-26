@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调**(2026-06-26 · Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` 拒写原因 · API 离线静态兜底 · 全路径 `write_executed=false`)。**质量门**:**2399 passed / 1 skipped / 88.53%** / mypy --strict 0 errors(**223 files**) / ruff 全绿 / format 237 files / **MD lint 161 files** 0 errors。**下一棒**:business writer 设计 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.12 ApprovalGate dry-run 按钮联调**(2026-06-26 · Mail/Notes/Finance 队列 dry-run 按钮 · inspector 展示 `403 write_disabled` 拒写原因 · API 离线静态兜底 · 全路径 `write_executed=false`)。**质量门**:**2399 passed / 1 skipped / 88.51%** / mypy --strict 0 errors(**223 files**) / ruff 全绿 / format 237 files / **MD lint 161 files** 0 errors。**下一棒**:business writer 设计 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.84%,fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2399 passed / 1 skipped / 88.51% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(2273 passed / 1 skipped,覆盖率 88.84%,fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2399 passed / 1 skipped / 88.51% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
