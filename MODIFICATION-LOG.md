@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26):v0.2.53.21 handler 接入 BusinessWriter dry-run + v0.2.53.22 第三道门 `BUSINESS_WRITER_ENABLED` env 严判 + v0.2.53.23 HTML inspector 三 badge + v0.2.53.24 Calendar/Settings 占位页升级 + v0.2.53.25 docs 三入口实测基线同步。**2493 passed / 1 skipped / 88.75%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.26 HTML dry-run 三门结果展示联调 / outlook+gmail Keychain SMTP / 8/1 截点 |
+| **当前阶段** | ✅ `v0.2.53.26` HTML dry-run 三门结果展示联调(2026-06-26):`responses.build_status_payload` + 4 字段 + helper `_dry_run_three_gate_status()` + 3 tests 覆盖 3 态(disabled / writer_required / dry_run_ready)+ HTML 三门面板 + 顶部 status strip 升级到 v0.2.53.26 + docs 三入口实测基线同步。**2496 passed / 1 skipped / 88.76%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.27 BusinessWriterImpl opt-in 注入 / outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
 | **上一阶段** | ✅ `v0.2.53.24` Calendar/Settings 占位页升级(2026-06-26 · `82356b3` · 1 file / +13 -0 · CalDAV 未接入说明 + Keychain present/missing 4 类别) |
 | **上一阶段** | ✅ `v0.2.53.23` HTML inspector 三 badge(2026-06-26 · `41cf8d1` · 1 file / +13 -0 · 双门 / Writer / would_allow) |
 | **上一阶段** | ✅ `v0.2.53.22` 第三道门 `BUSINESS_WRITER_ENABLED`(2026-06-26 · `e1184c4` · `evaluate_writer_dry_run` 8 路径决策矩阵) |
@@ -95,7 +96,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.25:**2493 passed / 1 skipped** / **88.75%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.26:**2496 passed / 1 skipped** / **88.76%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 

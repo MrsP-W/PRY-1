@@ -698,7 +698,8 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill">v0.2.53.12</span>
+          <span class="pill"><span class="dot" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 检测中</span></span>
+          <span class="pill">v0.2.53.26</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -895,6 +896,15 @@
                   <div class="gate"><strong>HEAD</strong><span class="tag" id="system-head">unknown</span></div>
                   <div class="gate"><strong>tag</strong><span class="tag">v0.1.0 anchored</span></div>
                   <div class="gate"><strong>v0.2.x tag</strong><span class="tag red">不打</span></div>
+                </div>
+              </div>
+              <div class="card card-pad">
+                <h3>审批门(三门联调 · v0.2.53.26)</h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag" id="system-gate-first">检测中</span></div>
+                  <div class="gate"><strong>第二道 confirm_text</strong><span class="tag" id="system-gate-second">ready</span></div>
+                  <div class="gate"><strong>第三道 BUSINESS_WRITER_ENABLED</strong><span class="tag" id="system-gate-third">检测中</span></div>
+                  <div class="gate"><strong>Dry-run 当前结果</strong><span class="tag" id="system-dry-run-outcome">检测中</span></div>
                 </div>
               </div>
               <div class="card card-pad">
@@ -1336,20 +1346,56 @@
           (name) => keychain[name] === "present",
         ).length;
         const realSmtp = approval.real_smtp === true;
+        const writeApi = approval.dashboard_write_api === true;
+        const writerEnabled = approval.business_writer_enabled === true;
+        const dryRunStatus = approval.v0_2_53_26_dry_run_status ?? null;
         setText("system-head", payload.git_head ?? "unknown");
         setText("system-pytest", quality.pytest ?? "unknown");
         setText("system-mypy", quality.mypy ?? "unknown");
         setText("system-lint", quality.lint ?? "unknown");
         setText("header-quality", quality.pytest ? "质量门已读取" : "质量门未知");
         setTag("gate-smtp", realSmtp ? "可发送" : "禁用", realSmtp ? "green" : "red");
-        setTag("gate-approval", approval.dashboard_write_api ? "设计态开启" : "禁写", approval.dashboard_write_api ? "green" : "red");
+        setTag("gate-approval", writeApi ? "设计态开启" : "禁写", writeApi ? "green" : "red");
         setTag("system-smtp-real", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
         setTag("inspect-real-network", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
-        setTag("inspect-approval", approval.dashboard_write_api ? "enabled" : "disabled", approval.dashboard_write_api ? "green" : "red");
+        setTag("inspect-approval", writeApi ? "enabled" : "disabled", writeApi ? "green" : "red");
         setTag("gate-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
         setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
         setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");
         setText("header-keychain", `${presentCount}/3 Keychain`);
+        // v0.2.53.26 三门联调状态展示
+        renderDryRunThreeGate(dryRunStatus, writeApi, writerEnabled);
+      }
+
+      function renderDryRunThreeGate(dryRunStatus, writeApi, writerEnabled) {
+        const outcome = dryRunStatus?.outcome ?? "unknown";
+        const labelMap = {
+          disabled: { text: "Dry-run 禁写(默认)", tone: "red" },
+          needs_confirmation: { text: "Dry-run 需 confirm_text", tone: "yellow" },
+          writer_required: { text: "Dry-run writer 未启用", tone: "yellow" },
+          dry_run_ready: { text: "Dry-run 三门已就绪", tone: "green" },
+          unknown: { text: "Dry-run 状态未知", tone: "yellow" },
+        };
+        const meta = labelMap[outcome] ?? labelMap.unknown;
+        const dot = document.getElementById("header-dry-run-dot");
+        if (dot) {
+          dot.classList.remove("green", "yellow", "red");
+          dot.classList.add(meta.tone);
+        }
+        setText("header-dry-run", meta.text);
+        // 系统健康页 3 门 gate
+        const firstGate = document.getElementById("system-gate-first");
+        const thirdGate = document.getElementById("system-gate-third");
+        const dryRunSystem = document.getElementById("system-dry-run-outcome");
+        if (firstGate) {
+          setTag("system-gate-first", writeApi ? "open" : "closed", writeApi ? "green" : "red");
+        }
+        if (thirdGate) {
+          setTag("system-gate-third", writerEnabled ? "open" : "closed", writerEnabled ? "green" : "red");
+        }
+        if (dryRunSystem) {
+          setText("system-dry-run-outcome", meta.text);
+        }
       }
 
       async function fetchJson(path) {
