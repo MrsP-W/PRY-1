@@ -79,11 +79,11 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.20` HTML 实写 audit log 落档设计稿(2026-06-26 · 6 阶段路线收口):v0.2.53.15-18 实施完成(BusinessWriter Protocol + Stub + Impl + DashboardContext 集成)+ v0.2.53.19-20 docs-only 设计稿。**2475 passed / 1 skipped / 88.50%** / mypy strict 0 / **114 files** / MD lint **164 files**。**下一棒**:v0.2.53.21 handler 接入 BusinessWriter dry-run / Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.18` DashboardContext.with_business_writer() + resolve_business_writer()(2026-06-26 · `4463796` · 2 files / +146 / 9 tests) |
-| **上一阶段** | ✅ `v0.2.53.17` BusinessWriterImpl 接入骨架(2026-06-26 · `cdd619e` · 2 files / +379 / 20 tests · 默认 raise NotImplementedError) |
-| **上一阶段** | ✅ `v0.2.53.16` AnomalyDismissalService Protocol + Stub + 0015 alembic migration(2026-06-26 · `dc1544b` · 8 files / +551 -9 / 18 tests · head 推 0015) |
-| **上一阶段** | ✅ `v0.2.53.15` BusinessWriter Protocol + Stub + AuditContext + WriteResult/Decision(2026-06-26 · `896025e` · 3 files / +558 -1 / 29 tests) |
+| **当前阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26):v0.2.53.21 handler 接入 BusinessWriter dry-run + v0.2.53.22 第三道门 `BUSINESS_WRITER_ENABLED` env 严判 + v0.2.53.23 HTML inspector 三 badge + v0.2.53.24 Calendar/Settings 占位页升级 + v0.2.53.25 docs 三入口实测基线同步。**2493 passed / 1 skipped / 88.75%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.26 HTML dry-run 三门结果展示联调 / outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.24` Calendar/Settings 占位页升级(2026-06-26 · `82356b3` · 1 file / +13 -0 · CalDAV 未接入说明 + Keychain present/missing 4 类别) |
+| **上一阶段** | ✅ `v0.2.53.23` HTML inspector 三 badge(2026-06-26 · `41cf8d1` · 1 file / +13 -0 · 双门 / Writer / would_allow) |
+| **上一阶段** | ✅ `v0.2.53.22` 第三道门 `BUSINESS_WRITER_ENABLED`(2026-06-26 · `e1184c4` · `evaluate_writer_dry_run` 8 路径决策矩阵) |
+| **上一阶段** | ✅ `v0.2.53.21` handler 接入 BusinessWriter dry-run(2026-06-26 · `b3fba72` · `_merge_writer_dry_run` + 异常隔离 + 13 tests) |
 | **上一阶段** | ✅ `v0.2.53.12` ApprovalGate dry-run 按钮联调(2026-06-26) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
@@ -95,7 +95,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.20:**2475 passed / 1 skipped** / **88.50%** / mypy strict 0 / **114 files** / MD lint **164 files** |
+| **质量基线** | v0.2.53.25:**2493 passed / 1 skipped** / **88.75%** / mypy strict 0 / **116 files** / MD lint **164 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
