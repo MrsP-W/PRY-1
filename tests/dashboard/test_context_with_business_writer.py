@@ -35,6 +35,13 @@ class TestDefaultBusinessWriter:
 class TestWithBusinessWriterImmutable:
     """with_business_writer() 不可变更新(沿 #64 公共 API 范本)."""
 
+    def test_with_business_writer_stub_not_counted_as_impl(self) -> None:
+        """显式注入 BusinessWriterStub 不算 Impl 已注入(v0.2.53.30)."""
+        ctx = DashboardContext().with_business_writer(BusinessWriterStub())
+        assert ctx.business_writer is not None
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
+
     def test_with_business_writer_returns_new_ctx(self) -> None:
         """with_business_writer() 返回新 ctx(原 ctx 不变)."""
         ctx = DashboardContext()

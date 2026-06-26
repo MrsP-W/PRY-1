@@ -336,7 +336,9 @@ class TestEvaluateWriterDryRunContract:
                 "target_id": "1",
                 "confirm_text": CONFIRM_TEXT,
                 "dry_run": True,
-            }
+            },
+            writer_enabled=True,
+            writer_impl_injected=True,
         )
         assert status.value == 200
         assert payload["writer_enabled"] is True
@@ -352,7 +354,9 @@ class TestEvaluateWriterDryRunContract:
                 "target_id": "1",
                 "confirm_text": CONFIRM_TEXT,
                 "dry_run": False,
-            }
+            },
+            writer_enabled=True,
+            writer_impl_injected=True,
         )
         assert status.value == 501
         assert payload["error"] == "real_write_disabled"
@@ -366,7 +370,7 @@ class TestEvaluateWriterDryRunThreeField:
         - default:env=False / impl=False / ready=False + 文案默认(无 DASHBOARD_REAL_DB 提示)
         - env_only:env=True / impl=False / ready=False + 文案边界化(需 DASHBOARD_REAL_DB=1)
         - all_open:env=True / impl=True / ready=True + 200 OK
-        - writer_impl_injected=None:沿用默认文案(bool(None)=False)
+        - writer_impl_injected=None:保守 501(不返回 200)
     """
 
     def test_default_payload_exposes_3_fields_all_false(self) -> None:
@@ -419,14 +423,14 @@ class TestEvaluateWriterDryRunThreeField:
         assert payload["business_writer_ready"] is True
         assert payload["approval_gate_passed"] is True
 
-    def test_writer_impl_injected_none_uses_200_default(
+    def test_writer_impl_injected_none_conservative_501(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        """writer_impl_injected=None(默认) → 走默认 200 路径(不触发 env_only 边界).
+        """writer_impl_injected=None(默认) → 保守 501(不返回 200 dry-run-ready).
 
-        边界(沿撞坑 #65 + v0.2.53.22):
-            - writer_impl_injected is False → env_only marker(501)
-            - writer_impl_injected is None → 沿默认 200(caller 没追踪,沿用原行为)
+        边界(v0.2.53.30):
+            - writer_impl_injected is not True → env_only marker(501)
+            - 仅 writer_impl_injected is True 才进入路径 3.5 dry_run 200
         """
         monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
         status, payload = evaluate_writer_dry_run(
@@ -439,11 +443,10 @@ class TestEvaluateWriterDryRunThreeField:
             writer_enabled=True,
             # writer_impl_injected 默认 None
         )
-        assert status.value == 200
-        # None 不算 env_only → 走默认 200 路径(三门已通过文案)
-        assert "BusinessWriter env 已开且 Impl 未注入" not in payload["reason"]
-        assert "ApprovalGate 三门已通过" in payload["reason"]
-        # bool(None)=False,所以 3 字段仍全 False
+        assert status.value == 501
+        assert payload["error"] == "write_not_implemented"
+        assert "BusinessWriter env 已开且 Impl 未注入" in payload["reason"]
+        assert payload["business_writer_env_enabled"] is True
         assert payload["business_writer_impl_injected"] is False
         assert payload["business_writer_ready"] is False
 

@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.29` HTML inspector 三字段联调收口(2026-06-26):POST payload 暴露 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段 + HTML inspector 升级 3 badge + 路径 3.5-pre env_only marker 501 文案边界化(明确指出需 `DASHBOARD_REAL_DB=1` + session 成功 + Impl 构造成功)+ 撞坑 #68 决策矩阵与可视化拆分模式。**2515 passed / 1 skipped / 88.79%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.28` BusinessWriter 第三门真实状态收口(2026-06-26 · docs-only · status/POST 以 `business_writer_ready` 为准 + 三字段暴露 + `DASHBOARD_REAL_DB` 前置语义修正) |
+| **当前阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固 + 状态口径同步(2026-06-26):`BusinessWriterImpl.is_runtime_impl` marker + `is_business_writer_impl_injected()` 显式识别 Impl + `evaluate_writer_dry_run()` 除非 `writer_impl_injected is True` 否则保守 501。**2515 passed / 1 skipped / 88.77%** / mypy strict 0 / **235 files** / MD lint **167 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.29` HTML inspector 三字段联调收口(2026-06-26 · POST payload 三字段 + inspector 3 badge + 路径 3.5-pre env_only 501 文案边界化) |
 | **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
 | **上一阶段** | ✅ `v0.2.53.24` Calendar/Settings 占位页升级(2026-06-26 · `82356b3` · 1 file / +13 -0 · CalDAV 未接入说明 + Keychain present/missing 4 类别) |
@@ -98,7 +98,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.29:**2515 passed / 1 skipped** / **88.79%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.30:**2515 passed / 1 skipped** / **88.77%** / mypy strict 0 / **235 files** / MD lint **167 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -128,6 +128,25 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-26 [v0.2.53.30 BusinessWriter ready 语义加固] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**: `BusinessWriterImpl.is_runtime_impl=True` marker;`is_business_writer_impl_injected()` 显式识别 Impl(Stub 不再误判)。
+- **feat(dashboard)**: `evaluate_writer_dry_run()` 收紧 — 除非 `writer_impl_injected is True`,否则保守 501(含 None 默认)。
+- **docs**: README / SESSION-STATE / MODIFICATION-LOG / `quality_snapshot.py` 口径同步 — **88.77%** / MD lint **167 files**。
+- **tests**: +1 stub 误判防护;evaluate_writer_dry_run None 路径改期望 501。
+
+**2. 风险点**
+
+- ⚠️ 自定义 mock writer 若需走 200 dry-run 路径,须设 `is_runtime_impl=True` 或注入真实 `BusinessWriterImpl`。
+- **边界**:不写 DB · 不发 SMTP · 不写 Keychain · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2515 passed / 1 skipped / 88.77% coverage**;mypy strict 0(**235 files**);MD lint **167 files** 0 errors。
+- 下一棒:Keychain SMTP spike / 8/1 截点。
 
 ### 2026-06-26 [v0.2.53.12 ApprovalGate dry-run 按钮联调] — 收口
 

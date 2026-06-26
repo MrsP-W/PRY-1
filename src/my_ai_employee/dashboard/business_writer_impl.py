@@ -32,7 +32,7 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from my_ai_employee.dashboard.action_contracts import is_supported_action
 from my_ai_employee.dashboard.business_writer import (
@@ -64,6 +64,8 @@ class BusinessWriterImpl:
         - 异常收窄:真实写入异常透传(沿 note_confirm_service.py:113-115)
         - 不接 SMTP / 不读 Keychain 明文
     """
+
+    is_runtime_impl: ClassVar[bool] = True
 
     def __init__(
         self,

@@ -229,10 +229,13 @@ def evaluate_writer_dry_run(
     """v0.2.53.22 第三道门判定 — env+confirm 通过 + writer 启用时,返回可合并到 dry-run 的 200 决策.
 
     v0.2.53.29 扩展:
-        - 新增 `writer_impl_injected` 参数(测试注入;None 时读 env)
+        - 新增 `writer_impl_injected` 参数(测试注入;None 时保守视为未注入)
         - payload 暴露 3 字段(business_writer_env_enabled / impl_injected / ready)
         - 路径 3 (501 write_not_implemented) 文案边界化:env 已开但 Impl 未注入时
           reason 明确为「writer env only,需 DASHBOARD_REAL_DB=1 + session 成功」
+
+    v0.2.53.30 收紧:
+        - 除非 `writer_impl_injected is True`,否则不返回 200 dry-run-ready(None/False 均走 501)
 
     决策矩阵(沿 v0.2.53.19 §6.2):
         - 路径 1 (DASHBOARD_WRITE_API 未设):           403 write_disabled
@@ -245,7 +248,7 @@ def evaluate_writer_dry_run(
         payload: 同 evaluate_approval_action_request 的 JSON object body.
         write_enabled: 测试注入;None 时读 `DASHBOARD_WRITE_API`.
         writer_enabled: 测试注入;None 时读 `BUSINESS_WRITER_ENABLED`.
-        writer_impl_injected: 测试注入;None 时读 env(仅做文案边界提示,不影响 status code).
+        writer_impl_injected: 测试/handler 注入;None 时保守视为未注入(501,不返回 200).
 
     Returns:
         `(HTTPStatus, payload)`. 所有返回都保证 `write_executed=False`.
@@ -278,11 +281,9 @@ def evaluate_writer_dry_run(
             writer_impl_injected=writer_impl_injected,
         )
 
-    # v0.2.53.29 路径 3.5-pre:env 已开 + Impl 未注入(可能因 DASHBOARD_REAL_DB 未开 /
-    #   session_factory 失败 / BusinessWriterImpl 构造失败) → 501 env_only marker,
-    #   文案明确指出需 DASHBOARD_REAL_DB=1 + session 成功 + Impl 构造成功。
-    # 触发条件:caller 显式传 writer_impl_injected=False(沿 handler 透传 ctx)
-    if writer_impl_injected is False:
+    # v0.2.53.30 路径 3.5-pre:env 已开 + Impl 未确认注入(None/False) → 501 env_only marker。
+    # 触发条件:writer_impl_injected is not True(沿 handler 透传 ctx 或测试保守默认)
+    if writer_impl_injected is not True:
         return _decision(
             HTTPStatus.NOT_IMPLEMENTED,
             error="write_not_implemented",

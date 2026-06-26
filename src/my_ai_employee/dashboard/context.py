@@ -181,8 +181,14 @@ class DashboardContext:
         return _is_business_writer_enabled()
 
     def is_business_writer_impl_injected(self) -> bool:
-        """BusinessWriterImpl 是否已通过 `with_business_writer()` / default() 注入."""
-        return self.business_writer is not None
+        """BusinessWriterImpl 是否已通过 `with_business_writer()` / default() 注入.
+
+        v0.2.53.30:显式识别 `BusinessWriterImpl.is_runtime_impl`,避免 Stub 被误判为已注入。
+        """
+        writer = self.business_writer
+        if writer is None:
+            return False
+        return getattr(writer, "is_runtime_impl", False) is True
 
     def is_business_writer_ready(self) -> bool:
         """第三道门运行时就绪 — env + `DASHBOARD_REAL_DB` session + Impl 已注入.
