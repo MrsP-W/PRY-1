@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.26 HTML dry-run 三门结果展示联调(2026-06-26)
+# SESSION-STATE — v0.2.53.27 BusinessWriterImpl opt-in 注入(2026-06-26)
 
 > **最后更新**:2026-06-26 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.26 HTML dry-run 三门结果展示联调(2026-06-26)** — `responses.build_status_payload` 暴露 4 字段 + helper `_dry_run_three_gate_status()` + 3 tests 覆盖 3 态(disabled / writer_required / dry_run_ready)+ HTML 三门面板 + 顶部 status strip 升级到 v0.2.53.26。**质量门**:**2496 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**116 files**) / ruff + format 全绿 / MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.27 BusinessWriterImpl opt-in 注入 / outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.27 BusinessWriterImpl opt-in 注入(2026-06-26)** — `DashboardContext.default()` 新增 `BUSINESS_WRITER_ENABLED=1` env 门控,自动注入 `BusinessWriterImpl`(沿 `DASHBOARD_REAL_DB=1` 范本);新增 helper `_is_business_writer_enabled()` + `_try_build_business_writer_from_session_factory()`;11 个测试覆盖默认/启用/降级/不变式/解耦 5 场景。**质量门**:**2506 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.26 HTML dry-run 三门结果展示联调 已落地(2026-06-26)** — `responses.build_status_payload` + 4 字段 + helper + 3 tests + HTML 三门面板(沿 v0.2.53.22 决策矩阵路径 3.5)+ docs 三入口实测基线同步。**下一步候选**:v0.2.53.27 BusinessWriterImpl opt-in 注入(沿 v0.2.53.8 `DASHBOARD_REAL_DB=1` 范本)/ outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.27 BusinessWriterImpl opt-in 注入 已落地(2026-06-26)** — `DashboardContext.default()` 新增 `BUSINESS_WRITER_ENABLED=1` env 门控,自动注入 `BusinessWriterImpl`(沿 `DASHBOARD_REAL_DB=1` 范本);新增 helper `_is_business_writer_enabled()` + `_try_build_business_writer_from_session_factory()`;11 个测试覆盖默认/启用/降级/不变式/解耦 5 场景。**下一步候选**:outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2496 passed / 1 skipped** · **88.76%** coverage · mypy --strict 0 errors(**116 files**) · MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| 核心质量门 | **2506 passed / 1 skipped** · **88.76%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |
