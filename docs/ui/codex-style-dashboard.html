@@ -949,8 +949,14 @@
 
           <section id="calendar" class="view">
             <div class="card card-pad">
-              <h1 class="headline">日程页 P0 占位</h1>
-              <p class="tiny">当前没有日程冲突；后续可接 CalDAV 只读摘要。</p>
+              <h1 class="headline">日程页(P0 占位 · 待接 CalDAV 只读)</h1>
+              <p class="tiny">v0.2.53.24 占位:当前 CalDAV 服务未接入,仅显示摘要(0 事件)。</p>
+              <div class="gate-list" style="margin-top: 12px">
+                <div class="gate"><strong>数据源</strong><span class="tag" data-tone="red">CalDAV 未接入</span></div>
+                <div class="gate"><strong>事件数</strong><span class="tag" id="calendar-event-count">0</span></div>
+                <div class="gate"><strong>同步模式</strong><span class="tag">只读</span></div>
+              </div>
+              <p class="tiny" style="margin-top: 10px">后续接入:CalDAV VCALENDAR 解析 + HTTP probe /var/folders/.../Calendar/Calendar.sqlite</p>
             </div>
           </section>
 
@@ -992,8 +998,16 @@
 
           <section id="settings" class="view">
             <div class="card card-pad">
-              <h1 class="headline">设置页 P0 占位</h1>
-              <p class="tiny">设置页只展示 present/missing，不展示凭据明文。</p>
+              <h1 class="headline">设置页(P0 占位 · Keychain probe)</h1>
+              <p class="tiny">v0.2.53.24 占位:仅展示 Keychain present/missing 状态,不展示凭据明文(沿 #59 撞坑规范)。</p>
+              <div class="gate-list" style="margin-top: 12px">
+                <div class="gate"><strong>DB 密码</strong><span class="tag" id="settings-keychain-db" data-tone="red">present</span></div>
+                <div class="gate"><strong>SMTP outlook</strong><span class="tag" id="settings-keychain-smtp-outlook" data-tone="red">missing</span></div>
+                <div class="gate"><strong>SMTP gmail</strong><span class="tag" id="settings-keychain-smtp-gmail" data-tone="red">missing</span></div>
+                <div class="gate"><strong>OAuth Microsoft</strong><span class="tag" id="settings-keychain-oauth-ms" data-tone="red">missing</span></div>
+                <div class="gate"><strong>OAuth Google</strong><span class="tag" id="settings-keychain-oauth-google" data-tone="red">missing</span></div>
+              </div>
+              <p class="tiny" style="margin-top: 10px">凭据写入需用户授权 + 显式启动 spike;不接 launchd 不写明文。</p>
             </div>
           </section>
         </main>
