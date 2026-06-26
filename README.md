@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.9 GET /api/reports + HTML 报告页 hydrate**(2026-06-25 · 扫描 `docs/` + `reports/` + `output/` 3 类目录 · 元数据(path/type/title/date/status/size_bytes)+ 报告页 filter + 离线兜底 · 无 DB 依赖)。**质量门**:**2364 passed / 1 skipped / 88.49%** / mypy --strict 0 errors(**221 files**) / ruff 全绿 / format 234 files / **MD lint 157 files** 0 errors。**下一棒**:v0.2.53.10 spike 详情页 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不默认读取 Keychain 明文、不接真实外部服务、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.10 报告预览 + 搜索**(2026-06-25 · `/api/reports/preview` 8KB 截断 · 路径白名单 · HTML 搜索 + 点击预览 · spike 详情提示)。**质量门**:**2373 passed / 1 skipped / 88.48%** / mypy --strict 0 errors(**221 files**) / ruff 全绿 / format 234 files / **MD lint 159 files** 0 errors。**下一棒**:ApprovalGate 写操作 / outlook+gmail Keychain → 真实 SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不默认读取 Keychain 明文、不接真实外部服务、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
@@ -238,6 +238,7 @@ make help
 | **v0.2.53.7** Dashboard opt-in 真实 Outbox(`DASHBOARD_REAL_DB=1` env 门控 · `DashboardContext.default()` 注入 Impl · 失败降级 Stub · +24 tests · 2324 passed / 88.50% · 撞坑 #65 opt-in 4 阶段范本) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.8** Dashboard opt-in 真实 Notes + Expense(共享 session_factory · NoteConfirmServiceImpl + ExpenseServiceImpl · +10 tests · 2330 passed / 88.46%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53.9** GET /api/reports + HTML 报告页 hydrate(扫描 docs/ + reports/ + output/ 3 目录 · 4 类型 · 6 字段元数据 · filter + 离线兜底 · +34 tests · 2364 passed / 88.49% · 撞坑 #66 扫描器 5 不做) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.53.10** 报告预览 + 搜索(`/api/reports/preview` 8KB 截断 · 路径白名单 · HTML 搜索 + 点击预览 · +9 tests · 2373 passed / 88.48%) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.54** 8/1 tag 锚定评估(**docs-only 评估线 · 非 Codex UI 主开发版本** · 7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 评估收口 | 2026-06-25 |
 
 > **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.7**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
@@ -299,6 +300,7 @@ make help
 | [docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md](docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md) | **🆕 v0.2.53.7 Dashboard opt-in 真实 Outbox(env 门控 + 失败降级)** |
 | [docs/v0.2.53.8-dashboard-opt-in-notes-expense-2026-06-25.md](docs/v0.2.53.8-dashboard-opt-in-notes-expense-2026-06-25.md) | **🆕 v0.2.53.8 Dashboard opt-in 真实 Notes + Expense** |
 | [docs/v0.2.53.9-dashboard-reports-api-2026-06-25.md](docs/v0.2.53.9-dashboard-reports-api-2026-06-25.md) | **🆕 v0.2.53.9 GET /api/reports + HTML 报告页 hydrate** |
+| [docs/v0.2.53.10-dashboard-reports-preview-2026-06-25.md](docs/v0.2.53.10-dashboard-reports-preview-2026-06-25.md) | **🆕 v0.2.53.10 报告预览 + 搜索** |
 | [docs/ui/codex-style-dashboard.md](docs/ui/codex-style-dashboard.md) | **🆕 Codex 风格工作台 P0/P2 静态原型说明(今日 / 邮件 / 系统 + API)** |
 | [docs/v0.2.1-candidates-2026-06-17.md](docs/v0.2.1-candidates-2026-06-17.md) | **🆕 v0.2.1 启动候选清单(6 候选 + 工作量/依赖/风险 3 维度)** |
 | [docs/v0.1.0-status-snapshot-2026-06-17.md](docs/v0.1.0-status-snapshot-2026-06-17.md) | **🆕 v0.1.0 tag 状态快照(释放/锁定/后期启动 3 维度复核)** |

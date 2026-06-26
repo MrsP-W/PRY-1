@@ -13,6 +13,7 @@ from my_ai_employee.dashboard.responses import (
     build_finance_anomalies_payload,
     build_notes_pending_payload,
     build_outbox_payload,
+    build_report_preview_payload,
     build_reports_payload,
     build_status_payload,
     build_tasks_today_payload,
@@ -35,6 +36,23 @@ class DashboardHandler(BaseHTTPRequestHandler):
         limit = parse_limit(limit_raw)
         type_raw = query.get("type", [None])[0]
         type_filter = type_raw.strip() if type_raw else None
+        path_raw = query.get("path", [None])[0]
+        if path == "/api/reports/preview":
+            if not path_raw or not path_raw.strip():
+                self._send_json(
+                    HTTPStatus.BAD_REQUEST,
+                    {"error": "missing_path", "read_only": True},
+                )
+                return
+            payload = build_report_preview_payload(path_raw.strip())
+            if payload is None:
+                self._send_json(
+                    HTTPStatus.NOT_FOUND,
+                    {"error": "report_not_found", "path": path_raw, "read_only": True},
+                )
+                return
+            self._send_json(HTTPStatus.OK, payload)
+            return
         if path == "/health":
             self._send_json(HTTPStatus.OK, {"ok": True, "read_only": True})
             return

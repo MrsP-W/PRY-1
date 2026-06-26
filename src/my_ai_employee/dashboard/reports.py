@@ -19,6 +19,9 @@ from pathlib import Path
 _REPORT_TYPES: tuple[str, ...] = ("doc", "phase_report", "spike", "agent_output")
 _DEFAULT_LIMIT: int = 50
 _MAX_FILE_BYTES: int = 256 * 1024  # 256 KB(只读前若干行,避免大文件)
+_PREVIEW_MAX_BYTES: int = 8192  # v0.2.53.10 预览上限
+_ALLOWED_PREFIXES: tuple[str, ...] = ("docs/", "reports/", "output/")
+_ALLOWED_SUFFIXES: frozenset[str] = frozenset({".md", ".json"})
 _TITLE_LINE_SCAN_LINES: int = 5
 _STATUS_SCAN_LINES: int = 30
 
@@ -90,6 +93,75 @@ def safe_scan(getter: Callable[[], list[ReportEntry]]) -> list[ReportEntry]:
         return list(result) if isinstance(result, list) else []
     except Exception:  # noqa: BLE001
         return []
+
+
+def read_report_preview(
+    rel_path: str,
+    *,
+    project_root: Path | None = None,
+    max_bytes: int = _PREVIEW_MAX_BYTES,
+) -> dict[str, str | int | bool] | None:
+    """读取单份报告截断预览(v0.2.53.10 · 只读 · 路径严判).
+
+    Returns:
+        预览 dict(path/type/title/date/status/size_bytes/preview/truncated),失败返回 None。
+    """
+    if max_bytes < 1:
+        max_bytes = _PREVIEW_MAX_BYTES
+    root = project_root or Path.cwd()
+    resolved = _resolve_report_path(rel_path, root)
+    if resolved is None:
+        return None
+    try:
+        size = resolved.stat().st_size
+        with resolved.open("r", encoding="utf-8", errors="replace") as fh:
+            preview = fh.read(max_bytes)
+        type_label = _infer_type_from_path(resolved, root)
+        entry = _entry_from(resolved, type_label, root)
+        return {
+            "path": entry.path,
+            "type": entry.type,
+            "title": entry.title,
+            "date": entry.date,
+            "status": entry.status,
+            "size_bytes": size,
+            "preview": preview,
+            "truncated": size > max_bytes,
+        }
+    except (OSError, UnicodeError):
+        return None
+
+
+def _resolve_report_path(rel_path: str, root: Path) -> Path | None:
+    """严判相对路径 — 仅允许 docs/ reports/ output/ 下 .md/.json,禁止 .. 穿越."""
+    if not rel_path or rel_path.startswith("/") or ".." in rel_path:
+        return None
+    normalized = rel_path.replace("\\", "/").strip()
+    if not any(normalized.startswith(prefix) for prefix in _ALLOWED_PREFIXES):
+        return None
+    if not any(normalized.endswith(suffix) for suffix in _ALLOWED_SUFFIXES):
+        return None
+    try:
+        full = (root / normalized).resolve()
+        full.relative_to(root.resolve())
+    except (ValueError, OSError):
+        return None
+    if not full.is_file():
+        return None
+    return full
+
+
+def _infer_type_from_path(path: Path, root: Path) -> str:
+    """从路径推断报告 type(与扫描器一致)."""
+    rel = path.relative_to(root).as_posix()
+    if rel.startswith("reports/"):
+        return "phase_report"
+    if rel.startswith("output/"):
+        parts = rel.split("/")
+        if len(parts) > 1 and parts[1].startswith("spike"):
+            return "spike"
+        return "agent_output"
+    return "doc"
 
 
 # ===== 子目录扫描器 =====

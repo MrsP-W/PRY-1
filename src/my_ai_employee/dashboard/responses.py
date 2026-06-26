@@ -11,7 +11,7 @@ from my_ai_employee.core.keychain import (
     SERVICE_SMTP_QQ,
 )
 from my_ai_employee.dashboard.context import DashboardContext, safe_count, safe_list
-from my_ai_employee.dashboard.reports import safe_scan, scan_reports
+from my_ai_employee.dashboard.reports import read_report_preview, safe_scan, scan_reports
 
 
 def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
@@ -139,3 +139,18 @@ def build_reports_payload(
             for e in items
         ],
     }
+
+
+def build_report_preview_payload(rel_path: str) -> dict[str, Any] | None:
+    """GET /api/reports/preview — 单份报告截断预览(只读).
+
+    Args:
+        rel_path: 相对项目根的路径(须通过 reports._resolve_report_path 严判)
+
+    Returns:
+        预览 dict 或 None(路径非法 / 文件不可读)。
+    """
+    preview = read_report_preview(rel_path)
+    if preview is None:
+        return None
+    return {"read_only": True, **preview}

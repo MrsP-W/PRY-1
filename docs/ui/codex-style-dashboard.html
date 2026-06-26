@@ -530,6 +530,78 @@
         white-space: nowrap;
       }
 
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .filter-row .filter {
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 999px;
+        padding: 6px 12px;
+        background: var(--panel-2);
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 12px;
+      }
+
+      .filter-row .filter.active {
+        border-color: rgb(91 140 255 / 50%);
+        background: rgb(91 140 255 / 14%);
+        color: #dce6ff;
+      }
+
+      .search-input {
+        flex: 1;
+        min-width: 160px;
+        border: 1px solid rgb(255 255 255 / 10%);
+        border-radius: 12px;
+        padding: 8px 12px;
+        background: var(--panel-2);
+        color: var(--text);
+        font: inherit;
+        font-size: 13px;
+      }
+
+      .queue-item.selected {
+        border-color: rgb(91 140 255 / 45%);
+        background: rgb(91 140 255 / 8%);
+      }
+
+      .queue-item.clickable {
+        cursor: pointer;
+      }
+
+      .queue-meta.mono {
+        font: 11px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        word-break: break-all;
+      }
+
+      .queue-empty {
+        padding: 16px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .report-preview {
+        margin-top: 14px;
+        padding: 14px;
+        border: 1px solid rgb(255 255 255 / 9%);
+        border-radius: var(--radius);
+        background: linear-gradient(180deg, rgb(32 36 45 / 86%), rgb(23 26 33 / 86%));
+      }
+
+      .report-preview pre {
+        overflow: auto;
+        max-height: 280px;
+        margin: 10px 0 0;
+        color: #d7deea;
+        font: 12px/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        white-space: pre-wrap;
+      }
+
       @media (max-width: 1080px) {
         .workspace {
           grid-template-columns: 180px minmax(0, 1fr);
@@ -581,7 +653,7 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill">v0.2.53.5</span>
+          <span class="pill">v0.2.53.10</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -842,6 +914,13 @@
               <p class="tiny" id="reports-source">本地报告清单 · 静态兜底</p>
 
               <div class="filter-row" style="margin-top: 12px">
+                <input
+                  id="reports-search"
+                  class="search-input"
+                  type="search"
+                  placeholder="搜索标题或路径…"
+                  aria-label="搜索报告"
+                />
                 <button class="filter active" data-filter="all">全部</button>
                 <button class="filter" data-filter="doc">docs</button>
                 <button class="filter" data-filter="phase_report">reports</button>
@@ -852,9 +931,16 @@
               <div class="reports-summary" id="reports-summary" style="margin-top: 12px">
                 <span class="tag">合计 <strong id="reports-count">0</strong></span>
                 <span class="tag">最近 <strong id="reports-latest-date">—</strong></span>
+                <span class="tag" id="reports-filter-hint">点击条目预览 · spike 可详情</span>
               </div>
 
               <div class="queue" id="reports-queue" style="margin-top: 16px"></div>
+
+              <div class="report-preview" id="report-preview-panel" hidden>
+                <h3 id="report-preview-title">报告预览</h3>
+                <p class="tiny" id="report-preview-meta">—</p>
+                <pre id="report-preview-body">选择左侧列表中的报告以加载预览。</pre>
+              </div>
             </div>
           </section>
 
@@ -897,7 +983,7 @@
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              启动 `make dashboard-api` 后刷新本页,即可看到 status/tasks/outbox/notes/finance 五个只读端点数据;API 离线时自动回退静态假数据。
+              启动 `make dashboard-api` 后刷新本页,报告页支持搜索 + 点击预览(`/api/reports/preview`);API 离线时用静态兜底。
             </div>
           </div>
         </section>
@@ -1197,9 +1283,12 @@
         }
       }
 
-      // ===== v0.2.53.9 报告页渲染 =====
+      // ===== v0.2.53.9 + v0.2.53.10 报告页渲染 =====
       let _currentReports = [];
       let _currentReportFilter = "all";
+      let _currentReportSearch = "";
+      let _selectedReportPath = "";
+      let _apiOnline = false;
 
       function statusToTagTone(status) {
         const map = {
@@ -1231,6 +1320,67 @@
         return `${(n / 1024 / 1024).toFixed(1)} MB`;
       }
 
+      function filteredReports() {
+        const q = _currentReportSearch.trim().toLowerCase();
+        return _currentReports.filter((r) => {
+          if (_currentReportFilter !== "all" && r.type !== _currentReportFilter) {
+            return false;
+          }
+          if (!q) {
+            return true;
+          }
+          return (
+            String(r.title ?? "").toLowerCase().includes(q) ||
+            String(r.path ?? "").toLowerCase().includes(q)
+          );
+        });
+      }
+
+      function renderReportPreviewPanel(title, meta, body, truncated) {
+        const panel = document.getElementById("report-preview-panel");
+        if (panel) panel.hidden = false;
+        setText("report-preview-title", title || "报告预览");
+        setText(
+          "report-preview-meta",
+          `${meta}${truncated ? " · 已截断(8KB)" : ""}`,
+        );
+        const pre = document.getElementById("report-preview-body");
+        if (pre) pre.textContent = body || "无预览内容";
+      }
+
+      async function loadReportPreview(reportPath) {
+        _selectedReportPath = reportPath;
+        renderReportsList();
+        if (!_apiOnline) {
+          const item = _currentReports.find((r) => r.path === reportPath);
+          renderReportPreviewPanel(
+            item?.title ?? reportPath,
+            `${item?.type ?? "unknown"} · ${item?.path ?? reportPath} · 静态兜底`,
+            "API 离线 — 预览需启动 make dashboard-api 后重试。\n\n路径: " + reportPath,
+            false,
+          );
+          return;
+        }
+        try {
+          const payload = await fetchJson(
+            `/api/reports/preview?path=${encodeURIComponent(reportPath)}`,
+          );
+          renderReportPreviewPanel(
+            payload.title,
+            `${payload.type} · ${payload.path} · ${formatBytes(payload.size_bytes)}`,
+            payload.preview,
+            payload.truncated,
+          );
+        } catch (_err) {
+          renderReportPreviewPanel(
+            reportPath,
+            "预览失败",
+            "无法加载预览 — 路径可能无效或文件不可读。",
+            false,
+          );
+        }
+      }
+
       function renderReports(payload, sourceLabel) {
         setText("reports-source", `本地报告清单 · ${sourceLabel}`);
         _currentReports = payload.items ?? [];
@@ -1253,21 +1403,19 @@
       function renderReportsList() {
         const container = document.getElementById("reports-queue");
         if (!container) return;
-        const filtered =
-          _currentReportFilter === "all"
-            ? _currentReports
-            : _currentReports.filter((r) => r.type === _currentReportFilter);
+        const filtered = filteredReports();
         if (filtered.length === 0) {
           container.innerHTML =
-            '<div class="queue-empty">暂无报告 · 启动 API 后自动扫描</div>';
+            '<div class="queue-empty">暂无匹配报告 · 调整搜索或 filter</div>';
           return;
         }
         container.innerHTML = filtered
           .map((r) => {
             const tone = statusToTagTone(r.status);
             const label = statusToLabel(r.status);
+            const selected = r.path === _selectedReportPath ? " selected" : "";
             return `
-              <div class="queue-item">
+              <div class="queue-item clickable${selected}" data-report-path="${escapeHtml(r.path)}" role="button" tabindex="0">
                 <div style="flex:1; min-width:0">
                   <div class="queue-title">${escapeHtml(r.title)}</div>
                   <div class="queue-meta">
@@ -1282,6 +1430,18 @@
             `;
           })
           .join("");
+        container.querySelectorAll("[data-report-path]").forEach((el) => {
+          el.addEventListener("click", () => {
+            const p = el.getAttribute("data-report-path");
+            if (p) loadReportPreview(p);
+          });
+        });
+        const hint = document.getElementById("reports-filter-hint");
+        if (hint && _currentReportFilter === "spike") {
+          hint.textContent = "spike 详情 · 点击条目加载预览";
+        } else if (hint) {
+          hint.textContent = "点击条目预览 · 支持搜索";
+        }
       }
 
       document.querySelectorAll(".filter-row .filter").forEach((btn) => {
@@ -1295,6 +1455,14 @@
         });
       });
 
+      const reportsSearch = document.getElementById("reports-search");
+      if (reportsSearch) {
+        reportsSearch.addEventListener("input", () => {
+          _currentReportSearch = reportsSearch.value;
+          renderReportsList();
+        });
+      }
+
       async function hydrateDashboard() {
         try {
           const [status, tasks, outbox, notes, finance, reports] = await Promise.all([
@@ -1305,13 +1473,15 @@
             fetchJson("/api/finance/anomalies?limit=10"),
             fetchJson("/api/reports?limit=50"),
           ]);
+          _apiOnline = true;
           renderStatus(status);
           renderTasks(tasks, "来自本地只读 API");
           renderExtendedViews(outbox, notes, finance, true);
           renderReports(reports, "本地只读 API · 文件系统扫描");
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
-          setApiState(true, "API 已连接 · 6 端点");
+          setApiState(true, "API 已连接 · 7 端点");
         } catch (_err) {
+          _apiOnline = false;
           renderTasks(fallbackTasks, "静态兜底数据");
           renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");

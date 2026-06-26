@@ -25,9 +25,11 @@ from my_ai_employee.dashboard.reports import (
     _extract_date,
     _extract_status,
     _extract_title,
+    _resolve_report_path,
+    read_report_preview,
     scan_reports,
 )
-from my_ai_employee.dashboard.responses import build_reports_payload
+from my_ai_employee.dashboard.responses import build_report_preview_payload, build_reports_payload
 
 # ===== 单元测试:scanner helpers =====
 
@@ -309,3 +311,80 @@ class TestReportsHttpEndpoint:
         payload = _get_json(f"{base}/api/reports?type=nonexistent_type")
         assert payload["count"] == 0
         assert payload["items"] == []
+
+
+# ===== v0.2.53.10 报告预览 =====
+
+
+class TestResolveReportPath:
+    """路径严判 — 禁止穿越 + 仅允许白名单目录."""
+
+    def test_allows_docs_md(self, tmp_path: Path) -> None:
+        f = tmp_path / "docs" / "test.md"
+        f.parent.mkdir(parents=True)
+        f.write_text("# hi", encoding="utf-8")
+        assert _resolve_report_path("docs/test.md", tmp_path) == f.resolve()
+
+    def test_rejects_traversal(self, tmp_path: Path) -> None:
+        assert _resolve_report_path("../etc/passwd", tmp_path) is None
+        assert _resolve_report_path("docs/../../secret.md", tmp_path) is None
+
+    def test_rejects_unknown_prefix(self, tmp_path: Path) -> None:
+        f = tmp_path / "secret.md"
+        f.write_text("# x", encoding="utf-8")
+        assert _resolve_report_path("secret.md", tmp_path) is None
+
+
+class TestReadReportPreview:
+    """read_report_preview — 截断预览 + 元数据."""
+
+    def test_preview_truncated_flag(self, tmp_path: Path) -> None:
+        f = tmp_path / "docs" / "big.md"
+        f.parent.mkdir(parents=True)
+        f.write_text("x" * 100, encoding="utf-8")
+        result = read_report_preview("docs/big.md", project_root=tmp_path, max_bytes=50)
+        assert result is not None
+        assert result["truncated"] is True
+        assert len(str(result["preview"])) == 50
+
+    def test_preview_missing_returns_none(self, tmp_path: Path) -> None:
+        assert read_report_preview("docs/missing.md", project_root=tmp_path) is None
+
+
+class TestBuildReportPreviewPayload:
+    def test_payload_shape(self, tmp_path: Path) -> None:
+        f = tmp_path / "reports" / "sample.md"
+        f.parent.mkdir(parents=True)
+        f.write_text("# Sample\n\n✅ 已落地", encoding="utf-8")
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            payload = build_report_preview_payload("reports/sample.md")
+        assert payload is not None
+        assert payload["read_only"] is True
+        assert "preview" in payload
+        assert payload["type"] == "phase_report"
+
+
+class TestReportPreviewHttpEndpoint:
+    def test_preview_ok(self, http_server: tuple[str, HTTPServer], tmp_path: Path) -> None:
+        f = tmp_path / "docs" / "preview-test.md"
+        f.parent.mkdir(parents=True)
+        f.write_text("# Preview Test", encoding="utf-8")
+        base, _ = http_server
+        with pytest.MonkeyPatch.context() as mp:
+            mp.chdir(tmp_path)
+            payload = _get_json(f"{base}/api/reports/preview?path=docs/preview-test.md")
+        assert payload["read_only"] is True
+        assert "Preview Test" in str(payload["preview"])
+
+    def test_preview_missing_path_400(self, http_server: tuple[str, HTTPServer]) -> None:
+        base, _ = http_server
+        with pytest.raises(urllib.error.HTTPError) as exc:
+            _get_json(f"{base}/api/reports/preview")
+        assert exc.value.code == 400
+
+    def test_preview_not_found_404(self, http_server: tuple[str, HTTPServer]) -> None:
+        base, _ = http_server
+        with pytest.raises(urllib.error.HTTPError) as exc:
+            _get_json(f"{base}/api/reports/preview?path=docs/no-such-file.md")
+        assert exc.value.code == 404
