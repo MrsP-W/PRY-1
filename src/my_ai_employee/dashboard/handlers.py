@@ -13,6 +13,10 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from my_ai_employee.dashboard.approval_gate import evaluate_approval_action_request
+from my_ai_employee.dashboard.business_writer import (
+    SUPPORTED_ACTIONS,
+    AuditContext,
+)
 from my_ai_employee.dashboard.context import DashboardContext, parse_limit
 from my_ai_employee.dashboard.responses import (
     build_finance_anomalies_payload,
@@ -108,9 +112,74 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
                 return
             status, decision = evaluate_approval_action_request(payload)
+            # v0.2.53.21 handler dry-run 接入 BusinessWriter(沿 v0.2.53.14 §8 + v0.2.53.19)
+            # 边界:
+            #   - 仅当 ApprovalGate 双门通过(approval_gate_passed=True) + dry_run=True 才合并 writer.dry_run
+            #   - 默认 writer 为 BusinessWriterStub(would_allow=False)
+            #   - 仍保证 write_executed=False(实际写入留 8/1 后 + 路径 4 启用)
+            decision = self._merge_writer_dry_run(payload, decision, status)
             self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
             return
         self._method_not_allowed()
+
+    def _merge_writer_dry_run(
+        self,
+        payload: dict[str, Any],
+        decision: dict[str, Any],
+        status: HTTPStatus,
+    ) -> dict[str, Any]:
+        """v0.2.53.21 handler dry-run 接入 BusinessWriter — 合并 writer.dry_run 结果到 ApprovalGate 决策.
+
+        触发条件(沿 v0.2.53.19 路径 3.5 设计):
+            - approval_gate_passed=True(双门已过)
+            - dry_run=True(默认)
+            - action 在 SUPPORTED_ACTIONS 白名单
+
+        合并字段(沿 v0.2.53.15 WriteDecision):
+            - would_allow ← writer.dry_run(action, target_id, audit).would_allow
+            - required ← writer.dry_run(action, target_id, audit).required
+            - business_writer_error ← writer.dry_run().error(若有)
+            - business_writer_reason ← writer.dry_run().reason(若有)
+            - write_executed 恒为 False(沿 v0.2.53.11 不变式)
+
+        失败模式(沿撞坑 #65 + v0.2.53.8):
+            - writer.dry_run 抛异常 → decision 不变(approval_gate 决策优先)
+        """
+        if not decision.get("approval_gate_passed"):
+            return decision
+        if not decision.get("dry_run"):
+            return decision
+        action = decision.get("action")
+        target_id = decision.get("target_id")
+        if not isinstance(action, str) or not action or action not in SUPPORTED_ACTIONS:
+            return decision
+        if not isinstance(target_id, str) or not target_id:
+            return decision
+        # 构造 AuditContext(沿 v0.2.53.15 §三 + v0.2.53.11 audit 字段)
+        audit = AuditContext(
+            actor=str(decision.get("audit", {}).get("actor", "local_dashboard")),
+            reason=str(decision.get("audit", {}).get("reason", "")),
+            source=str(decision.get("audit", {}).get("source", "dashboard")),
+        )
+        try:
+            writer = self.dashboard_context.resolve_business_writer()
+            writer_decision = writer.dry_run(action, target_id, audit=audit)
+        except Exception:
+            # 异常隔离(沿撞坑 #65 + v0.2.53.8):writer 异常不传播,decision 不变
+            return decision
+        # 合并字段(沿 v0.2.53.15 WriteDecision 字段)
+        merged = dict(decision)
+        merged["would_allow"] = writer_decision.would_allow
+        merged["business_writer_error"] = writer_decision.error
+        merged["business_writer_reason"] = writer_decision.reason
+        # required 合并:ApprovalGate 已有 required + writer 新增 required(去重保序)
+        existing_required = list(decision.get("required", []))
+        for item in writer_decision.required:
+            if item not in existing_required:
+                existing_required.append(item)
+        merged["required"] = existing_required
+        # write_executed 保持 False(沿 v0.2.53.11 不变式)
+        return merged
 
     def do_PUT(self) -> None:  # noqa: N802
         self._method_not_allowed()
