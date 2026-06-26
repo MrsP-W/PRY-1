@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.28 BusinessWriter 第三门真实状态收口(2026-06-26)
+# SESSION-STATE — v0.2.53.29 HTML inspector 三字段联调收口(2026-06-26)
 
 > **最后更新**:2026-06-26 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.28 BusinessWriter 第三门真实状态收口(2026-06-26)** — status/POST 第三道门以 `business_writer_ready`(Impl 实际注入)为准,新增 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段;修正 `DASHBOARD_REAL_DB` 前置语义。**质量门**:**2506 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.29 HTML inspector 三字段联调收口(2026-06-26)** — POST 响应 payload 暴露 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段;HTML inspector 升级为 3 badge(env / Impl / ready);evaluate_writer_dry_run 新增路径 3.5-pre env_only marker 501 文案边界化(明确指出需 `DASHBOARD_REAL_DB=1` + session 成功 + Impl 构造成功)。**质量门**:**2515 passed / 1 skipped / 88.79%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2506 passed / 1 skipped** · **88.76%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| 核心质量门 | **2515 passed / 1 skipped** · **88.79%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

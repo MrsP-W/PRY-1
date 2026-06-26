@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.28 BusinessWriter 第三门真实状态收口(2026-06-26)** — status/POST 第三道门以 `business_writer_ready`(Impl 实际注入)为准,新增 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段;修正 `DASHBOARD_REAL_DB` 前置语义。**质量门**:**2506 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.29 HTML inspector 三字段联调收口(2026-06-26)** — POST 响应 payload 暴露 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段;HTML inspector 升级为 3 badge(env / Impl / ready);evaluate_writer_dry_run 新增路径 3.5-pre env_only marker 501 文案边界化(明确指出需 `DASHBOARD_REAL_DB=1` + session 成功 + Impl 构造成功)。**质量门**:**2515 passed / 1 skipped / 88.79%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2506 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2515 passed / 1 skipped / 88.79% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2506 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2515 passed / 1 skipped / 88.79% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -216,8 +216,8 @@ make help
 | **v0.2.39** 启用 `--check-untyped-defs` 为 CI 默认(Makefile mypy target 修复撞坑 #50 docstring/code 漂移 · 撞坑 #55 v2.0 范本升级严格模式 + CI 默认化 = 强制约束) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.40** pyproject.toml mypy config 锁死 + 393 errors 全量修复(沿撞坑 #55 v3.0 范本 = 命令层 + 配置层 + Makefile 层 三重锁死 + 撞坑 #56 AST 注入顺序陷阱 · `mypy --disallow-untyped-defs` 0 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
 | **v0.2.41** mypy `--strict` 启用 + 388 errors 大幅修复(沿撞坑 #55 v4.0 范本 = 四重锁死 + 388→43 errors = 89% 严格模式覆盖率 + 撞坑 #57 ast.unparse 注释丢失陷阱 · `mypy --strict src tests` 43 errors / 209 files) | ✅ 6/24 落地 | 2026-06-24 |
-| **v0.2.42** mypy `--strict` 43 errors 清零 + 硬门锁死(Makefile 取消 `|| echo` 放行 · `mypy --strict src tests` 0 errors / 209 files · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
-| **v0.2.43** outlook/gmail SMTP provider 白名单解封(`spike_send_100.py --smtp-provider {qq,outlook,gmail}` · provider-aware Keychain 能力对齐 · 不真发邮件 · 2265 passed / 1 skipped / 88.76% coverage) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.42** mypy `--strict` 43 errors 清零 + 硬门锁死(Makefile 取消 `|| echo` 放行 · `mypy --strict src tests` 0 errors / 209 files · 2265 passed / 1 skipped / 88.79% coverage) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.43** outlook/gmail SMTP provider 白名单解封(`spike_send_100.py --smtp-provider {qq,outlook,gmail}` · provider-aware Keychain 能力对齐 · 不真发邮件 · 2265 passed / 1 skipped / 88.79% coverage) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.44** 跳过授权码 + 真实 SMTP spike 延后(用户明确“跳过授权码” · Keychain missing + InMemory sent=1 + SMTP_REAL_NETWORK 硬拦截实测 · 下一棒转 7/1 月度复盘准备) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.45** 7/1 月度复盘准备增量包(补齐 v0.2.36/v0.2.42/v0.2.43/v0.2.44 最新状态 · tag 前置条件从 6/8 更新为 7/8 实质满足 + SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.46** 7/1 月度复盘提前执行版(质量门全绿 + B 类事项三态归档 + 8/1 `v0.2.1` release tag readiness 7/8 实质满足但真实 SMTP 送达延后) | ✅ 6/25 落地 | 2026-06-25 |
@@ -225,7 +225,7 @@ make help
 | **v0.2.48** align release readiness state(3 文件顶部口径同步到 v0.2.47 · README L7 + SESSION-STATE L1/L4/L12 + MODIFICATION-LOG L82/L83/L84/L87 + 138 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.49** 7/8 月度复盘收官 docs(v0.2.42-v0.2.48 完整时间线 + B 类三态 + 8/1 tag 8 项前置条件 + 7/8 月度复盘交付物闭环) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.50** 8/1 tag 锚定评估 preliminary(preliminary ≠ 最终决策 · 撞坑 #60 范本应用 · 距 8/1 还有 5 周关键时间窗) | ✅ 6/25 落地 | 2026-06-25 |
-| **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.76% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
+| **v0.2.51** SMTPProviderFactory 接入(`feat(send_adapter)` smtp_provider 与 smtp_transport 互斥 + 3 测试覆盖 + 撞坑 #18 风险门控 + 2268 passed / 88.79% coverage / mypy --strict 0 errors / 141 files MD lint) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.2** 状态口径同步 + provider 封装硬化(`ProviderDefaults` + 只读属性 · OutboxDispatcher 改读公共 API · docs 三入口 2273/88.82%/143 files MD lint · `test_smpt_*` 拼写修正) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.52.3** 测试侧公共 API 一致性(OutboxDispatcher 暴露 `active_provider` + `provider_defaults` 公共属性 · 5 处私有属性断言迁移到公共 API · docs 三入口 2273/**88.84%** / **144 files** MD lint · 撞坑 #64 公共 API 迁移范本) | ✅ 6/25 落地 | 2026-06-25 |
 | **v0.2.53** Codex 风格 UI P0 启动(设计稿 + v0.2 launch plan 纳入 + `docs/ui/` 静态 HTML 原型 + 原型说明 · 不新增依赖 · 不接真实 DB/SMTP/Keychain · `make lint` **146 files** 0 errors) | ✅ 6/25 P0 启动 | 2026-06-25 |

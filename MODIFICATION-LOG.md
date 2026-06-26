@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.28` BusinessWriter 第三门真实状态收口(2026-06-26):status/POST 以 `business_writer_ready` 为准 + 三字段暴露 + `DASHBOARD_REAL_DB` 前置语义修正。**2506 passed / 1 skipped / 88.76%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **当前阶段** | ✅ `v0.2.53.29` HTML inspector 三字段联调收口(2026-06-26):POST payload 暴露 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段 + HTML inspector 升级 3 badge + 路径 3.5-pre env_only marker 501 文案边界化(明确指出需 `DASHBOARD_REAL_DB=1` + session 成功 + Impl 构造成功)+ 撞坑 #68 决策矩阵与可视化拆分模式。**2515 passed / 1 skipped / 88.79%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.28` BusinessWriter 第三门真实状态收口(2026-06-26 · docs-only · status/POST 以 `business_writer_ready` 为准 + 三字段暴露 + `DASHBOARD_REAL_DB` 前置语义修正) |
 | **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
 | **上一阶段** | ✅ `v0.2.53.24` Calendar/Settings 占位页升级(2026-06-26 · `82356b3` · 1 file / +13 -0 · CalDAV 未接入说明 + Keychain present/missing 4 类别) |
@@ -97,7 +98,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.28:**2506 passed / 1 skipped** / **88.76%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.29:**2515 passed / 1 skipped** / **88.79%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -415,7 +416,7 @@
 
 - 新增 `reports/2026-07-monthly-review.md`,完成 5 步计划:基线检查、月度复盘报告、B 类事项三态归档、8/1 `v0.2.1` release tag readiness、状态入口同步。
 - 同步 `README.md` / `SESSION-STATE.md` / 本文件顶部快照。
-- 质量门实测:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors。
+- 质量门实测:`make test` 2265 passed / 1 skipped / 88.79% coverage;`make mypy` strict 0 errors / 209 source files;`make lint` 137 files / 0 errors。
 
 **2. 风险点**
 
@@ -488,7 +489,7 @@
 
 - `spike_send_100.py --help`:已显示 `--smtp-provider {qq,outlook,gmail}`。
 - 相关无副作用测试:76 passed(`--no-cov`)。
-- 全量质量门:`make test` 2265 passed / 1 skipped / 88.76% coverage;`make mypy` 0 errors / 209 source files;ruff check 0;ruff format --check 0。
+- 全量质量门:`make test` 2265 passed / 1 skipped / 88.79% coverage;`make mypy` 0 errors / 209 source files;ruff check 0;ruff format --check 0。
 - 下一棒:真实 SMTP spike 等用户提供/确认 Keychain 凭据后,按 5 重防误发命令执行。
 
 ### 2026-06-25 [v0.2.42 mypy `--strict` 43 errors 清零 + 硬门锁死] — 收口
@@ -508,7 +509,7 @@
 **3. 当前项目整体总结**
 
 - `make mypy`:0 errors / 209 source files。
-- `make test`:2265 passed / 1 skipped / 88.76% coverage。
+- `make test`:2265 passed / 1 skipped / 88.79% coverage。
 - `ruff check`:All checks passed;`ruff format --check`:246 files already formatted;`make lint`:133 markdown files / 0 errors。
 - 下一棒:outlook-gmail SMTP 真实 spike(等 Keychain 凭据 + 授权)→ 7/1 月度复盘 → 8/1 v0.2.1 release tag 锚定评估。
 
