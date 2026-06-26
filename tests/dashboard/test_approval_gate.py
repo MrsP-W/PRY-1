@@ -43,6 +43,10 @@ def _clean_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
 @pytest.fixture
 def http_server() -> Generator[str, None, None]:
     ctx = DashboardContext.default()
+    yield from _serve_dashboard(ctx)
+
+
+def _serve_dashboard(ctx: DashboardContext) -> Generator[str, None, None]:
     server = HTTPServer(("127.0.0.1", 0), handler_factory(ctx))
     host, port = server.server_address[:2]
     host_str = str(host)
@@ -253,20 +257,43 @@ class TestApprovalGateWriterDryRunHttp:
         assert payload["write_executed"] is False
         assert "business_writer_error" not in payload
 
-    def test_post_all_gates_dry_run_ok_200(
+    def test_post_env_confirm_writer_env_only_stub_501(
         self, http_server: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """BUSINESS_WRITER_ENABLED=1 但 Impl 未注入 → 501(不再误报 200)."""
         monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
         monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
         status, payload = _post_json(
             f"{http_server}/api/approval-gate/actions",
             {
-                "action": "outbox.approve",
-                "target_id": "123",
+                "action": "notes.confirm",
+                "target_id": "note-1",
                 "confirm_text": CONFIRM_TEXT,
                 "dry_run": True,
             },
         )
+        assert status == 501
+        assert payload["error"] == "write_not_implemented"
+        assert payload["approval_gate_passed"] is True
+        assert payload["write_executed"] is False
+        assert "business_writer_error" not in payload
+
+    def test_post_all_gates_dry_run_ok_200(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        ctx = DashboardContext().with_business_writer(BusinessWriterImpl())
+        for base_url in _serve_dashboard(ctx):
+            status, payload = _post_json(
+                f"{base_url}/api/approval-gate/actions",
+                {
+                    "action": "outbox.approve",
+                    "target_id": "123",
+                    "confirm_text": CONFIRM_TEXT,
+                    "dry_run": True,
+                },
+            )
         assert status == 200
         assert payload["error"] is None
         assert payload["writer_enabled"] is True
@@ -275,20 +302,22 @@ class TestApprovalGateWriterDryRunHttp:
         assert payload["business_writer_error"] == "write_not_implemented"
         assert payload["would_allow"] is False
 
-    def test_post_all_gates_real_write_disabled_501(
-        self, http_server: str, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_post_all_gates_real_write_disabled_501(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+
         monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
         monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
-        status, payload = _post_json(
-            f"{http_server}/api/approval-gate/actions",
-            {
-                "action": "outbox.approve",
-                "target_id": "123",
-                "confirm_text": CONFIRM_TEXT,
-                "dry_run": False,
-            },
-        )
+        ctx = DashboardContext().with_business_writer(BusinessWriterImpl())
+        for base_url in _serve_dashboard(ctx):
+            status, payload = _post_json(
+                f"{base_url}/api/approval-gate/actions",
+                {
+                    "action": "outbox.approve",
+                    "target_id": "123",
+                    "confirm_text": CONFIRM_TEXT,
+                    "dry_run": False,
+                },
+            )
         assert status == 501
         assert payload["error"] == "real_write_disabled"
         assert payload["write_executed"] is False

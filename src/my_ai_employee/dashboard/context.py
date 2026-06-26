@@ -176,6 +176,21 @@ class DashboardContext:
         """
         return self.business_writer if self.business_writer is not None else BusinessWriterStub()
 
+    def is_business_writer_env_enabled(self) -> bool:
+        """第三道门 env 开关 — `BUSINESS_WRITER_ENABLED=1`(不等于 Impl 已注入)."""
+        return _is_business_writer_enabled()
+
+    def is_business_writer_impl_injected(self) -> bool:
+        """BusinessWriterImpl 是否已通过 `with_business_writer()` / default() 注入."""
+        return self.business_writer is not None
+
+    def is_business_writer_ready(self) -> bool:
+        """第三道门运行时就绪 — env + `DASHBOARD_REAL_DB` session + Impl 已注入.
+
+        完整写路径还需 POST 级 `DASHBOARD_WRITE_API=1` 与 `confirm_text=CONFIRM_WRITE`。
+        """
+        return self.is_business_writer_env_enabled() and self.is_business_writer_impl_injected()
+
 
 def _is_real_db_enabled() -> bool:
     """`DASHBOARD_REAL_DB=1` opt-in 判定 — 仅识别 truthy 字面量,避免意外触发."""
@@ -184,12 +199,13 @@ def _is_real_db_enabled() -> bool:
 
 
 def _is_business_writer_enabled() -> bool:
-    """`BUSINESS_WRITER_ENABLED=1` opt-in 判定 — 仅识别 truthy 字面量,避免意外触发.
+    """`BUSINESS_WRITER_ENABLED=1` opt-in env 判定 — 仅识别 truthy 字面量.
 
-    边界(沿 v0.2.53.27):
-        - 未设 → 默认 BusinessWriterStub(沿 v0.2.53.18 行为不变)
-        - 设 truthy → DashboardContext.default() 尝试注入 BusinessWriterImpl
-        - 与 `DASHBOARD_REAL_DB` 解耦:即使 DB opt-in 未开,也可显式开 writer(opt-in 失败 → Stub)
+    边界(v0.2.53.28 语义收口):
+        - env 设真值 ≠ writer 就绪;Impl 注入还需 `DASHBOARD_REAL_DB=1` +
+          `_try_build_real_session_factory()` 成功 + 构造 BusinessWriterImpl 成功
+        - `DashboardContext.default()` 在 `DASHBOARD_REAL_DB` 未开时早返回 Stub
+        - 运行时就绪以 `DashboardContext.is_business_writer_ready()` 为准
     """
     raw = os.environ.get(_BUSINESS_WRITER_ENABLED_ENV, "").strip().lower()
     return raw in {"1", "true", "yes", "on"}

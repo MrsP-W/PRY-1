@@ -25,6 +25,9 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
     }
     qg = ctx.quality_gates
     approval_gate = build_approval_gate_status()
+    writer_env = ctx.is_business_writer_env_enabled()
+    writer_injected = ctx.is_business_writer_impl_injected()
+    writer_ready = ctx.is_business_writer_ready()
     return {
         "read_only": True,
         "version": ctx.version,
@@ -52,35 +55,44 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
             "tag_create": False,
             "dashboard_write_api": approval_gate["write_enabled"],
             "business_writer_enabled": approval_gate["writer_enabled"],
+            "business_writer_env_enabled": writer_env,
+            "business_writer_impl_injected": writer_injected,
+            "business_writer_ready": writer_ready,
             "write_contract_version": approval_gate["contract_version"],
             "write_actions": approval_gate["actions"],
-            "v0_2_53_26_dry_run_status": _dry_run_three_gate_status(approval_gate),
+            "v0_2_53_26_dry_run_status": _dry_run_three_gate_status(
+                approval_gate,
+                business_writer_ready=writer_ready,
+            ),
         },
     }
 
 
-def _dry_run_three_gate_status(approval_gate: dict[str, Any]) -> dict[str, str]:
-    """v0.2.53.26 三门联调状态展示(沿 v0.2.53.22 决策矩阵路径 3.5).
+def _dry_run_three_gate_status(
+    approval_gate: dict[str, Any],
+    *,
+    business_writer_ready: bool,
+) -> dict[str, str]:
+    """v0.2.53.28 三门联调状态展示 — 第三道门以 Impl 实际注入为准.
 
     Returns:
         dict 包含 4 字段(纯前端展示用):
         - first_gate(第一道门 · DASHBOARD_WRITE_API):"open"/"closed"
         - second_gate(第二道门 · confirm_text):"confirm_required_per_action"(POST 请求级,非全局 env)
-        - third_gate(第三道门 · BUSINESS_WRITER_ENABLED):"open"/"closed"
+        - third_gate(第三道门 · BusinessWriter 运行时就绪):"open"/"closed"
         - outcome(综合结果):"disabled"/"writer_required"/"dry_run_ready"
     """
     write_enabled = approval_gate.get("write_enabled", False)
-    writer_enabled = approval_gate.get("writer_enabled", False)
     if not write_enabled:
         outcome = "disabled"
-    elif not writer_enabled:
+    elif not business_writer_ready:
         outcome = "writer_required"
     else:
         outcome = "dry_run_ready"
     return {
         "first_gate": "open" if write_enabled else "closed",
         "second_gate": "confirm_required_per_action",
-        "third_gate": "open" if writer_enabled else "closed",
+        "third_gate": "open" if business_writer_ready else "closed",
         "outcome": outcome,
     }
 

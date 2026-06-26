@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26):`DashboardContext.default()` 新增 `BUSINESS_WRITER_ENABLED=1` env 门控,自动注入 `BusinessWriterImpl`(沿 `DASHBOARD_REAL_DB=1` 范本);新增 helper `_is_business_writer_enabled()` + `_try_build_business_writer_from_session_factory()`;11 个测试覆盖默认/启用/降级/不变式/解耦 5 场景 + 撞坑 #50 第二层防御。**2506 passed / 1 skipped / 88.76%** / mypy strict 0 / **235 files** / MD lint **165 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.26` HTML dry-run 三门结果展示联调 + docs 收口(2026-06-26 · `b490f6a` + `b07ec82` + `3a97ba0` + `8b54d14` · 4 commits · 4 项小修 / 165 files 基线同步) |
+| **当前阶段** | ✅ `v0.2.53.28` BusinessWriter 第三门真实状态收口(2026-06-26):status/POST 以 `business_writer_ready` 为准 + 三字段暴露 + `DASHBOARD_REAL_DB` 前置语义修正。**2506 passed / 1 skipped / 88.76%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
 | **上一阶段** | ✅ `v0.2.53.24` Calendar/Settings 占位页升级(2026-06-26 · `82356b3` · 1 file / +13 -0 · CalDAV 未接入说明 + Keychain present/missing 4 类别) |
 | **上一阶段** | ✅ `v0.2.53.23` HTML inspector 三 badge(2026-06-26 · `41cf8d1` · 1 file / +13 -0 · 双门 / Writer / would_allow) |
@@ -97,7 +97,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.27:**2506 passed / 1 skipped** / **88.76%** / mypy strict 0 / **235 files** / MD lint **165 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.28:**2506 passed / 1 skipped** / **88.76%** / mypy strict 0 / **235 files** / MD lint **166 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 

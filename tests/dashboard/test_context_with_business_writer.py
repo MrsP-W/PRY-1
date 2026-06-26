@@ -176,6 +176,9 @@ class TestBusinessWriterOptInEnabled:
         ctx = DashboardContext.default()
         # 此时 ctx.business_writer 是 BusinessWriterImpl 实例
         assert isinstance(ctx.business_writer, BusinessWriterImpl)
+        assert ctx.is_business_writer_env_enabled() is True
+        assert ctx.is_business_writer_impl_injected() is True
+        assert ctx.is_business_writer_ready() is True
 
     def test_env_set_with_real_db_failure_returns_stub(
         self, monkeypatch: pytest.MonkeyPatch
@@ -192,6 +195,9 @@ class TestBusinessWriterOptInEnabled:
         ctx = DashboardContext.default()
         assert ctx.business_writer is None
         assert isinstance(ctx.resolve_business_writer(), BusinessWriterStub)
+        assert ctx.is_business_writer_env_enabled() is True
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
 
     def test_env_set_session_factory_fails_returns_stub(
         self, monkeypatch: pytest.MonkeyPatch
@@ -209,6 +215,9 @@ class TestBusinessWriterOptInEnabled:
         ctx = DashboardContext.default()
         assert ctx.business_writer is None
         assert isinstance(ctx.resolve_business_writer(), BusinessWriterStub)
+        assert ctx.is_business_writer_env_enabled() is True
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
 
     def test_env_set_business_writer_import_fails_returns_stub(
         self, monkeypatch: pytest.MonkeyPatch
@@ -250,6 +259,9 @@ class TestBusinessWriterOptInEnabled:
         ctx = DashboardContext.default()
         assert ctx.business_writer is None
         assert isinstance(ctx.resolve_business_writer(), BusinessWriterStub)
+        assert ctx.is_business_writer_env_enabled() is True
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
 
 
 class TestBusinessWriterOptInInvariants:
@@ -333,7 +345,7 @@ class TestBusinessWriterOptInInvariants:
 
 
 class TestBusinessWriterOptInIndependence:
-    """v0.2.53.27 opt-in 与 DASHBOARD_REAL_DB 解耦."""
+    """v0.2.53.28 BusinessWriter 第三门前置条件 — 依赖 DASHBOARD_REAL_DB session."""
 
     def test_real_db_unset_writer_env_set_returns_stub(
         self, monkeypatch: pytest.MonkeyPatch
@@ -350,6 +362,9 @@ class TestBusinessWriterOptInIndependence:
         ctx = DashboardContext.default()
         assert ctx.business_writer is None
         assert isinstance(ctx.resolve_business_writer(), BusinessWriterStub)
+        assert ctx.is_business_writer_env_enabled() is True
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
 
     def test_writer_env_unset_returns_stub(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED 未设 → 仅注入其他服务,writer 仍 Stub."""
@@ -378,3 +393,6 @@ class TestBusinessWriterOptInIndependence:
         # 即使 DB 开了,writer env 未设仍 Stub
         assert ctx.business_writer is None
         assert isinstance(ctx.resolve_business_writer(), BusinessWriterStub)
+        assert ctx.is_business_writer_env_enabled() is False
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False

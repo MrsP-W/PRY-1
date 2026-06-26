@@ -1347,7 +1347,9 @@
         ).length;
         const realSmtp = approval.real_smtp === true;
         const writeApi = approval.dashboard_write_api === true;
-        const writerEnabled = approval.business_writer_enabled === true;
+        const writerEnvEnabled = approval.business_writer_env_enabled === true;
+        const writerInjected = approval.business_writer_impl_injected === true;
+        const writerReady = approval.business_writer_ready === true;
         const dryRunStatus = approval.v0_2_53_26_dry_run_status ?? null;
         setText("system-head", payload.git_head ?? "unknown");
         setText("system-pytest", quality.pytest ?? "unknown");
@@ -1363,16 +1365,21 @@
         setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
         setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");
         setText("header-keychain", `${presentCount}/3 Keychain`);
-        // v0.2.53.26 三门联调状态展示
-        renderDryRunThreeGate(dryRunStatus, writeApi, writerEnabled);
+        // v0.2.53.28 三门联调 — 第三道门以 Impl 实际注入为准
+        renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected);
       }
 
-      function renderDryRunThreeGate(dryRunStatus, writeApi, writerEnabled) {
+      function renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected) {
         const outcome = dryRunStatus?.outcome ?? "unknown";
         const labelMap = {
           disabled: { text: "Dry-run 禁写(默认)", tone: "red" },
           needs_confirmation: { text: "Dry-run 需 confirm_text", tone: "yellow" },
-          writer_required: { text: "Dry-run writer 未启用", tone: "yellow" },
+          writer_required: {
+            text: writerEnvEnabled && !writerInjected
+              ? "Dry-run writer env 已开但未注入"
+              : "Dry-run writer 未就绪",
+            tone: "yellow",
+          },
           dry_run_ready: { text: "Dry-run 三门已就绪", tone: "green" },
           unknown: { text: "Dry-run 状态未知", tone: "yellow" },
         };
@@ -1397,7 +1404,13 @@
           setTag("system-gate-second", secondLabel, "yellow");
         }
         if (thirdGate) {
-          setTag("system-gate-third", writerEnabled ? "open" : "closed", writerEnabled ? "green" : "red");
+          const thirdLabel = writerReady
+            ? "open"
+            : writerEnvEnabled && !writerInjected
+              ? "env only"
+              : "closed";
+          const thirdTone = writerReady ? "green" : "red";
+          setTag("system-gate-third", thirdLabel, thirdTone);
         }
         if (dryRunSystem) {
           setText("system-dry-run-outcome", meta.text);

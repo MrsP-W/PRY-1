@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.27 BusinessWriterImpl opt-in 注入(2026-06-26)** — `DashboardContext.default()` 新增 `BUSINESS_WRITER_ENABLED=1` env 门控,自动注入 `BusinessWriterImpl`(沿 `DASHBOARD_REAL_DB=1` 范本);新增 helper `_is_business_writer_enabled()` + `_try_build_business_writer_from_session_factory()`;11 个测试覆盖默认/启用/降级/不变式/解耦 5 场景。**质量门**:**2506 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.28 BusinessWriter 第三门真实状态收口(2026-06-26)** — status/POST 第三道门以 `business_writer_ready`(Impl 实际注入)为准,新增 `business_writer_env_enabled` / `business_writer_impl_injected` / `business_writer_ready` 三字段;修正 `DASHBOARD_REAL_DB` 前置语义。**质量门**:**2506 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **166 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2496 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2506 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2496 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2506 passed / 1 skipped / 88.76% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

@@ -111,7 +111,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
             if error_status is not None:
                 self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
                 return
-            status, decision = evaluate_writer_dry_run(payload)
+            writer_ready = self.dashboard_context.is_business_writer_ready()
+            status, decision = evaluate_writer_dry_run(payload, writer_enabled=writer_ready)
             # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
             if status == HTTPStatus.OK:
                 decision = self._merge_writer_dry_run(decision)
