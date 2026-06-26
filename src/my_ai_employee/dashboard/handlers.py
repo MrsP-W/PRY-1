@@ -114,16 +114,12 @@ class DashboardHandler(BaseHTTPRequestHandler):
             status, decision = evaluate_writer_dry_run(payload)
             # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
             if status == HTTPStatus.OK:
-                decision = self._merge_writer_dry_run(payload, decision)
+                decision = self._merge_writer_dry_run(decision)
             self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
             return
         self._method_not_allowed()
 
-    def _merge_writer_dry_run(
-        self,
-        payload: dict[str, Any],
-        decision: dict[str, Any],
-    ) -> dict[str, Any]:
+    def _merge_writer_dry_run(self, decision: dict[str, Any]) -> dict[str, Any]:
         """v0.2.53.21 handler dry-run 接入 BusinessWriter — 合并 writer.dry_run 结果到 ApprovalGate 决策.
 
         触发条件(沿 v0.2.53.19 路径 3.5 设计):

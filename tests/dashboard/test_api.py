@@ -144,6 +144,7 @@ class TestDryRunThreeGateStatus:
         assert ag["business_writer_enabled"] is False
         status = ag["v0_2_53_26_dry_run_status"]
         assert status["first_gate"] == "closed"
+        assert status["second_gate"] == "confirm_required_per_action"
         assert status["third_gate"] == "closed"
         assert status["outcome"] == "disabled"
 
@@ -164,6 +165,7 @@ class TestDryRunThreeGateStatus:
         assert ag["business_writer_enabled"] is False
         status = ag["v0_2_53_26_dry_run_status"]
         assert status["first_gate"] == "open"
+        assert status["second_gate"] == "confirm_required_per_action"
         assert status["third_gate"] == "closed"
         assert status["outcome"] == "writer_required"
 
@@ -182,6 +184,7 @@ class TestDryRunThreeGateStatus:
         assert ag["business_writer_enabled"] is True
         status = ag["v0_2_53_26_dry_run_status"]
         assert status["first_gate"] == "open"
+        assert status["second_gate"] == "confirm_required_per_action"
         assert status["third_gate"] == "open"
         assert status["outcome"] == "dry_run_ready"
 

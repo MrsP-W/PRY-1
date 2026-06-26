@@ -108,7 +108,7 @@ class BusinessWriterImpl:
                     reason=f"未知 action:{action}",
                 )
 
-            # 默认 would_allow=False — handler 路径 4 启用后改为 True
+            # 默认 would_allow=False — real_write_handler 启用后改为 True
             return WriteDecision(
                 action=action,
                 target_id=target_id,
@@ -118,12 +118,12 @@ class BusinessWriterImpl:
                 dry_run=True,
                 audit=audit,
                 error="write_not_implemented",
-                reason="BusinessWriterImpl 骨架就绪,handler 路径 4 启用留 v0.2.53.19",
+                reason="BusinessWriterImpl 骨架就绪,real_write_handler 未启用",
                 required=(
                     "DASHBOARD_WRITE_API=1",
                     "confirm_text=CONFIRM_WRITE",
                     "BUSINESS_WRITER_ENABLED=1",
-                    "handler_path_4_enabled",
+                    "real_write_handler_enabled",
                 ),
             )
         except Exception as e:
@@ -151,9 +151,7 @@ class BusinessWriterImpl:
         Raises:
             NotImplementedError: 默认行为,留 v0.2.53.19 启用.
         """
-        raise NotImplementedError(
-            "BusinessWriterImpl.approve_outbox 等待 v0.2.53.19 handler 路径 4 启用"
-        )
+        raise NotImplementedError("BusinessWriterImpl.approve_outbox real_write_handler 未启用")
 
     def cancel_outbox(
         self,
@@ -162,9 +160,7 @@ class BusinessWriterImpl:
         audit: AuditContext,
     ) -> WriteResult:
         """默认 raise — handler 路径 4 启用后改为调 OutboxStore.update_status."""
-        raise NotImplementedError(
-            "BusinessWriterImpl.cancel_outbox 等待 v0.2.53.19 handler 路径 4 启用"
-        )
+        raise NotImplementedError("BusinessWriterImpl.cancel_outbox real_write_handler 未启用")
 
     def confirm_note(
         self,
@@ -176,9 +172,7 @@ class BusinessWriterImpl:
 
         异常收窄(沿 note_confirm_service.py:113-115):用户主动操作异常必须透传.
         """
-        raise NotImplementedError(
-            "BusinessWriterImpl.confirm_note 等待 v0.2.53.19 handler 路径 4 启用"
-        )
+        raise NotImplementedError("BusinessWriterImpl.confirm_note real_write_handler 未启用")
 
     def dismiss_anomaly(
         self,
@@ -187,9 +181,7 @@ class BusinessWriterImpl:
         audit: AuditContext,
     ) -> WriteResult:
         """默认 raise — handler 路径 4 启用后改为调 AnomalyDismissalServiceStub.dismiss."""
-        raise NotImplementedError(
-            "BusinessWriterImpl.dismiss_anomaly 等待 v0.2.53.19 handler 路径 4 启用"
-        )
+        raise NotImplementedError("BusinessWriterImpl.dismiss_anomaly real_write_handler 未启用")
 
     @staticmethod
     def _audit_timestamp(audit: AuditContext) -> int:

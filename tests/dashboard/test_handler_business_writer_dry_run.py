@@ -60,7 +60,7 @@ class TestMergeWriterDryRunGuard:
             action=None,
             target_id=None,
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged == decision
         assert "business_writer_error" not in merged
 
@@ -69,7 +69,7 @@ class TestMergeWriterDryRunGuard:
         ctx = DashboardContext()
         handler = _make_handler(ctx)
         decision = _decision(dry_run=False, required=["DASHBOARD_WRITE_API=1"])
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged == decision
 
     def test_no_merge_when_action_unsupported(self) -> None:
@@ -77,7 +77,7 @@ class TestMergeWriterDryRunGuard:
         ctx = DashboardContext()
         handler = _make_handler(ctx)
         decision = _decision(action="unknown.action")
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged == decision
 
     def test_no_merge_when_target_id_empty(self) -> None:
@@ -85,7 +85,7 @@ class TestMergeWriterDryRunGuard:
         ctx = DashboardContext()
         handler = _make_handler(ctx)
         decision = _decision(target_id="")
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged == decision
 
 
@@ -100,7 +100,7 @@ class TestMergeWriterDryRunWithStub:
             required=["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
             audit={"actor": "local_dashboard", "reason": "用户点击审批", "source": "dashboard"},
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged["would_allow"] is False
         assert merged["business_writer_error"] == "write_not_implemented"
         assert "BUSINESS_WRITER_ENABLED=1" in merged["required"]
@@ -157,7 +157,7 @@ class TestMergeWriterDryRunWithMockWriter:
             required=["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE"],
             audit={"actor": "test_user", "reason": "unit_test", "source": "dashboard"},
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged["would_allow"] is True
         assert merged["business_writer_error"] is None
         assert merged["business_writer_reason"] == "mock: writer 就绪"
@@ -188,7 +188,7 @@ class TestMergeWriterDryRunExceptionIsolation:
             required=["DASHBOARD_WRITE_API=1"],
             audit={"actor": "test_user", "reason": "", "source": "dashboard"},
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged == decision
 
 
@@ -213,7 +213,7 @@ class TestMergeWriterDryRunAll4Actions:
             target_id="test_target",
             audit={"actor": "test_user", "reason": "test", "source": "dashboard"},
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged["business_writer_error"] == "write_not_implemented"
         assert "BUSINESS_WRITER_ENABLED=1" in merged["required"]
 
@@ -230,7 +230,7 @@ class TestMergeWriterDryRunWriteExecutedInvariant:
         decision = _decision(
             audit={"actor": "test_user", "reason": "", "source": "dashboard"},
         )
-        merged = handler._merge_writer_dry_run({}, decision)
+        merged = handler._merge_writer_dry_run(decision)
         assert merged["would_allow"] is True
         assert merged["write_executed"] is False
 
@@ -271,7 +271,7 @@ class TestMergeWriterDryRunAuditContext:
                 "source": "cli",
             },
         )
-        handler._merge_writer_dry_run({}, decision)
+        handler._merge_writer_dry_run(decision)
         assert len(captured_audit) == 1
         audit = captured_audit[0]
         assert audit.actor == "custom_actor"

@@ -65,9 +65,9 @@ def _dry_run_three_gate_status(approval_gate: dict[str, Any]) -> dict[str, str]:
     Returns:
         dict 包含 4 字段(纯前端展示用):
         - first_gate(第一道门 · DASHBOARD_WRITE_API):"open"/"closed"
-        - second_gate(第二道门 · confirm_text):"ready"/"locked"
+        - second_gate(第二道门 · confirm_text):"confirm_required_per_action"(POST 请求级,非全局 env)
         - third_gate(第三道门 · BUSINESS_WRITER_ENABLED):"open"/"closed"
-        - outcome(综合结果):"disabled"/"needs_confirmation"/"writer_required"/"dry_run_ready"
+        - outcome(综合结果):"disabled"/"writer_required"/"dry_run_ready"
     """
     write_enabled = approval_gate.get("write_enabled", False)
     writer_enabled = approval_gate.get("writer_enabled", False)
@@ -79,7 +79,7 @@ def _dry_run_three_gate_status(approval_gate: dict[str, Any]) -> dict[str, str]:
         outcome = "dry_run_ready"
     return {
         "first_gate": "open" if write_enabled else "closed",
-        "second_gate": "ready",
+        "second_gate": "confirm_required_per_action",
         "third_gate": "open" if writer_enabled else "closed",
         "outcome": outcome,
     }

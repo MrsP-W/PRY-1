@@ -79,7 +79,7 @@ class TestBusinessWriterImplDryRun:
         assert "DASHBOARD_WRITE_API=1" in decision.required
         assert "confirm_text=CONFIRM_WRITE" in decision.required
         assert "BUSINESS_WRITER_ENABLED=1" in decision.required
-        assert "handler_path_4_enabled" in decision.required
+        assert "real_write_handler_enabled" in decision.required
 
     def test_dry_run_exception_isolation(
         self, writer: BusinessWriterImpl, audit: AuditContext
