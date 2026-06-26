@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.11` ApprovalGate 写操作设计(2026-06-26):`POST /api/approval-gate/actions` · `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` 双门控 · 默认拒写 · 全路径 `write_executed=false` · +24 tests · 核心质量门全绿。**2397 passed / 1 skipped / 88.53%** / MD lint **160 files**。**下一棒**:ApprovalGate dry-run 按钮联调 / business writer 设计 / Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.10` 报告预览 + 搜索(2026-06-25) |
+| **当前阶段** | ✅ `v0.2.53.12` ApprovalGate dry-run 按钮联调(2026-06-26):HTML 队列 dry-run · inspector 拒写原因 · API 离线兜底 · +2 tests · 核心质量门全绿。**2399 passed / 1 skipped / 88.53%** / MD lint **161 files**。**下一棒**:business writer 设计 / Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.11` ApprovalGate 写操作设计(2026-06-26) |
 | **上一阶段** | ✅ `v0.2.53.9` GET /api/reports + HTML 报告页 hydrate(2026-06-25) |
 | **上上一阶段** | ✅ `v0.2.52` SMTPProviderFactory 协议不匹配修复(撞坑 #61)+ Makefile alembic 退出码修复(撞坑 #62)+ 状态三入口同步(2026-06-25 · `91cbe96`,7 files,353+/-) |
 | **上上一阶段** | ✅ `v0.2.50` 8/1 tag 锚定评估 preliminary(2026-06-25 · docs-only · 撞坑 #60 preliminary 范本) |
@@ -92,8 +92,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.11:**2397 passed / 1 skipped** / **88.53%** / mypy strict 0 / **223 files** / MD lint **160 files** |
-| **下一棒** | ApprovalGate dry-run 按钮联调;business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
+| **质量基线** | v0.2.53.12:**2399 passed / 1 skipped** / **88.53%** / mypy strict 0 / **223 files** / MD lint **161 files** |
+| **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -122,6 +122,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-26 [v0.2.53.12 ApprovalGate dry-run 按钮联调] — 收口
+
+**1. 本次修改内容**
+
+- **docs(ui)**:Mail/Notes/Finance 队列项新增 dry-run 按钮;点击 `POST /api/approval-gate/actions`( `dry_run: true` )。
+- **docs(ui)**:inspector 新增 ApprovalGate dry-run 面板,展示 HTTP 状态、`reason`、`required` 与 JSON 审计预览。
+- **docs(ui)**:API 离线时静态兜底 `api_offline`,不发起 POST;全路径 `write_executed=false`。
+- **tests**:+2 `tests/dashboard/test_approval_gate.py` HTTP dry-run 用例(outbox + finance)。
+- 详细说明:[docs/v0.2.53.12-dashboard-approval-gate-dry-run-2026-06-26.md](docs/v0.2.53.12-dashboard-approval-gate-dry-run-2026-06-26.md)
+
+**2. 风险点**
+
+- ⚠️ dry-run 只展示拒写原因,不能当成真实审批/确认/忽略落地。
+- **边界**:不写 DB · 不发 SMTP · 不写 Keychain · 不接 business writer · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2399 passed / 1 skipped / 88.53% coverage**;mypy strict 0(**223 files**);MD lint **161 files** 0 errors。
+- 下一棒:business writer 设计 / Keychain SMTP / 8/1 截点。
 
 ### 2026-06-26 [v0.2.53.11 ApprovalGate 写操作设计] — 收口
 

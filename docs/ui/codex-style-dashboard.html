@@ -172,6 +172,23 @@
         opacity: 0.5;
       }
 
+      .btn.btn-sm {
+        border-radius: 10px;
+        padding: 5px 10px;
+        font-size: 11px;
+      }
+
+      .btn.dry-run-btn {
+        border-color: rgb(91 140 255 / 35%);
+        color: #b8ccff;
+        white-space: nowrap;
+      }
+
+      .btn.dry-run-btn.loading {
+        opacity: 0.65;
+        pointer-events: none;
+      }
+
       .workspace {
         display: grid;
         grid-template-columns: 220px minmax(460px, 1fr) 340px;
@@ -396,6 +413,34 @@
         border: 1px solid rgb(255 255 255 / 8%);
         border-radius: 16px;
         background: var(--panel);
+      }
+
+      .queue-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+      }
+
+      .dry-run-panel {
+        padding: 12px;
+        border: 1px solid rgb(255 255 255 / 8%);
+        border-radius: 14px;
+        background: var(--panel-2);
+      }
+
+      .dry-run-panel pre {
+        margin: 10px 0 0;
+        overflow: auto;
+        max-height: 220px;
+        padding: 10px;
+        border-radius: 10px;
+        background: rgb(0 0 0 / 25%);
+        color: #dbe4f2;
+        font-size: 11px;
+        line-height: 1.45;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
 
       .queue-title {
@@ -653,7 +698,7 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill">v0.2.53.11</span>
+          <span class="pill">v0.2.53.12</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -982,10 +1027,24 @@
             </div>
           </div>
 
+          <div class="inspector-section" id="approval-dry-run-section" hidden>
+            <h3>ApprovalGate dry-run</h3>
+            <div class="dry-run-panel">
+              <div class="gate-list">
+                <div class="gate"><strong>动作</strong><span class="tag" id="dry-run-action">—</span></div>
+                <div class="gate"><strong>目标</strong><span class="tiny" id="dry-run-target">—</span></div>
+                <div class="gate"><strong>HTTP</strong><span class="tag" id="dry-run-http">—</span></div>
+                <div class="gate"><strong>write_executed</strong><span class="tag green" id="dry-run-executed">false</span></div>
+              </div>
+              <p class="tiny" id="dry-run-reason" style="margin: 10px 0 0">点击 Mail / Notes / Finance 队列中的 dry-run 按钮,只展示拒写原因,不写 DB。</p>
+              <pre id="dry-run-detail"></pre>
+            </div>
+          </div>
+
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              `POST /api/approval-gate/actions` 已有契约骨架,当前只做校验/拒绝/审计预览,不执行真实写入。
+              dry-run 按钮已联调 `POST /api/approval-gate/actions`(默认 `403 write_disabled`);business writer 仍待设计,不执行真实写入。
             </div>
           </div>
         </section>
@@ -995,7 +1054,7 @@
         <div class="log">
           <span>执行日志(折叠):</span>
           <span id="footer-api">API 检测中</span>
-          <span>ApprovalGate write disabled ✅</span>
+          <span id="footer-dry-run">ApprovalGate dry-run wired ✅</span>
           <span>真实 SMTP blocked ✅</span>
           <span>Keychain plaintext hidden ✅</span>
         </div>
@@ -1181,6 +1240,9 @@
         const status = item.status ?? "draft";
         const tagText = status === "pending_send" ? "待审批" : "可保存";
         const tagClass = status === "pending_send" ? "" : "green";
+        const targetId = String(item.outbox_id ?? item.id ?? "");
+        const action = status === "pending_send" ? "outbox.approve" : "outbox.cancel";
+        const btnLabel = status === "pending_send" ? "dry-run 审批" : "dry-run 取消";
         const metaParts = [
           item.to ? `to: ${item.to}` : "",
           item.provider ? `provider: ${item.provider}` : "",
@@ -1188,18 +1250,20 @@
           status ? `status: ${status}` : "",
         ].filter(Boolean);
         const meta = metaParts.join(" · ") || "outbox 草稿";
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><span class="tag ${tagClass}">${escapeHtml(tagText)}</span></div>`;
+        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}">${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn">${escapeHtml(btnLabel)}</button></div></div>`;
       }
 
       function renderNotesItem(item) {
         const folder = item.folder ? `${item.folder} · ` : "";
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><span class="tag">确认</span></div>`;
+        const targetId = String(item.apple_note_id ?? item.id ?? "");
+        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "Notes 候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 确认</button></div></div>`;
       }
 
       function renderFinanceItem(item) {
         const title = `${item.counterparty ?? "未知"} ${formatAmount(item.amount)}`;
         const meta = [item.date, item.kinds].filter(Boolean).join(" · ") || "财务异常";
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><span class="tag red">风险</span></div>`;
+        const targetId = [item.date, item.counterparty, item.amount].filter((v) => v !== undefined && v !== null && v !== "").join("|");
+        return `<div class="queue-item" data-approval-action="finance.dismiss_anomaly" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(title)}"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag red">风险</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 忽略</button></div></div>`;
       }
 
       function renderTodayQueueItem(kind, item) {
@@ -1286,6 +1350,160 @@
         } finally {
           window.clearTimeout(timer);
         }
+      }
+
+      async function postJson(path, body) {
+        const controller = new AbortController();
+        const timer = window.setTimeout(() => controller.abort(), 3000);
+        try {
+          const response = await fetch(`${API_BASE}${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: controller.signal,
+          });
+          let data = {};
+          try {
+            data = await response.json();
+          } catch (_err) {
+            data = { error: "invalid_json_response", write_executed: false };
+          }
+          return { status: response.status, body: data };
+        } finally {
+          window.clearTimeout(timer);
+        }
+      }
+
+      function dryRunHttpTone(status) {
+        if (status === null || status === undefined) {
+          return "yellow";
+        }
+        if (status >= 500) {
+          return "red";
+        }
+        if (status === 403 || status === 501) {
+          return "yellow";
+        }
+        if (status >= 400) {
+          return "red";
+        }
+        return "green";
+      }
+
+      function renderDryRunResult(payload, httpStatus, label) {
+        const section = document.getElementById("approval-dry-run-section");
+        if (section) {
+          section.hidden = false;
+        }
+        const action = payload.action ?? "—";
+        const targetId = payload.target_id ?? "—";
+        setText("dry-run-action", action);
+        setText("dry-run-target", label ? `${label} · ${targetId}` : String(targetId));
+        const httpLabel = httpStatus === null || httpStatus === undefined ? "offline" : String(httpStatus);
+        setTag("dry-run-http", httpLabel, dryRunHttpTone(httpStatus));
+        setTag("dry-run-executed", payload.write_executed === true ? "true" : "false", payload.write_executed === true ? "red" : "green");
+        const reason = payload.reason ?? payload.error ?? "无拒写原因";
+        setText("dry-run-reason", reason);
+        const detail = {
+          error: payload.error ?? null,
+          reason: payload.reason ?? null,
+          write_enabled: payload.write_enabled ?? null,
+          write_executed: payload.write_executed ?? false,
+          would_allow: payload.would_allow ?? false,
+          dry_run: payload.dry_run ?? true,
+          required: payload.required ?? [],
+          action_contract: payload.action_contract ?? null,
+          audit: payload.audit ?? null,
+        };
+        const pre = document.getElementById("dry-run-detail");
+        if (pre) {
+          pre.textContent = JSON.stringify(detail, null, 2);
+        }
+      }
+
+      async function submitApprovalDryRun(action, targetId, label, buttonEl) {
+        if (!action || !targetId) {
+          renderDryRunResult(
+            {
+              error: "missing_target",
+              reason: "队列项缺少 action 或 target_id,无法 dry-run。",
+              write_executed: false,
+              action,
+              target_id: targetId,
+            },
+            null,
+            label,
+          );
+          return;
+        }
+        if (buttonEl) {
+          buttonEl.classList.add("loading");
+          buttonEl.disabled = true;
+        }
+        try {
+          if (!_apiOnline) {
+            renderDryRunResult(
+              {
+                error: "api_offline",
+                reason: "ApprovalGate 未连接 · 默认禁写 · 静态兜底不发起 POST",
+                write_executed: false,
+                action,
+                target_id: targetId,
+                dry_run: true,
+                required: ["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE", "business_writer_implementation"],
+              },
+              null,
+              label,
+            );
+            return;
+          }
+          const { status, body } = await postJson("/api/approval-gate/actions", {
+            action,
+            target_id: targetId,
+            dry_run: true,
+            reason: "dashboard ui dry-run click",
+            actor: "local_dashboard",
+          });
+          renderDryRunResult(body, status, label);
+        } catch (_err) {
+          renderDryRunResult(
+            {
+              error: "request_failed",
+              reason: "POST /api/approval-gate/actions 请求失败,仍保持禁写。",
+              write_executed: false,
+              action,
+              target_id: targetId,
+              dry_run: true,
+            },
+            null,
+            label,
+          );
+        } finally {
+          if (buttonEl) {
+            buttonEl.classList.remove("loading");
+            buttonEl.disabled = false;
+          }
+        }
+      }
+
+      function bindApprovalDryRunClick() {
+        document.addEventListener("click", (ev) => {
+          const btn = ev.target.closest(".dry-run-btn");
+          if (!btn) {
+            return;
+          }
+          const item = btn.closest("[data-approval-action]");
+          if (!item) {
+            return;
+          }
+          ev.preventDefault();
+          submitApprovalDryRun(
+            item.dataset.approvalAction,
+            item.dataset.targetId,
+            item.dataset.approvalLabel ?? "",
+            btn,
+          );
+        });
       }
 
       // ===== v0.2.53.9 + v0.2.53.10 报告页渲染 =====
@@ -1484,7 +1702,7 @@
           renderExtendedViews(outbox, notes, finance, true);
           renderReports(reports, "本地只读 API · 文件系统扫描");
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
-          setApiState(true, "API 已连接 · 7 端点");
+          setApiState(true, "API 已连接 · 7 读 + dry-run 写门");
         } catch (_err) {
           _apiOnline = false;
           renderTasks(fallbackTasks, "静态兜底数据");
@@ -1505,6 +1723,7 @@
         });
       });
 
+      bindApprovalDryRunClick();
       hydrateDashboard();
     </script>
   </body>

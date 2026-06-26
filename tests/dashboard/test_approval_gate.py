@@ -176,6 +176,36 @@ class TestApprovalGateHttp:
         assert payload["error"] == "write_disabled"
         assert payload["write_executed"] is False
 
+    def test_post_dry_run_explicit_forbidden(self, http_server: str) -> None:
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "outbox.approve",
+                "target_id": 1,
+                "dry_run": True,
+                "reason": "dashboard ui dry-run click",
+                "actor": "local_dashboard",
+            },
+        )
+        assert status == 403
+        assert payload["error"] == "write_disabled"
+        assert payload["dry_run"] is True
+        assert payload["write_executed"] is False
+
+    def test_post_finance_dismiss_dry_run_forbidden(self, http_server: str) -> None:
+        status, payload = _post_json(
+            f"{http_server}/api/approval-gate/actions",
+            {
+                "action": "finance.dismiss_anomaly",
+                "target_id": "2026-06-25|支付宝|1299",
+                "dry_run": True,
+            },
+        )
+        assert status == 403
+        assert payload["error"] == "write_disabled"
+        assert payload["action_contract"]["target_type"] == "finance_anomaly"
+        assert payload["write_executed"] is False
+
     def test_post_invalid_json_bad_request(self, http_server: str) -> None:
         status, payload = _post_json(f"{http_server}/api/approval-gate/actions", "{bad")
         assert status == 400
