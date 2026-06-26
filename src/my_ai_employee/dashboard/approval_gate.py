@@ -20,9 +20,14 @@ from typing import Any, Final
 
 from my_ai_employee.dashboard.action_contracts import ACTION_CONTRACTS, is_supported_action
 
-CONTRACT_VERSION: Final = "v0.2.53.11"
+CONTRACT_VERSION: Final = "v0.2.53.22"
 DASHBOARD_WRITE_API_ENV: Final = "DASHBOARD_WRITE_API"
 CONFIRM_TEXT: Final = "CONFIRM_WRITE"
+# v0.2.53.22 第三道门(沿 v0.2.53.19 §设计)
+#   - 默认未设 → 路径 3 仍 `501 write_not_implemented`
+#   - 设为 truthy 字面量 → writer 就绪时走 writer.dry_run 路径(仍 write_executed=False)
+#   - 实际写入路径(路径 4)留 8/1 后 + 用户明确授权
+BUSINESS_WRITER_ENABLED_ENV: Final = "BUSINESS_WRITER_ENABLED"
 
 _TRUTHY: Final = {"1", "true", "yes", "on"}
 
@@ -31,6 +36,17 @@ def is_dashboard_write_api_enabled() -> bool:
     """`DASHBOARD_WRITE_API=1` 判定 — 默认禁写,仅识别 truthy 字面量."""
 
     raw = os.environ.get(DASHBOARD_WRITE_API_ENV, "").strip().lower()
+    return raw in _TRUTHY
+
+
+def is_business_writer_enabled() -> bool:
+    """`BUSINESS_WRITER_ENABLED=1` 判定 — 默认未启用,仅识别 truthy 字面量.
+
+    沿 v0.2.53.19 §6.2 决策矩阵:这是第三道门.默认禁用,设真值后表示
+    writer 层就绪(handler 路径 3.5 → writer.dry_run 合并).
+    """
+
+    raw = os.environ.get(BUSINESS_WRITER_ENABLED_ENV, "").strip().lower()
     return raw in _TRUTHY
 
 
@@ -55,6 +71,7 @@ def build_approval_gate_status() -> dict[str, Any]:
     return {
         "contract_version": CONTRACT_VERSION,
         "write_enabled": is_dashboard_write_api_enabled(),
+        "writer_enabled": is_business_writer_enabled(),
         "write_executed": False,
         "confirm_text": CONFIRM_TEXT,
         "actions": list_action_contracts(),
@@ -166,10 +183,156 @@ def evaluate_approval_action_request(
     )
 
 
+def evaluate_writer_dry_run(
+    payload: Mapping[str, Any],
+    *,
+    write_enabled: bool | None = None,
+    writer_enabled: bool | None = None,
+) -> tuple[HTTPStatus, dict[str, Any]]:
+    """v0.2.53.22 第三道门判定 — env+confirm 通过 + writer 启用时,返回可合并到 dry-run 的 200 决策.
+
+    决策矩阵(沿 v0.2.53.19 §6.2):
+        - 路径 1 (DASHBOARD_WRITE_API 未设):           403 write_disabled
+        - 路径 2 (env 已开但 confirm_text 错):          403 confirmation_required
+        - 路径 3 (env+confirm 通过 + writer 未启用):     501 write_not_implemented
+        - 路径 3.5 (env+confirm+writer 都启用 + dry_run=True):  200 OK + approval_gate_passed=True + would_allow 由 writer 决定
+        - 路径 3.5-dry_run_false:                        501 write_not_implemented(dry-run 默认,实际写入留 8/1 后)
+
+    Args:
+        payload: 同 evaluate_approval_action_request 的 JSON object body.
+        write_enabled: 测试注入;None 时读 `DASHBOARD_WRITE_API`.
+        writer_enabled: 测试注入;None 时读 `BUSINESS_WRITER_ENABLED`.
+
+    Returns:
+        `(HTTPStatus, payload)`. 所有返回都保证 `write_executed=False`.
+    """
+    enabled = is_dashboard_write_api_enabled() if write_enabled is None else write_enabled
+    writer_on = is_business_writer_enabled() if writer_enabled is None else writer_enabled
+    action = _text_field(payload, "action")
+    target_id = _target_id(payload)
+    dry_run_raw = payload.get("dry_run", True)
+    if type(dry_run_raw) is not bool:
+        return _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="invalid_dry_run",
+            reason="dry_run 必须是 bool。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=True,
+            payload=payload,
+        )
+    dry_run = dry_run_raw
+
+    if not action:
+        return _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_action",
+            reason="缺少 action。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    if not is_supported_action(action):
+        return _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="unsupported_action",
+            reason=f"不支持的 action: {action}",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+    if not target_id:
+        return _decision(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_target_id",
+            reason="缺少 target_id。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+
+    if not enabled:
+        return _decision(
+            HTTPStatus.FORBIDDEN,
+            error="write_disabled",
+            reason=f"默认禁写;需显式设置 {DASHBOARD_WRITE_API_ENV}=1。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+
+    confirm_text = _text_field(payload, "confirm_text")
+    if confirm_text != CONFIRM_TEXT:
+        return _decision(
+            HTTPStatus.FORBIDDEN,
+            error="confirmation_required",
+            reason=f"需 confirm_text={CONFIRM_TEXT}。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+        )
+
+    # 路径 3:env+confirm 通过,writer 未启用 → 501 write_not_implemented
+    if not writer_on:
+        return _decision(
+            HTTPStatus.NOT_IMPLEMENTED,
+            error="write_not_implemented",
+            reason="ApprovalGate 双门已通过,但 BusinessWriter 未启用,未接业务写入。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+            would_allow=False,
+            approval_gate_passed=True,
+        )
+
+    # 路径 3.5-dry_run_false:实际写入路径留 8/1 后
+    if not dry_run:
+        return _decision(
+            HTTPStatus.NOT_IMPLEMENTED,
+            error="real_write_disabled",
+            reason="实际写入路径留 v0.2.53.19 后 + 用户明确授权。",
+            write_enabled=enabled,
+            action=action,
+            target_id=target_id,
+            dry_run=dry_run,
+            payload=payload,
+            would_allow=False,
+            approval_gate_passed=True,
+        )
+
+    # 路径 3.5 dry_run=True:writer dry-run 入口(handler._merge_writer_dry_run 进一步合并)
+    return _decision(
+        HTTPStatus.OK,
+        error=None,
+        reason="ApprovalGate 三门已通过(write + confirm + writer),进入 writer dry-run。",
+        write_enabled=enabled,
+        action=action,
+        target_id=target_id,
+        dry_run=dry_run,
+        payload=payload,
+        would_allow=False,  # 由 writer.dry_run 决定(handler 合并后覆盖)
+        approval_gate_passed=True,
+        writer_enabled=True,
+    )
+
+
 def _decision(
     status: HTTPStatus,
     *,
-    error: str,
+    error: str | None,
     reason: str,
     write_enabled: bool,
     action: str,
@@ -178,6 +341,7 @@ def _decision(
     payload: Mapping[str, Any],
     would_allow: bool = False,
     approval_gate_passed: bool = False,
+    writer_enabled: bool = False,
 ) -> tuple[HTTPStatus, dict[str, Any]]:
     contract = ACTION_CONTRACTS.get(action)
     action_contract: dict[str, str] | None = None
@@ -187,12 +351,20 @@ def _decision(
             "target_type": contract["target_type"],
             "future_effect": contract["future_effect"],
         }
+    required = [
+        f"{DASHBOARD_WRITE_API_ENV}=1",
+        f"confirm_text={CONFIRM_TEXT}",
+    ]
+    if not writer_enabled:
+        required.append(BUSINESS_WRITER_ENABLED_ENV + "=1")
+        required.append("business_writer_implementation")
     return (
         status,
         {
             "contract_version": CONTRACT_VERSION,
             "read_only": True,
             "write_enabled": write_enabled,
+            "writer_enabled": writer_enabled,
             "write_executed": False,
             "would_allow": would_allow,
             "approval_gate_passed": approval_gate_passed,
@@ -207,11 +379,7 @@ def _decision(
                 "reason": _bounded_text(payload, "reason", default="", limit=240),
                 "source": "dashboard",
             },
-            "required": [
-                f"{DASHBOARD_WRITE_API_ENV}=1",
-                f"confirm_text={CONFIRM_TEXT}",
-                "business_writer_implementation",
-            ],
+            "required": required,
         },
     )
 
@@ -244,11 +412,14 @@ def _bounded_text(
 
 
 __all__ = [
+    "BUSINESS_WRITER_ENABLED_ENV",
     "CONFIRM_TEXT",
     "CONTRACT_VERSION",
     "DASHBOARD_WRITE_API_ENV",
     "build_approval_gate_status",
     "evaluate_approval_action_request",
+    "evaluate_writer_dry_run",
+    "is_business_writer_enabled",
     "is_dashboard_write_api_enabled",
     "list_action_contracts",
 ]

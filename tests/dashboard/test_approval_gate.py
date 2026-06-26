@@ -163,7 +163,7 @@ class TestApprovalGateStatusPayload:
             DashboardContext(git_head_resolver=lambda: "abc123", keychain_probe=lambda _s: False)
         )
         assert payload["approval_gates"]["dashboard_write_api"] is False
-        assert payload["approval_gates"]["write_contract_version"] == "v0.2.53.11"
+        assert payload["approval_gates"]["write_contract_version"] == "v0.2.53.22"
         assert len(payload["approval_gates"]["write_actions"]) >= 3
 
 
