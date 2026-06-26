@@ -107,6 +107,85 @@ def test_build_status_payload_read_only(dashboard_ctx: DashboardContext) -> None
     assert payload["approval_gates"]["keychain_write"] is False
 
 
+class TestDryRunThreeGateStatus:
+    """v0.2.53.26 三门联调 status payload(纯展示字段,不改 ApprovalGate 决策).
+
+    覆盖 3 态:
+        - 默认(双门都未开):outcome=disabled
+        - DASHBOARD_WRITE_API 开但 writer 未开:outcome=writer_required
+        - 双门都开:outcome=dry_run_ready
+    """
+
+    def _base_payload(self) -> dict[str, Any]:
+        from my_ai_employee.dashboard.responses import build_status_payload
+
+        return build_status_payload(self._make_ctx())
+
+    @staticmethod
+    def _make_ctx() -> DashboardContext:
+        return DashboardContext(
+            git_head_resolver=lambda: "abc123",
+            keychain_probe=lambda _s: False,
+            quality_gates=QualityGateSnapshot(pytest="2493 passed / 1 skipped"),
+        )
+
+    def test_default_state_outcome_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.approval_gate import (
+            BUSINESS_WRITER_ENABLED_ENV,
+            DASHBOARD_WRITE_API_ENV,
+        )
+        from my_ai_employee.dashboard.responses import build_status_payload
+
+        monkeypatch.delenv(DASHBOARD_WRITE_API_ENV, raising=False)
+        monkeypatch.delenv(BUSINESS_WRITER_ENABLED_ENV, raising=False)
+        payload = build_status_payload(self._make_ctx())
+        ag = payload["approval_gates"]
+        assert ag["dashboard_write_api"] is False
+        assert ag["business_writer_enabled"] is False
+        status = ag["v0_2_53_26_dry_run_status"]
+        assert status["first_gate"] == "closed"
+        assert status["third_gate"] == "closed"
+        assert status["outcome"] == "disabled"
+
+    def test_dashbaord_write_api_only_outcome_writer_required(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from my_ai_employee.dashboard.approval_gate import (
+            BUSINESS_WRITER_ENABLED_ENV,
+            DASHBOARD_WRITE_API_ENV,
+        )
+        from my_ai_employee.dashboard.responses import build_status_payload
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.delenv(BUSINESS_WRITER_ENABLED_ENV, raising=False)
+        payload = build_status_payload(self._make_ctx())
+        ag = payload["approval_gates"]
+        assert ag["dashboard_write_api"] is True
+        assert ag["business_writer_enabled"] is False
+        status = ag["v0_2_53_26_dry_run_status"]
+        assert status["first_gate"] == "open"
+        assert status["third_gate"] == "closed"
+        assert status["outcome"] == "writer_required"
+
+    def test_both_gates_open_outcome_dry_run_ready(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.approval_gate import (
+            BUSINESS_WRITER_ENABLED_ENV,
+            DASHBOARD_WRITE_API_ENV,
+        )
+        from my_ai_employee.dashboard.responses import build_status_payload
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        payload = build_status_payload(self._make_ctx())
+        ag = payload["approval_gates"]
+        assert ag["dashboard_write_api"] is True
+        assert ag["business_writer_enabled"] is True
+        status = ag["v0_2_53_26_dry_run_status"]
+        assert status["first_gate"] == "open"
+        assert status["third_gate"] == "open"
+        assert status["outcome"] == "dry_run_ready"
+
+
 def test_build_tasks_today_payload_counts(dashboard_ctx: DashboardContext) -> None:
     payload = build_tasks_today_payload(dashboard_ctx)
     assert payload["read_only"] is True
