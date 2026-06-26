@@ -10,6 +10,7 @@ from my_ai_employee.core.keychain import (
     SERVICE_SMTP_OUTLOOK,
     SERVICE_SMTP_QQ,
 )
+from my_ai_employee.dashboard.approval_gate import build_approval_gate_status
 from my_ai_employee.dashboard.context import DashboardContext, safe_count, safe_list
 from my_ai_employee.dashboard.reports import read_report_preview, safe_scan, scan_reports
 
@@ -23,6 +24,7 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
         "smtp_gmail": "present" if ctx.keychain_probe(SERVICE_SMTP_GMAIL) else "missing",
     }
     qg = ctx.quality_gates
+    approval_gate = build_approval_gate_status()
     return {
         "read_only": True,
         "version": ctx.version,
@@ -48,6 +50,9 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
             "real_bill_import": False,
             "launchd_kickstart": False,
             "tag_create": False,
+            "dashboard_write_api": approval_gate["write_enabled"],
+            "write_contract_version": approval_gate["contract_version"],
+            "write_actions": approval_gate["actions"],
         },
     }
 

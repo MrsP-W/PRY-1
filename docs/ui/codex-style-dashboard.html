@@ -645,7 +645,7 @@
           <div class="avatar">职</div>
           <div>
             <div class="brand-title">我的AI员工</div>
-            <div class="brand-subtitle">Codex 风格本地工作台 · P2 只读 API 预览</div>
+            <div class="brand-subtitle">Codex 风格本地工作台 · P2 安全写操作契约预览</div>
           </div>
         </div>
         <div class="status-strip" aria-label="系统状态">
@@ -653,12 +653,12 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill">v0.2.53.10</span>
+          <span class="pill">v0.2.53.11</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
           <button class="btn">查看证据</button>
-          <button class="btn primary">处理最高风险项</button>
+          <button class="btn primary" disabled>写操作禁用</button>
         </div>
       </header>
 
@@ -686,7 +686,7 @@
           <div class="side-card">
             <h3>边界</h3>
             <div class="tiny">
-              假数据 · 不接真实 DB · 不读 Keychain 明文 · 不发 SMTP · 不启动 launchd。
+              默认禁写 · 不读 Keychain 明文 · 不发 SMTP · 不启动 launchd · 写动作必须先过 ApprovalGate。
             </div>
           </div>
         </aside>
@@ -720,6 +720,7 @@
                 <h3>安全门控</h3>
                 <div class="gate-list">
                   <div class="gate"><strong>真实 SMTP</strong><span class="tag red" id="gate-smtp">禁用</span></div>
+                  <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="gate-approval">禁写</span></div>
                   <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
                   <div class="gate"><strong>Keychain</strong><span class="tag red" id="gate-keychain">missing</span></div>
                 </div>
@@ -967,6 +968,7 @@
               <div class="gate"><strong>黑名单检查</strong><span class="tag green">通过</span></div>
               <div class="gate"><strong>Keychain</strong><span class="tag red" id="inspect-keychain">missing</span></div>
               <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">off</span></div>
+              <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="inspect-approval">disabled</span></div>
             </div>
           </div>
 
@@ -983,7 +985,7 @@
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              启动 `make dashboard-api` 后刷新本页,报告页支持搜索 + 点击预览(`/api/reports/preview`);API 离线时用静态兜底。
+              `POST /api/approval-gate/actions` 已有契约骨架,当前只做校验/拒绝/审计预览,不执行真实写入。
             </div>
           </div>
         </section>
@@ -993,6 +995,7 @@
         <div class="log">
           <span>执行日志(折叠):</span>
           <span id="footer-api">API 检测中</span>
+          <span>ApprovalGate write disabled ✅</span>
           <span>真实 SMTP blocked ✅</span>
           <span>Keychain plaintext hidden ✅</span>
         </div>
@@ -1258,8 +1261,10 @@
         setText("system-lint", quality.lint ?? "unknown");
         setText("header-quality", quality.pytest ? "质量门已读取" : "质量门未知");
         setTag("gate-smtp", realSmtp ? "可发送" : "禁用", realSmtp ? "green" : "red");
+        setTag("gate-approval", approval.dashboard_write_api ? "设计态开启" : "禁写", approval.dashboard_write_api ? "green" : "red");
         setTag("system-smtp-real", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
         setTag("inspect-real-network", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-approval", approval.dashboard_write_api ? "enabled" : "disabled", approval.dashboard_write_api ? "green" : "red");
         setTag("gate-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
         setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
         setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");

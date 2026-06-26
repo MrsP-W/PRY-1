@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.10 报告预览 + 搜索(2026-06-25)
+# SESSION-STATE — v0.2.53.11 ApprovalGate 写操作设计(2026-06-26)
 
-> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.10 报告预览 + 搜索 已落地** — `GET /api/reports/preview?path=` 8KB 截断 · 路径白名单 · HTML 搜索 + 点击预览 · spike 详情提示。**质量门**:**2373 passed / 1 skipped / 88.48%** / mypy --strict 0 errors(**221 files**) / ruff + format 全绿 / MD lint **159 files** 0 errors。**下一棒**:ApprovalGate 写操作 / Keychain SMTP / 8/1 截点。
+> **最后更新**:2026-06-26 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
+> **状态**:🟢 **v0.2.53.11 ApprovalGate 写操作设计 已落地** — `POST /api/approval-gate/actions` 契约 · `DASHBOARD_WRITE_API=1` env 门控 · `confirm_text=CONFIRM_WRITE` · 默认 `write_disabled` · 全路径 `write_executed=false`。**质量门**:**2397 passed / 1 skipped / 88.53%** / mypy --strict 0 errors(**223 files**) / ruff + format 全绿 / MD lint **160 files** 0 errors。**下一棒**:ApprovalGate dry-run 按钮联调 / business writer 设计 / Keychain SMTP / 8/1 截点。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.10 报告预览 + 搜索 已落地(2026-06-25)**。**下一步候选**:ApprovalGate 写操作 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.11 ApprovalGate 写操作设计 已落地(2026-06-26)**。**下一步候选**:ApprovalGate dry-run 按钮联调 / business writer 设计 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 8/8 质量门 | **2373 passed / 1 skipped** · **88.48%** coverage · mypy --strict 0 errors(**221 files**) · MD lint **159 files** 0 errors |
+| 核心质量门 | **2397 passed / 1 skipped** · **88.53%** coverage · mypy --strict 0 errors(**223 files**) · MD lint **160 files** 0 errors |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

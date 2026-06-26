@@ -1,10 +1,10 @@
 # Codex 风格工作台 P0/P2 静态原型
 
-> 范围:静态 UI 原型 + 本地只读 API 预览;不发 SMTP、不写 Keychain、不启动 launchd。
+> 范围:静态 UI 原型 + 本地 API 预览;写操作只到 ApprovalGate 契约层,不发 SMTP、不写 Keychain、不启动 launchd。
 
 ## 结论
 
-P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。P2 已补充只读 API 连接:五个端点 status / tasks / outbox / notes / finance。
+P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作台:左侧能力导航、中间任务线程、右侧上下文检查器、底部折叠执行日志。P2 已补充本地 API 连接:status / tasks / outbox / notes / finance / reports / report preview,并在 v0.2.53.11 增加 ApprovalGate 写操作契约骨架。
 
 ## 产物
 
@@ -21,7 +21,8 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 | 系统 | ✅ + API | 质量门、Provider、Git、审批门 |
 | 笔记 | ✅ + API | Notes 待确认列表 |
 | 财务 | ✅ + API | 异常检测列表 |
-| 报告 | 占位 | 后续展示月度复盘、撞坑清单、质量门趋势 |
+| 报告 | ✅ + API | 本地报告清单、搜索、点击预览 |
+| ApprovalGate | ✅ 设计态 | POST 契约、默认禁写、审计预览 |
 
 ## 评审检查点
 
@@ -34,8 +35,8 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 ## 推荐下一步
 
 1. 运行 `make dashboard-api`。
-2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 `API 已连接 · 5 端点`。
-3. 下一步:显式授权后让 DashboardContext 默认注入真实 `OutboxDraftServiceImpl`。
+2. 打开 `docs/ui/codex-style-dashboard.html`,确认顶部显示 API 已连接。
+3. 下一步:可选把禁用按钮接到 ApprovalGate dry-run,只展示拒写原因。
 
 ## 暂不做
 
@@ -43,3 +44,4 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 - 不读取或展示 Keychain 明文。
 - 不新增真实发送入口。
 - 不绕过现有 Outbox / Notes / Finance 状态机。
+- 不把 ApprovalGate 契约等同于真实写入授权。

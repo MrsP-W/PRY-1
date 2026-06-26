@@ -1,4 +1,8 @@
-"""Dashboard HTTP 路由 — stdlib BaseHTTPRequestHandler(只读 GET)."""
+"""Dashboard HTTP 路由 — stdlib BaseHTTPRequestHandler.
+
+默认只读 GET;v0.2.53.11 仅开放 ApprovalGate POST 契约端点,该端点当前
+不会执行真实写入。
+"""
 
 from __future__ import annotations
 
@@ -8,6 +12,7 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from my_ai_employee.dashboard.approval_gate import evaluate_approval_action_request
 from my_ai_employee.dashboard.context import DashboardContext, parse_limit
 from my_ai_employee.dashboard.responses import (
     build_finance_anomalies_payload,
@@ -21,6 +26,9 @@ from my_ai_employee.dashboard.responses import (
 
 _JSON_CONTENT_TYPE = "application/json; charset=utf-8"
 _CORS_FILE_ORIGIN = "null"
+_MAX_POST_BODY_BYTES = 16 * 1024
+_READ_ONLY_METHODS = "GET, OPTIONS"
+_APPROVAL_GATE_METHODS = "POST, OPTIONS"
 
 
 class DashboardHandler(BaseHTTPRequestHandler):
@@ -92,6 +100,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
         )
 
     def do_POST(self) -> None:  # noqa: N802
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        if path == "/api/approval-gate/actions":
+            error_status, payload = self._read_json_object()
+            if error_status is not None:
+                self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
+                return
+            status, decision = evaluate_approval_action_request(payload)
+            self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
+            return
         self._method_not_allowed()
 
     def do_PUT(self) -> None:  # noqa: N802
@@ -102,9 +120,13 @@ class DashboardHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self) -> None:  # noqa: N802
         """允许静态 file:// 原型读取本地只读 GET API."""
+        parsed = urlparse(self.path)
+        path = parsed.path.rstrip("/") or "/"
+        allow_methods = (
+            _APPROVAL_GATE_METHODS if path == "/api/approval-gate/actions" else _READ_ONLY_METHODS
+        )
         self.send_response(HTTPStatus.NO_CONTENT.value)
-        self._send_common_headers(content_length=0)
-        self.send_header("Allow", "GET, OPTIONS")
+        self._send_common_headers(content_length=0, allow_methods=allow_methods)
         self.end_headers()
 
     def _method_not_allowed(self) -> None:
@@ -113,20 +135,79 @@ class DashboardHandler(BaseHTTPRequestHandler):
             {"error": "method_not_allowed", "read_only": True},
         )
 
-    def _send_json(self, status: HTTPStatus, payload: dict[str, Any]) -> None:
+    def _read_json_object(self) -> tuple[HTTPStatus | None, dict[str, Any]]:
+        length_raw = self.headers.get("Content-Length", "0").strip()
+        try:
+            content_length = int(length_raw)
+        except ValueError:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "error": "invalid_content_length",
+                    "read_only": True,
+                    "write_executed": False,
+                },
+            )
+        if content_length <= 0:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {"error": "empty_body", "read_only": True, "write_executed": False},
+            )
+        if content_length > _MAX_POST_BODY_BYTES:
+            return (
+                HTTPStatus.REQUEST_ENTITY_TOO_LARGE,
+                {
+                    "error": "body_too_large",
+                    "max_bytes": _MAX_POST_BODY_BYTES,
+                    "read_only": True,
+                    "write_executed": False,
+                },
+            )
+        raw = self.rfile.read(content_length)
+        try:
+            loaded: Any = json.loads(raw.decode("utf-8"))
+        except UnicodeDecodeError:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {"error": "invalid_utf8", "read_only": True, "write_executed": False},
+            )
+        except json.JSONDecodeError:
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {"error": "invalid_json", "read_only": True, "write_executed": False},
+            )
+        if not isinstance(loaded, dict):
+            return (
+                HTTPStatus.BAD_REQUEST,
+                {
+                    "error": "json_object_required",
+                    "read_only": True,
+                    "write_executed": False,
+                },
+            )
+        return None, loaded
+
+    def _send_json(
+        self,
+        status: HTTPStatus,
+        payload: dict[str, Any],
+        *,
+        allow_methods: str = _READ_ONLY_METHODS,
+    ) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
         self.send_response(status.value)
-        self._send_common_headers(content_length=len(body))
+        self._send_common_headers(content_length=len(body), allow_methods=allow_methods)
         self.end_headers()
         self.wfile.write(body)
 
-    def _send_common_headers(self, *, content_length: int) -> None:
+    def _send_common_headers(self, *, content_length: int, allow_methods: str) -> None:
         self.send_header("Content-Type", _JSON_CONTENT_TYPE)
         self.send_header("Content-Length", str(content_length))
         self.send_header("X-Read-Only-Api", "true")
         self.send_header("Access-Control-Allow-Origin", _CORS_FILE_ORIGIN)
-        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", allow_methods)
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Allow", allow_methods)
         self.send_header("Vary", "Origin")
 
     def log_message(self, format: str, *args: Any) -> None:  # noqa: A002

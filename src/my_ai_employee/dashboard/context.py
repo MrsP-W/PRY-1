@@ -47,10 +47,10 @@ _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
 class QualityGateSnapshot:
     """质量门只读快照(不跑 CI,沿菜单栏系统健康范本)."""
 
-    pytest: str = "2330 passed / 1 skipped"
-    coverage: str = "88.46%"
+    pytest: str = "2397 passed / 1 skipped"
+    coverage: str = "88.53%"
     mypy: str = "0 errors"
-    lint: str = "157 files 0 errors"
+    lint: str = "160 files 0 errors"
 
 
 @dataclass(slots=True)
