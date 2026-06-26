@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.26 HTML dry-run 三门结果展示联调(2026-06-26)** — `responses.build_status_payload` 暴露 4 字段 + helper `_dry_run_three_gate_status()` + 3 tests 覆盖 3 态(disabled / writer_required / dry_run_ready)+ HTML 三门面板 + 顶部 status strip 升级到 v0.2.53.26。**质量门**:**2496 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**116 files**) / ruff + format 全绿 / MD lint **164 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.27 BusinessWriterImpl opt-in 注入 / outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
+> **状态**:🟢 **v0.2.53.26 HTML dry-run 三门结果展示联调(2026-06-26)** — `responses.build_status_payload` 暴露 4 字段 + helper `_dry_run_three_gate_status()` + 3 tests 覆盖 3 态(disabled / writer_required / dry_run_ready)+ HTML 三门面板 + 顶部 status strip 升级到 v0.2.53.26。**质量门**:**2496 passed / 1 skipped / 88.76%** / mypy --strict 0 errors(**116 files**) / ruff + format 全绿 / MD lint **165 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.27 BusinessWriterImpl opt-in 注入 / outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag。
 
 ---
 
