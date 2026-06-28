@@ -16,7 +16,7 @@ class QualityGateSnapshot:
     pytest: str = "2518 passed / 1 skipped"
     coverage: str = "88.78%"
     mypy: str = "0 errors"
-    lint: str = "169 files 0 errors"
+    lint: str = "171 files 0 errors"
 
 
 DEFAULT_QUALITY_GATES = QualityGateSnapshot()

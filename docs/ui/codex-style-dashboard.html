@@ -698,8 +698,8 @@
           <span class="pill"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill"><span class="dot" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 检测中</span></span>
-          <span class="pill">v0.2.53.29</span>
+          <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 禁写(默认)</span></span>
+          <span class="pill">v0.2.53.34</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -899,12 +899,12 @@
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>审批门(三门联调 · v0.2.53.28 system + v0.2.53.29 inspector)</h3>
+                <h3>审批门(三门联调 · v0.2.53.34 system + inspector)</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag" id="system-gate-first">检测中</span></div>
+                  <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag red" id="system-gate-first">closed</span></div>
                   <div class="gate"><strong>第二道 confirm_text</strong><span class="tag" id="system-gate-second">每动作需 confirm</span></div>
-                  <div class="gate"><strong>第三道 BUSINESS_WRITER_ENABLED</strong><span class="tag" id="system-gate-third">检测中</span></div>
-                  <div class="gate"><strong>Dry-run 当前结果</strong><span class="tag" id="system-dry-run-outcome">检测中</span></div>
+                  <div class="gate"><strong>第三道 BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="system-gate-third">closed</span></div>
+                  <div class="gate"><strong>Dry-run 当前结果</strong><span class="tag red" id="system-dry-run-outcome">Dry-run 禁写(默认)</span></div>
                 </div>
               </div>
               <div class="card card-pad">
@@ -1051,6 +1051,17 @@
             </div>
           </div>
 
+          <div class="inspector-section" id="three-gate-section">
+            <h3>三门状态 · dry-run</h3>
+            <div class="gate-list">
+              <div class="gate"><strong>第一道 · DASHBOARD_WRITE_API</strong><span class="tag red" id="inspect-gate-first">closed</span></div>
+              <div class="gate"><strong>第二道 · confirm_text</strong><span class="tag" id="inspect-gate-second">每动作需 confirm</span></div>
+              <div class="gate"><strong>第三道 · Writer ready</strong><span class="tag red" id="inspect-gate-third">closed</span></div>
+              <div class="gate"><strong>综合 outcome</strong><span class="tag red" id="inspect-gate-outcome">Dry-run 禁写(默认)</span></div>
+            </div>
+            <p class="tiny" id="inspect-gate-detail">第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。</p>
+          </div>
+
           <div class="inspector-section" id="approval-dry-run-section" hidden>
             <h3>ApprovalGate dry-run</h3>
             <div class="dry-run-panel">
@@ -1073,7 +1084,7 @@
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              dry-run 按钮已联调 `POST /api/approval-gate/actions`(默认 `403 write_disabled`);business writer 仍待设计,不执行真实写入。
+              dry-run 按钮联调 `POST /api/approval-gate/actions`(默认禁写);三门状态见上方 inspector;API 离线时静态兜底,write_executed 恒 false。
             </div>
           </div>
         </section>
@@ -1186,6 +1197,124 @@
         ],
       };
 
+      // v0.2.53.34 三门文案 — system / header / inspector / dry-run 离线兜底共用
+      const FALLBACK_DRY_RUN_STATUS = {
+        outcome: "disabled",
+        first_gate: "closed",
+        second_gate: "confirm_required_per_action",
+        third_gate: "closed",
+      };
+
+      const THREE_GATE_COPY = {
+        first: {
+          open: { label: "open", tone: "green" },
+          closed: { label: "closed", tone: "red" },
+        },
+        second: {
+          confirm_required_per_action: {
+            label: "每动作需 confirm",
+            tone: "yellow",
+            detail: "第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。",
+          },
+        },
+        third: {
+          open: { label: "open", tone: "green" },
+          closed: { label: "closed", tone: "red" },
+          env_only: { label: "env only · Impl 未注入", tone: "yellow" },
+        },
+        outcome: {
+          disabled: {
+            text: "Dry-run 禁写(默认)",
+            tone: "red",
+            detail: "第一道门 DASHBOARD_WRITE_API 未开;默认禁写,write_executed 恒 false。",
+          },
+          needs_confirmation: {
+            text: "Dry-run 需 confirm_text",
+            tone: "yellow",
+            detail: "第二道门:POST 须带 confirm_text=CONFIRM_WRITE。",
+          },
+          writer_required: {
+            text: "Dry-run writer 未就绪",
+            tone: "yellow",
+            detail: "第三道门:BUSINESS_WRITER env 或 Impl 未满足;见 Writer env / Impl badge。",
+          },
+          dry_run_ready: {
+            text: "Dry-run 三门已就绪",
+            tone: "green",
+            detail: "三门通过;点击 dry-run 可模拟,仍 write_executed=false。",
+          },
+          api_offline: {
+            text: "Dry-run · API 离线兜底",
+            tone: "yellow",
+            detail: "ApprovalGate 未连接;三门默认 closed;静态兜底不发起 POST。",
+          },
+          unknown: {
+            text: "Dry-run 状态未知",
+            tone: "yellow",
+            detail: "无法读取 /api/status;请启动 make dashboard-api 后刷新。",
+          },
+        },
+        writerBadge: {
+          env: { on: "已开", off: "未开" },
+          impl: { on: "已注入", off: "未注入" },
+          ready: { on: "ready", off: "未 ready" },
+        },
+        offlineDryRun: {
+          error: "api_offline",
+          reason: "ApprovalGate 未连接 · 三门默认 closed · 静态兜底不发起 POST",
+          required: [
+            "DASHBOARD_WRITE_API=1",
+            "confirm_text=CONFIRM_WRITE",
+            "business_writer_implementation",
+          ],
+        },
+      };
+
+      function writerRequiredOutcomeText(writerEnvEnabled, writerInjected) {
+        if (writerEnvEnabled && !writerInjected) {
+          return "Dry-run writer env 已开 · Impl 未注入";
+        }
+        if (!writerEnvEnabled) {
+          return "Dry-run writer env 未开";
+        }
+        return THREE_GATE_COPY.outcome.writer_required.text;
+      }
+
+      function writerRequiredDetail(writerEnvEnabled, writerInjected) {
+        if (writerEnvEnabled && !writerInjected) {
+          return "第三道门:BUSINESS_WRITER env 已开但 Impl 未注入;需 DASHBOARD_REAL_DB=1 + BusinessWriterImpl 构造成功。";
+        }
+        if (!writerEnvEnabled) {
+          return "第三道门:BUSINESS_WRITER_ENABLED 未开;writer 路径未启用。";
+        }
+        return THREE_GATE_COPY.outcome.writer_required.detail;
+      }
+
+      function resolveOutcomeMeta(outcome, writerEnvEnabled, writerInjected, offline) {
+        if (offline) {
+          return THREE_GATE_COPY.outcome.api_offline;
+        }
+        const base = THREE_GATE_COPY.outcome[outcome] ?? THREE_GATE_COPY.outcome.unknown;
+        if (outcome !== "writer_required") {
+          return base;
+        }
+        return {
+          ...base,
+          text: writerRequiredOutcomeText(writerEnvEnabled, writerInjected),
+          detail: writerRequiredDetail(writerEnvEnabled, writerInjected),
+        };
+      }
+
+      function resolveThirdGateMeta(writerReady, writerEnvEnabled, writerInjected) {
+        if (writerReady) {
+          return THREE_GATE_COPY.third.open;
+        }
+        if (writerEnvEnabled && !writerInjected) {
+          return THREE_GATE_COPY.third.env_only;
+        }
+        return THREE_GATE_COPY.third.closed;
+      }
+
       function escapeHtml(value) {
         return String(value ?? "")
           .replaceAll("&", "&amp;")
@@ -1214,7 +1343,7 @@
           return;
         }
         el.textContent = value;
-        el.classList.remove("green", "red");
+        el.classList.remove("green", "red", "yellow");
         if (tone) {
           el.classList.add(tone);
         }
@@ -1371,52 +1500,48 @@
         renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected);
       }
 
-      function renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected) {
-        const outcome = dryRunStatus?.outcome ?? "unknown";
-        const labelMap = {
-          disabled: { text: "Dry-run 禁写(默认)", tone: "red" },
-          needs_confirmation: { text: "Dry-run 需 confirm_text", tone: "yellow" },
-          writer_required: {
-            text: writerEnvEnabled && !writerInjected
-              ? "Dry-run writer env 已开但未注入"
-              : "Dry-run writer 未就绪",
-            tone: "yellow",
-          },
-          dry_run_ready: { text: "Dry-run 三门已就绪", tone: "green" },
-          unknown: { text: "Dry-run 状态未知", tone: "yellow" },
-        };
-        const meta = labelMap[outcome] ?? labelMap.unknown;
+      function renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected, options = {}) {
+        const offline = options.offline === true;
+        const outcome = offline ? "api_offline" : (dryRunStatus?.outcome ?? "unknown");
+        const meta = resolveOutcomeMeta(outcome, writerEnvEnabled, writerInjected, offline);
         const dot = document.getElementById("header-dry-run-dot");
         if (dot) {
           dot.classList.remove("green", "yellow", "red");
           dot.classList.add(meta.tone);
         }
         setText("header-dry-run", meta.text);
-        // 系统健康页 3 门 gate
-        const firstGate = document.getElementById("system-gate-first");
-        const secondGate = document.getElementById("system-gate-second");
-        const thirdGate = document.getElementById("system-gate-third");
-        const dryRunSystem = document.getElementById("system-dry-run-outcome");
-        if (firstGate) {
-          setTag("system-gate-first", writeApi ? "open" : "closed", writeApi ? "green" : "red");
-        }
-        if (secondGate) {
-          const secondValue = dryRunStatus?.second_gate ?? "confirm_required_per_action";
-          const secondLabel = secondValue === "confirm_required_per_action" ? "每动作需 confirm" : secondValue;
-          setTag("system-gate-second", secondLabel, "yellow");
-        }
-        if (thirdGate) {
-          const thirdLabel = writerReady
-            ? "open"
-            : writerEnvEnabled && !writerInjected
-              ? "env only"
-              : "closed";
-          const thirdTone = writerReady ? "green" : "red";
-          setTag("system-gate-third", thirdLabel, thirdTone);
-        }
-        if (dryRunSystem) {
-          setText("system-dry-run-outcome", meta.text);
-        }
+
+        const firstMeta = writeApi ? THREE_GATE_COPY.first.open : THREE_GATE_COPY.first.closed;
+        setTag("system-gate-first", firstMeta.label, firstMeta.tone);
+
+        const secondKey = dryRunStatus?.second_gate ?? "confirm_required_per_action";
+        const secondMeta =
+          THREE_GATE_COPY.second[secondKey] ?? THREE_GATE_COPY.second.confirm_required_per_action;
+        setTag("system-gate-second", secondMeta.label, secondMeta.tone);
+
+        const thirdMeta = offline
+          ? THREE_GATE_COPY.third.closed
+          : resolveThirdGateMeta(writerReady, writerEnvEnabled, writerInjected);
+        setTag("system-gate-third", thirdMeta.label, thirdMeta.tone);
+        setTag("system-dry-run-outcome", meta.text, meta.tone);
+
+        setTag("inspect-gate-first", firstMeta.label, firstMeta.tone);
+        setTag("inspect-gate-second", secondMeta.label, secondMeta.tone);
+        setTag("inspect-gate-third", thirdMeta.label, thirdMeta.tone);
+        setTag("inspect-gate-outcome", meta.text, meta.tone);
+        setText("inspect-gate-detail", meta.detail);
+      }
+
+      function renderOfflineApprovalState() {
+        renderDryRunThreeGate(FALLBACK_DRY_RUN_STATUS, false, false, false, false, { offline: true });
+        setTag("gate-approval", "禁写", "red");
+        setTag("inspect-approval", "disabled", "red");
+        setText("header-quality", "API 离线 · 质量门见 quality_snapshot");
+        setText("system-pytest", "API 离线");
+        setText("system-mypy", "API 离线");
+        setText("system-lint", "API 离线");
+        setText("system-head", "unknown");
+        setText("footer-dry-run", "ApprovalGate dry-run · API 离线兜底");
       }
 
       async function fetchJson(path) {
@@ -1493,9 +1618,9 @@
         const writerEnv = payload.business_writer_env_enabled === true;
         const writerImpl = payload.business_writer_impl_injected === true;
         const writerReady = payload.business_writer_ready === true;
-        setTag("dry-run-writer-env", writerEnv ? "已开" : "未开", writerEnv ? "green" : "red");
-        setTag("dry-run-writer-impl", writerImpl ? "已注入" : "未注入", writerImpl ? "green" : "red");
-        setTag("dry-run-writer-ready", writerReady ? "true" : "false", writerReady ? "green" : "red");
+        setTag("dry-run-writer-env", writerEnv ? THREE_GATE_COPY.writerBadge.env.on : THREE_GATE_COPY.writerBadge.env.off, writerEnv ? "green" : "red");
+        setTag("dry-run-writer-impl", writerImpl ? THREE_GATE_COPY.writerBadge.impl.on : THREE_GATE_COPY.writerBadge.impl.off, writerImpl ? "green" : "red");
+        setTag("dry-run-writer-ready", writerReady ? THREE_GATE_COPY.writerBadge.ready.on : THREE_GATE_COPY.writerBadge.ready.off, writerReady ? "green" : "red");
         const wouldAllow = payload.would_allow === true;
         setTag("dry-run-would-allow", wouldAllow ? "true" : "false", wouldAllow ? "green" : "red");
         const reason = payload.reason ?? payload.error ?? "无拒写原因";
@@ -1545,15 +1670,21 @@
         }
         try {
           if (!_apiOnline) {
+            const offline = THREE_GATE_COPY.offlineDryRun;
             renderDryRunResult(
               {
-                error: "api_offline",
-                reason: "ApprovalGate 未连接 · 默认禁写 · 静态兜底不发起 POST",
+                error: offline.error,
+                reason: offline.reason,
                 write_executed: false,
                 action,
                 target_id: targetId,
                 dry_run: true,
-                required: ["DASHBOARD_WRITE_API=1", "confirm_text=CONFIRM_WRITE", "business_writer_implementation"],
+                approval_gate_passed: false,
+                would_allow: false,
+                business_writer_env_enabled: false,
+                business_writer_impl_injected: false,
+                business_writer_ready: false,
+                required: offline.required,
               },
               null,
               label,
@@ -1806,8 +1937,10 @@
           renderReports(reports, "本地只读 API · 文件系统扫描");
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
           setApiState(true, "API 已连接 · 7 读 + dry-run 写门");
+          setText("footer-dry-run", "ApprovalGate dry-run wired · write_executed=false");
         } catch (_err) {
           _apiOnline = false;
+          renderOfflineApprovalState();
           renderTasks(fallbackTasks, "静态兜底数据");
           renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");

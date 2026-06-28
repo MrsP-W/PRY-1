@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.33` markdownlint `.pytest_cache` 忽略规则收口(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **169 files** + `Makefile` + `package.json` 增加 `#.pytest_cache` 排除(170→169,口径不变)。mypy strict 0(**235 files**)。**下一棒**:v0.2.53.34 HTML inspector 文案 / outlook+gmail Keychain SMTP / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.32` coverage baseline 实测落档(2026-06-28):2518 passed / MD lint 169 + 撞坑 #50 第三层防御实化(`make coverage` 实测值 88.78%) |
+| **当前阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **171 files** + `THREE_GATE_COPY` 统一离线兜底;launch plan 三门联调已勾选。**下一棒**:Keychain SMTP spike / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.33` markdownlint `.pytest_cache` 忽略规则收口(2026-06-28):`Makefile` + `package.json` `#.pytest_cache` 排除 |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |
 | **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
@@ -99,8 +99,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.32:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **169 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
-| **下一棒** | v0.2.53.34 HTML inspector 文案;business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
+| **质量基线** | v0.2.53.34:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **171 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **下一棒** | Keychain SMTP spike;quality_snapshot MD lint 171 落档;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -129,6 +129,24 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-28 [v0.2.53.34 HTML dry-run inspector 三门文案收口] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard-ui)**: `docs/ui/codex-style-dashboard.html` — `THREE_GATE_COPY` 集中文案;inspector 常驻三门区块;`renderOfflineApprovalState()` API 离线兜底;writer env-only 细分 detail。
+- **docs**: `docs/v0.2.53.34-html-inspector-three-gate-copy-2026-06-28.md` + launch plan 勾选三门联调 + 三入口同步。
+- **范围**:1 HTML + 4 docs;0 Python 改动;dashboard API 契约不变。
+
+**2. 风险点**
+
+- ⚠️ MD lint 实测 **171 files**(v0.2.53.33/34 closure docs);`quality_snapshot.py` 已同步 171。
+- **边界**:不接真实写入 · write_executed 恒 false · 不发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2518 passed / 1 skipped / 88.78%**;mypy strict 0;MD lint **171 files** 0 errors。
+- 下一棒:Keychain SMTP spike / 8/1 截点。
 
 ### 2026-06-28 [v0.2.53.33 markdownlint `.pytest_cache` 忽略规则收口] — 收口
 
