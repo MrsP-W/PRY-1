@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.32 coverage baseline 实测落档(2026-06-28)
+# SESSION-STATE — v0.2.53.33 markdownlint `.pytest_cache` 忽略规则收口(2026-06-28)
 
 > **最后更新**:2026-06-28 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.32 coverage baseline 实测落档(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **169 files**;撞坑 #50 第三层防御实化(`make coverage` 实测值 88.78% 替代硬编码 88.77%,`2518 passed` 替代 `2516 passed`);`quality_snapshot.py` + `tests/dashboard/test_api.py` + `tests/menu_bar/test_app.py` 三文件硬编码同步。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.33 markdownlint `.pytest_cache` 忽略规则收口(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **169 files**;`Makefile` + `package.json` 增加 `#.pytest_cache` 排除(修复 `.pytest_cache/README.md` 污染 170→169,项目口径不变)。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.34 HTML inspector 文案 / outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.32 coverage baseline 实测落档 已落地(2026-06-28)** — 2518 passed / MD lint 169 + 撞坑 #50 第三层防御实化(`make coverage` 实测值 88.78%)。**下一步候选**:outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
+**当前启动候选**:**v0.2.53.33 markdownlint `.pytest_cache` 忽略规则收口 已落地(2026-06-28)** — 2518 passed / MD lint 169 + `#.pytest_cache` 排除(170→169 口径对齐)。**下一步候选**:v0.2.53.34 HTML inspector 文案 / outlook+gmail Keychain → 真实 SMTP spike / 8/1 12:00+ 检查员截点。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

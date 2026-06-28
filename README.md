@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.32 coverage baseline 实测落档(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **169 files**;撞坑 #50 第三层防御实化(`make coverage` 实测值 88.78% 替代硬编码 88.77%);`quality_snapshot.py` + `tests/dashboard/test_api.py` + `tests/menu_bar/test_app.py` 三文件硬编码同步。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.33 markdownlint `.pytest_cache` 忽略规则收口(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **169 files**;`Makefile` + `package.json` 增加 `#.pytest_cache` 排除(170→169,口径不变)。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:v0.2.53.34 HTML inspector 文案 / outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
