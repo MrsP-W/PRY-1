@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.31` 质量口径同步 + BusinessWriter ready 文案清理(2026-06-26):2516 passed / MD lint 169 + `_decision()` 注释对齐 v0.2.53.30 + 自定义 writer marker 测试。**2516 passed / 1 skipped / 88.77%** / mypy strict 0 / **235 files** / MD lint **169 files**(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **当前阶段** | ✅ `v0.2.53.32` coverage baseline 实测落档(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint 169 + 撞坑 #50 第三层防御实化(`make coverage` 实测值替代硬编码 88.77%)。mypy strict 0(**235 files**);MD lint **169 files** 0 errors。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.31` 质量口径同步 + BusinessWriter ready 文案清理(2026-06-26):2516 passed / MD lint 169 + `_decision()` 注释对齐 v0.2.53.30 + 自定义 writer marker 测试 |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |
 | **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
@@ -98,7 +99,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.31:**2516 passed / 1 skipped** / **88.77%** / mypy strict 0 / **235 files** / MD lint **169 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.32:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **169 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | business writer 设计;outlook/gmail Keychain SMTP;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -128,6 +129,25 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-28 [v0.2.53.32 coverage baseline 实测落档] — 收口
+
+**1. 本次修改内容**
+
+- **chore(dashboard)**: `quality_snapshot.py` 硬编码 `88.77%` → **`88.78%`** 实测值;`2516 passed / 1 skipped` → **`2518 passed / 1 skipped`** 实测值(沿 `make coverage` 实测)。
+- **chore(tests)**: `tests/dashboard/test_api.py:129` + `tests/menu_bar/test_app.py:811` 两处 hardcode 同步(撞坑 #50 第三层防御)。
+- **docs(同步)**: `SESSION-STATE.md` + `README.md` + `MODIFICATION-LOG.md` 三入口状态口径同步 v0.2.53.32。
+- **MD lint**: 169 files 0 errors(实测一致,无需改)。
+
+**2. 风险点**
+
+- ⚠️ coverage 实测值(88.78%)与上版硬编码(88.77%)偏差 0.01pp,基线小但真实;测试数 +2 是 v0.2.53.31 收口的副作用,但 MODIFICATION-LOG v0.2.53.31 条目未识别 → 撞坑 #50 衍生第三层范本:**实测基线应在 docs-only commit 内同步,避免 MODIFICATION-LOG "上版条目" 与实测漂移**。
+- **边界**:不改 approval_gate / 不动 business_writer / 不接真实 DB / 不打 `v0.2.x` tag / `write_executed` 恒 False。
+
+**3. 当前项目整体总结**
+
+- 进度:**2518 passed / 1 skipped / 88.78% coverage**;mypy strict 0(**235 files**);MD lint **169 files** 0 errors;`make coverage` 实测值已替代硬编码。
+- 下一棒:outlook+gmail Keychain SMTP spike / 8/1 截点。
 
 ### 2026-06-26 [v0.2.53.31 质量口径 + ready 文案清理] — 收口
 
