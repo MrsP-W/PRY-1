@@ -359,7 +359,7 @@ def _decision(
 
     v0.2.53.29 扩展:
         - payload 暴露 3 字段(business_writer_env_enabled / impl_injected / ready)
-        - writer_impl_injected=None 时表示未追踪(默认 writer_env 不开路径);不为 None 时计算 ready = env AND injected
+        - writer_impl_injected:None/False 均视为未注入;仅 True 时 ready = env AND injected
     """
     contract = ACTION_CONTRACTS.get(action)
     action_contract: dict[str, str] | None = None

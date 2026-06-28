@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.30 BusinessWriter ready 语义加固 + 状态口径同步(2026-06-26)** — `is_business_writer_impl_injected()` 显式识别 `BusinessWriterImpl.is_runtime_impl`(Stub 不再误判);`evaluate_writer_dry_run()` 除非 `writer_impl_injected is True` 否则保守 501。**质量门**:**2515 passed / 1 skipped / 88.77%** / mypy --strict 0 errors(**235 files**) / ruff + format 全绿 / MD lint **167 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.31 质量口径同步 + BusinessWriter ready 文案清理(2026-06-26)** — 质量门 **2516 passed / 1 skipped / 88.77%** / MD lint **169 files**;`_decision()` 注释对齐 v0.2.53.30(None/False 均视为未注入);自定义 writer 无 marker 测试补强。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿(以 `make test` / `make coverage` / `make lint` 实测为准)。**下一棒**:outlook+gmail Keychain SMTP / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2515 passed / 1 skipped / 88.77% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2516 passed / 1 skipped / 88.77% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2515 passed / 1 skipped / 88.77% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2516 passed / 1 skipped / 88.77% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

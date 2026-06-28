@@ -126,7 +126,7 @@ class TestDryRunThreeGateStatus:
         return DashboardContext(
             git_head_resolver=lambda: "abc123",
             keychain_probe=lambda _s: False,
-            quality_gates=QualityGateSnapshot(pytest="2515 passed / 1 skipped"),
+            quality_gates=QualityGateSnapshot(pytest="2516 passed / 1 skipped"),
         )
 
     def test_default_state_outcome_disabled(self, monkeypatch: pytest.MonkeyPatch) -> None:

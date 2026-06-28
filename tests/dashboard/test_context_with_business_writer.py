@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
-from my_ai_employee.dashboard.business_writer import BusinessWriterStub
+from my_ai_employee.dashboard.business_writer import BusinessWriter, BusinessWriterStub
 from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
 from my_ai_employee.dashboard.context import DashboardContext
 
@@ -39,6 +41,26 @@ class TestWithBusinessWriterImmutable:
         """显式注入 BusinessWriterStub 不算 Impl 已注入(v0.2.53.30)."""
         ctx = DashboardContext().with_business_writer(BusinessWriterStub())
         assert ctx.business_writer is not None
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
+
+    def test_custom_writer_without_marker_not_counted_as_impl(self) -> None:
+        """自定义 writer 无 is_runtime_impl 不算 Impl 已注入(v0.2.53.31)."""
+
+        class _WriterWithoutMarker:
+            pass
+
+        ctx = DashboardContext().with_business_writer(cast(BusinessWriter, _WriterWithoutMarker()))
+        assert ctx.is_business_writer_impl_injected() is False
+        assert ctx.is_business_writer_ready() is False
+
+    def test_custom_writer_marker_false_not_counted_as_impl(self) -> None:
+        """自定义 writer is_runtime_impl=False 不算 Impl 已注入(v0.2.53.31)."""
+
+        class _WriterMarkerFalse:
+            is_runtime_impl = False
+
+        ctx = DashboardContext().with_business_writer(cast(BusinessWriter, _WriterMarkerFalse()))
         assert ctx.is_business_writer_impl_injected() is False
         assert ctx.is_business_writer_ready() is False
 
