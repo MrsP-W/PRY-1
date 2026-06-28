@@ -97,9 +97,9 @@ test-verbose: ## 跑测试（详细输出）
 lint: ## Markdown 格式检查
 	@echo "$(BLUE)📝 检查 Markdown 格式$(RESET)"
 	@if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
-		node_modules/.bin/markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" || exit 1; \
+		node_modules/.bin/markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" || exit 1; \
 	elif command -v markdownlint-cli2 >/dev/null 2>&1; then \
-		markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" || exit 1; \
+		markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" || exit 1; \
 	else \
 		echo "$(RED)❌ markdownlint-cli2 未安装$(RESET)"; \
 		echo "  $(YELLOW)请先跑: make install-npm$(RESET)"; \
@@ -110,9 +110,9 @@ lint: ## Markdown 格式检查
 .PHONY: lint-fix
 lint-fix: ## 自动修复 MD 格式
 	@if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
-		node_modules/.bin/markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" || exit 1; \
+		node_modules/.bin/markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" || exit 1; \
 	elif command -v markdownlint-cli2 >/dev/null 2>&1; then \
-		markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" || exit 1; \
+		markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" || exit 1; \
 	else \
 		echo "$(RED)❌ markdownlint-cli2 未安装$(RESET)"; \
 		echo "  $(YELLOW)请先跑: make install-npm$(RESET)"; \
