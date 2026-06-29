@@ -145,7 +145,7 @@ def test_orm_has_8_columns_with_unique_constraint() -> None:
     # UNIQUE 约束(用 isinstance 检查 UniqueConstraint)
     from sqlalchemy import Table, UniqueConstraint
 
-    table: Table = MerchantProfile.__table__  # type: ignore[assignment]
+    table: Table = MerchantProfile.__table__
     unique_constraints = [c for c in table.constraints if isinstance(c, UniqueConstraint)]
     assert any("counterparty" in [col.name for col in c.columns] for c in unique_constraints)
     # 索引(idx_merchant_profile_last_seen) 必含
@@ -167,7 +167,7 @@ def test_validate_counterparty_rejects_empty_and_non_string() -> None:
 
     # 非 str → TypeError
     with pytest.raises(TypeError, match="counterparty 必须是 str"):
-        MerchantProfileStore._validate_counterparty(123)  # type: ignore[arg-type]
+        MerchantProfileStore._validate_counterparty(123)
 
     # 超长(> 128)→ ValueError
     with pytest.raises(ValueError, match="counterparty 长度超 128"):
@@ -187,7 +187,7 @@ def test_validate_amount_rejects_negative_and_non_decimal() -> None:
 
     # 非 Decimal → TypeError
     with pytest.raises(TypeError, match="avg_amount 必须是 Decimal"):
-        MerchantProfileStore._validate_amount(13.14, "avg_amount")  # type: ignore[arg-type]
+        MerchantProfileStore._validate_amount(13.14, "avg_amount")
 
     # 超 2 位小数 → ValueError
     with pytest.raises(ValueError, match="小数位超 2"):

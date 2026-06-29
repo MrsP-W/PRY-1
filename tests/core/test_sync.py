@@ -96,7 +96,7 @@ def db(tmp_db_path: Path, fake_keychain: dict[Any, Any]) -> Iterator[Database]:
 # ===== Mock BaseConnector =====
 
 
-class FakeIMAPConnector(BaseConnector):
+class FakeIMAPConnector(BaseConnector):  # type: ignore[misc]
     """测试用 fake connector（继承 BaseConnector 满足 mypy 严格类型检查）。
 
     `connect/fetch/healthcheck` 是 ABC 抽象方法 — 测试不调它们（IMAPSync 走
@@ -247,7 +247,7 @@ def test_sync_commits_per_batch(
 # ===== 4. 失败隔离：单批 SQLAlchemyError 不阻塞后续 =====
 
 
-class FailingBatchConnector(BaseConnector):
+class FailingBatchConnector(BaseConnector):  # type: ignore[misc]
     """safe_fetch 返回 250 封 + run_once 第 1 次 _commit_batch 抛 SQLAlchemyError。
 
     模拟"批次 1（1-100）整批失败"场景（最坏情况）— 验证 sync 顶层

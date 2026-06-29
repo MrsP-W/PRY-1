@@ -55,14 +55,14 @@ class TestStubDismiss:
         """非 str 类型 anomaly_id → invalid_anomaly_id."""
         service = AnomalyDismissalServiceStub()
         # 故意传 int(类型错误) — 严判必须拒绝
-        result = service.dismiss(123)  # type: ignore[arg-type]
+        result = service.dismiss(123)
         assert result.success is False
         assert result.error == "invalid_anomaly_id"
 
     def test_dismiss_invalid_reason_not_string(self) -> None:
         """非 str 类型 reason → invalid_reason."""
         service = AnomalyDismissalServiceStub()
-        result = service.dismiss("2026-06-26|星巴克|38.50", reason=123)  # type: ignore[arg-type]
+        result = service.dismiss("2026-06-26|星巴克|38.50", reason=123)
         assert result.success is False
         assert result.error == "invalid_reason"
 

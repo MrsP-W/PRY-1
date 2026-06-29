@@ -459,7 +459,7 @@ def test_l3_fuzzy_rejects_invalid_transaction_date_type(session_factory: Any) ->
         with pytest.raises(TypeError, match="transaction_date 必须是 date"):
             find_l3_fuzzy_candidates(
                 session,
-                transaction_date="2026-06-14",  # type: ignore[arg-type]
+                transaction_date="2026-06-14",
                 counterparty="星巴克",
             )
         # datetime
@@ -763,9 +763,9 @@ def test_notes_l3_helper_validates_inputs(notes_store: Any) -> None:
 
     # 验证 _normalize_note_title_value 严判
     with pytest.raises(TypeError, match="title 必须是 str"):
-        _normalize_note_title_value(123)  # type: ignore[arg-type]
+        _normalize_note_title_value(123)
     with pytest.raises(TypeError, match="title 必须是 str"):
-        _normalize_note_title_value(None)  # type: ignore[arg-type]
+        _normalize_note_title_value(None)
 
 
 def test_notes_l3_helper_basic_usage(notes_store: Any) -> None:

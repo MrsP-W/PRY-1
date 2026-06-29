@@ -59,7 +59,7 @@ def test_tcc_permission_denied_reason_nonempty() -> None:
         TCCPermissionError(op="Automation", reason="   \t\n")
     # 非 str
     with pytest.raises(ValueError, match="reason 必须是 str"):
-        TCCPermissionError(op="Automation", reason=123)  # type: ignore[arg-type]
+        TCCPermissionError(op="Automation", reason=123)
 
 
 # ===== T4. open_privacy_settings 严判 + URL 协议 =====
@@ -118,6 +118,6 @@ def test_open_privacy_settings_rejects_non_str_op() -> None:
     from my_ai_employee.menu_bar import tcc as tcc_module
 
     with pytest.raises(ValueError, match="op 必须是 str"):
-        tcc_module.open_privacy_settings(op=42)  # type: ignore[arg-type]
+        tcc_module.open_privacy_settings(op=42)
     with pytest.raises(ValueError, match="op 必须是 str"):
-        tcc_module.open_privacy_settings(op=None)  # type: ignore[arg-type]
+        tcc_module.open_privacy_settings(op=None)

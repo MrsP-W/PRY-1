@@ -116,11 +116,11 @@ class TestBuildSystemPrompt:
         with pytest.raises(ValueError, match="note_category 字符串必须"):
             build_system_prompt("urgent")  # 大小写敏感(小写非法)
         with pytest.raises(ValueError, match="必须是 str 或 None"):
-            build_system_prompt(123)  # type: ignore[arg-type]
+            build_system_prompt(123)
         with pytest.raises(ValueError, match="必须是 str 或 None"):
-            build_system_prompt(True)  # type: ignore[arg-type]
+            build_system_prompt(True)
         with pytest.raises(ValueError, match="必须是 str 或 None"):
-            build_system_prompt(["URGENT"])  # type: ignore[arg-type]
+            build_system_prompt(["URGENT"])
 
 
 # ============================================================
@@ -199,7 +199,7 @@ class TestBuildUserMessage:
         # title 严判
         with pytest.raises(ValueError, match="title 必须是 str"):
             build_user_message(
-                title=123,  # type: ignore[arg-type]
+                title=123,
                 apple_note_id="id",
                 body_excerpt="",
             )
@@ -207,7 +207,7 @@ class TestBuildUserMessage:
         with pytest.raises(ValueError, match="apple_note_id 必须是 str"):
             build_user_message(
                 title="t",
-                apple_note_id=None,  # type: ignore[arg-type]
+                apple_note_id=None,
                 body_excerpt="",
             )
         # body_excerpt 严判
@@ -215,7 +215,7 @@ class TestBuildUserMessage:
             build_user_message(
                 title="t",
                 apple_note_id="id",
-                body_excerpt=[],  # type: ignore[arg-type]
+                body_excerpt=[],
             )
         # note_category 非法字符串
         with pytest.raises(ValueError, match="note_category 字符串必须"):

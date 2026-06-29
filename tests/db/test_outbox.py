@@ -219,7 +219,7 @@ def test_outbox_entry_uniqueness_constraint_on_email_id() -> None:
     # Table.constraints 是 SA 内部属性, FromClause 上无声明(SA 类型分立)
     unique_constraints = [
         c
-        for c in OutboxEntry.__table__.constraints  # type: ignore[attr-defined]
+        for c in OutboxEntry.__table__.constraints
         if isinstance(c, UniqueConstraint) and getattr(c, "name", None) == "uq_outbox_email_id"
     ]
     assert len(unique_constraints) == 1
@@ -235,7 +235,7 @@ def test_outbox_entry_fk_to_events_reviewer_and_drafter() -> None:
 
     fk_constraints = [
         c
-        for c in OutboxEntry.__table__.constraints  # type: ignore[attr-defined]
+        for c in OutboxEntry.__table__.constraints
         if isinstance(c, ForeignKeyConstraint)
         and (
             getattr(c, "name", None) == "fk_outbox_reviewer_event"
@@ -253,7 +253,7 @@ def test_outbox_entry_fk_to_events_reviewer_and_drafter() -> None:
 def test_outbox_entry_2_indexes_status_and_priority() -> None:
     """2 索引 idx_outbox_status_created_at + idx_outbox_priority_created_at。"""
     # Table.indexes 类型为 frozenset[Index](SA 内部用 frozenset)
-    index_names = {idx.name for idx in OutboxEntry.__table__.indexes}  # type: ignore[attr-defined]
+    index_names = {idx.name for idx in OutboxEntry.__table__.indexes}
     assert "idx_outbox_status_created_at" in index_names
     assert "idx_outbox_priority_created_at" in index_names
 
@@ -682,7 +682,7 @@ def test_insert_forces_status_pending_send(store: OutboxStore) -> None:
     """
     # 1. status 参数已被移除(严判:尝试传 status= 必 TypeError)
     with pytest.raises(TypeError, match="unexpected keyword argument"):
-        store.insert(  # type: ignore[call-arg]
+        store.insert(
             email_id=2,
             subject="测试主题",
             body="测试邮件正文内容,超过十个字符。",
@@ -772,7 +772,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             body="测试 priority=[] 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
             recipient_email="list[Any]@example.com",
-            priority=[],  # type: ignore[arg-type]
+            priority=[],
         )
     # 2. 字典 — 非可哈希类型
     with pytest.raises(TypeError, match="priority 必须是 str"):
@@ -782,7 +782,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             body="测试 priority={} 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
             recipient_email="dict[Any, Any]@example.com",
-            priority={},  # type: ignore[arg-type]
+            priority={},
         )
     # 3. int — 非 str 类型
     with pytest.raises(TypeError, match="priority 必须是 str"):
@@ -792,7 +792,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             body="测试 priority=123 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
             recipient_email="int@example.com",
-            priority=123,  # type: ignore[arg-type]
+            priority=123,
         )
     # 4. None — 非 str 类型
     with pytest.raises(TypeError, match="priority 必须是 str"):
@@ -802,7 +802,7 @@ def test_insert_rejects_non_str_priority_raises_typeerror(store: OutboxStore) ->
             body="测试 priority=None 必被 _normalize_priority TypeError 拒绝。",
             tone="FORMAL",
             recipient_email="none@example.com",
-            priority=None,  # type: ignore[arg-type]
+            priority=None,
         )
 
 

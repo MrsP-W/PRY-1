@@ -104,7 +104,7 @@ class TestReviewPrompts:
     @pytest.mark.parametrize("category", ["OTHER", "", 1, True])
     def test_system_prompt_rejects_invalid_category(self, category: object) -> None:
         with pytest.raises(ValueError):
-            build_system_prompt(category)  # type: ignore[arg-type]
+            build_system_prompt(category)
 
     def test_user_message_wraps_json_as_untrusted_data(self) -> None:
         message = build_user_message(
@@ -158,7 +158,7 @@ class TestReviewPrompts:
         }
         kwargs.update(overrides)
         with pytest.raises(ValueError):
-            build_user_message(**kwargs)  # type: ignore[arg-type]
+            build_user_message(**kwargs)
 
 
 class TestParseReviewResponse:
@@ -305,7 +305,7 @@ class TestReviewDataClasses:
     def test_review_result_is_frozen(self) -> None:
         result = ReviewResult(**_result_kwargs())
         with pytest.raises(FrozenInstanceError):
-            result.review_passed = False  # type: ignore[misc]
+            result.review_passed = False
 
     def test_review_result_rejected_requires_issues(self) -> None:
         with pytest.raises(ValueError):
@@ -340,8 +340,8 @@ class TestReviewDataClasses:
         result = ReviewBlockedResult(
             subject="Re: 项目",
             body="这是长度足够的邮件草稿正文。",
-            tone="FORMAL",  # type: ignore[arg-type]
-            email_category="TODO",  # type: ignore[arg-type]
+            tone="FORMAL",
+            email_category="TODO",
             blocked=True,
             reason=reason,
             blocked_word="",
@@ -382,8 +382,8 @@ class TestReviewDataClasses:
         result = ReviewFailureResult(
             subject="Re: 项目",
             body="这是长度足够的邮件草稿正文。",
-            tone="FORMAL",  # type: ignore[arg-type]
-            email_category="TODO",  # type: ignore[arg-type]
+            tone="FORMAL",
+            email_category="TODO",
             failed=True,
             last_error="network down",
             consecutive_review_failures=1,
@@ -401,7 +401,7 @@ class TestReviewDataClasses:
                 email_category=EmailCategory.TODO,
                 failed=True,
                 last_error="network down",
-                consecutive_review_failures=count,  # type: ignore[arg-type]
+                consecutive_review_failures=count,
             )
 
 
@@ -512,7 +512,7 @@ class TestEmailReviewer:
     @pytest.mark.parametrize("max_tokens", [0, -1, True, 1.5])
     def test_rejects_invalid_max_tokens(self, max_tokens: object) -> None:
         with pytest.raises(ValueError):
-            EmailReviewer(max_tokens=max_tokens)  # type: ignore[arg-type]
+            EmailReviewer(max_tokens=max_tokens)
 
     @pytest.mark.parametrize(
         "sensitive_words",
@@ -520,7 +520,7 @@ class TestEmailReviewer:
     )
     def test_rejects_invalid_sensitive_words(self, sensitive_words: object) -> None:
         with pytest.raises(ValueError):
-            EmailReviewer(sensitive_words=sensitive_words)  # type: ignore[arg-type]
+            EmailReviewer(sensitive_words=sensitive_words)
 
     @pytest.mark.parametrize(
         "overrides",
@@ -577,7 +577,7 @@ class TestEmailReviewer:
             {"subject": "缺字段"},
             "not-a-dict",
         ]
-        results = reviewer.review_batch(drafts)  # type: ignore[arg-type]
+        results = reviewer.review_batch(drafts)
         assert len(results) == 4
         assert isinstance(results[0], ReviewResult)
         assert isinstance(results[1], ReviewBlockedResult)
@@ -586,7 +586,7 @@ class TestEmailReviewer:
 
     def test_batch_rejects_non_list(self) -> None:
         with pytest.raises(ValueError):
-            EmailReviewer(router=MagicMock()).review_batch(())  # type: ignore[arg-type]
+            EmailReviewer(router=MagicMock()).review_batch(())
 
 
 class TestD474V103Fixes:

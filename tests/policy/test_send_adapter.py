@@ -34,7 +34,7 @@ import sys
 import time
 from email.message import EmailMessage
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 import pytest
 
@@ -173,7 +173,7 @@ def _insert_pending_entry(store: OutboxStore, *, email_id: int) -> int:
         recipient_email=f"customer{email_id}@example.com",
     )
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
-    return entry.id
+    return cast(int, entry.id)
 
 
 # ===== A. 5 helper / factory / acceptance(7 tests)=====
@@ -301,10 +301,10 @@ class _FakeEvaluation:
 def test_send_decision_report_basic() -> None:
     """SendDecisionReport 最小构造(成功发送, send_succeeded=True 必锁)."""
     report = SendDecisionReport(
-        evaluation=_FakeEvaluation(),  # type: ignore[arg-type]
+        evaluation=_FakeEvaluation(),
         event_id=1,
         lane_entry_id="send:test:run1",
-        liveness="healthy",  # type: ignore[arg-type]
+        liveness="healthy",
         outbox_id=1,
         email_id=100,
         subject="测试邮件主题",
@@ -325,10 +325,10 @@ def test_send_decision_report_basic() -> None:
 def test_send_blocked_decision_report_basic() -> None:
     """SendBlockedDecisionReport 最小构造(业务阻断, send_blocked=True 必锁)."""
     report = SendBlockedDecisionReport(
-        evaluation=_FakeEvaluation(),  # type: ignore[arg-type]
+        evaluation=_FakeEvaluation(),
         event_id=1,
         lane_entry_id="send:test:run1",
-        liveness="healthy",  # type: ignore[arg-type]
+        liveness="healthy",
         last_error="SMTP 收件人拒收: 550 mailbox not found",
         reason="recipients_refused",
         outbox_id=1,
@@ -347,10 +347,10 @@ def test_send_blocked_decision_report_basic() -> None:
 def test_send_failure_decision_report_basic() -> None:
     """SendFailureDecisionReport 最小构造(技术失败, send_failed=True 必锁)."""
     report = SendFailureDecisionReport(
-        evaluation=_FakeEvaluation(),  # type: ignore[arg-type]
+        evaluation=_FakeEvaluation(),
         event_id=1,
         lane_entry_id="send:test:run1",
-        liveness="healthy",  # type: ignore[arg-type]
+        liveness="healthy",
         last_error="SMTP 服务器断连: ConnectionResetError",
         error_category="transport_error",
         outbox_id=1,
@@ -838,10 +838,10 @@ def test_record_blocked_cf_must_be_zero(
     # 这里通过 __post_init__ 跨字段校验验证: 手动构造一个非法 cf=1 的 report 必抛 ValueError
     with pytest.raises(ValueError, match="consecutive_send_failures 业务阻断必为 0"):
         SendBlockedDecisionReport(
-            evaluation=_FakeEvaluation(),  # type: ignore[arg-type]
+            evaluation=_FakeEvaluation(),
             event_id=1,
             lane_entry_id="send:test:run1",
-            liveness="healthy",  # type: ignore[arg-type]
+            liveness="healthy",
             last_error="test",
             reason="recipients_refused",
             outbox_id=outbox_id,
@@ -929,7 +929,7 @@ def test_record_blocked_transport_alive_must_be_bool(
             outbox_id=outbox_id,
             reason="recipients_refused",
             last_error="test",
-            transport_alive="not_bool",  # type: ignore[arg-type]
+            transport_alive="not_bool",
         )
 
 
@@ -1125,7 +1125,7 @@ def test_record_failure_state_machine_illegal_transition(
                 actual_status="sent",  # 另一 process 已推到 sent
             )
         # 其他走真实方法
-        return store.__class__.update_status(store, *args, **kwargs)  # type: ignore[arg-type]
+        return store.__class__.update_status(store, *args, **kwargs)
 
     monkeypatch.setattr(store, "update_status", fake_update)
 
@@ -1507,7 +1507,7 @@ def test_send_blacklist_store_dict_type_mismatch_rejected(
             source="test-send-b43-dict[Any, Any]",
             outbox_store=store,
             smtp_transport=smtp_transport,
-            blacklist_store=fake_dict,  # type: ignore[arg-type]
+            blacklist_store=fake_dict,
         )
 
 

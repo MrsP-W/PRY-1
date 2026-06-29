@@ -108,7 +108,7 @@ def test_build_xoauth2_auth_string_rejects_invalid_email() -> Any:
 
     # 1.3.1 非 str
     with pytest.raises(XOAUTH2EmailValidationError, match="email 必须是 str"):
-        build_xoauth2_auth_string(email=123, access_token="token")  # type: ignore[arg-type]
+        build_xoauth2_auth_string(email=123, access_token="token")
 
     # 1.3.2 缺 @
     with pytest.raises(XOAUTH2EmailValidationError, match="email 必须含 @"):
@@ -133,7 +133,7 @@ def test_build_xoauth2_auth_string_rejects_invalid_token() -> Any:
 
     # 1.4.1 非 str
     with pytest.raises(XOAUTH2TokenValidationError, match="access_token 必须是 str"):
-        build_xoauth2_auth_string(email="user@x.com", access_token=123)  # type: ignore[arg-type]
+        build_xoauth2_auth_string(email="user@x.com", access_token=123)
 
     # 1.4.2 仅空白
     with pytest.raises(XOAUTH2TokenValidationError, match="access_token 必填且必须非空字符串"):

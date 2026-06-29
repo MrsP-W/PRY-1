@@ -111,7 +111,7 @@ class TestMergeWriterDryRunWithStub:
 class TestMergeWriterDryRunWithMockWriter:
     """Mock Writer writer dry_run would_allow=True 测试."""
 
-    class _MockAllowWriter(BusinessWriterStub):
+    class _MockAllowWriter(BusinessWriterStub):  # type: ignore[misc]
         """Mock writer — dry_run 返回 would_allow=True."""
 
         def dry_run(
@@ -168,7 +168,7 @@ class TestMergeWriterDryRunWithMockWriter:
 class TestMergeWriterDryRunExceptionIsolation:
     """writer 异常隔离(沿撞坑 #65 + v0.2.53.8)."""
 
-    class _BrokenWriter(BusinessWriterStub):
+    class _BrokenWriter(BusinessWriterStub):  # type: ignore[misc]
         """Mock writer — dry_run 抛 RuntimeError."""
 
         def dry_run(
@@ -243,7 +243,7 @@ class TestMergeWriterDryRunAuditContext:
 
         captured_audit: list[AuditContext] = []
 
-        class _CaptureWriter(BusinessWriterStub):
+        class _CaptureWriter(BusinessWriterStub):  # type: ignore[misc]
             def dry_run(
                 self,
                 action: str,

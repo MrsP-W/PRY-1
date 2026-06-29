@@ -193,7 +193,7 @@ def test_init_rejects_string_poll_interval(fake_rumps: None) -> None:
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     with pytest.raises(ValueError, match="badge_poll_interval_seconds 必须是"):
-        NotesMenuBarApp(badge_poll_interval_seconds="30")  # type: ignore[arg-type]
+        NotesMenuBarApp(badge_poll_interval_seconds="30")
 
 
 def test_init_accepts_zero_to_disable_polling(fake_rumps: None) -> None:
@@ -356,7 +356,7 @@ def test_poll_badge_count_refreshes_both_badges(fake_rumps: None) -> None:
         badge_poll_interval_seconds=0.1,
     )
     # 替换 _service 为可控异常告警
-    app._service = _FakeAnomalyService(count=3)  # type: ignore[assignment]
+    app._service = _FakeAnomalyService(count=3)
     # 显式调一次 _refresh_*_count(fake_rumps 禁用 polling, 不会异步覆盖)
     app._refresh_pending_confirm_count()
     app._refresh_anomaly_count()

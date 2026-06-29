@@ -177,7 +177,7 @@ class TestAssertEventInvariants:
     def test_metadata_not_dict_raises_metadata_error(self) -> None:
         """metadata 不是 dict → EventMetadataError."""
         with pytest.raises(EventMetadataError, match="metadata 必须是 dict"):
-            assert_event_invariants(EventType.LLM_CALL_STARTED, EventStatus.STARTED, "not a dict")  # type: ignore[arg-type]
+            assert_event_invariants(EventType.LLM_CALL_STARTED, EventStatus.STARTED, "not a dict")
 
     def test_negative_evidence_first_class(self) -> None:
         """负向证据 first-class: status=failed/skipped/blocked 独立合法."""

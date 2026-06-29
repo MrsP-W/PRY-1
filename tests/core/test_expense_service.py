@@ -110,7 +110,7 @@ def test_construct_rejects_none_note_store(tx_store: Any, anomaly_detector: Any)
 
     with pytest.raises(TypeError, match="note_store 必传非 None"):
         ExpenseServiceImpl(
-            note_store=None,  # type: ignore[arg-type]
+            note_store=None,
             tx_store=tx_store,
             anomaly_detector=anomaly_detector,
         )
@@ -124,7 +124,7 @@ def test_construct_rejects_wrong_type_anomaly_detector(note_store: Any, tx_store
         ExpenseServiceImpl(
             note_store=note_store,
             tx_store=tx_store,
-            anomaly_detector="not_a_detector",  # type: ignore[arg-type]
+            anomaly_detector="not_a_detector",
         )
 
 

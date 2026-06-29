@@ -105,7 +105,7 @@ class TestNoteConfirmServiceProtocol:
         result_list = stub.list_pending_confirm()
         assert isinstance(result_list, list)
         # confirm_note: apple_note_id: str → None
-        result_confirm = stub.confirm_note("test-id")  # type: ignore[func-returns-value]
+        result_confirm = stub.confirm_note("test-id")
         assert result_confirm is None
 
 
@@ -136,8 +136,8 @@ class TestNoteConfirmServiceStub:
         stub = NoteConfirmServiceStub()
         # 修复(v0.2.2 #2 mypy): Protocol 推断 confirm_note 签名 → 实际 Stub 是 no-op,
         # 用 # type: ignore 避免 mypy func-returns-value 误报
-        assert stub.confirm_note("any-id") is None  # type: ignore[func-returns-value]
-        assert stub.confirm_note("") is None  # type: ignore[func-returns-value]
+        assert stub.confirm_note("any-id") is None
+        assert stub.confirm_note("") is None
 
     def test_get_default_stub_singleton(self) -> None:
         """get_default_stub 返回单例(沿 D5.6.4 工厂范本)."""
@@ -265,7 +265,7 @@ class TestNoteConfirmServiceImplListPending:
 
         # type 不对
         with pytest.raises(ValueError, match="limit 必须是"):
-            impl.list_pending_confirm(limit="10")  # type: ignore[arg-type]
+            impl.list_pending_confirm(limit="10")
         # bool 拒收(isinstance(True, int)==True 陷阱)
         with pytest.raises(ValueError, match="limit 必须是"):
             impl.list_pending_confirm(limit=True)
@@ -320,9 +320,9 @@ class TestNoteConfirmServiceImplConfirmNote:
         store = _FakeNoteStore()
         impl = NoteConfirmServiceImpl(store)
         with pytest.raises(TypeError, match="apple_note_id 必须是 str"):
-            impl.confirm_note(123)  # type: ignore[arg-type]
+            impl.confirm_note(123)
         with pytest.raises(TypeError, match="apple_note_id 必须是 str"):
-            impl.confirm_note(None)  # type: ignore[arg-type]
+            impl.confirm_note(None)
 
     def test_confirm_note_value_error_on_empty(self) -> None:
         """confirm_note 严判非空字符串(非纯空白)→ ValueError."""
@@ -352,7 +352,7 @@ class TestNoteConfirmServiceImplConfirmNote:
         store = _FakeNoteStore()
         impl = NoteConfirmServiceImpl(store)
         with pytest.raises(TypeError):
-            impl.confirm_note(123)  # type: ignore[arg-type]
+            impl.confirm_note(123)
         assert store.archive_calls == []  # 严判失败时未触发 store
 
 

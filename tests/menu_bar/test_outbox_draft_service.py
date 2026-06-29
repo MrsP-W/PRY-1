@@ -73,10 +73,10 @@ def test_stub_defaults() -> None:
 
 def test_impl_requires_outbox_store() -> None:
     with pytest.raises(TypeError, match="outbox_store 必填"):
-        OutboxDraftServiceImpl(None)  # type: ignore[arg-type]
+        OutboxDraftServiceImpl(None)
 
     with pytest.raises(TypeError, match="by_status"):
-        OutboxDraftServiceImpl(object())  # type: ignore[arg-type]
+        OutboxDraftServiceImpl(object())
 
 
 def test_impl_counts_pending_send_and_approved() -> None:
@@ -119,7 +119,7 @@ def test_impl_limit_validation() -> None:
     service = OutboxDraftServiceImpl(_FakeOutboxStore())
     for bad in (True, "10", 0, 101):
         with pytest.raises(ValueError, match="limit 必须"):
-            service.list_pending_drafts(limit=bad)  # type: ignore[arg-type]
+            service.list_pending_drafts(limit=bad)
 
 
 def test_impl_swallows_query_exceptions() -> None:

@@ -136,7 +136,7 @@ def test_fingerprint_input_validation_raises() -> None:
 
     # 1. date 类型非法
     with __import__("pytest").raises(TypeError, match="date 必须是"):
-        normalize_fingerprint(20260614, Decimal("13.14"), "星巴克")  # type: ignore[arg-type]
+        normalize_fingerprint(20260614, Decimal("13.14"), "星巴克")
 
     # 2. date 空字符串
     with __import__("pytest").raises(ValueError, match="日期必填"):
@@ -156,7 +156,7 @@ def test_fingerprint_input_validation_raises() -> None:
 
     # 6. counterparty 类型非法
     with __import__("pytest").raises(TypeError, match="counterparty 必须是 str"):
-        normalize_fingerprint("2026-06-14", Decimal("13.14"), 123)  # type: ignore[arg-type]
+        normalize_fingerprint("2026-06-14", Decimal("13.14"), 123)
 
     # 7. counterparty 空字符串
     with __import__("pytest").raises(ValueError, match="counterparty 必填"):

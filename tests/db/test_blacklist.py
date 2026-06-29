@@ -116,7 +116,7 @@ def test_recipient_blacklist_orm_unique_constraint_on_recipient_email() -> None:
     # Table.constraints 是 SA 内部属性,FromClause 上无声明(SA 类型分立)— 沿 D9.1 NoteStore 测试范本
     unique_constraints = [
         c
-        for c in RecipientBlacklist.__table__.constraints  # type: ignore[attr-defined]
+        for c in RecipientBlacklist.__table__.constraints
         if isinstance(c, UniqueConstraint)
         and getattr(c, "name", None) == "uq_recipient_blacklist_email"
     ]
@@ -169,7 +169,7 @@ def test_insert_added_by_three_choices(store: RecipientBlacklistStore) -> None:
 def test_insert_rejects_non_string_recipient_email(store: RecipientBlacklistStore) -> None:
     """3.1 recipient_email 必填非 str — TypeError."""
     with pytest.raises(TypeError, match="recipient_email 必须是 str"):
-        store.insert(recipient_email=123)  # type: ignore[arg-type]
+        store.insert(recipient_email=123)
 
 
 def test_insert_rejects_empty_or_whitespace_recipient_email(

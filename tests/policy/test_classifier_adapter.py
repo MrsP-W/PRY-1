@@ -269,14 +269,14 @@ class TestFactoryFunctions:
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                branch_stale="false",  # type: ignore[arg-type]
+                branch_stale="false",
             )
         with pytest.raises(ValueError):
             build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                now_ms="123",  # type: ignore[arg-type]
+                now_ms="123",
             )
 
     def test_build_classify_policy_context_escalate_logic(self) -> None:
@@ -340,14 +340,14 @@ class TestFactoryFunctions:
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                last_classify_failed="true",  # type: ignore[arg-type]
+                last_classify_failed="true",
             )
         with pytest.raises(ValueError, match="last_classify_failed"):
             build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                last_classify_failed=1,  # type: ignore[arg-type]
+                last_classify_failed=1,
             )
 
 
@@ -367,7 +367,7 @@ class TestEmailClassifierAdapterInit:
         with pytest.raises(ValueError):
             EmailClassifierAdapter(source="")
         with pytest.raises(ValueError):
-            EmailClassifierAdapter(source=None)  # type: ignore[arg-type]
+            EmailClassifierAdapter(source=None)
 
     def test_init_with_dependencies(self) -> None:
         eng = PolicyEngine()
@@ -399,7 +399,7 @@ class TestBuildLaneEntryId:
         with pytest.raises(ValueError):
             a.build_lane_entry_id("")
         with pytest.raises(ValueError):
-            a.build_lane_entry_id(None)  # type: ignore[arg-type]
+            a.build_lane_entry_id(None)
 
 
 # ============================================================
@@ -424,9 +424,9 @@ class TestTickHeartbeat:
         """D4.5 P0 修复: 拒 'true' 字符串."""
         a = EmailClassifierAdapter(source="qq")
         with pytest.raises(ValueError):
-            a.tick_heartbeat(transport_alive="true")  # type: ignore[arg-type]
+            a.tick_heartbeat(transport_alive="true")
         with pytest.raises(ValueError):
-            a.tick_heartbeat(transport_alive=1)  # type: ignore[arg-type]
+            a.tick_heartbeat(transport_alive=1)
 
 
 # ============================================================
@@ -595,7 +595,7 @@ class TestClassifyAndEmit:
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                consecutive_classify_failures=2,  # type: ignore[call-arg]
+                consecutive_classify_failures=2,
                 run_id="r-no-cf-on-success",
             )
         # 失败入口 cf 必填 >= 1
@@ -707,14 +707,14 @@ class TestD46V101AdapterFixes:
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                transport_alive=1,  # type: ignore[arg-type]
+                transport_alive=1,
                 run_id="r-bool-transport",
             )
         with pytest.raises(ValueError, match="transport_alive"):
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                transport_alive="true",  # type: ignore[arg-type]
+                transport_alive="true",
                 run_id="r-str-transport",
             )
 
@@ -845,7 +845,7 @@ class TestD46V102AdapterFixes:
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                consecutive_classify_failures=99,  # type: ignore[call-arg]
+                consecutive_classify_failures=99,
                 run_id="r-v102-no-cf",
             )
         # 2) 成功入口不再接受 last_classify_failed 参数
@@ -853,7 +853,7 @@ class TestD46V102AdapterFixes:
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                last_classify_failed=True,  # type: ignore[call-arg]
+                last_classify_failed=True,
                 run_id="r-v102-no-last-failed",
             )
 
@@ -1279,7 +1279,7 @@ class TestD46V102ThirdPassFixes:
                 event_id=None,
                 lane_entry_id="classify:qq:r",
                 liveness=Liveness.HEALTHY,
-                failed=False,  # type: ignore[arg-type]
+                failed=False,
                 last_error="err",
                 consecutive_classify_failures=1,
             )

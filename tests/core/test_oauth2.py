@@ -78,7 +78,7 @@ def test_oauth2_token_rejects_non_string_scope() -> Any:
             access_token="ya29",
             refresh_token=None,
             expires_at_ms=1700000000000,
-            scope=("valid_scope", 123),  # type: ignore[arg-type]
+            scope=("valid_scope", 123),
         )
 
 
@@ -131,7 +131,7 @@ def test_oauth2_config_rejects_non_tuple_scope() -> Any:
         OAuth2Config(
             client_id="x",
             redirect_uri="https://example.com/cb",
-            scope="invalid_string",  # type: ignore[arg-type]
+            scope="invalid_string",
         )
 
 
@@ -207,7 +207,7 @@ def test_keychain_set_oauth_token_validates_provider(monkeypatch: Any) -> Any:
     with pytest.raises(ValueError, match="oauth_provider 必传"):
         keychain.set_oauth_token("invalid_provider", "user@example.com", "{}")
     with pytest.raises(ValueError, match="token_json 必须是 str"):
-        keychain.set_oauth_token("microsoft", "user@example.com", 123)  # type: ignore[arg-type]
+        keychain.set_oauth_token("microsoft", "user@example.com", 123)
     with pytest.raises(ValueError, match="token_json 必填"):
         keychain.set_oauth_token("microsoft", "user@example.com", "   ")
 

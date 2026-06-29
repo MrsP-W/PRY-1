@@ -129,7 +129,7 @@ def test_note_orm_unique_constraint_on_apple_note_id() -> None:
     # Table.constraints 是 SA 内部属性, FromClause 上无声明(SA 类型分立)— 沿 D4.8 outbox 测试范本
     unique_constraints = [
         c
-        for c in Note.__table__.constraints  # type: ignore[attr-defined]
+        for c in Note.__table__.constraints
         if isinstance(c, UniqueConstraint) and getattr(c, "name", None) == "uq_notes_apple_note_id"
     ]
     assert len(unique_constraints) == 1
@@ -201,7 +201,7 @@ def test_insert_rejects_non_str_apple_note_id(store: NoteStore) -> None:
     """3.1 apple_note_id 非 str → TypeError."""
     with pytest.raises(TypeError, match="apple_note_id"):
         store.insert(
-            apple_note_id=12345,  # type: ignore[arg-type]
+            apple_note_id=12345,
             folder="Notes",
             title="",
             body="",
@@ -230,7 +230,7 @@ def test_insert_rejects_int_subclass_is_private(store: NoteStore) -> None:
             title="",
             body="",
             updated_at_ms=0,
-            is_private=1,  # type: ignore[arg-type]
+            is_private=1,
         )
 
 

@@ -7,7 +7,7 @@ import threading
 import urllib.error
 import urllib.request
 from collections.abc import Generator
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -119,7 +119,7 @@ class TestDryRunThreeGateStatus:
     def _base_payload(self) -> dict[str, Any]:
         from my_ai_employee.dashboard.responses import build_status_payload
 
-        return build_status_payload(self._make_ctx())
+        return cast(dict[str, Any], build_status_payload(self._make_ctx()))
 
     @staticmethod
     def _make_ctx() -> DashboardContext:

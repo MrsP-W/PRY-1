@@ -137,9 +137,9 @@ def test_08_l1_wrong_type_guards(session: Any) -> None:
     from my_ai_employee.core.dedup import check_l1_duplicate
 
     with pytest.raises(ValueError):
-        check_l1_duplicate(session, None, "tx-1")  # type: ignore[arg-type]
+        check_l1_duplicate(session, None, "tx-1")
     with pytest.raises(ValueError):
-        check_l1_duplicate(session, 123, "tx-1")  # type: ignore[arg-type]
+        check_l1_duplicate(session, 123, "tx-1")
 
 
 # ===== L2 跨源候选(5 cases)=====
@@ -228,9 +228,9 @@ def test_16_l3_type_guard(session: Any) -> None:
     from my_ai_employee.core.dedup import mark_l3_needs_confirm
 
     with pytest.raises(ValueError):
-        mark_l3_needs_confirm(session, None, 1)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, None, 1)
     with pytest.raises(ValueError):
-        mark_l3_needs_confirm(session, "1", 1)  # type: ignore[arg-type]
+        mark_l3_needs_confirm(session, "1", 1)
 
 
 def test_17_l3_no_l2_hit_skips_l3(session: Any) -> None:

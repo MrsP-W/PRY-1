@@ -267,7 +267,7 @@ def test_failed_items_tracks_value_error_per_row(adapter: Any) -> None:
         ),
     ]
 
-    transaction_adapter.categorize = _selective_categorize  # type: ignore[assignment]
+    transaction_adapter.categorize = _selective_categorize
     try:
         result = adapter.import_raw_transactions(raws, source="wechat")
     finally:
