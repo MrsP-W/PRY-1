@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.38 launch-plan 补勾 docs-only(2026-06-29)
+# SESSION-STATE — v0.2.53.39 质量基线实测刷新(2026-06-29)
 
 > **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD 以 `git rev-parse --short HEAD` 为准**
-> **状态**:🟢 **v0.2.53.38 launch-plan 补勾(2026-06-29)** — 质量门 **2518 passed / 1 skipped / 88.80%** / MD lint **176 files**;补勾 `docs/v0.2-launch-plan.md` P0 执行清单 v0.2.53.26-37 共 12 项 commits(8b54d14 + 9a7b95c+31a2134 + e74b5e3+87caba7 + 915c7f8 + 5b8d518 + b035837+0fba278 + 4b8a4ad+7a299f0 + bec1460 + 8f8ed27 + 8b1c66c + 391777a)+ 新增"8/1 release tag readiness 锚定" + "7/1 月度复盘锚定"两段(沿 v0.2.47 + v0.2.53.36 + v0.2.53.37 三层决策矩阵)。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 沿用(本棒 docs-only 无新增)。
+> **状态**:🟢 **v0.2.53.39 质量基线实测刷新(2026-06-29)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **177 files**;补勾 `docs/v0.2-launch-plan.md` P0 执行清单 v0.2.53.26-37 共 12 项 commits(8b54d14 + 9a7b95c+31a2134 + e74b5e3+87caba7 + 915c7f8 + 5b8d518 + b035837+0fba278 + 4b8a4ad+7a299f0 + bec1460 + 8f8ed27 + 8b1c66c + 391777a)+ 新增"8/1 release tag readiness 锚定" + "7/1 月度复盘锚定"两段(沿 v0.2.47 + v0.2.53.36 + v0.2.53.37 三层决策矩阵)。**质量门**:mypy --strict 0 errors(**235 files**) / ruff + format 全绿。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 沿用(本棒 docs-only 无新增)。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.36 8/1 release tag readiness 刷新已落地(2026-06-28)** — 2518 passed / MD lint 174 + 8/9 项实质满足。**下一步候选**:Keychain SMTP spike / 7/1 月度复盘统一评估。
+**当前启动候选**:**v0.2.53.36 8/1 release tag readiness 刷新已落地(2026-06-28)** — 2518 passed / MD lint 177 + 8/9 项实质满足。**下一步候选**:Keychain SMTP spike / 7/1 月度复盘统一评估。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **174 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **177 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

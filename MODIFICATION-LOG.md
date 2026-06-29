@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.38` launch-plan 补勾 docs-only(2026-06-29):**2518 passed / 1 skipped / 88.80%** / MD lint **176 files** + 补勾 `docs/v0.2-launch-plan.md` P0 checklist v0.2.53.26-37 共 12 项 commits + 新增"8/1 release tag readiness 锚定" + "7/1 月度复盘锚定"两段(沿 v0.2.47 + v0.2.53.36 + v0.2.53.37 三层决策矩阵)+ 撞坑累计 68 沿用(本棒 docs-only 无新增)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike |
+| **当前阶段** | ✅ `v0.2.53.39` 质量基线实测刷新 docs-only(2026-06-29):**2518 passed / 1 skipped / 88.78%** / MD lint **177 files** + 漂移修复(quality_snapshot.py 174→177 / docs 层 88.80%→88.78%)+ 撞坑 #50 衍生第三版"漂移两类"沉淀(docs 与实测错位 + snapshot 与实测错位)+ 撞坑累计 68 沿用(本棒 docs-only 无新增)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike |
 | **上一阶段** | ✅ `v0.2.53.37` 7/1 月度复盘输入包 docs-only(2026-06-29 · `391777a`):27 项议程总盘(22 + 5 撞坑 #68 衍生 · 主题 1-8)+ 7/1 复盘流程 12:00-16:30(4.5h 窗口) |
 | **上一阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28 · `8b1c66c`):8/9 项实质满足,沿 v0.2.47 决策矩阵 |
 | **上一阶段** | ✅ `v0.2.53.35` sync MD lint 173 + audit semantics(2026-06-28 · `8f8ed27`):173 MD baseline 同步 |
@@ -103,7 +103,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.38:**2518 passed / 1 skipped** / **88.80%** / mypy strict 0 / **235 files** / MD lint **176 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.39:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **177 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | Keychain SMTP spike;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
