@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.51 状态快照漂移收口(2026-06-29 · `2950f6a`)** — v0.2.53.50 Dashboard 报告页搜索 UX 已提交;本轮同步 MD lint **192** = `git ls-files '*.md'` = `make lint`,并修正 SESSION-STATE 的 HEAD/待提交口径。**上一阶段**:v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试。**下一棒**:v0.2.53.51 audit 真实落档 / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.53 路径 4 实写 launch checklist v2 收口(2026-06-30 · `82574ec`)** — docs-only 提交 v2 升级版路径 4 实写 launch checklist(5 门 + 5th flag `ENABLE_PATH_4_WRITE=1` + 失败回滚 plan)。**上一阶段**:v0.2.53.52 Dashboard Audit UI(GET `/api/approval-gate/audits` + HTML inspector audit-card)。**上上一阶段**:v0.2.53.51 audit 落档骨架(`approval_gate_audits` 表 + `ApprovalGateAuditStore` Protocol/Stub/InMemory + `BusinessWriterImpl` 4 动作成功/失败 audit 真实落档)。**下一棒**:P4 项目状态复盘(SESSION-STATE/MODIFICATION-LOG/docs/v0.2-launch-plan.md) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -108,8 +108,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2557 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **235 files** / MD lint **192 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | v0.2.53.51 audit 真实落档(沿 v0.2.53.20 落档 design);8/1 后实写 launch |
+| **质量基线** | **2582 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **195 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | P4 项目状态复盘(本轮 docs-only)· 8/1 后实写 launch |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -138,6 +138,77 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.53.53 路径 4 实写 launch checklist v2] — 收口
+
+**1. 本次修改内容**
+
+- **docs(C4)**: `docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md` — v2 升级版路径 4 实写 launch checklist,8/1 后启动用。新增 `docs/2026-06-29-business-writer-path4-checklist.md`(C3 已有)→ v2 升级。5 门:`DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + `real_write_handler_enabled=True` + **新增顶级 `ENABLE_PATH_4_WRITE=1`** flag(避免单 env 误开)。8 项前置条件:6 沿用(实化 ApprovalGateAuditStoreImpl + 真实 service 可注入 + 路径 4 启用真实写入 flag + 4 门已开 + 路径 3.5 dry-run 实际可执行 + audit 落档可查)+ 2 新增已落地(`v0.2.53.51 audit 真实落档` + `v0.2.53.52 Dashboard audit UI`)。8 步骤实施 checklist:4 已落地(`ApprovalGate handler dry-run 接入` + `第三道门 BUSINESS_WRITER_ENABLED` + `audit 真实落档` + `Dashboard audit UI`)+ 4 剩余(`ApprovalGateAuditStoreImpl 真实接入` + `real_write_handler_enabled=True` 实开 + `ENABLE_PATH_4_WRITE=1` 实开 + 8/1 实战 dry-run 演练`)。4 重防误发:`confirm_text 严判 CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED 严判` + `real_write_handler_enabled 严判` + `ENABLE_PATH_4_WRITE 严判`。实施失败回滚 plan:4 门任一未达 → 立即 raise NotImplementedError,绝不降级。271 lines。
+
+**2. 风险点**
+
+- 🟢 docs-only,不前进 pytest/coverage,不引入新依赖,不接真实 DB/IMAP/SMTP/Keychain。
+- 🟡 v2 升级变更:由 v1.6(6/29 docs)的 4 门 + 4 重防误发 → v2 升级到 5 门 + 新增顶级 `ENABLE_PATH_4_WRITE=1` flag(避免单 env 误开)+ 8 步骤实施 checklist 拆分(已落地 4 + 剩余 4)。原 v1.6 docs 仅作历史归档,8/1 后启动以 v2 为准。
+- ⚠️ 实际写入仍 8/1 后 + 用户授权 + 真实 QQ SMTP 凭据激活后才解锁。
+- ⚠️ 撞坑 #18 风险门控应用:默认 raise NotImplementedError,实际写入留 8/1 后 + 用户授权。
+
+**3. 当前项目整体总结**
+
+- 质量门:2582 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **195** / ruff + format 全绿。
+- 当前阶段:v0.2.53.51/52/53 三 commits 全部收口(`bcf7706` + `8b224a2` + `82574ec`);HEAD `82574ec`。
+- 下一棒:P4 项目状态复盘(SESSION-STATE/MODIFICATION-LOG/docs/v0.2-launch-plan.md 三入口同步)· 8/1 后实写 launch。
+
+### 2026-06-30 [v0.2.53.52 Dashboard Audit UI] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/context.py` — 新增 `audit_store: ApprovalGateAuditStore` 字段(默认 `ApprovalGateAuditStoreStub.get_default_stub()`,撞坑 #65 范本)+ `with_audit_store(store)` 不可变更新方法(沿撞坑 #64 公共 API 范本)+ 5 个 `with_*` 方法(已有 4 + 新 1)全部传 `audit_store=self.audit_store` 保持字段不丢失+ helper `_try_build_audit_store()` 工厂(尝试 `InMemoryApprovalGateAuditStore()`,任何 Exception → 静默降级 None)+ `default()` 在 `BUSINESS_WRITER_ENABLED=1` + `BusinessWriterImpl` 注入成功时联动注入 audit_store(沿 v0.2.53.27 范本)。
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/responses.py` — 新增 `build_approval_gate_audits_payload(ctx, *, limit=10)` 响应(沿 v0.2.53.7-10 GET 范本:只读 + safe_list 静默降级)。4 字段输出:`read_only=True` + `enabled: bool` + `count: int` + `items: list[dict]`(每条 8 字段:action/target_id/actor/reason/write_executed/affected_id/error/executed_at_ms)。
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/handlers.py` — `do_GET()` 新增路由:`path == "/api/approval-gate/audits"` + 复用 `parse_limit(limit_raw)` 严判 1-100。
+- **feat(ui)**: `docs/ui/codex-style-dashboard.html` — 顶部 status strip 版本 pill `v0.2.53.34` → `v0.2.53.52` + system 视图新增 `audit-card`(含 audit-state-tag / audit-source / audit-queue 三节点)+ `hydrateDashboard()` 新增 7th fetch `/api/approval-gate/audits?limit=10` + `renderAudits(payload, sourceLabel)` 渲染函数(Stub="默认 Stub" / InMemory="InMemory 已注入" / 失败红 tag / 已执行绿 tag / dry-run 灰 tag)+ 顶部"API 已连接"文案 `7 读` → `8 读` + 离线兜底 `renderAudits({read_only: true, enabled: false, count: 0, items: []}, "API 离线兜底")`。
+- **test(dashboard)**: `tests/dashboard/test_api.py` — 新增 `TestApprovalGateAuditsPayload`(4 tests) + `TestApprovalGateAuditsEndpoint`(2 tests) = 6 tests。新增 `host_str = host if isinstance(host, str) else host.decode("utf-8")` 修复 str-bytes-safe mypy error(沿 v0.2.53.41 hotfix 范本)。
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — pytest 2576 → **2582** / coverage 88.84% → **88.92%** / lint 192 → **193** / mypy files 235 → **237**(撞坑 #50 第二层防御 + #65 沿用)。
+- **test(menu-bar)**: `tests/menu_bar/test_app.py` L811 同步 `"2582 passed"` 字符串断言(撞坑 #50 第二层防御)。
+- **fix(tests)**: `tests/core/test_oauth2.py` — 顺手修复 3 处 pre-existing mypy unused-ignore(L201 `# type: ignore[attr-defined]` / L210 `# type: ignore[arg-type]` / L217 `# type: ignore[attr-defined]`)。沿 v0.2.53.40 + v0.2.53.41 hotfix 范本清理,撞坑 #69 mypy 状态失真修复。
+- **docs(state)**: `docs/v0.2.53.52-dashboard-audit-ui-2026-06-30.md` — 10 段沉淀:背景与目标 / 设计决策 / 实施内容 / 测试覆盖 / 9 质量门验收 / 撞坑累计与沿用 / 沿用边界 / 下一步 / 关键文件路径 / 关联文档。
+
+**2. 风险点**
+
+- 🟢 GET 只读 + safe_list 静默降级 + Stub/InMemory 默认零 I/O,不接真实 DB,不发 SMTP,不读 Keychain 明文。
+- 🟡 `audit_store` 默认 Stub(`is_enabled=False`,record 永远失败);仅 `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` + session_factory 成功时才联动注入 InMemory。
+- ⚠️ `enabled=False` HTML 渲染"默认 Stub" + 空列表显示"暂无 audit 记录",沿撞坑 #18 风险门控应用。
+- ⚠️ 撞坑 #69 mypy 状态失真顺手修(test_oauth2.py 3 处 unused-ignore 清理),沿 v0.2.53.41 范本。
+
+**3. 当前项目整体总结**
+
+- 质量门:2582 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **193** / ruff + format 全绿。
+- 当前阶段:v0.2.53.52 已提交到 `8b224a2`;新增 GET `/api/approval-gate/audits` 端点 + HTML audit-card + 8 端点 hydrate。
+- 下一棒:v0.2.53.53 路径 4 实写 launch checklist v2 / 8/1 后实写 launch。
+
+### 2026-06-29 [v0.2.53.51 audit 落档骨架] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**: `src/my_ai_employee/menu_bar/approval_gate_audit.py` — 新增 `AuditRecord` dataclass(8 字段:action/target_id/actor/reason/write_executed/affected_id/error/executed_at_ms,严判 type/长度)+ `ApprovalGateAuditStore` Protocol(record/list_recent/is_enabled)+ `ApprovalGateAuditStoreStub`(默认 is_enabled=False,record 永远失败,沿撞坑 #65 范本)+ `InMemoryApprovalGateAuditStore`(is_enabled=True,record 存 list + return audit_id 字符串 "audit:{id}" 沿撞坑 #64 公共 API 范本)+ 9 不变式:写保护锁 raise / dry-run / invalid_target_id / 依赖未注入 都不落档(撞坑 #18 风险门控)。
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/business_writer_impl.py` — `_call_service_xxx()` 4 动作升级:APPROVED last_approved_at_ms=now_ms + CANCELLED last_approved_at_ms=None + confirm_note + dismiss_anomaly + audit_id 从 None 升级到 `InMemoryApprovalGateAuditStore.record()` 真实字符串(沿 D5.6.3 P1-1 审批凭据必传规则)。失败也落档(`error=str(exception)`,`affected_id=None`)。
+- **feat(dashboard)**: alembic 0016 migration — 新增 `approval_gate_audits` 表 + UNIQUE audit_id + idx_executed_at_ms DESC。
+- **test(dashboard)**: `tests/dashboard/test_business_writer_impl.py` — 11 fake store tests 覆盖 audit 4 不变式(成功/失败/dry-run 不落档/写保护锁 raise 不落档)+ `tests/dashboard/test_approval_gate_audit.py` — 4 Protocol/Stub/InMemory 严判测试。
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — pytest 2557 → **2576** / coverage 88.85% → **88.84%** / lint 191 → **192** / mypy files 不变(撞坑 #50 第二层防御)。
+- **test(menu-bar)**: `tests/menu_bar/test_app.py` L811 同步 `"2576 passed"` 字符串断言(撞坑 #50 第二层防御)。
+- **docs(state)**: `docs/v0.2.53.51-audit-filing-skeleton-2026-06-29.md` — 10 段沉淀:背景与目标 / 设计决策 / 实施内容 / 测试覆盖 / 9 质量门验收 / 撞坑累计与沿用 / 沿用边界 / 下一步 / 关键文件路径 / 关联文档。
+
+**2. 风险点**
+
+- 🟢 audit 4 不变式严格遵守:写保护锁 raise / dry-run / invalid_target_id / 依赖未注入 都不落档(撞坑 #18 风险门控应用)。
+- 🟡 默认 Stub(`is_enabled=False`,record 永远失败);不接真实 `ApprovalGateAuditStoreImpl`(留 8/1 后)。
+- ⚠️ `write_executed=True` 仅在真实 service 调用后发生(沿 v0.2.53.11 dry-run 上下文恒 False 不变式)。
+- ⚠️ 撞坑 #64 公共 API 一致性:audit_id 字符串 "audit:{id}" 与 anomaly_dismissals "dismissal:{id}" 对齐。
+
+**3. 当前项目整体总结**
+
+- 质量门:2576 passed / 1 skipped / 88.84% / mypy --strict 0 / 235 files / MD lint **192** / ruff + format 全绿。
+- 当前阶段:v0.2.53.51 audit 落档骨架已提交到 `bcf7706`;新增 `approval_gate_audits` 表 + 4 不变式 + 11 tests。
+- 下一棒:v0.2.53.52 Dashboard Audit UI / 8/1 后实写 launch。
 
 ### 2026-06-29 [v0.2.53.51 状态快照漂移收口 + 项目检查优化] — 收口
 
