@@ -227,10 +227,10 @@ class TestBusinessWriterImplApproveOutboxSkeleton:
         assert "必填且必须非空" in (result.reason or "")
 
     def test_with_deps_valid_target_id_raises_not_implemented(self) -> None:
-        """有依赖 + 有效 target_id → raise NotImplementedError(默认 raise,等待路径 4)."""
+        """有依赖 + 有效 target_id → raise NotImplementedError(写保护锁默认锁定,撞坑 #18 风险门控)."""
 
         writer = BusinessWriterImpl(outbox_store=cast(Any, SimpleNamespace()))
-        with pytest.raises(NotImplementedError, match="approve_outbox 路径 4 启用后将调"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.approve_outbox("123", audit=AuditContext.default())
 
 
@@ -253,7 +253,7 @@ class TestBusinessWriterImplCancelOutboxSkeleton:
     def test_with_deps_valid_target_id_raises_not_implemented(self) -> None:
 
         writer = BusinessWriterImpl(outbox_store=cast(Any, SimpleNamespace()))
-        with pytest.raises(NotImplementedError, match="cancel_outbox 路径 4 启用后将调"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.cancel_outbox("456", audit=AuditContext.default())
 
 
@@ -284,7 +284,7 @@ class TestBusinessWriterImplConfirmNoteSkeleton:
     def test_with_deps_valid_target_id_raises_not_implemented(self) -> None:
 
         writer = BusinessWriterImpl(note_confirm_service=cast(Any, SimpleNamespace()))
-        with pytest.raises(NotImplementedError, match="confirm_note 路径 4 启用后将调"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.confirm_note("note-abc", audit=AuditContext.default())
 
 
@@ -307,7 +307,7 @@ class TestBusinessWriterImplDismissAnomalySkeleton:
     def test_with_deps_valid_target_id_raises_not_implemented(self) -> None:
 
         writer = BusinessWriterImpl(anomaly_dismissal_service=cast(Any, SimpleNamespace()))
-        with pytest.raises(NotImplementedError, match="dismiss_anomaly 路径 4 启用后将调"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=AuditContext.default())
 
 
@@ -441,3 +441,163 @@ class TestBusinessWriterImplSkeletonBoundaries:
             impl_sig = inspect.signature(getattr(BusinessWriterImpl, method_name))
             # 参数名对齐(target_id / audit)
             assert proto_sig.parameters.keys() == impl_sig.parameters.keys()
+
+
+class TestBusinessWriterImplRealWriteHandlerApproved:
+    """v0.2.53.49 approve_outbox 写保护锁开 + fake store 真实调 service(撞坑 #18 测试场景)."""
+
+    def test_real_write_calls_outbox_store_update_status(self) -> None:
+        """写保护锁开 + 依赖注入 → 真实调 outbox_store.update_status(APPROVED)."""
+
+        class _FakeUpdated:
+            id = 12345
+
+        fake_store = SimpleNamespace(
+            update_status=lambda **kw: _FakeUpdated(),
+        )
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            real_write_handler_enabled=True,
+        )
+        result = writer.approve_outbox("123", audit=AuditContext.default())
+
+        assert result.success is True
+        assert result.affected_id == "12345"
+        assert result.error is None
+        assert "APPROVED" in (result.reason or "")
+        assert result.write_executed is True
+
+    def test_real_write_passes_last_approved_at_ms(self) -> None:
+        """approve_outbox 必须传 last_approved_at_ms(沿 D5.6.3 P1-1 审批凭据必传规则)."""
+
+        captured: dict[str, Any] = {}
+
+        def _fake_update_status(**kw: Any) -> SimpleNamespace:
+            captured.update(kw)
+            return SimpleNamespace(id=999)
+
+        fake_store = SimpleNamespace(update_status=_fake_update_status)
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            real_write_handler_enabled=True,
+        )
+        writer.approve_outbox("888", audit=AuditContext.default())
+
+        assert captured.get("new_status") == "APPROVED"
+        assert captured.get("from_status") == "PENDING_SEND"
+        assert captured.get("outbox_id") == 888
+        assert isinstance(captured.get("last_approved_at_ms"), int)
+        assert captured["last_approved_at_ms"] > 0
+
+
+class TestBusinessWriterImplRealWriteHandlerCancelled:
+    """v0.2.53.49 cancel_outbox 写保护锁开 + fake store."""
+
+    def test_real_write_calls_update_status_with_none_approved_at(self) -> None:
+        """cancel_outbox 必须传 last_approved_at_ms=None(D5.6.3 P1-1 必传 None 规则)."""
+
+        captured: dict[str, Any] = {}
+
+        def _fake_update_status(**kw: Any) -> SimpleNamespace:
+            captured.update(kw)
+            return SimpleNamespace(id=999)
+
+        fake_store = SimpleNamespace(update_status=_fake_update_status)
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            real_write_handler_enabled=True,
+        )
+        result = writer.cancel_outbox("777", audit=AuditContext.default())
+
+        assert result.success is True
+        assert result.affected_id == "999"
+        assert captured.get("new_status") == "CANCELLED"
+        assert captured.get("from_status") == "PENDING_SEND"
+        assert captured.get("last_approved_at_ms") is None
+
+
+class TestBusinessWriterImplRealWriteHandlerConfirmNote:
+    """v0.2.53.49 confirm_note 写保护锁开 + fake note_confirm_service."""
+
+    def test_real_write_calls_confirm_note(self) -> None:
+        """写保护锁开 → 真实调 note_confirm_service.confirm_note(target_id)."""
+
+        captured: dict[str, Any] = {}
+
+        def _fake_confirm_note(*, apple_note_id: str) -> None:
+            captured["apple_note_id"] = apple_note_id
+
+        fake_service = SimpleNamespace(confirm_note=_fake_confirm_note)
+        writer = BusinessWriterImpl(
+            note_confirm_service=cast(Any, fake_service),
+            real_write_handler_enabled=True,
+        )
+        result = writer.confirm_note("note-xyz", audit=AuditContext.default())
+
+        assert result.success is True
+        assert result.affected_id == "note-xyz"
+        assert captured.get("apple_note_id") == "note-xyz"
+
+
+class TestBusinessWriterImplRealWriteHandlerDismissAnomaly:
+    """v0.2.53.49 dismiss_anomaly 写保护锁开 + fake anomaly_dismissal_service."""
+
+    def test_real_write_calls_dismiss_with_reason(self) -> None:
+        """写保护锁开 → 真实调 anomaly_dismissal_service.dismiss(target_id, reason)."""
+
+        captured: dict[str, Any] = {}
+
+        def _fake_dismiss(*, anomaly_id: str, reason: str) -> None:
+            captured["anomaly_id"] = anomaly_id
+            captured["reason"] = reason
+
+        fake_service = SimpleNamespace(dismiss=_fake_dismiss)
+        writer = BusinessWriterImpl(
+            anomaly_dismissal_service=cast(Any, fake_service),
+            real_write_handler_enabled=True,
+        )
+        audit = AuditContext(actor="tester", reason="test reason for pitfall #18")
+        result = writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=audit)
+
+        assert result.success is True
+        assert result.affected_id == "2026-06-26|星巴克|38.50"
+        assert captured.get("anomaly_id") == "2026-06-26|星巴克|38.50"
+        assert captured.get("reason") == "test reason for pitfall #18"
+
+
+class TestBusinessWriterImplWriteProtectionDefaultLocked:
+    """v0.2.53.49 默认写保护锁锁定(撞坑 #18 风险门控)— 4 动作 raise."""
+
+    @pytest.mark.parametrize(
+        ("method_name", "kw"),
+        [
+            ("approve_outbox", {"outbox_store": SimpleNamespace()}),
+            ("cancel_outbox", {"outbox_store": SimpleNamespace()}),
+            ("confirm_note", {"note_confirm_service": SimpleNamespace()}),
+            ("dismiss_anomaly", {"anomaly_dismissal_service": SimpleNamespace()}),
+        ],
+    )
+    def test_default_locked_raises_not_implemented(
+        self, method_name: str, kw: dict[str, Any]
+    ) -> None:
+        """默认 _real_write_handler_enabled=False → 4 动作 raise(写保护锁风险门控)."""
+
+        kwargs = cast(Any, kw)
+        writer = BusinessWriterImpl(**kwargs)
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            getattr(writer, method_name)("1", audit=AuditContext.default())
+
+    def test_default_constructor_real_write_handler_false(self) -> None:
+        """默认构造 _real_write_handler_enabled=False."""
+        writer = BusinessWriterImpl()
+        assert writer._real_write_handler_enabled is False  # noqa: SLF001
+
+    def test_explicit_true_unlock(self) -> None:
+        """显式 _real_write_handler_enabled=True → 放行(仅测试场景)."""
+        writer = BusinessWriterImpl(
+            outbox_store=cast(
+                Any, SimpleNamespace(update_status=lambda **kw: SimpleNamespace(id=1))
+            ),
+            real_write_handler_enabled=True,
+        )
+        assert writer._real_write_handler_enabled is True  # noqa: SLF001

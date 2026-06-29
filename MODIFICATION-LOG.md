@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.47 状态快照同步(2026-06-29 · HEAD `8edb592`)** — 2546 passed / 88.83% / MD lint **189** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.46 BusinessWriterImpl 4 动作实写骨架 · QQ-only SMTP 已收口。**下一棒**:Dashboard 系统健康接 quality_snapshot / 路径 4 fake store 测试 / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试(2026-06-29 · HEAD 待提交)** — 2557 passed / 88.87% / MD lint **190** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.48 Dashboard 系统健康硬编码修复 · v0.2.53.47 状态快照同步。**下一棒**:P1-3 报告页强化 / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -108,8 +108,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2546 passed / 1 skipped** / **88.83%** / mypy --strict 0 / **235 files** / MD lint **189 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | Dashboard 系统健康接 quality_snapshot;路径 4 fake store 测试;8/1 后实写 launch |
+| **质量基线** | **2557 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **235 files** / MD lint **190 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | P1-3 报告页强化(撞坑 #66 扫描器 + 撞坑 #50 docstring/code 漂移防御 + 只读 GET);8/1 后实写 launch |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -156,6 +156,77 @@
 - 质量门:2546 / 88.83% / mypy 0 / MD lint **189** / ruff + format 全绿
 - 当前阶段:三入口 + quality_snapshot 对齐 HEAD `8edb592`
 - 下一棒 P1:Dashboard 系统健康接 quality_snapshot;路径 4 fake store 测试
+
+### 2026-06-29 [v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/business_writer_impl.py` — 加 `_real_write_handler_enabled: bool = False` 写保护锁构造参数(默认锁定,撞坑 #18 风险门控)+ 4 动作统一骨架升级 `_check_dep + _validate_target_id + _check_write_protection() + _call_service_xxx()` + 4 个 `_call_service_xxx()` 真实调 service(APPROVED last_approved_at_ms=now_ms / CANCELLED last_approved_at_ms=None / confirm_note / dismiss_anomaly)+ audit_id 占位 None(留 v0.2.53.50)
+- **test(dashboard)**: `tests/dashboard/test_business_writer_impl.py` — +11 fake store tests(沿撞坑 #65 opt-in 4 阶段 + D5.6.3 P1-1 审批凭据必传规则)+ 4 个旧测试 `match` 字符串同步(从 `动作名 路径 4 启用后将调` → `写保护锁未开`)
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — pytest 2546 → **2557** / coverage 88.81% → **88.87%**(撞坑 #50 第三层防御)/ lint 189 → **190**
+
+**2. 质量门 9/9 全绿**
+
+| 门 | 结果 |
+|---|------|
+| MD lint | 190 files 0 errors |
+| mypy --strict | 0 errors / 235 files |
+| ruff check | All checks passed |
+| ruff format | 272 files already formatted |
+| pytest | **2557 passed** / 1 skipped(2546 → 2557,+11 fake store tests) |
+| coverage | **88.87%**(88.81% → 88.87% · +0.06pp · 撞坑 #50 第三层修复) |
+| alembic upgrade head --sql | exit 0 |
+| uv build | OK(sdist + wheel) |
+| FINAL_EXIT | 0 |
+
+**3. 沿用边界**(本棒 0 新增,全部沿用)
+
+- ❌ 不接真实业务 writer(实际写入路径留 v0.2.53.19 handler 启用 + 8/1 后)
+- ❌ 不写 DB 实际数据(默认 raise / 测试场景用 fake store)
+- ❌ 不发真实 SMTP
+- ❌ 不读 Keychain 明文(沿 #59 撞坑规范)
+- ❌ 不打 `v0.2.x` tag(沿 D5.7.2 + 8/1 锚定)
+- ❌ 不移动 `v0.1.0` tag(`2af775f` 锚定不动)
+- ❌ 不接 outlook/gmail SMTP(用户决策豁免)
+- ✅ 默认 raise + 写保护锁锁定 + fake store 测试覆盖(沿撞坑 #18 + #65)
+- ✅ write_executed 恒 False(dry_run 上下文 · 实写可 True 仅测试场景)
+- ✅ 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
+- ✅ D5.6.3 P1-1 审批凭据必传规则(APPROVED 必传 last_approved_at_ms)
+- ✅ audit_id 占位 None(留 v0.2.53.50 真实落档)
+- ✅ 撞坑累计 **70 类沿用**(本棒 0 新增)
+
+**4. 写保护锁 3 层语义**
+
+| 状态 | 行为 | 用途 |
+|------|------|------|
+| `_real_write_handler_enabled=False`(默认) | 4 动作 raise NotImplementedError | 生产环境(v0.2.53.19 未启用前) |
+| `True` + 无依赖 | `_check_dep` raise | 测试场景(依赖未注入) |
+| `True` + 有依赖 | 真实调 service(写 DB) | 测试场景(撞坑 #18 风险门控) |
+
+**5. 4 动作公共模板**
+
+- `_check_dep`:依赖检查(撞坑 #18 风险门控)
+- `_validate_target_id`:参数校验(严判 type + strip + 非空)
+- `_check_write_protection`:写保护锁(撞坑 #18 默认锁定)
+- `_call_service_xxx`:真实调 service(仅测试场景)
+
+**6. fake store 测试覆盖(11 个)**
+
+| Test class | Test 数 | 覆盖范围 |
+|------------|---------|---------|
+| TestBusinessWriterImplRealWriteHandlerApproved | 2 | update_status(APPROVED, last_approved_at_ms=now_ms) |
+| TestBusinessWriterImplRealWriteHandlerCancelled | 1 | update_status(CANCELLED, last_approved_at_ms=None) |
+| TestBusinessWriterImplRealWriteHandlerConfirmNote | 1 | confirm_note(apple_note_id=target_id) |
+| TestBusinessWriterImplRealWriteHandlerDismissAnomaly | 1 | dismiss(anomaly_id, reason=audit.reason) |
+| TestBusinessWriterImplWriteProtectionDefaultLocked | 6 | 默认 4 动作 raise + 锁字段断言 |
+
+**7. 下一棒**
+
+- **P1-3 报告页强化** — `/api/reports/preview` + 搜索 UX 强化,沿 v0.2.53.10 范本,只读 GET
+- **v0.2.53.50 audit 真实落档** — audit_id 从 None 升级到真实 audit_log,留 8/1 后 + 用户授权
+- **8/1 后独立 launch 路径 4 切换** — 实际写入留 8/1 后 + 用户明确授权
+
+---
 
 ### 2026-06-29 [v0.2.53.48 Dashboard 系统健康硬编码修复 + 撞坑 #50 第二层同步] — 收口
 

@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2546 passed / 1 skipped / 88.81% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2557 passed / 1 skipped / 88.87% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -257,9 +257,10 @@ make help
 | **v0.2.53.46** BusinessWriterImpl 4 动作实写骨架(`_check_dep(依赖检查) + _validate_target_id(参数校验) + 末尾 raise` · 默认 raise · 28 tests · 撞坑 #18 风险门控 · 2546 passed / 88.83% / MD lint 188) | ✅ 6/29 落地 | 2026-06-29 |
 | **v0.2.53.47** 状态同步(2546 / 88.83% / 189 / 撞坑 #50 第二层修复 docs-only 收口) | ✅ 6/29 落地 | 2026-06-29 |
 | **v0.2.53.48** Dashboard 系统健康卡片硬编码修复(L879 `2273 passed` → `待读取` 占位 + quality_snapshot 88.83% → 88.81% 撞坑 #50 第二层同步 · docs-only + HTML 静态页) | ✅ 6/29 落地 | 2026-06-29 |
+| **v0.2.53.49** BusinessWriterImpl 写保护锁 + fake store 实写测试(`_real_write_handler_enabled=False` 默认锁定 · 4 动作统一骨架 `_check_dep + _validate_target_id + _check_write_protection + _call_service_xxx` · +11 fake store tests · 撞坑 #18 + #65 opt-in 4 阶段 + D5.6.3 P1-1 审批凭据必传规则 · 2557 passed / 88.87% / MD lint 190) | ✅ 6/29 落地 | 2026-06-29 |
 | **v0.2.54** 8/1 tag 锚定评估(**docs-only 评估线 · 非 Codex UI 主开发版本** · 7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 评估收口 | 2026-06-25 |
 
-> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.48**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
+> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.49**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
 
 ---
 

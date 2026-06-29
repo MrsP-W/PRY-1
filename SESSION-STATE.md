@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.48 Dashboard 系统健康硬编码修复(2026-06-29)
+# SESSION-STATE — v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试(2026-06-29)
 
-> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `a12f081`) · 工作区干净
-> **状态**:🟢 **v0.2.53.48 Dashboard 系统健康硬编码修复(2026-06-29)** — L879 `2273 passed` → `待读取` 占位 + quality_snapshot 88.83% → 88.81%(撞坑 #50 第二层修复)+ 9 质量门全绿。**SMTP 范围**:**仅 QQ** — 用户决策 Outlook/Gmail **不配置、不使用**(代码 factory 保留,不跑凭据/spike)。**8/1 readiness**:QQ SMTP ✅ · #2/#9 outlook/gmail **用户决策豁免** · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / **2546 passed** / **88.81%** / lint **189** 0 errors / ruff + format 全绿。**下一棒**:P1-2 路径 4 fake store 测试 / P1-3 报告页强化 / 8/1 后独立 launch。**边界**:默认 raise · 不接业务 writer 实写 · 不打 tag · `write_executed` 恒 False · 撞坑累计 70 类沿用。
+> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测待提交) · 工作区干净(待提交)
+> **状态**:🟢 **v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试(2026-06-29)** — `_real_write_handler_enabled=False` 默认锁定 + 4 动作统一骨架 `_check_dep + _validate_target_id + _check_write_protection + _call_service_xxx` + +11 fake store tests(撞坑 #18 + #65 opt-in 4 阶段 + D5.6.3 P1-1 审批凭据必传规则)+ 9 质量门全绿。**SMTP 范围**:**仅 QQ** — 用户决策 Outlook/Gmail **不配置、不使用**(代码 factory 保留,不跑凭据/spike)。**8/1 readiness**:QQ SMTP ✅ · #2/#9 outlook/gmail **用户决策豁免** · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / **2557 passed** / **88.87%** / lint **190** 0 errors / ruff + format 全绿。**下一棒**:P1-3 报告页强化 / 8/1 后独立 launch。**边界**:默认 raise · 写保护锁锁定 · 不打 tag · `write_executed` 恒 False(dry_run 上下文)· 撞坑累计 70 类沿用。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.48 Dashboard 系统健康硬编码修复已落地(2026-06-29 · HEAD `a12f081`)** — 2546 passed / 88.81% / MD lint **189** = `git ls-files '*.md'`。**下一步候选**:P1-2 路径 4 fake store 测试 / P1-3 报告页强化 / 8/1 后实写 launch。
+**当前启动候选**:**v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试已落地(2026-06-29 · HEAD 待提交)** — 2557 passed / 88.87% / MD lint **190** = `git ls-files '*.md'`。**下一步候选**:P1-3 报告页强化 / 8/1 后实写 launch。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2546 passed / 1 skipped** · **88.81%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **189 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| 核心质量门 | **2557 passed / 1 skipped** · **88.87%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **190 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
