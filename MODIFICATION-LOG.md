@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.35` state sync + BusinessWriter write-path design closure(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **173 files** + audit 落档语义统一 + 版本顺序倒挂 docs 说明。**下一棒**:Keychain SMTP spike / 8/1 截点 |
+| **当前阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **173 files** + 8/9 项实质满足(从 v0.2.47 7/9 项前进 1 项)+ 决策矩阵沿 v0.2.47(自动打 tag ❌ / 继续延后 ✅ / 降级 rc1 🟡)。**下一棒**:7/1 月度复盘统一评估(`v0.2.1-rc1` 候选)+ Keychain SMTP spike |
 | **上一阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):`THREE_GATE_COPY` 统一离线兜底 |
 | **上一阶段** | ✅ `4b8a4ad` BusinessWriter 实写路径设计稿(docs-only · 编号 v0.2.53.33 与 lint ignore 重复,由 v0.2.53.35 收口说明) |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |

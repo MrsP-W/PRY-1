@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.35 state sync: BusinessWriter write-path design closure + MD lint 172(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **173 files**;实写路径 audit 落档语义统一(路径 4 实写尝试必落档);版本顺序倒挂以本棒收口说明。**下一棒**:Keychain SMTP spike / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.36 8/1 release tag readiness 刷新 docs-only(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **173 files**;8/1 评估从 v0.2.47 7/9 项推进到 8/9 项实质满足(路径 4 实写设计稿就绪);沿 v0.2.47 决策矩阵 = 自动打 tag ❌ / 继续延后 ✅ / 降级 rc1 🟡。**下一棒**:7/1 月度复盘统一评估(`v0.2.1-rc1` 候选)+ Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式。
 
 ---
 
