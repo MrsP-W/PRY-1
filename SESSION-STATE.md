@@ -1,7 +1,7 @@
 # SESSION-STATE — 7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29)
 
-> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `602a123`) · 工作区干净
-> **状态**:🟢 **7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29)** — 4 commits docs-only(`a125f09` + `0aea121` + `dfa00da` + `602a123`)+ 6 新增 docs(`docs/2026-06-29-pre-71-smoke.md` + `reports/2026-07-01-v0.2.1-rc1-decision-prep.md` + `reports/2026-07-01-loop-patterns-prep.md` + 3 Track C docs)+ **MD lint 184 = `git ls-files '*.md'` 178 + 本棒新增 6 docs**。**质量门**:mypy --strict 0 errors(**235 files**)/ 2518 passed / 1 skipped / 88.78% coverage / ruff + format 全绿 / alembic + build 沿用 v0.2.53.32 + v0.2.53.36。**预制内容**:A0-1 会前冒烟 9 质量门 5/5 重跑 + 4/9 沿用 + 7/1 readiness OK / A0-2 v0.2.1-rc1 B/C/D 三选一决策论据(基线推荐 B 继续延后 + C 候选需授权)/ A0-3 7 个 Agent loop 范式骨架(信息员 Plan-Execute 15 / 日报员 ReAct+Reflection 3 / 教练员 Reflection 5 / 检查员 Plan-Execute 9 / SAP顾问 Plan-Execute 12 / 回顾员 Reflection 8 / 安全审计员 Verifier-Generator 5)+ 撞坑 #69/#70 SOP 草案 / A0-4 ApprovalGate 三门文案统一表 + HTML dry-run inspector 8 路径 ↔ 4 outcome ↔ 3 badge 语义对照 + 路径 4 实施 checklist(8 项前置 + 8 步骤 + 4 重防误发 · 8/1 后独立 launch)。**上一棒**:7/1 月度复盘收口 A1-A3 docs-only(`fe5473c` · `30297f9` v0.2.53.40 § 8 漂移修正)+ v0.2.53.41 hotfix(3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化。**下一棒**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口 → `monthly-review-decision-2026-07-01.md`)+ outlook/gmail Keychain SMTP spike(等凭据)。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 + #69 + #70 = 70(本棒 A0-1 ~ A0-4 无新增,沿用 #69/#70)。
+> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `ec38cd2`) · 工作区干净
+> **状态**:🟢 **7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29)** — 4 commits docs-only(`a125f09` + `0aea121` + `dfa00da` + `602a123`)+ 6 新增 docs(`docs/2026-06-29-pre-71-smoke.md` + `reports/2026-07-01-v0.2.1-rc1-decision-prep.md` + `reports/2026-07-01-loop-patterns-prep.md` + 3 Track C docs)+ **MD lint 184 = `git ls-files '*.md'` 已稳定**。**质量门**:mypy --strict 0 errors(**235 files**)/ 2518 passed / 1 skipped / 88.78% coverage / ruff + format 全绿 / alembic + build 沿用 v0.2.53.32 + v0.2.53.36。**预制内容**:A0-1 会前冒烟 9 质量门 5/5 重跑 + 4/9 沿用 + 7/1 readiness OK / A0-2 v0.2.1-rc1 B/C/D 三选一决策论据(基线推荐 B 继续延后 + C 候选需授权)/ A0-3 7 个 Agent loop 范式骨架(信息员 Plan-Execute 15 / 日报员 ReAct+Reflection 3 / 教练员 Reflection 5 / 检查员 Plan-Execute 9 / SAP顾问 Plan-Execute 12 / 回顾员 Reflection 8 / 安全审计员 Verifier-Generator 5)+ 撞坑 #69/#70 SOP 草案 / A0-4 ApprovalGate 三门文案统一表 + HTML dry-run inspector 8 路径 ↔ 4 outcome ↔ 3 badge 语义对照 + 路径 4 实施 checklist(8 项前置 + 8 步骤 + 4 重防误发 · 8/1 后独立 launch)。**上一棒**:7/1 月度复盘收口 A1-A3 docs-only(`fe5473c` · `30297f9` v0.2.53.40 § 8 漂移修正)+ v0.2.53.41 hotfix(3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化。**下一棒**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口 → `monthly-review-decision-2026-07-01.md`)+ outlook/gmail Keychain SMTP spike(等凭据)。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 + #69 + #70 = 70(本棒 A0-1 ~ A0-4 无新增,沿用 #69/#70)。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only 已落地(2026-06-29 · 实测 `602a123`)** — 4 commits docs-only + 6 新增 docs + mypy --strict 0 errors / 2518 passed / MD lint 184。**下一步候选**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口)/ Keychain SMTP spike(等凭据)。
+**当前启动候选**:**7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only 已落地(2026-06-29 · 实测 `ec38cd2`)** — 4 commits docs-only + 6 新增 docs + mypy --strict 0 errors / 2518 passed / MD lint 184。**下一步候选**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口)/ QQ SMTP 1 封 spike / Keychain SMTP spike(Outlook/Gmail 等凭据)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **178 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
+| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **184 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | 🟡 **部分实化**(v0.2.2 #8 SMTPProviderFactory 工厂模式 · `b2cf3c5` + `51da8fd` · 10 new tests · 真实发送仍受 SMTP_REAL_NETWORK + spike_send_100 provider 白名单门控) |

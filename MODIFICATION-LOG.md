@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29 · 实测 `602a123`)** — HEAD 以 `git rev-parse --short HEAD` 为准 / 9 质量门全绿 / **MD lint 184 = `git ls-files '*.md'` 178 + 本棒新增 6 docs**;4 commits docs-only(`a125f09` A0-1 会前冒烟 + `0aea121` A0-2 v0.2.1-rc1 决策论据 + `dfa00da` A0-3 loop 范式 + 撞坑 #69/#70 SOP + `602a123` A0-4 Track C 三 docs)。**下一棒**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口 → `monthly-review-decision-2026-07-01.md`)+ outlook/gmail Keychain SMTP spike(等凭据) |
+| **当前阶段** | ✅ **7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29 · 实测 `ec38cd2`)** — HEAD 以 `git rev-parse --short HEAD` 为准 / 9 质量门全绿 / **MD lint 184 = `git ls-files '*.md'` 已稳定**;4 commits docs-only(`a125f09` A0-1 会前冒烟 + `0aea121` A0-2 v0.2.1-rc1 决策论据 + `dfa00da` A0-3 loop 范式 + 撞坑 #69/#70 SOP + `602a123` A0-4 Track C 三 docs)+ `ec38cd2` 三入口状态同步。**下一棒**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口 → `monthly-review-decision-2026-07-01.md`)+ QQ SMTP 1 封 spike / outlook/gmail Keychain SMTP spike(等凭据) |
 | **上一阶段** | ✅ 7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29 · 4 commits `a125f09` + `0aea121` + `dfa00da` + `602a123` · 6 新增 docs · docs-only · 撞坑累计 70 类沿用)+ A0-1 会前冒烟(`docs/2026-06-29-pre-71-smoke.md` · 9 质量门 5/5 重跑全绿 + 4/9 沿用) + A0-2 v0.2.1-rc1 决策论据(`reports/2026-07-01-v0.2.1-rc1-decision-prep.md` · B/C/D 三选一 + 撞坑 #18 风险门控) + A0-3 loop 范式(`reports/2026-07-01-loop-patterns-prep.md` · 7 个 Agent 骨架 + 撞坑 #69/#70 SOP 草案) + A0-4 Track C 三 docs(`docs/2026-06-29-approval-gate-gates-design.md` + `docs/2026-06-29-dry-run-inspector-semantic-map.md` + `docs/2026-06-29-business-writer-path4-checklist.md`) |
 | **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
 | **上一阶段** | ✅ `v0.2.53.40` mypy --strict tests 全清 300 errors(2026-06-29 · `cc39670`):三层修复范本(unused-ignore 脚本 + cast 范本 + # type: ignore[misc])+ 撞坑 #69(type: ignore 注释漂移) |
@@ -106,8 +106,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **178 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
-| **下一棒** | 7/1 月度复盘会议统一评估;Keychain SMTP spike(等凭据);8/1 截点 |
+| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **184 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
+| **下一棒** | 7/1 月度复盘会议统一执行;QQ SMTP 1 封 spike;Keychain SMTP spike(Outlook/Gmail 等凭据);8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -136,6 +136,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-29 [v0.2.53.43 MD lint 184 + HEAD 状态漂移收口] — 收口
+
+**1. 本次修改内容**
+
+- **chore**: `quality_snapshot.py` lint **178 → 184**(沿 A0-1 ~ A0-4 新增 6 docs · `make lint` 实测 184 = `git ls-files '*.md'`)
+- **docs-only**: README / SESSION-STATE / MODIFICATION-LOG 顶部实测 HEAD `602a123` → `ec38cd2`;MD lint 口径统一为 184
+- **docs-only**: 修正「184 = 178 + 6 docs」过期表述 →「184 = `git ls-files '*.md'` 已稳定」
+
+**2. 风险点**
+
+- ⚠️ 历史 docs(如 `docs/2026-06-29-pre-71-smoke.md`)仍写 lint 178,属 A0-1 会前快照,不 retroactive 修改。
+- 🟡 pytest/coverage 不前进(沿 docs-only 规则);Outlook/Gmail SMTP 仍等凭据。
+
+**3. 当前项目整体总结**
+
+- 质量门:2518 passed / 1 skipped / 88.78% / mypy --strict 0 / MD lint 184 / ruff + format 全绿。
+- 当前阶段:7/1 月度复盘会前预制 A0-1 ~ A0-4 已落地(实测 `ec38cd2`)。
+- 下一棒:7/1 月度复盘会议执行 + QQ SMTP 1 封 spike / Keychain(Outlook/Gmail 等凭据)。
+
+---
 
 ### 2026-06-29 [v0.2.53.42 HEAD 状态漂移收口] — 收口
 
