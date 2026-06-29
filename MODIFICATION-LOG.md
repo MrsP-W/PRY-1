@@ -75,12 +75,13 @@
 
 ---
 
-## 📊 当前项目整体状态(最新快照 · 2026-06-25 实测)
+## 📊 当前项目整体状态(最新快照 · 2026-06-29 实测)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段。**上一阶段**:QQ-only SMTP 已收口 · Outlook/Gmail 用户决策不配置。**下一棒**:docs commit 同步 + 跨项目 memory 沉淀 + 8/1 后独立 launch 路径 4 切换 |
-| **当前阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告。**上一阶段**:QQ-only SMTP 已收口 · Outlook/Gmail 用户决策不配置。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC / 路径 4(8/1 后) |
+| **当前阶段** | ✅ **v0.2.53.47 状态快照同步(2026-06-29 · HEAD `8edb592`)** — 2546 passed / 88.83% / MD lint **189** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.46 BusinessWriterImpl 4 动作实写骨架 · QQ-only SMTP 已收口。**下一棒**:Dashboard 系统健康接 quality_snapshot / 路径 4 fake store 测试 / 8/1 后实写 launch |
+| **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
+| **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
 | **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
 | **上一阶段** | ✅ `v0.2.53.40` mypy --strict tests 全清 300 errors(2026-06-29 · `cc39670`):三层修复范本(unused-ignore 脚本 + cast 范本 + # type: ignore[misc])+ 撞坑 #69(type: ignore 注释漂移) |
@@ -107,8 +108,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **188 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | 8/1 readiness 二次刷新 docs-only;7/10 WAIC 延后项;路径 4 实写(8/1 后) |
+| **质量基线** | **2546 passed / 1 skipped** / **88.83%** / mypy --strict 0 / **235 files** / MD lint **189 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | Dashboard 系统健康接 quality_snapshot;路径 4 fake store 测试;8/1 后实写 launch |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -137,6 +138,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-29 [v0.2.53.47 状态快照同步 · HEAD 8edb592] — 收口
+
+**1. 本次修改内容**
+
+- **chore(snapshot)**: `quality_snapshot.py` lint **188 → 189**(新增 docs 后 `git ls-files '*.md'` 对齐)
+- **docs-only**: SESSION-STATE / README / MODIFICATION-LOG — HEAD `e76d716` → **`8edb592`**;pytest **2518 → 2546**;coverage **88.78% → 88.83%**;MD lint **188 → 189**
+
+**2. 风险点**
+
+- 🟡 历史 docs(v0.2.53.46 报告等)仍写 88.81%/188 — 仅历史记录,当前以 2546/88.83%/189 为准
+- ⚠️ Dashboard UI 系统健康卡片仍可能显示旧硬编码 — P1 待接 quality_snapshot
+
+**3. 当前项目整体总结**
+
+- 质量门:2546 / 88.83% / mypy 0 / MD lint **189** / ruff + format 全绿
+- 当前阶段:三入口 + quality_snapshot 对齐 HEAD `8edb592`
+- 下一棒 P1:Dashboard 系统健康接 quality_snapshot;路径 4 fake store 测试
+
+---
 
 ### 2026-06-29 [v0.2.53.46 BusinessWriterImpl 4 动作实写骨架 + 9 质量门全绿] — 收口
 
