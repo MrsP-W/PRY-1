@@ -1,6 +1,6 @@
 # SESSION-STATE — QQ SMTP 1 封 spike 复验通过(2026-06-29)
 
-> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `62e371d`) · 工作区待提交
+> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `16fb78e`) · 工作区干净
 > **状态**:🟢 **QQ SMTP 1 封 spike 复验通过(2026-06-29)** — `sent=1/4.31s` · smtp.qq.com:465 SSL · 477***009@qq.com 自发自收 · 五重防误发全过 · 报告 `reports/qq-smtp-spike-2026-06-29.md`。**SMTP 范围**:**仅 QQ** — 用户决策 Outlook/Gmail **不配置、不使用**(代码 factory 保留,不跑凭据/spike)。**8/1 readiness**:QQ SMTP ✅ · #2/#9 outlook/gmail **用户决策豁免** · 路径 4 实写仍 8/1 后。**质量门**:mypy --strict 0 / 2518 passed / 88.78% / ruff + format 全绿。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC 延后项 / 路径 4 实写(8/1 后)。**边界**:不接 BusinessWriter 实写 · 不打 tag · `write_executed` 恒 False。
 
 ---
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**QQ-only SMTP 已收口(2026-06-29 · sent=1/4.31s · Outlook/Gmail 用户决策不配置)** — 五重防误发全过。**下一步候选**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC 延后项 / 路径 4 实写(8/1 后独立 launch)。
+**当前启动候选**:**v0.2.53.45 MD lint 188 口径稳定化已落地(2026-06-25)** — `make lint` = `git ls-files '*.md'` · 188 tracked · 排除 gitignore spike 本地报告。**下一步候选**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC 延后项 / 路径 4 实写(8/1 后独立 launch)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **186 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
+| 核心质量门 | **2518 passed / 1 skipped** · **88.78%** coverage · mypy --strict 0 errors(**235 files**) · MD lint **188 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |

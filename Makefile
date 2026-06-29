@@ -94,12 +94,16 @@ test-verbose: ## 跑测试（详细输出）
 	@$(PYTHON) -m pytest -v --tb=long
 
 .PHONY: lint
-lint: ## Markdown 格式检查
+lint: ## Markdown 格式检查（仅 git tracked *.md，对齐 git ls-files）
 	@echo "$(BLUE)📝 检查 Markdown 格式$(RESET)"
-	@if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
-		node_modules/.bin/markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" "#reports/transaction-candidate-review-summary*.md" || exit 1; \
+	@if [ -z "$$(git ls-files '*.md')" ]; then \
+		echo "$(YELLOW)⚠️ 无 tracked Markdown 文件，跳过$(RESET)"; \
+		exit 0; \
+	fi; \
+	if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
+		git ls-files -z '*.md' | xargs -0 node_modules/.bin/markdownlint-cli2 || exit 1; \
 	elif command -v markdownlint-cli2 >/dev/null 2>&1; then \
-		markdownlint-cli2 "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" "#reports/transaction-candidate-review-summary*.md" || exit 1; \
+		git ls-files -z '*.md' | xargs -0 markdownlint-cli2 || exit 1; \
 	else \
 		echo "$(RED)❌ markdownlint-cli2 未安装$(RESET)"; \
 		echo "  $(YELLOW)请先跑: make install-npm$(RESET)"; \
@@ -108,11 +112,15 @@ lint: ## Markdown 格式检查
 	@echo "$(GREEN)✅ 0 错误$(RESET)"
 
 .PHONY: lint-fix
-lint-fix: ## 自动修复 MD 格式
-	@if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
-		node_modules/.bin/markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" "#reports/transaction-candidate-review-summary*.md" || exit 1; \
+lint-fix: ## 自动修复 MD 格式（仅 git tracked *.md）
+	@if [ -z "$$(git ls-files '*.md')" ]; then \
+		echo "$(YELLOW)⚠️ 无 tracked Markdown 文件，跳过$(RESET)"; \
+		exit 0; \
+	fi; \
+	if [ -x node_modules/.bin/markdownlint-cli2 ]; then \
+		git ls-files -z '*.md' | xargs -0 node_modules/.bin/markdownlint-cli2 --fix || exit 1; \
 	elif command -v markdownlint-cli2 >/dev/null 2>&1; then \
-		markdownlint-cli2 --fix "**/*.md" "#node_modules" "#data" "#.venv" "#dist" "#.pytest_cache" "#reports/transaction-candidate-review-summary*.md" || exit 1; \
+		git ls-files -z '*.md' | xargs -0 markdownlint-cli2 --fix || exit 1; \
 	else \
 		echo "$(RED)❌ markdownlint-cli2 未安装$(RESET)"; \
 		echo "  $(YELLOW)请先跑: make install-npm$(RESET)"; \

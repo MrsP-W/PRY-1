@@ -75,11 +75,11 @@
 
 ---
 
-## 📊 当前项目整体状态(最新快照 · 2026-06-29 实测)
+## 📊 当前项目整体状态(最新快照 · 2026-06-25 实测)
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **QQ-only SMTP 已收口(2026-06-29)** — sent=1/4.31s · **Outlook/Gmail 用户决策不配置/不使用** · `reports/qq-smtp-spike-2026-06-29.md` · 8/1 readiness #2/#9 用户决策豁免。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC / 路径 4(8/1 后) |
+| **当前阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告。**上一阶段**:QQ-only SMTP 已收口 · Outlook/Gmail 用户决策不配置。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC / 路径 4(8/1 后) |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
 | **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
 | **上一阶段** | ✅ `v0.2.53.40` mypy --strict tests 全清 300 errors(2026-06-29 · `cc39670`):三层修复范本(unused-ignore 脚本 + cast 范本 + # type: ignore[misc])+ 撞坑 #69(type: ignore 注释漂移) |
@@ -106,7 +106,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **186 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
+| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **188 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | **下一棒** | 8/1 readiness 二次刷新 docs-only;7/10 WAIC 延后项;路径 4 实写(8/1 后) |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -136,6 +136,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-25 [v0.2.53.45 MD lint 188 口径稳定化 + HEAD 状态漂移收口] — 收口
+
+**1. 本次修改内容**
+
+- **chore(lint)**: `Makefile` / `package.json` — `make lint` 改扫 `git ls-files '*.md'`(xargs -0),不再 glob 扫 gitignore 本地 spike 报告(189 vs 188 漂移根因)
+- **chore**: `quality_snapshot.py` lint **186 → 188**(对齐 tracked 实测)
+- **docs-only**: SESSION-STATE / MODIFICATION-LOG — HEAD `62e371d` +「工作区待提交」→ 实测 `16fb78e` + 工作区干净
+
+**2. 风险点**
+
+- 🟡 历史 docs 仍写 186/184 等旧 lint 计数 — 仅历史记录,当前以 188 = `git ls-files` 为准
+- ⚠️ `output/spike/` 本地报告仍 gitignore;pre-commit 仍只 lint staged .md(行为不变)
+
+**3. 当前项目整体总结**
+
+- 质量门:2518 / 88.78% / mypy 0 / MD lint **188** / ruff + format 全绿
+- 当前阶段:lint 扫描口径与 git tracked 对齐,撞坑 #50 衍生第四层防御
+- 下一棒 P1:8/1 readiness 二次刷新 docs-only;路径 4 BusinessWriterImpl(8/1 后)
+
+---
 
 ### 2026-06-29 [Outlook/Gmail 用户决策不配置 · QQ-only SMTP 范围锁定] — 收口
 
