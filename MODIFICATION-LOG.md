@@ -157,6 +157,56 @@
 - 当前阶段:三入口 + quality_snapshot 对齐 HEAD `8edb592`
 - 下一棒 P1:Dashboard 系统健康接 quality_snapshot;路径 4 fake store 测试
 
+### 2026-06-29 [v0.2.53.48 Dashboard 系统健康硬编码修复 + 撞坑 #50 第二层同步] — 收口
+
+**1. 本次修改内容**
+
+- **docs(ui)**: `docs/ui/codex-style-dashboard.html` L879 硬编码 `2273 passed` → `待读取` 占位(JS L1486 `setText("system-pytest", quality.pytest ?? "unknown")` 自动 hydrate 覆盖)
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` coverage 字段 `88.83% → 88.81%`(撞坑 #50 第二层防御 · 实测为权威 · 漂移 0.02pp)
+- **docs(state)**: README + SESSION-STATE + MODIFICATION-LOG 三入口同步 v0.2.53.48(`2546 / 88.81% / 189` · 沿 v0.2.53.46 范本)
+
+**2. 质量门 9/9 全绿**
+
+| 门 | 结果 |
+|---|------|
+| MD lint | 189 files 0 errors |
+| mypy --strict | 0 errors / 235 files |
+| ruff check | All checks passed |
+| ruff format | 249 files already formatted |
+| pytest | 2546 passed / 1 skipped |
+| coverage | **88.81%**(88.83% → 88.81% · 撞坑 #50 第二层修复) |
+| alembic upgrade head --sql | exit 0 |
+| uv build | OK(sdist + wheel) |
+| FINAL_EXIT | 0 |
+
+**3. 沿用边界**(本棒 0 新增,全部沿用)
+
+- ❌ 不接真实业务 writer(实际写入路径留 8/1 后)
+- ❌ 不写 DB 实际数据(默认 raise / dry-run 模式)
+- ❌ 不发真实 SMTP
+- ❌ 不读 Keychain 明文(沿 #59 撞坑规范)
+- ❌ 不打 `v0.2.x` tag(沿 D5.7.2 + 8/1 锚定)
+- ❌ 不移动 `v0.1.0` tag(`2af775f` 锚定不动)
+- ❌ 不接 outlook/gmail SMTP(用户决策豁免)
+- ✅ 撞坑累计 **70 类沿用**(本棒 0 新增)
+- ✅ write_executed 恒 False(沿 v0.2.53.11 不变式)
+- ✅ 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
+
+**4. 撞坑 #50 第二层修复应用**
+
+v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
+
+- 根因:本地 `.coverage` 数据库陈旧,实测 = 权威
+- 修复:`quality_snapshot.coverage` 同步 88.81%
+- 这是撞坑 #50 衍生第三版自我应用(修复自己的 quality_snapshot 漂移)
+- 沿 v0.2.53.32 撞坑 #50 第二层范本
+
+**5. 下一棒**
+
+- **P1-2 路径 4 fake store 测试** — BusinessWriterImpl 4 动作 `raise → 真实调 service` + fake store 测试 + audit 语义,**默认仍禁写**(撞坑 #18 风险门控)
+- **P1-3 报告页强化** — `/api/reports/preview` + 搜索 UX 强化,沿 v0.2.53.10 范本,只读 GET
+- **8/1 后独立 launch 路径 4 切换** — 实际写入留 8/1 后 + 用户明确授权
+
 ---
 
 ### 2026-06-29 [v0.2.53.46 BusinessWriterImpl 4 动作实写骨架 + 9 质量门全绿] — 收口

@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2546 passed / 1 skipped / 88.83% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2546 passed / 1 skipped / 88.81% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -247,9 +247,19 @@ make help
 | **v0.2.53.18** DashboardContext.with_business_writer() + resolve_business_writer()(默认 None → Stub · 不可变更新 · pass None 还原 Stub · +9 tests · 2475 passed / 88.50%) | ✅ 6/26 落地 | 2026-06-26 |
 | **v0.2.53.19** ApprovalGate handler 路径 4 启用设计稿(4 道门 + 4 类动作实际写入流程 + 7 错误码扩展 · docs-only · 实际启用留 8/1 后) | ✅ 6/26 落地 | 2026-06-26 |
 | **v0.2.53.20** HTML 实写 audit log 落档设计稿(3 类实写流程 + approval_gate_audits 表 + HTML inspector 升级 + 离线兜底 · docs-only · 实际启用留 8/1 后) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.21** handler 接入 BusinessWriter dry-run(`_merge_writer_dry_run` + ApprovalGate 双门 + dry_run=True 才合并 · 异常隔离 · +13 tests · 2488 passed / 88.50%) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.22** 第三道门 `BUSINESS_WRITER_ENABLED` env 严判 + 8 路径决策矩阵(`evaluate_writer_dry_run` · 路径 3.5 dry_run=True → 200 OK · write_executed 恒 False) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.23** HTML inspector 升级三 badge(双门 / Writer / would_allow · +13 · 2488 passed) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.24** Calendar/Settings 占位页升级(CalDAV 未接入说明 + Keychain present/missing 4 类别 · +18/-4) | ✅ 6/26 落地 | 2026-06-26 |
+| **v0.2.53.25-v0.2.53.35** v0.2.53.25 docs-only 三入口同步 → 26 HTML dry-run 三门文案 → 27 BusinessWriterImpl opt-in → 29 HTML inspector 3 fields → 30 BusinessWriter ready 语义 → 31 docs 收口 → 32 coverage baseline → 33 markdownlint pytest_cache ignore → 34 HTML 三门文案 → 35 状态同步(9 commits docs-only) | ✅ 6/26-6/28 落地 | 2026-06-28 |
+| **v0.2.53.36-v0.2.53.41** 8/1 readiness 二次刷新 → 7/1 月度复盘输入包 → 8/1 launch plan patch → 质量基线刷新 → mypy tests strict cleanup → mypy hotfix 300 errors 收口(撞坑 #69 + #70) | ✅ 6/29 落地 | 2026-06-29 |
+| **v0.2.53.42-v0.2.53.45** HEAD 状态漂移收口 → MD lint 184 → 7/1 月度复盘决策收口 → MD lint 188 稳定化(撞坑 #50 衍生第三版 · gitignore 闭环) | ✅ 6/29 落地 | 2026-06-29 |
+| **v0.2.53.46** BusinessWriterImpl 4 动作实写骨架(`_check_dep(依赖检查) + _validate_target_id(参数校验) + 末尾 raise` · 默认 raise · 28 tests · 撞坑 #18 风险门控 · 2546 passed / 88.83% / MD lint 188) | ✅ 6/29 落地 | 2026-06-29 |
+| **v0.2.53.47** 状态同步(2546 / 88.83% / 189 / 撞坑 #50 第二层修复 docs-only 收口) | ✅ 6/29 落地 | 2026-06-29 |
+| **v0.2.53.48** Dashboard 系统健康卡片硬编码修复(L879 `2273 passed` → `待读取` 占位 + quality_snapshot 88.83% → 88.81% 撞坑 #50 第二层同步 · docs-only + HTML 静态页) | ✅ 6/29 落地 | 2026-06-29 |
 | **v0.2.54** 8/1 tag 锚定评估(**docs-only 评估线 · 非 Codex UI 主开发版本** · 7/8 · outlook/gmail Keychain missing · InMemory sent=1) | ✅ 6/25 评估收口 | 2026-06-25 |
 
-> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.20**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
+> **时间线说明**:**v0.2.53.x** = Codex UI 主线(当前 **v0.2.53.48**);**v0.2.54** = 8/1 release tag 并行评估收口,不替代主开发状态。
 
 ---
 
