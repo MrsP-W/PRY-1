@@ -1,19 +1,21 @@
-"""v0.2.53.49 BusinessWriterImpl — 4 动作实写 + 写保护锁(默认 raise,撞坑 #18).
+"""v0.2.53.51 BusinessWriterImpl — 4 动作实写 + 写保护锁 + audit 真实落档.
 
-承接 docs/v0.2.53.14-business-writer-design-2026-06-26.md §10 + v0.2.53.46 范围 + v0.2.53.49 升级:
+承接 docs/v0.2.53.14-business-writer-design-2026-06-26.md §10 + v0.2.53.46 范围 + v0.2.53.49 写保护锁
++ v0.2.53.51 audit 真实落档:
     - 接入 BusinessWriterImpl(approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly 4 动作)
-    - 4 动作实写骨架:依赖检查 + 参数校验 + 写保护锁 + service 调用 + WriteResult 包装
+    - 4 动作实写骨架:依赖检查 + 参数校验 + 写保护锁 + service 调用 + audit 落档 + WriteResult 包装
     - 默认行为 = raise NotImplementedError(沿撞坑 #18 风险门控 · _real_write_handler_enabled=False)
     - 真实写入路径留 v0.2.53.19 handler 路径 4 启用 + 用户明确授权 + 8/1 后
-    - fake store 测试:_real_write_handler_enabled=True 走通整条链(沿撞坑 #18 + #65 opt-in 4 阶段)
+    - audit 落档:写保护锁开 + 真实 service 调用(成功/失败)都落档;dry-run / 写保护锁 raise 不落档
 
 设计决策(2026-06-29 锁定):
-    - 抽象 BusinessWriterImpl 类(3 已有 Service + dismiss_anomaly 占位)
-    - 构造函数接受可选依赖(OutboxStore / NoteConfirmServiceImpl / AnomalyDismissalServiceStub)
+    - 抽象 BusinessWriterImpl 类(3 已有 Service + dismiss_anomaly + audit_store)
+    - 构造函数接受可选依赖(OutboxStore / NoteConfirmServiceImpl / AnomalyDismissalServiceStub / ApprovalGateAuditStore)
     - 默认所有方法 raise NotImplementedError(等待 v0.2.53.19 handler 路径 4 启用)
     - 写保护锁 _real_write_handler_enabled:bool=False(默认锁定,撞坑 #18)
     - 仅 dry_run 真实实现(返回 WriteDecision)
     - 异常收窄(沿 note_confirm_service.py:113-115):用户主动操作异常必须透传
+    - audit 落档:沿 v0.2.53.20 §5.3 design,撞坑 #18 风险门控 + 撞坑 #65 opt-in 4 阶段
 
 v0.2.53.46 升级点(实写骨架):
     - 4 动作方法统一骨架:_check_dep(依赖检查) + _validate_target_id(参数校验) + 末尾 raise
@@ -26,18 +28,37 @@ v0.2.53.49 升级点(实写 + 写保护锁):
     - 4 动作方法升级:_check_dep + _validate_target_id + 写保护锁校验 + _call_service_xxx 调用 + WriteResult 包装
     - 写保护锁未开 → raise NotImplementedError(等同 v0.2.53.46 默认行为,撞坑 #18 风险门控)
     - 写保护锁开 + 依赖注入 → 真实调 service(测试场景用 fake store 验证整条链)
-    - audit 语义:沿 v0.2.53.20 落档 design,本棒仅占位 audit_id 字段(留 v0.2.53.50 真实落档)
+    - audit 语义:沿 v0.2.53.20 落档 design,本棒仅占位 audit_id 字段
+
+v0.2.53.51 升级点(audit 真实落档):
+    - 构造函数加 audit_store: ApprovalGateAuditStore | None = None(可选,撞坑 #65 默认 Stub)
+    - 4 动作方法升级:写保护锁开 + 真实 service 调用后,记录 audit
+    - 成功路径:_call_service_xxx 返回值写入 audit(success=True, affected_id)
+    - 失败路径:try/except 收容,service 抛异常时记录 audit(success=False, error)
+    - WriteResult.audit_id 字段从 None 升级为真实 audit_id 字符串(格式 "audit:{id}")
+    - 写保护锁 raise / dry-run / 依赖未注入 / invalid_target_id 都不落档
 
 D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - Protocol 类型鸭子类型友好(无需 isinstance)
     - 严判 type 严格(避免 bool/int 互窜)
     - 单项失败不传播(approve_outbox 失败不影响 cancel_outbox)
     - 异常收容:dry_run 失败 → WriteDecision(error="internal_error");真实写入异常透传
+    - audit 落档失败:返回 audit_id=None,但不抛异常(撞坑 #18 「日志语义」)
 
 撞坑 #18 边界应用(实际写入留 8/1 后):
     - 默认 _real_write_handler_enabled=False(写保护锁锁定)
     - 不接 SMTP / 不读 Keychain 明文
     - 真实写入路径(env+confirm+writer+handler 四道门齐全)留 v0.2.53.19 handler 启用
+    - audit 落档仅在写保护锁开 + 真实 service 调用后发生(撞坑 #18 「日志」语义)
+
+撞坑 #64 公共 API 一致性:
+    - audit_id 字符串格式 "audit:{id}" 与 anomaly_dismissals "dismissal:{id}" 对齐
+    - audit_store 是可选构造参数(默认 None = ApprovalGateAuditStoreStub,撞坑 #65 范本)
+
+撞坑 #65 opt-in 4 阶段范本(env 门控 + 默认 Stub + 单项失败降级 + 不动 ApprovalGate 决策矩阵):
+    - audit_store 默认 None → ApprovalGateAuditStoreStub(等效 is_enabled=False)
+    - DashboardContext.default() 在 DASHBOARD_REAL_DB=1 时尝试构造 InMemoryApprovalGateAuditStore
+    - 单项失败静默降级 Stub(沿 v0.2.53.7 范本)
 
 沿用边界:
     - 本棒默认 raise NotImplementedError(等同 v0.2.53.46 行为)
@@ -45,6 +66,8 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - 不接真实 SMTP / 不读 Keychain 明文
     - write_executed 恒 False(沿 v0.2.53.11 不变式,本棒真实调 service 时也 False)
     - 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
+    - dry-run 不落档(沿 v0.2.53.51 范本)
+    - 写保护锁 raise 不落档(沿 v0.2.53.51 范本)
 """
 
 from __future__ import annotations
@@ -57,6 +80,12 @@ from my_ai_employee.dashboard.business_writer import (
     AuditContext,
     WriteDecision,
     WriteResult,
+)
+from my_ai_employee.menu_bar.approval_gate_audit import (
+    ApprovalGateAuditStore,
+    ApprovalGateAuditStoreStub,
+    AuditRecord,
+    AuditRecordResult,
 )
 
 if TYPE_CHECKING:
@@ -75,12 +104,13 @@ def _now_ms() -> int:
 class BusinessWriterImpl:
     """BusinessWriter 真实实现骨架 — 默认所有方法 raise NotImplementedError.
 
-    边界(沿撞坑 #65 + v0.2.53.14 设计 + v0.2.53.17 范围):
+    边界(沿撞坑 #65 + v0.2.53.14 设计 + v0.2.53.17 范围 + v0.2.53.51 audit 落档):
         - 默认行为 = raise NotImplementedError(等同 Stub)
         - 真实写入路径留 v0.2.53.19 handler 启用
         - 单项失败不传播(dry_run 内 try/except 容错)
         - 异常收窄:真实写入异常透传(沿 note_confirm_service.py:113-115)
         - 不接 SMTP / 不读 Keychain 明文
+        - audit 落档:写保护锁开 + 真实 service 调用后(成功/失败)落档;dry-run / 写保护锁 raise 不落档
     """
 
     is_runtime_impl: ClassVar[bool] = True
@@ -92,6 +122,7 @@ class BusinessWriterImpl:
         outbox_store: OutboxStore | None = None,
         note_confirm_service: NoteConfirmServiceImpl | None = None,
         anomaly_dismissal_service: AnomalyDismissalServiceStub | None = None,
+        audit_store: ApprovalGateAuditStore | None = None,
         real_write_handler_enabled: bool = False,
     ) -> None:
         """构造 — 所有依赖可选(默认 None 表示 raise NotImplementedError).
@@ -101,6 +132,7 @@ class BusinessWriterImpl:
             outbox_store: OutboxStore 实例(approve_outbox / cancel_outbox 必需)
             note_confirm_service: NoteConfirmServiceImpl 实例(confirm_note 必需)
             anomaly_dismissal_service: AnomalyDismissalService 实例(dismiss_anomaly 必需)
+            audit_store: ApprovalGateAuditStore 实例(可选,默认 None = Stub,撞坑 #65 范本)
             real_write_handler_enabled: 写保护锁(默认 False = 锁定,沿撞坑 #18 风险门控)。
                 False → 4 动作 raise NotImplementedError(等同 v0.2.53.46 行为)
                 True → 4 动作真实调 service(仅测试场景用 fake store 验证整条链)
@@ -110,6 +142,10 @@ class BusinessWriterImpl:
         self._outbox_store = outbox_store
         self._note_confirm_service = note_confirm_service
         self._anomaly_dismissal_service = anomaly_dismissal_service
+        # 撞坑 #65 opt-in 4 阶段:audit_store 默认 None → ApprovalGateAuditStoreStub
+        self._audit_store: ApprovalGateAuditStore = (
+            audit_store if audit_store is not None else ApprovalGateAuditStoreStub()
+        )
         self._real_write_handler_enabled = real_write_handler_enabled
 
     def dry_run(
@@ -121,11 +157,12 @@ class BusinessWriterImpl:
     ) -> WriteDecision:
         """dry-run 决策 — 默认 would_allow=False(等待 v0.2.53.19 启用).
 
-        边界(沿 v0.2.53.14 §2.1):
+        边界(沿 v0.2.53.14 §2.1 + v0.2.53.51 audit 不落档):
             - 4 类动作白名单严判(未知 action → error="unsupported_action")
             - 默认 would_allow=False(Impl 已构造但 handler 未启用)
             - write_executed=False 恒定
             - required 列出当前还缺什么
+            - dry-run 不落档(沿 v0.2.53.51 范本 · 撞坑 #18 「日志」语义)
         """
         try:
             if not is_supported_action(action):
@@ -179,13 +216,15 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service.
+        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
-        边界(沿撞坑 #18 + v0.2.53.14 §6 + v0.2.53.19):
-            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError)
-            - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False, error='invalid_target_id'))
-            - 写保护锁:_real_write_handler_enabled=False → raise(撞坑 #18 默认行为)
+        边界(沿撞坑 #18 + v0.2.53.14 §6 + v0.2.53.19 + v0.2.53.51 audit 落档):
+            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
+            - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
+            - 写保护锁:_real_write_handler_enabled=False → raise(撞坑 #18 默认行为,无 audit)
             - 写保护锁开 + 依赖注入 → 真实调 outbox_store.update_status(路径 4 启用)
+            - 成功后 audit 落档(success=True, affected_id, audit_id 真实字符串)
+            - 失败后 audit 落档(success=False, error, audit_id 真实字符串)
             - 真实写入路径留 v0.2.53.19 handler 启用 + 用户明确授权 + 8/1 后
 
         路径 4 启用后真实调用(沿 D5.6.3 P1-1 审批凭据必传规则):
@@ -221,13 +260,15 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service.
+        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
-        边界(沿撞坑 #18 + v0.2.53.14 §6 + D5.6.3 P1-1 必传 None 规则):
-            - 依赖检查:outbox_store 必须注入
-            - 参数校验:target_id 必须为非空 str
-            - 写保护锁:False → raise(撞坑 #18 默认行为)
+        边界(沿撞坑 #18 + v0.2.53.14 §6 + D5.6.3 P1-1 必传 None 规则 + v0.2.53.51 audit 落档):
+            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
+            - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
+            - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
             - 写保护锁开 → 真实调 outbox_store.update_status(CANCELLED, None)
+            - 成功后 audit 落档(success=True, affected_id)
+            - 失败后 audit 落档(success=False, error)
             - 真实写入路径留 v0.2.53.19 handler 启用
 
         路径 4 启用后真实调用(D5.6.3 P1-1:非 APPROVED 必传 None):
@@ -256,17 +297,16 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service.
+        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
-        边界(沿撞坑 #18 + note_confirm_service.py:113-115 异常透传):
-            - 依赖检查:note_confirm_service 必须注入
-            - 参数校验:target_id 必须为非空 str
-            - 写保护锁:False → raise(撞坑 #18 默认行为)
+        边界(沿撞坑 #18 + note_confirm_service.py:113-115 异常透传 + v0.2.53.51 audit 落档):
+            - 依赖检查:note_confirm_service 必须注入(无则 raise NotImplementedError,无 audit)
+            - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
+            - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
             - 写保护锁开 → 真实调 note_confirm_service.confirm_note
+            - 成功后 audit 落档(success=True, affected_id=target_id)
+            - 失败后 audit 落档(success=False, error)
             - 真实写入异常透传(不收容 — 用户主动操作必须看到 ValueError)
-
-        路径 4 启用后真实调用:
-            note_confirm_service.confirm_note(apple_note_id=target_id)
         """
         self._check_dep(self._note_confirm_service, "note_confirm_service")
         err = self._validate_target_id(target_id)
@@ -286,21 +326,17 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service.
+        """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
-        边界(沿撞坑 #18 + AnomalyDismissalService.dismiss 契约):
-            - 依赖检查:anomaly_dismissal_service 必须注入
+        边界(沿撞坑 #18 + AnomalyDismissalService.dismiss 契约 + v0.2.53.51 audit 落档):
+            - 依赖检查:anomaly_dismissal_service 必须注入(无则 raise NotImplementedError,无 audit)
             - 参数校验:target_id 必须为非空 str(格式 {date}|{counterparty}|{amount})
-            - 写保护锁:False → raise(撞坑 #18 默认行为)
+            - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
             - 写保护锁开 → 真实调 anomaly_dismissal_service.dismiss
+            - 成功后 audit 落档(success=True, affected_id=target_id)
+            - 失败后 audit 落档(success=False, error)
             - reason 限 240 字符(沿 _MAX_REASON_LEN)
             - 真实写入路径留 v0.2.53.19 handler 启用
-
-        路径 4 启用后真实调用:
-            anomaly_dismissal_service.dismiss(
-                anomaly_id=target_id,
-                reason=audit.reason,  # 限 240 字符
-            )
         """
         self._check_dep(self._anomaly_dismissal_service, "anomaly_dismissal_service")
         err = self._validate_target_id(target_id)
@@ -337,6 +373,7 @@ class BusinessWriterImpl:
             - _real_write_handler_enabled=False → raise(默认行为,等同 v0.2.53.46)
             - _real_write_handler_enabled=True → 放行(仅测试场景用 fake store 验证)
             - 生产环境必须保持 False,等 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
+            - 写保护锁 raise 不落档(沿 v0.2.53.51 范本 · 撞坑 #18 「日志」语义)
 
         Raises:
             NotImplementedError: 写保护锁未开时(撞坑 #18 默认行为)
@@ -348,89 +385,219 @@ class BusinessWriterImpl:
             )
 
     def _call_service_approve_outbox(self, target_id: str, *, audit: AuditContext) -> WriteResult:
-        """真实调 outbox_store.update_status(APPROVED 路径).
+        """真实调 outbox_store.update_status(APPROVED 路径) + audit 落档.
 
-        边界(沿 v0.2.53.49 + D5.6.3 P1-1 审批凭据必传规则):
+        边界(沿 v0.2.53.49 + D5.6.3 P1-1 审批凭据必传规则 + v0.2.53.51 audit 落档):
             - new_status='APPROVED' → last_approved_at_ms 必传 now_ms
             - 异常透传(OutboxIllegalTransitionError / ValueError)
+            - audit 落档:成功 → success=True,affected_id;失败 → success=False,error
+            - audit 落档失败:WriteResult.audit_id=None,但不抛异常
         """
-        # 路径 4 启用后的真实调用(写保护锁开 + 依赖注入)
-        # 异常透传,不收容(用户主动操作必须看到 ValueError)
-        updated = self._outbox_store.update_status(  # type: ignore[union-attr]
-            outbox_id=int(target_id),
-            new_status="APPROVED",
-            from_status="PENDING_SEND",
-            last_approved_at_ms=_now_ms(),
-        )
-        # audit_id 占位(沿 v0.2.53.20 落档 design · 本棒仅占位,留 v0.2.53.50 真实落档)
-        return WriteResult(
-            success=True,
-            affected_id=str(updated.id),
-            error=None,
-            reason=f"approve_outbox: {target_id} → APPROVED",
-            audit_id=None,  # v0.2.53.50 真实落档
-            write_executed=True,  # 真实写入了,但 v0.2.53.11 不变式仅在 dry_run 上下文
-        )
+        try:
+            # 路径 4 启用后的真实调用(写保护锁开 + 依赖注入)
+            # 异常透传,不收容(用户主动操作必须看到 ValueError)
+            updated = self._outbox_store.update_status(  # type: ignore[union-attr]
+                outbox_id=int(target_id),
+                new_status="APPROVED",
+                from_status="PENDING_SEND",
+                last_approved_at_ms=_now_ms(),
+            )
+            affected_id = str(updated.id)
+            # audit 落档(成功)
+            audit_id = self._record_audit(
+                action="approve_outbox",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=affected_id,
+                error=None,
+            )
+            return WriteResult(
+                success=True,
+                affected_id=affected_id,
+                error=None,
+                reason=f"approve_outbox: {target_id} → APPROVED",
+                audit_id=audit_id,
+                write_executed=True,  # 真实写入了,但 v0.2.53.11 不变式仅在 dry_run 上下文
+            )
+        except Exception as e:
+            # audit 落档(失败) — 异常透传前记录
+            audit_id = self._record_audit(
+                action="approve_outbox",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=None,
+                error=f"{type(e).__name__}:{e}",
+            )
+            # 异常透传(用户主动操作必须看到 ValueError)
+            raise
 
     def _call_service_cancel_outbox(self, target_id: str, *, audit: AuditContext) -> WriteResult:
-        """真实调 outbox_store.update_status(CANCELLED 路径).
+        """真实调 outbox_store.update_status(CANCELLED 路径) + audit 落档.
 
-        边界(沿 v0.2.53.49 + D5.6.3 P1-1 必传 None 规则):
+        边界(沿 v0.2.53.49 + D5.6.3 P1-1 必传 None 规则 + v0.2.53.51 audit 落档):
             - new_status='CANCELLED' → last_approved_at_ms 必传 None
             - 异常透传
+            - audit 落档:成功 → success=True,affected_id;失败 → success=False,error
         """
-        updated = self._outbox_store.update_status(  # type: ignore[union-attr]
-            outbox_id=int(target_id),
-            new_status="CANCELLED",
-            from_status="PENDING_SEND",
-            last_approved_at_ms=None,
-        )
-        return WriteResult(
-            success=True,
-            affected_id=str(updated.id),
-            error=None,
-            reason=f"cancel_outbox: {target_id} → CANCELLED",
-            audit_id=None,
-            write_executed=True,
-        )
+        try:
+            updated = self._outbox_store.update_status(  # type: ignore[union-attr]
+                outbox_id=int(target_id),
+                new_status="CANCELLED",
+                from_status="PENDING_SEND",
+                last_approved_at_ms=None,
+            )
+            affected_id = str(updated.id)
+            audit_id = self._record_audit(
+                action="cancel_outbox",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=affected_id,
+                error=None,
+            )
+            return WriteResult(
+                success=True,
+                affected_id=affected_id,
+                error=None,
+                reason=f"cancel_outbox: {target_id} → CANCELLED",
+                audit_id=audit_id,
+                write_executed=True,
+            )
+        except Exception as e:
+            audit_id = self._record_audit(
+                action="cancel_outbox",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=None,
+                error=f"{type(e).__name__}:{e}",
+            )
+            raise
 
     def _call_service_confirm_note(self, target_id: str, *, audit: AuditContext) -> WriteResult:
-        """真实调 note_confirm_service.confirm_note.
+        """真实调 note_confirm_service.confirm_note + audit 落档.
 
-        边界(沿 v0.2.53.49 + note_confirm_service.py:113-115):
+        边界(沿 v0.2.53.49 + note_confirm_service.py:113-115 + v0.2.53.51 audit 落档):
             - 异常透传(用户主动操作必须看到 ValueError)
+            - audit 落档:成功 → success=True,affected_id=target_id;失败 → success=False,error
         """
-        self._note_confirm_service.confirm_note(  # type: ignore[union-attr]
-            apple_note_id=target_id,
-        )
-        return WriteResult(
-            success=True,
-            affected_id=target_id,
-            error=None,
-            reason=f"confirm_note: {target_id} confirmed",
-            audit_id=None,
-            write_executed=True,
-        )
+        try:
+            self._note_confirm_service.confirm_note(  # type: ignore[union-attr]
+                apple_note_id=target_id,
+            )
+            audit_id = self._record_audit(
+                action="confirm_note",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=target_id,
+                error=None,
+            )
+            return WriteResult(
+                success=True,
+                affected_id=target_id,
+                error=None,
+                reason=f"confirm_note: {target_id} confirmed",
+                audit_id=audit_id,
+                write_executed=True,
+            )
+        except Exception as e:
+            audit_id = self._record_audit(
+                action="confirm_note",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=None,
+                error=f"{type(e).__name__}:{e}",
+            )
+            raise
 
     def _call_service_dismiss_anomaly(self, target_id: str, *, audit: AuditContext) -> WriteResult:
-        """真实调 anomaly_dismissal_service.dismiss.
+        """真实调 anomaly_dismissal_service.dismiss + audit 落档.
 
-        边界(沿 v0.2.53.49 + AnomalyDismissalService.dismiss 契约):
+        边界(沿 v0.2.53.49 + AnomalyDismissalService.dismiss 契约 + v0.2.53.51 audit 落档):
             - reason 限 240 字符(沿 _MAX_REASON_LEN)
             - 异常透传
+            - audit 落档:成功 → success=True,affected_id=target_id;失败 → success=False,error
         """
-        self._anomaly_dismissal_service.dismiss(  # type: ignore[union-attr]
-            anomaly_id=target_id,
-            reason=audit.reason,
-        )
-        return WriteResult(
-            success=True,
-            affected_id=target_id,
-            error=None,
-            reason=f"dismiss_anomaly: {target_id} dismissed",
-            audit_id=None,
-            write_executed=True,
-        )
+        try:
+            self._anomaly_dismissal_service.dismiss(  # type: ignore[union-attr]
+                anomaly_id=target_id,
+                reason=audit.reason,
+            )
+            audit_id = self._record_audit(
+                action="dismiss_anomaly",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=target_id,
+                error=None,
+            )
+            return WriteResult(
+                success=True,
+                affected_id=target_id,
+                error=None,
+                reason=f"dismiss_anomaly: {target_id} dismissed",
+                audit_id=audit_id,
+                write_executed=True,
+            )
+        except Exception as e:
+            audit_id = self._record_audit(
+                action="dismiss_anomaly",
+                target_id=target_id,
+                audit=audit,
+                write_executed=True,
+                affected_id=None,
+                error=f"{type(e).__name__}:{e}",
+            )
+            raise
+
+    def _record_audit(
+        self,
+        *,
+        action: str,
+        target_id: str,
+        audit: AuditContext,
+        write_executed: bool,
+        affected_id: str | None,
+        error: str | None,
+    ) -> str | None:
+        """Audit 落档辅助 — 包装 store.record + 异常收容(沿撞坑 #18 「日志」语义).
+
+        边界(沿 v0.2.53.51 + 撞坑 #18):
+            - 异常收容:audit 落档失败 → 返回 None,不抛异常(避免日志失败阻塞业务)
+            - audit_id 字符串格式 "audit:{id}" 与 anomaly_dismissals "dismissal:{id}" 对齐
+            - executed_at_ms 默认 = _now_ms()(沿 v0.2.53.11 actor 默认值时间戳)
+            - write_executed=True 表示「写操作已尝试」(成功或失败都算)
+
+        Args:
+            action: 写操作类型(approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly)
+            target_id: 写操作的目标 ID
+            audit: 审计上下文(AuditContext)
+            write_executed: True = 写操作已尝试
+            affected_id: 成功时填,失败时 None
+            error: 失败时填 error code,成功时 None
+
+        Returns:
+            audit_id 字符串(成功)或 None(失败)
+        """
+        try:
+            record = AuditRecord(
+                action=action,
+                target_id=target_id,
+                actor=audit.actor,
+                reason=audit.reason,
+                write_executed=write_executed,
+                affected_id=affected_id,
+                error=error,
+                executed_at_ms=self._audit_timestamp(audit),
+            )
+            result: AuditRecordResult = self._audit_store.record(record)
+            return result.audit_id
+        except Exception:  # noqa: BLE001 — audit 落档是「日志」语义,失败不阻塞业务
+            return None
 
     @staticmethod
     def _validate_target_id(target_id: object) -> str | None:

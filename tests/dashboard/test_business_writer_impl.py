@@ -12,10 +12,16 @@ v0.2.53.46 升级(实写骨架):
     - 有依赖 + 有效 target_id → raise NotImplementedError(默认 raise,等待路径 4)
     - 2 个辅助方法:_check_dep + _validate_target_id
 
+v0.2.53.51 升级(audit 真实落档):
+    - 4 动作方法成功/失败都落档 audit(real_write_handler_enabled=True 时)
+    - 写保护锁 raise / dry_run / invalid_target_id 都不落档(撞坑 #18 「日志」语义)
+    - audit_id 字符串格式 "audit:{id}"(撞坑 #64 公共 API 范本)
+
 边界(沿撞坑 #65 + 撞坑 #18):
     - 默认 raise NotImplementedError(等同 Stub 行为)
     - dry_run 返回 would_allow=False(等待 v0.2.53.19 启用)
     - 真实写入路径留 v0.2.53.19 handler 启用
+    - audit 落档仅在写保护锁开 + 真实 service 调用后发生
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ from my_ai_employee.dashboard.business_writer import (
     WriteResult,
 )
 from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+from my_ai_employee.menu_bar.approval_gate_audit import InMemoryApprovalGateAuditStore
 
 
 class TestBusinessWriterImplConstruction:
@@ -444,7 +451,13 @@ class TestBusinessWriterImplSkeletonBoundaries:
 
 
 class TestBusinessWriterImplRealWriteHandlerApproved:
-    """v0.2.53.49 approve_outbox 写保护锁开 + fake store 真实调 service(撞坑 #18 测试场景)."""
+    """v0.2.53.49 approve_outbox 写保护锁开 + fake store 真实调 service(撞坑 #18 测试场景).
+
+    v0.2.53.51 升级(audit 真实落档):
+    - 4 个测试都加 InMemoryApprovalGateAuditStore 注入
+    - 断言 WriteResult.audit_id 是真实 "audit:N" 格式
+    - 断言 audit_store 收到 1 条 success record
+    """
 
     def test_real_write_calls_outbox_store_update_status(self) -> None:
         """写保护锁开 + 依赖注入 → 真实调 outbox_store.update_status(APPROVED)."""
@@ -455,8 +468,10 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
         fake_store = SimpleNamespace(
             update_status=lambda **kw: _FakeUpdated(),
         )
+        audit_store = InMemoryApprovalGateAuditStore()
         writer = BusinessWriterImpl(
             outbox_store=cast(Any, fake_store),
+            audit_store=audit_store,
             real_write_handler_enabled=True,
         )
         result = writer.approve_outbox("123", audit=AuditContext.default())
@@ -466,6 +481,9 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
         assert result.error is None
         assert "APPROVED" in (result.reason or "")
         assert result.write_executed is True
+        # v0.2.53.51 audit 落档:success=True,audit_id="audit:1"
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
 
     def test_real_write_passes_last_approved_at_ms(self) -> None:
         """approve_outbox 必须传 last_approved_at_ms(沿 D5.6.3 P1-1 审批凭据必传规则)."""
@@ -477,8 +495,10 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
             return SimpleNamespace(id=999)
 
         fake_store = SimpleNamespace(update_status=_fake_update_status)
+        audit_store = InMemoryApprovalGateAuditStore()
         writer = BusinessWriterImpl(
             outbox_store=cast(Any, fake_store),
+            audit_store=audit_store,
             real_write_handler_enabled=True,
         )
         writer.approve_outbox("888", audit=AuditContext.default())
@@ -488,10 +508,21 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
         assert captured.get("outbox_id") == 888
         assert isinstance(captured.get("last_approved_at_ms"), int)
         assert captured["last_approved_at_ms"] > 0
+        # v0.2.53.51 audit 落档:1 条 record,affected_id="999"
+        assert audit_store.count() == 1
+        records = audit_store.list_recent(limit=1)
+        assert records[0]["action"] == "approve_outbox"
+        assert records[0]["affected_id"] == "999"
+        assert records[0]["write_executed"] is True
 
 
 class TestBusinessWriterImplRealWriteHandlerCancelled:
-    """v0.2.53.49 cancel_outbox 写保护锁开 + fake store."""
+    """v0.2.53.49 cancel_outbox 写保护锁开 + fake store.
+
+    v0.2.53.51 升级(audit 真实落档):
+    - 注入 InMemoryApprovalGateAuditStore
+    - 断言 audit_id 真实 + audit_store 收到 1 条 record
+    """
 
     def test_real_write_calls_update_status_with_none_approved_at(self) -> None:
         """cancel_outbox 必须传 last_approved_at_ms=None(D5.6.3 P1-1 必传 None 规则)."""
@@ -503,8 +534,10 @@ class TestBusinessWriterImplRealWriteHandlerCancelled:
             return SimpleNamespace(id=999)
 
         fake_store = SimpleNamespace(update_status=_fake_update_status)
+        audit_store = InMemoryApprovalGateAuditStore()
         writer = BusinessWriterImpl(
             outbox_store=cast(Any, fake_store),
+            audit_store=audit_store,
             real_write_handler_enabled=True,
         )
         result = writer.cancel_outbox("777", audit=AuditContext.default())
@@ -514,10 +547,19 @@ class TestBusinessWriterImplRealWriteHandlerCancelled:
         assert captured.get("new_status") == "CANCELLED"
         assert captured.get("from_status") == "PENDING_SEND"
         assert captured.get("last_approved_at_ms") is None
+        # v0.2.53.51 audit 落档
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        records = audit_store.list_recent(limit=1)
+        assert records[0]["action"] == "cancel_outbox"
+        assert records[0]["affected_id"] == "999"
 
 
 class TestBusinessWriterImplRealWriteHandlerConfirmNote:
-    """v0.2.53.49 confirm_note 写保护锁开 + fake note_confirm_service."""
+    """v0.2.53.49 confirm_note 写保护锁开 + fake note_confirm_service.
+
+    v0.2.53.51 升级(audit 真实落档).
+    """
 
     def test_real_write_calls_confirm_note(self) -> None:
         """写保护锁开 → 真实调 note_confirm_service.confirm_note(target_id)."""
@@ -528,8 +570,10 @@ class TestBusinessWriterImplRealWriteHandlerConfirmNote:
             captured["apple_note_id"] = apple_note_id
 
         fake_service = SimpleNamespace(confirm_note=_fake_confirm_note)
+        audit_store = InMemoryApprovalGateAuditStore()
         writer = BusinessWriterImpl(
             note_confirm_service=cast(Any, fake_service),
+            audit_store=audit_store,
             real_write_handler_enabled=True,
         )
         result = writer.confirm_note("note-xyz", audit=AuditContext.default())
@@ -537,10 +581,19 @@ class TestBusinessWriterImplRealWriteHandlerConfirmNote:
         assert result.success is True
         assert result.affected_id == "note-xyz"
         assert captured.get("apple_note_id") == "note-xyz"
+        # v0.2.53.51 audit 落档:affected_id=target_id
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        records = audit_store.list_recent(limit=1)
+        assert records[0]["action"] == "confirm_note"
+        assert records[0]["affected_id"] == "note-xyz"
 
 
 class TestBusinessWriterImplRealWriteHandlerDismissAnomaly:
-    """v0.2.53.49 dismiss_anomaly 写保护锁开 + fake anomaly_dismissal_service."""
+    """v0.2.53.49 dismiss_anomaly 写保护锁开 + fake anomaly_dismissal_service.
+
+    v0.2.53.51 升级(audit 真实落档).
+    """
 
     def test_real_write_calls_dismiss_with_reason(self) -> None:
         """写保护锁开 → 真实调 anomaly_dismissal_service.dismiss(target_id, reason)."""
@@ -552,8 +605,10 @@ class TestBusinessWriterImplRealWriteHandlerDismissAnomaly:
             captured["reason"] = reason
 
         fake_service = SimpleNamespace(dismiss=_fake_dismiss)
+        audit_store = InMemoryApprovalGateAuditStore()
         writer = BusinessWriterImpl(
             anomaly_dismissal_service=cast(Any, fake_service),
+            audit_store=audit_store,
             real_write_handler_enabled=True,
         )
         audit = AuditContext(actor="tester", reason="test reason for pitfall #18")
@@ -563,10 +618,23 @@ class TestBusinessWriterImplRealWriteHandlerDismissAnomaly:
         assert result.affected_id == "2026-06-26|星巴克|38.50"
         assert captured.get("anomaly_id") == "2026-06-26|星巴克|38.50"
         assert captured.get("reason") == "test reason for pitfall #18"
+        # v0.2.53.51 audit 落档:reason="test reason for pitfall #18"
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        records = audit_store.list_recent(limit=1)
+        assert records[0]["action"] == "dismiss_anomaly"
+        assert records[0]["affected_id"] == "2026-06-26|星巴克|38.50"
+        assert records[0]["reason"] == "test reason for pitfall #18"
+        assert records[0]["actor"] == "tester"
 
 
 class TestBusinessWriterImplWriteProtectionDefaultLocked:
-    """v0.2.53.49 默认写保护锁锁定(撞坑 #18 风险门控)— 4 动作 raise."""
+    """v0.2.53.49 默认写保护锁锁定(撞坑 #18 风险门控)— 4 动作 raise.
+
+    v0.2.53.51 升级(audit 不落档):
+    - 写保护锁 raise 时 audit_store 不应被调用(撞坑 #18 「日志」语义)
+    - 验证:即使注入 audit_store,count 仍为 0
+    """
 
     @pytest.mark.parametrize(
         ("method_name", "kw"),
@@ -580,12 +648,18 @@ class TestBusinessWriterImplWriteProtectionDefaultLocked:
     def test_default_locked_raises_not_implemented(
         self, method_name: str, kw: dict[str, Any]
     ) -> None:
-        """默认 _real_write_handler_enabled=False → 4 动作 raise(写保护锁风险门控)."""
+        """默认 _real_write_handler_enabled=False → 4 动作 raise(写保护锁风险门控).
 
+        v0.2.53.51 边界:写保护锁 raise 时 audit 不落档(撞坑 #18 「日志」语义).
+        """
         kwargs = cast(Any, kw)
+        audit_store = InMemoryApprovalGateAuditStore()
+        kwargs["audit_store"] = audit_store
         writer = BusinessWriterImpl(**kwargs)
         with pytest.raises(NotImplementedError, match="写保护锁未开"):
             getattr(writer, method_name)("1", audit=AuditContext.default())
+        # v0.2.53.51 验证:写保护锁 raise 时 audit_store 不被调用
+        assert audit_store.count() == 0
 
     def test_default_constructor_real_write_handler_false(self) -> None:
         """默认构造 _real_write_handler_enabled=False."""
@@ -601,3 +675,321 @@ class TestBusinessWriterImplWriteProtectionDefaultLocked:
             real_write_handler_enabled=True,
         )
         assert writer._real_write_handler_enabled is True  # noqa: SLF001
+
+
+# ============================================================
+# v0.2.53.51 audit 真实落档测试(覆盖成功/失败/拒写/dry-run 不落档)
+# ============================================================
+
+
+class TestBusinessWriterImplAuditSuccess:
+    """v0.2.53.51 audit 落档 — 4 类动作成功路径.
+
+    边界(沿 v0.2.53.51):
+        - 写保护锁开 + 依赖注入 + 有效 target_id + service 成功
+        - audit_store.record() 收到 1 条 success=True record
+        - WriteResult.audit_id 是 "audit:N" 格式
+    """
+
+    @pytest.mark.parametrize(
+        ("method_name", "fake_dep_kw", "target_id", "expected_affected_id"),
+        [
+            (
+                "approve_outbox",
+                {
+                    "outbox_store": SimpleNamespace(
+                        update_status=lambda **kw: SimpleNamespace(id=100)
+                    )
+                },
+                "100",
+                "100",
+            ),
+            (
+                "cancel_outbox",
+                {
+                    "outbox_store": SimpleNamespace(
+                        update_status=lambda **kw: SimpleNamespace(id=200)
+                    )
+                },
+                "200",
+                "200",
+            ),
+            (
+                "confirm_note",
+                {
+                    "note_confirm_service": SimpleNamespace(
+                        confirm_note=lambda *, apple_note_id: None
+                    )
+                },
+                "note-1",
+                "note-1",
+            ),
+            (
+                "dismiss_anomaly",
+                {
+                    "anomaly_dismissal_service": SimpleNamespace(
+                        dismiss=lambda *, anomaly_id, reason: None
+                    )
+                },
+                "2026-06-26|星巴克|38.50",
+                "2026-06-26|星巴克|38.50",
+            ),
+        ],
+    )
+    def test_audit_recorded_on_success(
+        self,
+        method_name: str,
+        fake_dep_kw: dict[str, Any],
+        target_id: str,
+        expected_affected_id: str,
+    ) -> None:
+        """4 类动作成功路径都落档 audit(success=True, affected_id)."""
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+            **cast(Any, fake_dep_kw),
+        )
+        result = getattr(writer, method_name)(
+            target_id, audit=AuditContext(actor="audit_test", reason="success path")
+        )
+        assert result.success is True
+        assert result.affected_id == expected_affected_id
+        # v0.2.53.51:audit_id 真实 "audit:1" 格式
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == method_name
+        assert record["target_id"] == target_id
+        assert record["affected_id"] == expected_affected_id
+        assert record["write_executed"] is True
+        assert record["error"] is None
+        assert record["actor"] == "audit_test"
+        assert record["reason"] == "success path"
+
+
+class TestBusinessWriterImplAuditFailure:
+    """v0.2.53.51 audit 落档 — service 抛异常时也落档.
+
+    边界(沿 v0.2.53.51 + 撞坑 #18 「日志」语义):
+        - 写保护锁开 + 依赖注入 + 有效 target_id + service throws
+        - audit_store.record() 收到 1 条 success=False record(带 error)
+        - 异常透传(用户主动操作必须看到 ValueError,沿 note_confirm_service.py:113-115)
+    """
+
+    def test_audit_recorded_on_service_failure(self) -> None:
+        """approve_outbox service 抛异常 → audit 落档(success=False, error)+ 异常透传."""
+
+        def _fake_update_status_raises(**kw: Any) -> SimpleNamespace:
+            raise ValueError("outbox not found")
+
+        fake_store = SimpleNamespace(update_status=_fake_update_status_raises)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        with pytest.raises(ValueError, match="outbox not found"):
+            writer.approve_outbox("404", audit=AuditContext(actor="audit_failure_test", reason=""))
+        # v0.2.53.51:failure 也落档
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "approve_outbox"
+        assert record["target_id"] == "404"
+        assert record["affected_id"] is None
+        assert record["write_executed"] is True
+        assert record["error"] is not None
+        assert "ValueError" in record["error"]
+        assert "outbox not found" in record["error"]
+
+    def test_audit_recorded_on_cancel_service_failure(self) -> None:
+        """cancel_outbox service 抛异常 → audit 落档 + 异常透传."""
+
+        def _fake_update_status_raises(**kw: Any) -> SimpleNamespace:
+            raise RuntimeError("DB connection lost")
+
+        fake_store = SimpleNamespace(update_status=_fake_update_status_raises)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        with pytest.raises(RuntimeError, match="DB connection lost"):
+            writer.cancel_outbox("500", audit=AuditContext.default())
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "cancel_outbox"
+        assert "RuntimeError" in record["error"]
+
+    def test_audit_recorded_on_confirm_note_failure(self) -> None:
+        """confirm_note service 抛异常 → audit 落档 + 异常透传."""
+
+        def _fake_confirm_raises(*, apple_note_id: str) -> None:
+            raise ValueError(f"note {apple_note_id} not confirmed")
+
+        fake_service = SimpleNamespace(confirm_note=_fake_confirm_raises)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            note_confirm_service=cast(Any, fake_service),
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        with pytest.raises(ValueError, match="not confirmed"):
+            writer.confirm_note("note-404", audit=AuditContext.default())
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "confirm_note"
+        assert record["affected_id"] is None
+
+    def test_audit_recorded_on_dismiss_anomaly_failure(self) -> None:
+        """dismiss_anomaly service 抛异常 → audit 落档 + 异常透传."""
+
+        def _fake_dismiss_raises(*, anomaly_id: str, reason: str) -> None:
+            raise ValueError(f"anomaly {anomaly_id} invalid")
+
+        fake_service = SimpleNamespace(dismiss=_fake_dismiss_raises)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            anomaly_dismissal_service=cast(Any, fake_service),
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        with pytest.raises(ValueError, match="invalid"):
+            writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=AuditContext.default())
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "dismiss_anomaly"
+
+
+class TestBusinessWriterImplAuditDryRunNoRecord:
+    """v0.2.53.51 audit 落档 — dry_run 不落档(撞坑 #18 「日志」语义).
+
+    边界:
+        - dry_run() 是预览,不实际执行 → audit 不应被记录
+        - 即便 audit_store 注入,dry_run 也不调用 store.record()
+    """
+
+    def test_dry_run_does_not_record_audit(self) -> None:
+        """dry_run() 不调 audit_store.record()(撞坑 #18 范本)."""
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        decision = writer.dry_run(ACTION_OUTBOX_APPROVE, "123", audit=AuditContext.default())
+        # dry_run 返回 WriteDecision(dry_run=True, write_executed=False)
+        assert decision.write_executed is False
+        assert decision.dry_run is True
+        # v0.2.53.51:audit_store 0 条 record
+        assert audit_store.count() == 0
+
+    @pytest.mark.parametrize("action", SUPPORTED_ACTIONS)
+    def test_dry_run_4_actions_no_audit(self, action: str) -> None:
+        """4 类动作 dry_run 都不落档 audit."""
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+        )
+        writer.dry_run(action, "1", audit=AuditContext.default())
+        assert audit_store.count() == 0
+
+
+class TestBusinessWriterImplAuditInvalidTargetNoRecord:
+    """v0.2.53.51 audit 落档 — invalid_target_id 不落档(撞坑 #18 「日志」语义).
+
+    边界:
+        - 参数校验失败(invalid_target_id)是用户输入问题,非写操作尝试
+        - audit 不应被记录(避免日志污染)
+    """
+
+    @pytest.mark.parametrize(
+        ("method_name", "kw", "bad_target_id"),
+        [
+            ("approve_outbox", {"outbox_store": SimpleNamespace()}, cast(str, 123)),
+            ("cancel_outbox", {"outbox_store": SimpleNamespace()}, cast(str, None)),
+            ("confirm_note", {"note_confirm_service": SimpleNamespace()}, ""),
+            ("dismiss_anomaly", {"anomaly_dismissal_service": SimpleNamespace()}, "   "),
+        ],
+    )
+    def test_invalid_target_id_no_audit(
+        self,
+        method_name: str,
+        kw: dict[str, Any],
+        bad_target_id: Any,
+    ) -> None:
+        """参数非法 → WriteResult(success=False),不落档 audit(撞坑 #18 范本)."""
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+            **cast(Any, kw),
+        )
+        result = getattr(writer, method_name)(bad_target_id, audit=AuditContext.default())
+        assert result.success is False
+        assert result.error == "invalid_target_id"
+        # v0.2.53.51:invalid_target_id 不落档
+        assert audit_store.count() == 0
+
+
+class TestBusinessWriterImplAuditStoreFallback:
+    """v0.2.53.51 audit 落档 — audit_store=None 走默认 Stub(撞坑 #65 范本).
+
+    边界:
+        - audit_store 默认 None → ApprovalGateAuditStoreStub(is_enabled=False)
+        - record() 永远返回 success=False
+        - WriteResult.audit_id = None(Stub 不落档)
+    """
+
+    def test_audit_store_none_uses_stub(self) -> None:
+        """audit_store=None → ApprovalGateAuditStoreStub(撞坑 #65 默认 Stub)."""
+
+        class _FakeUpdated:
+            id = 999
+
+        fake_store = SimpleNamespace(
+            update_status=lambda **kw: _FakeUpdated(),
+        )
+        # 显式不传 audit_store,验证默认 Stub
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            real_write_handler_enabled=True,
+        )
+        result = writer.approve_outbox("123", audit=AuditContext.default())
+        assert result.success is True
+        # Stub 返回 audit_id=None(撞坑 #65 默认禁写)
+        assert result.audit_id is None
+
+    def test_audit_store_failure_does_not_block_business(self) -> None:
+        """audit_store.record() 抛异常 → WriteResult 仍正常返回(撞坑 #18 「日志」语义)."""
+
+        class _FakeUpdated:
+            id = 999
+
+        class _BrokenAuditStore:
+            def record(self, record: Any) -> Any:
+                raise RuntimeError("audit store broken")
+
+            def is_enabled(self) -> bool:
+                return True
+
+            def list_recent(self, limit: int = 10) -> list[dict[str, Any]]:
+                return []
+
+        fake_store = SimpleNamespace(
+            update_status=lambda **kw: _FakeUpdated(),
+        )
+        broken_audit_store = _BrokenAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, fake_store),
+            audit_store=cast(Any, broken_audit_store),
+            real_write_handler_enabled=True,
+        )
+        # audit_store 抛异常,但业务 WriteResult 仍正常
+        result = writer.approve_outbox("123", audit=AuditContext.default())
+        assert result.success is True
+        assert result.affected_id == "999"
+        # audit_id=None(落档失败,但不抛异常)
+        assert result.audit_id is None

@@ -34,7 +34,10 @@ from my_ai_employee.events import (  # noqa: E402
 
 class TestMetadataRegistration:
     def test_events_table_registered(self) -> None:
-        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions; D9.1 启动后第 10 张是 notes; B4.1 启动后第 11 张是 recipient_blacklist; D8.1 启动后第 12 张是 merchant_profile; v0.2.53.16 启动后第 13 张是 anomaly_dismissals)."""
+        """Base.metadata 注册了 events 表(D4.3 新增, 第 7 张表; D4.8 启动后第 8 张是 outbox; D6.4 启动后第 9 张是 transactions; D9.1 启动后第 10 张是 notes; B4.1 启动后第 11 张是 recipient_blacklist; D8.1 启动后第 12 张是 merchant_profile; v0.2.53.16 启动后第 13 张是 anomaly_dismissals; v0.2.53.51 启动后第 14 张是 approval_gate_audits)."""
+        from my_ai_employee.core.models import (
+            ApprovalGateAudit,  # noqa: F401  # 触发 approval_gate_audits 表注册(v0.2.53.51)
+        )
         from my_ai_employee.db.anomaly_dismissals import (
             AnomalyDismissal,  # noqa: F401  # 触发 anomaly_dismissals 表注册(v0.2.53.16)
         )
@@ -47,8 +50,8 @@ class TestMetadataRegistration:
 
         tables = sorted(Base.metadata.tables.keys())
         assert "events" in tables
-        # 12 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile
-        assert len(tables) == 13
+        # 14 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile + 1 v0.2.53.16 anomaly_dismissals + 1 v0.2.53.51 approval_gate_audits
+        assert len(tables) == 14
 
     def test_events_table_has_7_columns(self) -> None:
         """events 表 7 字段 (id + event + status + source + subject_id + fingerprint + event_metadata + created_at)."""

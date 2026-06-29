@@ -133,7 +133,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0015_anomaly_dismissal。
+    """alembic_version 表记录当前 head revision = 0016_approval_gate_audits。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -148,6 +148,7 @@ def test_alembic_version_records_current_revision(
       - v0.2.1 #5 加 0013_note_fingerprint(head 推到 0013)
       - v0.2.1+ 加 0014_note_l2_cross_source(head 推到 0014)
       - v0.2.53.16 加 0015_anomaly_dismissal(head 推到 0015)
+      - v0.2.53.51 加 0016_approval_gate_audits(head 推到 0016)
     """
     from alembic import command
 
@@ -159,7 +160,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0015_anomaly_dismissal"
+        assert version[0] == "0016_approval_gate_audits"
     finally:
         db.close()
 
@@ -283,6 +284,7 @@ def test_orm_metadata_tables_match_alembic_tables(
     """ORM Base.metadata 表数 == alembic 实际建出的表数（除 alembic_version / sqlite_sequence）。"""
     from alembic import command
 
+    from my_ai_employee.core.models import ApprovalGateAudit  # noqa: F401  # v0.2.53.51
     from my_ai_employee.core.outbox import OutboxEntry  # noqa: F401  # outbox 表
     from my_ai_employee.db.anomaly_dismissals import AnomalyDismissal  # noqa: F401  # v0.2.53.16
     from my_ai_employee.db.blacklist import (
@@ -396,7 +398,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录当前 head
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0015_anomaly_dismissal"
+            assert version[0] == "0016_approval_gate_audits"
     finally:
         db.close()
 
@@ -430,7 +432,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0015_anomaly_dismissal"
+            assert version[0] == "0016_approval_gate_audits"
     finally:
         db.close()
 

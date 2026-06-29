@@ -398,17 +398,73 @@ class AuditLog(Base):
         return f"<AuditLog id={self.id} event={self.event!r} source={self.source!r}>"
 
 
+# ===== 7. ApprovalGateAudit(v0.2.53.51 — 沿 v0.2.53.20 §5.3 落档 design)=====
+
+
+class ApprovalGateAudit(Base):
+    """ApprovalGate 写操作审计日志(mirror schema.sql approval_gate_audits).
+
+    字段注解([docs/v0.2.53.20-html-real-write-flow-design-2026-06-26.md §5.3]):
+        - id:              INTEGER PK AUTOINCREMENT
+        - action:          TEXT NOT NULL              # approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly
+        - target_id:       TEXT NOT NULL              # str 表示的 int / str 本身
+        - actor:           TEXT NOT NULL DEFAULT 'local_dashboard'  # 审计字段(沿 v0.2.53.11 actor 默认值)
+        - reason:          TEXT NOT NULL DEFAULT ''   # 用户操作原因(限 240 字符,AuditContext 严判)
+        - write_executed:  INTEGER NOT NULL            # 0=False, 1=True(BOOLEAN → Integer, 沿 D3.2 雷区 #2)
+        - affected_id:     TEXT NULL                   # 成功时填(str 表示的 int / str 本身)
+        - error:           TEXT NULL                   # 失败时填(error code 字符串)
+        - executed_at_ms:  INTEGER NOT NULL            # ms 时间戳(沿现有 store 范本)
+
+    索引:
+        - idx_audit_executed_at (executed_at_ms DESC) — 按时间倒序查询热路径(Dashboard /api/approval-gate/audits)
+        - idx_audit_action_at (action, executed_at_ms DESC) — 按 action 过滤 + 时间倒序
+
+    撞坑 #64 公共 API 一致性:
+        - 字段顺序与 alembic 0016 migration 严格对齐
+        - audit_id 字符串格式 "audit:{id}"(撞坑 #64 范本)
+    """
+
+    __tablename__ = "approval_gate_audits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    action: Mapped[str] = mapped_column(Text, nullable=False)
+    target_id: Mapped[str] = mapped_column(Text, nullable=False)
+    actor: Mapped[str] = mapped_column(
+        Text, nullable=False, default="local_dashboard", server_default="local_dashboard"
+    )
+    reason: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    write_executed: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    affected_id: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    error: Mapped[str | None] = mapped_column(Text, nullable=True, default=None)
+    executed_at_ms: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    # 索引(DESC 倒序与 0016 migration 对齐:Dashboard 审计热路径"按时间倒序取最近")
+    __table_args__ = (
+        Index("idx_audit_executed_at", text("executed_at_ms DESC")),
+        Index("idx_audit_action_at", "action", text("executed_at_ms DESC")),
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<ApprovalGateAudit id={self.id} action={self.action!r} "
+            f"target_id={self.target_id!r} write_executed={self.write_executed}>"
+        )
+
+
 # ===== 模块导出 =====
 
 
 __all__ = [
+    "ApprovalGateAudit",
+    "AuditLog",
     "Base",
     "Email",
     "Attachment",
-    "Label",
     "EmailLabel",
+    "Label",
     "SyncState",
-    "AuditLog",
 ]
 
 

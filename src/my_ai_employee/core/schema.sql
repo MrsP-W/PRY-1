@@ -117,6 +117,50 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at DESC
 CREATE INDEX IF NOT EXISTS idx_audit_log_event ON audit_log(event);
 
 
+-- ===== approval_gate_audits (v0.2.53.51 新增) =====
+-- ApprovalGate 写操作审计日志(沿 docs/v0.2.53.20-html-real-write-flow-design-2026-06-26.md §5.3)
+-- 区别于 audit_log:
+--   - audit_log 记 sync 事件(简化)
+--   - approval_gate_audits 记「写操作尝试」(成功/失败/dry-run 不记录/写保护锁 raise 不记录)
+-- 职责:BusinessWriterImpl 4 动作实写(approve_outbox/cancel_outbox/confirm_note/dismiss_anomaly)的真实落档
+--
+-- 字段(沿 v0.2.53.51 范本):
+--   id              INTEGER PK AUTOINCREMENT
+--   action          TEXT NOT NULL              # approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly
+--   target_id       TEXT NOT NULL              # str 表示的 int / str 本身
+--   actor           TEXT NOT NULL DEFAULT 'local_dashboard'  # 审计字段(沿 v0.2.53.11 actor 默认值)
+--   reason          TEXT NOT NULL DEFAULT ''   # 用户操作原因(限 240 字符,AuditContext 严判)
+--   write_executed  INTEGER NOT NULL            # 0=False, 1=True(BOOLEAN → Integer, 沿 D3.2 雷区 #2)
+--   affected_id     TEXT NULL                   # 成功时填(str 表示的 int / str 本身)
+--   error           TEXT NULL                   # 失败时填(error code 字符串)
+--   executed_at_ms  INTEGER NOT NULL            # ms 时间戳(沿现有 store 范本)
+--
+-- 索引:
+--   - idx_audit_executed_at (executed_at_ms DESC) — 按时间倒序查询热路径(Dashboard /api/approval-gate/audits)
+--   - idx_audit_action_at (action, executed_at_ms DESC) — 按 action 过滤 + 时间倒序
+--
+-- 撞坑 #18 边界(默认禁写):
+--   - 默认 BusinessWriterImpl 写保护锁锁定,audit 表不接收新行
+--   - 即便 audit store 失败,业务 WriteResult 仍正常返回(audit 是「日志」语义,沿 v0.2.53.51)
+--
+-- 撞坑 #64 公共 API 一致性:
+--   - audit_id 字符串格式 "audit:{id}",与 anomaly_dismissals "dismissal:{id}" 对齐
+CREATE TABLE IF NOT EXISTS approval_gate_audits (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    action          TEXT    NOT NULL,
+    target_id       TEXT    NOT NULL,
+    actor           TEXT    NOT NULL DEFAULT 'local_dashboard',
+    reason          TEXT    NOT NULL DEFAULT '',
+    write_executed  INTEGER NOT NULL DEFAULT 0,
+    affected_id     TEXT,
+    error           TEXT,
+    executed_at_ms  INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_audit_executed_at ON approval_gate_audits(executed_at_ms DESC);
+CREATE INDEX IF NOT EXISTS idx_audit_action_at ON approval_gate_audits(action, executed_at_ms DESC);
+
+
 -- ===== events (D4.3 新增) =====
 -- 结构化事件流（g004-events-reports-contract.md 4 大不变量落地）
 -- 区别于 audit_log：events 走 typed event + status + 6 必含 metadata 字段 + fingerprint 去重
