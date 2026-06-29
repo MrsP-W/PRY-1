@@ -79,8 +79,9 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **171 files** + `THREE_GATE_COPY` 统一离线兜底;launch plan 三门联调已勾选。**下一棒**:Keychain SMTP spike / 8/1 截点 |
-| **上一阶段** | ✅ `v0.2.53.33` markdownlint `.pytest_cache` 忽略规则收口(2026-06-28):`Makefile` + `package.json` `#.pytest_cache` 排除 |
+| **当前阶段** | ✅ `v0.2.53.35` state sync + BusinessWriter write-path design closure(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **173 files** + audit 落档语义统一 + 版本顺序倒挂 docs 说明。**下一棒**:Keychain SMTP spike / 8/1 截点 |
+| **上一阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):`THREE_GATE_COPY` 统一离线兜底 |
+| **上一阶段** | ✅ `4b8a4ad` BusinessWriter 实写路径设计稿(docs-only · 编号 v0.2.53.33 与 lint ignore 重复,由 v0.2.53.35 收口说明) |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |
 | **上一阶段** | ✅ `v0.2.53.27` BusinessWriterImpl opt-in 注入(2026-06-26 · `31a2134` · `BUSINESS_WRITER_ENABLED=1` + `DASHBOARD_REAL_DB=1` 范本 + 11 tests) |
 | **上一阶段** | ✅ `v0.2.53.25` docs-only 三入口同步(2026-06-26 · `81f5024` · 6 files / +25 -17 · v0.2.53.21-24 handler 第三道门 + HTML inspector 三 badge + 占位页升级 docs 收口) |
@@ -99,8 +100,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.34:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **171 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
-| **下一棒** | Keychain SMTP spike;quality_snapshot MD lint 171 落档;8/1 截点 |
+| **质量基线** | v0.2.53.35:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **173 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **下一棒** | Keychain SMTP spike;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -129,6 +130,24 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-28 [v0.2.53.35 state sync + BusinessWriter write-path design closure] — 收口
+
+**1. 本次修改内容**
+
+- **docs(design)**: 修正 `docs/v0.2.53.33-business-writer-write-path-design-2026-06-28.md` audit 落档语义 — 路径 4 实写尝试必落档;finance.dismiss 业务拒 `write_executed=false` 仍落档;新增路径 4c。
+- **chore**: `quality_snapshot.py` lint **171 → 173**(172 = `4b8a4ad` 设计稿落档;173 = 含本收口 doc)
+- **docs**: 新建 `docs/v0.2.53.35-state-sync-business-writer-design-closure-2026-06-28.md` — 版本顺序倒挂说明(不改 Git 历史)。
+
+**2. 风险点**
+
+- ⚠️ v0.2.53.33 编号重复(lint ignore vs BusinessWriter 设计稿);以 v0.2.53.35 状态行澄清,不 rewrite commit。
+- **边界**:不接真实写入 · coverage 沿用 88.78% · 不发 SMTP · 不打 tag。
+
+**3. 当前项目整体总结**
+
+- 进度:**2518 passed / 1 skipped / 88.78%**;mypy strict 0;MD lint **173 files** 0 errors。
+- 下一棒:Keychain SMTP spike / 8/1 截点。
 
 ### 2026-06-28 [v0.2.53.34 HTML dry-run inspector 三门文案收口] — 收口
 

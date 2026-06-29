@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.34 HTML dry-run inspector 三门文案收口(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **171 files**;`THREE_GATE_COPY` 统一 system/header/inspector 离线兜底;API 离线不再「检测中」。**下一棒**:Keychain SMTP spike / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
+> **状态**:🟢 **v0.2.53.35 state sync: BusinessWriter write-path design closure + MD lint 172(2026-06-28)** — 质量门 **2518 passed / 1 skipped / 88.78%** / MD lint **173 files**;实写路径 audit 落档语义统一(路径 4 实写尝试必落档);版本顺序倒挂以本棒收口说明。**下一棒**:Keychain SMTP spike / 8/1 截点。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`write_executed` 恒 False 不变式。
 
 ---
 
