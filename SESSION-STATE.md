@@ -1,6 +1,6 @@
 # SESSION-STATE — 7/1 月度复盘收口 A1-A3 docs-only(2026-06-29)
 
-> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD `7e0a1fd`** · 工作区干净
+> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `fe5473c`) · 工作区干净
 > **状态**:🟢 **7/1 月度复盘收口 A1-A3 docs-only(2026-06-29)** — `reports/2026-07-monthly-review.md` 刷新为最终版(覆盖 6/25 提前执行版)+ 32 项议程 + 9/9 项实质满足 + 撞坑 #69 + #70 沉淀 + `7e0a1fd` 稳定化回顾 + §5.2 v0.2.1-rc1 决策表(选项 A/B/C · 7/1 议程 1 评估);`docs/v0.2-launch-plan.md` P0 checklist 补勾 v0.2.53.38-41 + `7e0a1fd` + `30297f9` + monthly report 共 6 项。**质量门**:mypy --strict 0 errors(**235 files**)/ 2518 passed / 1 skipped / 88.78% coverage / **MD lint 178 = `git ls-files '*.md'` 已稳定** / ruff + format 全绿。**上一棒**:v0.2.53.41 hotfix(3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68/#69/#70 衍生 5 项补强 → 32 项议程)+ outlook/gmail Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 + #69 + #70 = 70(本棒无新增,沿用 #69/#70)。
 
 ---
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.41 hotfix mypy 状态失真修复已落地(2026-06-29)** — mypy --strict 0 errors / 2518 passed / MD lint 178。**下一步候选**:Keychain SMTP spike / 7/1 月度复盘统一评估。
+**当前启动候选**:**7/1 月度复盘收口 A1-A3 docs-only 已落地(2026-06-29 · 实测 `fe5473c`)** — mypy --strict 0 errors / 2518 passed / MD lint 178。**下一步候选**:7/1 月度复盘会议统一评估 / Keychain SMTP spike(等凭据)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
