@@ -4,8 +4,8 @@
   "private": true,
   "description": "Markdown lint 工具 — markdownlint-cli2 固定版本（避免 npx 走网络）",
   "scripts": {
-    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\" \"#.pytest_cache\"",
-    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\" \"#.pytest_cache\""
+    "lint": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\" \"#.pytest_cache\" \"#reports/transaction-candidate-review-summary*.md\"",
+    "lint:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#data\" \"#.venv\" \"#dist\" \"#.pytest_cache\" \"#reports/transaction-candidate-review-summary*.md\""
   },
   "devDependencies": {
     "markdownlint-cli2": "0.22.1"
