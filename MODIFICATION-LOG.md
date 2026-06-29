@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29 · 实测 `ec38cd2`)** — HEAD 以 `git rev-parse --short HEAD` 为准 / 9 质量门全绿 / **MD lint 184 = `git ls-files '*.md'` 已稳定**;4 commits docs-only(`a125f09` A0-1 会前冒烟 + `0aea121` A0-2 v0.2.1-rc1 决策论据 + `dfa00da` A0-3 loop 范式 + 撞坑 #69/#70 SOP + `602a123` A0-4 Track C 三 docs)+ `ec38cd2` 三入口状态同步。**下一棒**:7/1 月度复盘会议统一执行(32 项议程 4.5h + 1h docs-only 收口 → `monthly-review-decision-2026-07-01.md`)+ QQ SMTP 1 封 spike / outlook/gmail Keychain SMTP spike(等凭据) |
-| **上一阶段** | ✅ 7/1 月度复盘会前预制 A0-1 ~ A0-4 docs-only(2026-06-29 · 4 commits `a125f09` + `0aea121` + `dfa00da` + `602a123` · 6 新增 docs · docs-only · 撞坑累计 70 类沿用)+ A0-1 会前冒烟(`docs/2026-06-29-pre-71-smoke.md` · 9 质量门 5/5 重跑全绿 + 4/9 沿用) + A0-2 v0.2.1-rc1 决策论据(`reports/2026-07-01-v0.2.1-rc1-decision-prep.md` · B/C/D 三选一 + 撞坑 #18 风险门控) + A0-3 loop 范式(`reports/2026-07-01-loop-patterns-prep.md` · 7 个 Agent 骨架 + 撞坑 #69/#70 SOP 草案) + A0-4 Track C 三 docs(`docs/2026-06-29-approval-gate-gates-design.md` + `docs/2026-06-29-dry-run-inspector-semantic-map.md` + `docs/2026-06-29-business-writer-path4-checklist.md`) |
+| **当前阶段** | ✅ **QQ-only SMTP 已收口(2026-06-29)** — sent=1/4.31s · **Outlook/Gmail 用户决策不配置/不使用** · `reports/qq-smtp-spike-2026-06-29.md` · 8/1 readiness #2/#9 用户决策豁免。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC / 路径 4(8/1 后) |
+| **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
 | **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
 | **上一阶段** | ✅ `v0.2.53.40` mypy --strict tests 全清 300 errors(2026-06-29 · `cc39670`):三层修复范本(unused-ignore 脚本 + cast 范本 + # type: ignore[misc])+ 撞坑 #69(type: ignore 注释漂移) |
 | **上一阶段** | ✅ `v0.2.53.37` 7/1 月度复盘输入包 docs-only(2026-06-29 · `391777a`):27 项议程总盘(22 + 5 撞坑 #68 衍生 · 主题 1-8)+ 7/1 复盘流程 12:00-16:30(4.5h 窗口) |
@@ -106,8 +106,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **184 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
-| **下一棒** | 7/1 月度复盘会议统一执行;QQ SMTP 1 封 spike;Keychain SMTP spike(Outlook/Gmail 等凭据);8/1 截点 |
+| **质量基线** | **2518 passed / 1 skipped** / **88.78%** / mypy --strict 0 / **235 files** / MD lint **186 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 对齐 `git ls-files '*.md'`) |
+| **下一棒** | 8/1 readiness 二次刷新 docs-only;7/10 WAIC 延后项;路径 4 实写(8/1 后) |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -136,6 +136,72 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-29 [Outlook/Gmail 用户决策不配置 · QQ-only SMTP 范围锁定] — 收口
+
+**1. 本次修改内容**
+
+- **用户决策**:Outlook 和 Gmail **不使用、不需要配置** Keychain / 真实 spike
+- **docs-only**: README / SESSION-STATE / MODIFICATION-LOG / spike 报告同步
+- **8/1 readiness**:#2 outlook/gmail Keychain + #9 SMTP spike → **用户决策豁免**(非阻塞);QQ SMTP ✅ 已复验
+
+**2. 风险点**
+
+- 🟡 代码层 SMTPProviderFactory 仍含 outlook/gmail 分支(保留,不激活)
+- 🟡 历史 docs 仍提及「等凭据」— 仅历史记录,当前状态以本决策为准
+
+**3. 当前项目整体总结**
+
+- SMTP 范围:**QQ-only** · sent=1/4.31s 已验证
+- 下一棒:8/1 readiness 二次刷新 / 路径 4(8/1 后)
+
+---
+
+### 2026-06-29 [QQ SMTP 1 封 spike 复验] — 收口
+
+**1. 本次修改内容**
+
+- **spike 实测**: `SMTP_REAL_NETWORK=1` + `spike_send_100.py --real` · qq · sent=1/4.31s
+- **Keychain**: provider=qq · 477***009@qq.com · 16 chars round-trip OK
+- **docs**: `reports/qq-smtp-spike-2026-06-29.md` + 三入口状态同步
+- **本地报告**: `output/spike/spike_send_100_20260629_140047.md`(gitignore)
+
+**2. 风险点**
+
+- 🟡 延迟 4.31s vs D5.6.5 1.27s(网络波动,功能 OK)
+- 🟡 Outlook/Gmail Keychain 仍 missing → 8/9 readiness 不变
+- ⚠️ 本 spike 走 OutboxDispatcher 测试链路,非 Dashboard ApprovalGate 写路径
+
+**3. 当前项目整体总结**
+
+- QQ SMTP:✅ 复验通过 · 五重防误发全过
+- 8/1 readiness:8/9(#2 + #9 outlook/gmail 仍缺)
+- 下一棒:Outlook/Gmail Keychain SMTP(等凭据)
+
+---
+
+### 2026-06-29 [7/1 月度复盘决策收官 · v0.2.53.44] — 收口
+
+**1. 本次修改内容**
+
+- **docs**: 新建 `reports/monthly-review-decision-2026-07-01.md` — 32 项议程决议汇总
+- **核心决议**:选项 B 继续延后 `v0.2.1-rc1`(基线 · 未获 tag 授权 · 沿撞坑 #18/#60)
+- **chore**: `quality_snapshot.py` lint **184 → 185**(本棒新增 1 decision doc)
+- **docs-only**: README / SESSION-STATE / MODIFICATION-LOG 三入口同步
+
+**2. 风险点**
+
+- 🟡 选项 C(rc1)技术条件满足但缺用户授权;若后续授权需单独 D-step + 9 质量门重跑
+- 🟡 QQ SMTP spike 需 Keychain + `SMTP_REAL_NETWORK=1` + 用户明确授权
+- ⚠️ loop 范式 / SDK / 大文件拆分等 11 项 B 类延后至 7/10 WAIC 窗口
+
+**3. 当前项目整体总结**
+
+- 质量门:2518 / 88.78% / mypy 0 / MD lint 185 / ruff + format 全绿
+- 当前阶段:7/1 月度复盘决策收官完成
+- 下一棒 P1:QQ SMTP 1 封 spike(需授权)
+
+---
 
 ### 2026-06-29 [v0.2.53.43 MD lint 184 + HEAD 状态漂移收口] — 收口
 
