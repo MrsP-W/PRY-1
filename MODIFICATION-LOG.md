@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **173 files** + 8/9 项实质满足(从 v0.2.47 7/9 项前进 1 项)+ 决策矩阵沿 v0.2.47(自动打 tag ❌ / 继续延后 ✅ / 降级 rc1 🟡)。**下一棒**:7/1 月度复盘统一评估(`v0.2.1-rc1` 候选)+ Keychain SMTP spike |
+| **当前阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28):**2518 passed / 1 skipped / 88.78%** / MD lint **174 files** + 8/9 项实质满足(从 v0.2.47 7/9 项前进 1 项)+ 决策矩阵沿 v0.2.47(自动打 tag ❌ / 继续延后 ✅ / 降级 rc1 🟡)。**下一棒**:7/1 月度复盘统一评估(`v0.2.1-rc1` 候选)+ Keychain SMTP spike |
 | **上一阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):`THREE_GATE_COPY` 统一离线兜底 |
 | **上一阶段** | ✅ `4b8a4ad` BusinessWriter 实写路径设计稿(docs-only · 编号 v0.2.53.33 与 lint ignore 重复,由 v0.2.53.35 收口说明) |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |
@@ -100,7 +100,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.35:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **173 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.36:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **174 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | Keychain SMTP spike;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
