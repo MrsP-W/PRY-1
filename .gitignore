@@ -77,3 +77,5 @@ coverage.json
 # AI 生成物（与 Agent Assistant 保持一致）
 output/images/
 output/videos/
+# AI spike 输出（撞坑 #50 衍生第三版 · 详细 spike 不进 git · reports/qq-smtp-spike-2026-06-29.md 范本 · 历史 D5.6.5 等 spike 保留在 git 历史）
+output/spike/
