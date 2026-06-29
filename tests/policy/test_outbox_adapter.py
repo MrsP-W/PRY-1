@@ -35,7 +35,7 @@ from __future__ import annotations
 import contextlib
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -746,7 +746,7 @@ class TestStoreAndEmit:
         )
         assert isinstance(report, OutboxDecisionReport)
         assert report.outbox_id is not None
-        entry = adapter._outbox_store.by_email_id(200)
+        entry = adapter._outbox_store.by_email_id(200)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.id == report.outbox_id
 
@@ -757,7 +757,7 @@ class TestStoreAndEmit:
         with pytest.raises(ValueError, match="subject 必须是 str"):
             adapter.store_and_emit(
                 email_id=300,
-                subject=123,
+                subject=123,  # type: ignore[arg-type]
                 body=_VALID_BODY,
                 tone=_VALID_TONE,
                 recipient_email=_VALID_RECIPIENT,
@@ -806,7 +806,7 @@ class TestStoreAndEmit:
             recipient_email="ops@example.com",
             priority="urgent",
         )
-        entry = adapter._outbox_store.by_email_id(700)
+        entry = adapter._outbox_store.by_email_id(700)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.priority == "urgent"
 
@@ -821,7 +821,7 @@ class TestStoreAndEmit:
         )
         assert isinstance(report, OutboxDecisionReport)
         assert report.priority == "normal"
-        entry = adapter._outbox_store.by_email_id(800)
+        entry = adapter._outbox_store.by_email_id(800)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.priority == "normal"
 
@@ -1029,7 +1029,7 @@ class TestIntegration:
                 recipient_email="new@example.com",
             )
         # 验证原条目未变
-        entry = adapter._outbox_store.by_email_id(1800)
+        entry = adapter._outbox_store.by_email_id(1800)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.id == first.outbox_id
         assert entry.subject == "原始主题"
@@ -1047,7 +1047,7 @@ class TestIntegration:
         )
         assert isinstance(report, OutboxDecisionReport)
         assert report.priority == "normal"
-        entry = adapter._outbox_store.by_email_id(1900)
+        entry = adapter._outbox_store.by_email_id(1900)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.priority == "normal"
 
@@ -1061,7 +1061,7 @@ class TestIntegration:
             recipient_email="ops@example.com",
             priority="urgent",
         )
-        entry = adapter._outbox_store.by_email_id(2000)
+        entry = adapter._outbox_store.by_email_id(2000)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.priority == "urgent"
 
@@ -1074,7 +1074,7 @@ class TestIntegration:
             tone=_VALID_TONE,
             recipient_email="test@example.com",
         )
-        entry = adapter._outbox_store.by_email_id(2100)
+        entry = adapter._outbox_store.by_email_id(2100)  # type: ignore[union-attr]
         assert entry is not None
         assert entry.status == "pending_send"
 
@@ -1349,12 +1349,12 @@ class TestBlacklistStoreIntegration:
             "find_by_email": lambda email: None,
         }
         with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
-            EmailOutboxAdapter(source="outbox_dict_test", blacklist_store=fake_dict)
+            EmailOutboxAdapter(source="outbox_dict_test", blacklist_store=fake_dict)  # type: ignore[arg-type]
 
     def test_blacklist_store_list_type_mismatch_rejected(self) -> None:
         """13.10 blacklist_store 传 list[Any] → ValueError(type 严判,拒 list[Any] 替身)。"""
         with pytest.raises(ValueError, match="blacklist_store 必须是 RecipientBlacklistStore"):
-            EmailOutboxAdapter(source="outbox_list_test", blacklist_store=[])
+            EmailOutboxAdapter(source="outbox_list_test", blacklist_store=[])  # type: ignore[arg-type]
 
     def test_blacklist_store_subclass_type_mismatch_rejected(self) -> None:
         """13.11 blacklist_store 传 RecipientBlacklistStore 子类 → ValueError(type() is 严格)。
@@ -1363,7 +1363,7 @@ class TestBlacklistStoreIntegration:
         黑名单 hot-path 阻塞是安全门,严禁子类偷偷绕过严判。
         """
 
-        class _FakeSubclass(RecipientBlacklistStore):  # type: ignore[misc]
+        class _FakeSubclass(RecipientBlacklistStore):
             """仅用于测试 type() is 严判的子类替身."""
 
             def __init__(self) -> None:
@@ -1379,4 +1379,4 @@ def blacklist_check_helper(
     email: str,
 ) -> bool:
     """Helper:hot-path check(沿 D4.8 业务层范本:helper 提到模块顶层,不在 class 内)。"""
-    return cast(bool, store.is_blocked(email))
+    return store.is_blocked(email)

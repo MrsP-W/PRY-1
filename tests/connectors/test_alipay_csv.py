@@ -194,10 +194,10 @@ def test_get_parser_invalid_version_guards() -> None:
 
     # type 严判(沿 OutboxStore 范本 type(value) is int)
     with pytest.raises(TypeError, match="version 必须是 int"):
-        get_parser("2024")
+        get_parser("2024")  # type: ignore[arg-type]
 
     with pytest.raises(TypeError, match="version 必须是 int"):
-        get_parser(2024.0)
+        get_parser(2024.0)  # type: ignore[arg-type]
 
     # 未知版本
     with pytest.raises(UnsupportedCSVVersionError, match="不支持的支付宝账单 CSV 版本"):

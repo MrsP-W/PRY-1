@@ -40,7 +40,7 @@ def test_init_rejects_none_queue() -> None:
     from my_ai_employee.menu_bar.clipboard_listener import HotkeyListenerProcess
 
     with pytest.raises(ValueError, match="queue 必传非 None"):
-        HotkeyListenerProcess(queue=None)
+        HotkeyListenerProcess(queue=None)  # type: ignore[arg-type]
 
 
 # ===== T2. 初始化正常路径 — daemon=True + name 锁定 =====

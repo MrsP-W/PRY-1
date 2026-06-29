@@ -200,7 +200,7 @@ class TestEvaluateEntry:
     ) -> None:
         """非 dict context → PolicyDecisionError."""
         with pytest.raises(PolicyDecisionError, match="context 必须是 dict"):
-            policy_engine.evaluate(valid_packet, context="not a dict")
+            policy_engine.evaluate(valid_packet, context="not a dict")  # type: ignore[arg-type]
 
     def test_no_context_arg_uses_empty(
         self, policy_engine: PolicyEngine, valid_packet: TaskPacket
@@ -707,7 +707,7 @@ class TestContextStrictParsing:
     ) -> None:
         """顶层非 dict 拒绝 (兼容旧行为, 错误信息更精确)."""
         with pytest.raises(PolicyDecisionError, match="context 必须是 dict"):
-            policy_engine.evaluate(valid_packet, context=["not", "a", "dict"])
+            policy_engine.evaluate(valid_packet, context=["not", "a", "dict"])  # type: ignore[arg-type]
 
 
 # ===== Singleton =====

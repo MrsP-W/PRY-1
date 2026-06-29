@@ -87,7 +87,7 @@ def test_notes_connector_rejects_non_callable_runner() -> None:
     from my_ai_employee.connectors.apple_notes import NotesConnector
 
     with pytest.raises(TypeError, match="osascript_runner"):
-        NotesConnector(osascript_runner="not_callable")
+        NotesConnector(osascript_runner="not_callable")  # type: ignore[arg-type]
 
 
 # ===== 2. list_all_notes_metadata 解析(4 tests)=====
@@ -322,7 +322,7 @@ def test_build_raw_note_rejects_non_str_body() -> None:
         "modified_at_ms": 0,
     }
     with pytest.raises(TypeError, match="body"):
-        build_raw_note(meta, body=12345)
+        build_raw_note(meta, body=12345)  # type: ignore[arg-type]
 
 
 # ===== 5. 失败隔离(2 tests)=====

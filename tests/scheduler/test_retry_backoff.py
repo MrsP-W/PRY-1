@@ -85,7 +85,7 @@ def test_retry_cf_negative_rejected() -> None:
 def test_retry_cf_non_int_rejected() -> None:
     """cf=1.5 → ValueError(必须 int,拒 float)。"""
     with pytest.raises(ValueError, match="consecutive_send_failures 必须是原生 int"):
-        compute_retry_after_ms(1.5)
+        compute_retry_after_ms(1.5)  # type: ignore[arg-type]
 
 
 # ===== E. 模块导出 — compute_retry_after_ms 可导入(1 test)=====

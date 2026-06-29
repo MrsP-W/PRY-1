@@ -64,7 +64,7 @@ from my_ai_employee.policy.policy_engine import PolicyEngine  # noqa: E402
 
 
 @dataclass(frozen=True)
-class FakeReviewResult(ReviewResult):  # type: ignore[misc]
+class FakeReviewResult(ReviewResult):
     """仿造 ReviewResult(供 EmailReviewerAdapter.review_and_emit 用).
 
     D4.7.4 沿用 D4.7.3 FakeDraftResult 范本但改为 ReviewResult 子类。
@@ -305,7 +305,7 @@ class TestComputeReviewAcceptance:
     def test_invalid_args_rejected(self) -> None:
         with pytest.raises(ValueError):
             compute_review_acceptance(
-                review_passed=1,
+                review_passed=1,  # type: ignore[arg-type]
                 review_summary="x",
                 latency_ms=1000,
             )
@@ -628,7 +628,7 @@ class TestEmailReviewerAdapterInit:
 
     def test_non_str_source_rejected(self) -> None:
         with pytest.raises(ValueError, match="source 必填非空白"):
-            EmailReviewerAdapter(source=42)
+            EmailReviewerAdapter(source=42)  # type: ignore[arg-type]
 
     def test_is_none_keeps_falsy_substitute(self) -> None:
         """D4.7.3 v1.0.3 P2-2 范本: is None 范式保留 falsey 替身."""
@@ -651,7 +651,7 @@ class TestBuildLaneEntryId:
 
     def test_non_str_run_id_rejected(self, adapter: EmailReviewerAdapter) -> None:
         with pytest.raises(ValueError, match="run_id"):
-            adapter.build_lane_entry_id(42)
+            adapter.build_lane_entry_id(42)  # type: ignore[arg-type]
 
 
 # ============================================================
@@ -674,7 +674,7 @@ class TestTickHeartbeat:
 
     def test_non_bool_transport_alive_rejected(self, adapter: EmailReviewerAdapter) -> None:
         with pytest.raises(ValueError, match="transport_alive 必须是原生 bool"):
-            adapter.tick_heartbeat(transport_alive=1)
+            adapter.tick_heartbeat(transport_alive=1)  # type: ignore[arg-type]
 
 
 # ============================================================
@@ -710,7 +710,7 @@ class TestReviewAndEmit:
             category="URGENT",
             run_id="r-event-insert",
         )
-        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)
+        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)  # type: ignore[union-attr]
         assert len(events) >= 1
         # event_metadata 含 lane_entry_id + run_id(D4.5 v1.0.1 反馈闭环)
         assert any(
@@ -771,7 +771,7 @@ class TestReviewAndEmit:
                 email_id=42,
                 review_result=result,
                 category="URGENT",
-                transport_alive=1,
+                transport_alive=1,  # type: ignore[arg-type]
             )
 
     def test_missing_required_field_rejected(self, adapter: EmailReviewerAdapter) -> None:
@@ -796,7 +796,7 @@ class TestReviewAndEmit:
             category="URGENT",
             run_id="r-payload",
         )
-        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=1)
+        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=1)  # type: ignore[union-attr]
         # event_metadata 含 6 字段(extra_business_payload)
         assert events[0].event_metadata.get("category") == "URGENT"
         assert events[0].event_metadata.get("email_id") == 42
@@ -867,7 +867,7 @@ class TestRecordReviewBusinessBlockedAndEmit:
             last_error="template_violation",
             run_id="r-bblocked-event",
         )
-        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)
+        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)  # type: ignore[union-attr]
         assert any(
             e.event_metadata.get("lane_entry_id") == "review:qq:r-bblocked-event" for e in events
         )
@@ -1029,7 +1029,7 @@ class TestRecordReviewFailureAndEmit:
             consecutive_review_failures=1,
             run_id="r-fail-event",
         )
-        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)
+        events = adapter._event_store.by_event_type(EventType.POLICY_DECISION_MADE, limit=10)  # type: ignore[union-attr]
         assert any(e.event_metadata.get("failed_kind") == "technical" for e in events)
 
     def test_blank_last_error_rejected(self, adapter: EmailReviewerAdapter) -> None:

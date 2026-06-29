@@ -142,11 +142,11 @@ class TestBuildSystemPrompt:
     def test_dispatch_wrong_type_raises(self) -> None:
         """D4.5 P0 严判: 非 str / None → ValueError."""
         with pytest.raises(ValueError, match="email_category 必须是 str 或 None"):
-            build_system_prompt(123)
+            build_system_prompt(123)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="email_category 必须是 str 或 None"):
-            build_system_prompt(True)
+            build_system_prompt(True)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="email_category 必须是 str 或 None"):
-            build_system_prompt(["URGENT"])
+            build_system_prompt(["URGENT"])  # type: ignore[arg-type]
 
     def test_dispatch_all_five_categories(self) -> None:
         """5 类全部能正常分发(无 ValueError)."""
@@ -358,31 +358,31 @@ class TestBuildUserMessage:
     def test_strict_type_rejection(self) -> None:
         """D4.4 P1 + D4.5 P0 严判: 所有字段 type 错 → ValueError."""
         with pytest.raises(ValueError, match="subject 必须是 str"):
-            build_user_message(subject=123, sender="y", body_excerpt="z")
+            build_user_message(subject=123, sender="y", body_excerpt="z")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="sender 必须是 str"):
-            build_user_message(subject="x", sender=123, body_excerpt="z")
+            build_user_message(subject="x", sender=123, body_excerpt="z")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="body_excerpt 必须是 str"):
-            build_user_message(subject="x", sender="y", body_excerpt=123)
+            build_user_message(subject="x", sender="y", body_excerpt=123)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="tone 必须是 str"):
-            build_user_message(subject="x", sender="y", body_excerpt="z", tone=123)
+            build_user_message(subject="x", sender="y", body_excerpt="z", tone=123)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="email_category 必须是 str 或 None"):
             build_user_message(
                 subject="x",
                 sender="y",
                 body_excerpt="z",
-                email_category=123,
+                email_category=123,  # type: ignore[arg-type]
             )
 
     def test_bool_subclass_rejected(self) -> None:
         """bool 子类陷阱(isinstance(True, int) == True): True/False 严判拒绝."""
         with pytest.raises(ValueError, match="tone 必须是 str"):
-            build_user_message(subject="x", sender="y", body_excerpt="z", tone=True)
+            build_user_message(subject="x", sender="y", body_excerpt="z", tone=True)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="email_category 必须是 str 或 None"):
             build_user_message(
                 subject="x",
                 sender="y",
                 body_excerpt="z",
-                email_category=False,
+                email_category=False,  # type: ignore[arg-type]
             )
 
     def test_returns_list_with_single_user_message(self) -> None:

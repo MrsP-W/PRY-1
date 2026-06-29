@@ -65,7 +65,7 @@ class TestInit:
     def test_threshold_not_int_raises(self) -> None:
         """非 int threshold → ValueError."""
         with pytest.raises(ValueError, match="idle_threshold_ms 必须是 int"):
-            LaneBoard(idle_threshold_ms="10000")
+            LaneBoard(idle_threshold_ms="10000")  # type: ignore[arg-type]
 
     def test_threshold_zero_raises(self) -> None:
         """threshold=0 → ValueError."""
@@ -115,7 +115,7 @@ class TestAdd:
     def test_add_non_lane_entry_raises(self, board: LaneBoard) -> None:
         """非 LaneEntry → PolicyLaneError."""
         with pytest.raises(PolicyLaneError, match="entry 必须是 LaneEntry"):
-            board.add({"entry_id": "t1"})
+            board.add({"entry_id": "t1"})  # type: ignore[arg-type]
 
     def test_add_finished_status_raises(self, board: LaneBoard) -> None:
         """add FINISHED 状态 → PolicyLaneError(终态)."""
@@ -189,7 +189,7 @@ class TestStateTransitions:
         """非 LaneStatus/str 状态 → PolicyLaneError."""
         board.add(entry)
         with pytest.raises(PolicyLaneError, match="status 必须是 LaneStatus 或 str"):
-            board.update("t1", status=123)
+            board.update("t1", status=123)  # type: ignore[arg-type]
 
     def test_update_owner(self, board: LaneBoard, entry: LaneEntry) -> None:
         """update owner 字段."""
@@ -201,7 +201,7 @@ class TestStateTransitions:
         """update owner 非 str → ValueError(编程错误透传)."""
         board.add(entry)
         with pytest.raises(ValueError, match="owner 必须是 str"):
-            board.update("t1", owner=123)
+            board.update("t1", owner=123)  # type: ignore[arg-type]
 
     def test_update_extra_merges(self, board: LaneBoard, entry: LaneEntry) -> None:
         """update extra merge 到现有 extra(不覆盖)."""
@@ -215,7 +215,7 @@ class TestStateTransitions:
         """update extra 非 dict → ValueError(透传)."""
         board.add(entry)
         with pytest.raises(ValueError, match="extra 必须是 dict"):
-            board.update("t1", extra="not a dict")
+            board.update("t1", extra="not a dict")  # type: ignore[arg-type]
 
     def test_update_sets_updated_at_ms(self, board: LaneBoard, entry: LaneEntry) -> None:
         """update 自动刷 updated_at_ms(可注入 now_ms)."""
@@ -248,12 +248,12 @@ class TestRemoveAndGet:
     def test_remove_wrong_type_raises(self, board: LaneBoard) -> None:
         """remove 非 str entry_id → ValueError(透传)."""
         with pytest.raises(ValueError, match="entry_id 必须是 str"):
-            board.remove(123)
+            board.remove(123)  # type: ignore[arg-type]
 
     def test_get_wrong_type_raises(self, board: LaneBoard) -> None:
         """get 非 str entry_id → ValueError(透传)."""
         with pytest.raises(ValueError, match="entry_id 必须是 str"):
-            board.get(123)
+            board.get(123)  # type: ignore[arg-type]
 
     def test_get_returns_lane_entry(self, board: LaneBoard, entry: LaneEntry) -> None:
         """get 返回 LaneEntry 实例."""
@@ -295,7 +295,7 @@ class TestQueries:
     def test_list_by_status_wrong_type_raises(self, board: LaneBoard) -> None:
         """list_by_status 非 LaneStatus/str → PolicyLaneError."""
         with pytest.raises(PolicyLaneError, match="status 必须是 LaneStatus 或 str"):
-            board.list_by_status(123)
+            board.list_by_status(123)  # type: ignore[arg-type]
 
     def test_group_by_status_alias(self, board: LaneBoard) -> None:
         """group_by_status 是 list_by_status 的 alias(g006 用词)."""
@@ -386,7 +386,7 @@ class TestFreshness:
         e = LaneEntry(entry_id="t1", objective="x")
         board.add(e)
         with pytest.raises(ValueError, match="now_ms 必须是 int"):
-            board.freshness("t1", now_ms="123")
+            board.freshness("t1", now_ms="123")  # type: ignore[arg-type]
 
 
 # ===== to_status_json =====

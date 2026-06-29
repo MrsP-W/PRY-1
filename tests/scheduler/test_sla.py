@@ -145,4 +145,4 @@ def test_evaluation_constructor_rejects_lying_status() -> None:
 def test_evaluation_priority_not_str_raises() -> None:
     """SLAEvaluation 构造 priority 非 str → ValueError(数据类 __post_init__ 严判)。"""
     with pytest.raises(ValueError, match="priority 必须是 str"):
-        SLAEvaluation(priority=123, age_ms=1000, status=SLAStatus.OK)
+        SLAEvaluation(priority=123, age_ms=1000, status=SLAStatus.OK)  # type: ignore[arg-type]

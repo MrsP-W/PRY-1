@@ -67,7 +67,7 @@ from my_ai_employee.policy.policy_engine import (  # noqa: E402
 
 
 @dataclass(frozen=True)
-class FakeDraftResult(DraftResult):  # type: ignore[misc]
+class FakeDraftResult(DraftResult):
     """仿造 DraftResult(供 EmailDrafterAdapter.draft_and_emit 用).
 
     D4.7.3 沿用 D4.6 FakeClassification 范本但改为 DraftResult 子类,
@@ -180,7 +180,7 @@ class TestFactoryFunctions:
             build_draft_packet(
                 email_id=1,
                 source="qq",
-                tone=None,
+                tone=None,  # type: ignore[arg-type]
                 model_full_id="m",
                 body_length=50,
             )
@@ -346,7 +346,7 @@ class TestFactoryFunctions:
                 tone="FORMAL",
                 latency_ms=1000,
                 body_length=50,
-                last_draft_failed="false",
+                last_draft_failed="false",  # type: ignore[arg-type]
             )
         with pytest.raises(ValueError):
             build_draft_policy_context(
@@ -367,7 +367,7 @@ class TestFactoryFunctions:
                 tone="FORMAL",
                 latency_ms=1000,
                 body_length=50,
-                branch_stale="false",
+                branch_stale="false",  # type: ignore[arg-type]
             )
 
 
@@ -404,7 +404,7 @@ class TestEmailDrafterAdapterInit:
         with pytest.raises(ValueError):
             EmailDrafterAdapter(source="")
         with pytest.raises(ValueError):
-            EmailDrafterAdapter(source=None)
+            EmailDrafterAdapter(source=None)  # type: ignore[arg-type]
 
 
 class TestBuildLaneEntryId:
@@ -420,7 +420,7 @@ class TestBuildLaneEntryId:
         with pytest.raises(ValueError):
             a.build_lane_entry_id("")
         with pytest.raises(ValueError):
-            a.build_lane_entry_id(None)
+            a.build_lane_entry_id(None)  # type: ignore[arg-type]
 
 
 class TestTickHeartbeat:
@@ -435,7 +435,7 @@ class TestTickHeartbeat:
         """严判 transport_alive bool."""
         a = EmailDrafterAdapter(source="qq")
         with pytest.raises(ValueError):
-            a.tick_heartbeat(transport_alive="true")
+            a.tick_heartbeat(transport_alive="true")  # type: ignore[arg-type]
 
 
 # ============================================================
@@ -525,7 +525,7 @@ class TestDraftAndEmit:
                 draft_result=result,
                 category="URGENT",
                 run_id="r005",
-                transport_alive="true",
+                transport_alive="true",  # type: ignore[arg-type]
             )
 
     def test_draft_and_emit_reject_missing_field(self) -> None:
@@ -542,7 +542,7 @@ class TestDraftAndEmit:
         with pytest.raises(ValueError):
             a.draft_and_emit(
                 email_id=1,
-                draft_result=IncompleteDraft(),
+                draft_result=IncompleteDraft(),  # type: ignore[arg-type]
                 category="URGENT",
                 run_id="r006",
             )
@@ -985,7 +985,7 @@ class TestDraftBlockedDecisionReportStrongConsistency:
                 event_id=base.event_id,
                 lane_entry_id=base.lane_entry_id,
                 liveness=base.liveness,
-                blocked=False,
+                blocked=False,  # type: ignore[arg-type]
                 last_error="x",
                 consecutive_draft_failures=1,
                 tone="FORMAL",
@@ -1177,7 +1177,7 @@ class TestD473V101Fixes:
         with pytest.raises(ValueError):
             a.draft_and_emit(email_id=1, draft_result=result, category="UNKNOWN", run_id="vp10105")
         with pytest.raises(ValueError):
-            a.draft_and_emit(email_id=1, draft_result=result, category=None, run_id="vp10105")
+            a.draft_and_emit(email_id=1, draft_result=result, category=None, run_id="vp10105")  # type: ignore[arg-type]
 
     # ----- P2-1: 草稿 body 长度边界 -----
 
@@ -1354,7 +1354,7 @@ class TestD473V102Fixes:
                 event_id=base.event_id,
                 lane_entry_id=base.lane_entry_id,
                 liveness=base.liveness,
-                failed=False,
+                failed=False,  # type: ignore[arg-type]
                 last_error="x",
                 consecutive_draft_failures=1,
             )
@@ -1472,7 +1472,7 @@ class TestD473V102Fixes:
                 tone="FORMAL",
                 original_email_category="SPAM",
                 reason="spam_business_blocked",
-                kind="technical",
+                kind="technical",  # type: ignore[arg-type]
             )
 
     # ----- P2-3: 拒纯空白 + body_length 上限 -----
@@ -1615,7 +1615,7 @@ class TestD473V103Fixes:
         )
         report = a.draft_and_emit(
             email_id=1,
-            draft_result=duck,
+            draft_result=duck,  # type: ignore[arg-type]
             category="URGENT",
             run_id="vp10304",
         )
@@ -1665,7 +1665,7 @@ class TestD473V103Fixes:
         """
         # 创建一个 __bool__() 返回 False 但调用 update 正常工作的替身
         fake_engine = _BoolFalseFake()
-        a = EmailDrafterAdapter(source="qq", engine=fake_engine)
+        a = EmailDrafterAdapter(source="qq", engine=fake_engine)  # type: ignore[arg-type]
         # 验证: 替身被保留(不是默认 PolicyEngine)
         assert cast(Any, a)._engine is fake_engine
         # 验证: 替身的 update 方法可正常调用
@@ -1729,7 +1729,7 @@ class TestD473V104Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="test:1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 last_error="SPAM 邮件禁止回复",
                 consecutive_draft_failures=0,
                 tone="FORMAL",
@@ -1753,7 +1753,7 @@ class TestD473V104Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="test:1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 last_error="SPAM 邮件禁止回复",
                 consecutive_draft_failures=2,  # 业务阻断不允许非 0
                 tone="FORMAL",
@@ -1777,7 +1777,7 @@ class TestD473V104Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="test:1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 last_error="   ",  # 纯空白, 实际未填
                 consecutive_draft_failures=0,
                 tone="FORMAL",
@@ -1945,7 +1945,7 @@ class TestD473V105Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="draft:qq:r-1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 tone="FORMAL",
                 model_full_id="deepseek/deepseek-chat",
                 email_id=1,
@@ -1967,7 +1967,7 @@ class TestD473V105Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="draft:qq:r-1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 tone="FORMAL",
                 model_full_id="deepseek/deepseek-chat",
                 email_id=1,
@@ -1990,7 +1990,7 @@ class TestD473V105Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="draft:qq:r-1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 tone="FORMAL",
                 model_full_id="   ",  # 纯空白应拒收
                 email_id=1,
@@ -2083,7 +2083,7 @@ class TestD473V105Fixes:
                 last_error="blocked by spam filter",
                 tone=DraftTone.FORMAL,
                 original_email_category="SPAM",
-                reason=[],  # list 不是 str, 应抛 ValueError 而非 TypeError
+                reason=[],  # type: ignore[arg-type]  # list 不是 str, 应抛 ValueError 而非 TypeError
                 spam_reply_authorized=False,
             )
 
@@ -2100,7 +2100,7 @@ class TestD473V105Fixes:
                 last_error="blocked by spam filter",
                 tone=DraftTone.FORMAL,
                 original_email_category="SPAM",
-                reason={"unexpected": "dict"},  # dict 同样应抛 ValueError
+                reason={"unexpected": "dict"},  # type: ignore[arg-type]  # dict 同样应抛 ValueError
                 spam_reply_authorized=False,
             )
 
@@ -2142,7 +2142,7 @@ class TestD473V105Fixes:
                 evaluation=eval_obj,
                 event_id=None,
                 lane_entry_id="draft:qq:r-1",
-                liveness=None,
+                liveness=None,  # type: ignore[arg-type]
                 failed=True,
                 last_error="   ",  # 纯空白
                 consecutive_draft_failures=1,

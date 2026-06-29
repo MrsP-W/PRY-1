@@ -150,7 +150,7 @@ class TestInit:
     def test_init_rejects_none_deps(self, store: NoteStore) -> None:
         """1.2 store/llm_provider=None 抛 ValueError(沿 D4.7.3 v1.0.5 范本)."""
         with pytest.raises(ValueError, match="store 必传非 None"):
-            NoteStructurerService(store=None, llm_provider=FakeLLMRouter())
+            NoteStructurerService(store=None, llm_provider=FakeLLMRouter())  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="llm_provider 必传非 None"):
             NoteStructurerService(store=store, llm_provider=None)
 
@@ -296,7 +296,7 @@ class TestRecordPrivateSkip:
         svc = NoteStructurerService(store=store, llm_provider=llm)
 
         with pytest.raises(ValueError, match="apple_note_id 必须是 str"):
-            svc.record_private_skip_and_emit(123)
+            svc.record_private_skip_and_emit(123)  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="apple_note_id 必非空"):
             svc.record_private_skip_and_emit("")  # 空白
         with pytest.raises(ValueError, match="apple_note_id 必非空"):
@@ -355,7 +355,7 @@ class TestRecordFailure:
             svc.record_failure_and_emit(
                 "x-coredata://note-006",
                 LLMError("test"),
-                reason="other_failure",
+                reason="other_failure",  # type: ignore[arg-type]
             )
         # cf=0 非法
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
@@ -440,7 +440,7 @@ class TestDataClasses:
                 apple_note_id="x-coredata://note-009",
                 last_error="test",
                 consecutive_failures=1,
-                reason="other",
+                reason="other",  # type: ignore[arg-type]
             )
         # cf=0 非法(技术失败必填 >= 1)
         with pytest.raises(ValueError, match="consecutive_failures 必须是 int"):

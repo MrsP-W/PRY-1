@@ -70,7 +70,7 @@ def mock_structurer() -> MagicMock:
             apple_note_id=clip_id,
             last_error=str(exc)[:200],
             consecutive_failures=consecutive_failures,
-            reason=reason,
+            reason=reason,  # type: ignore[arg-type]
         )
 
     mock.record_failure_and_emit.side_effect = _build_failure
@@ -100,7 +100,7 @@ def test_init_raises_on_none_store(mock_structurer: MagicMock, fake_reader: Any)
     """T01: store=None → ValueError(沿 D4.7.3 严判范本)."""
     with pytest.raises(ValueError, match="store 必传非 None NoteStore"):
         ClipboardCaptureService(
-            store=None,
+            store=None,  # type: ignore[arg-type]
             structurer=mock_structurer,
             clipboard_reader=fake_reader,
         )
@@ -111,7 +111,7 @@ def test_init_raises_on_none_structurer(mock_store: MagicMock, fake_reader: Any)
     with pytest.raises(ValueError, match="structurer 必传非 None NoteStructurerService"):
         ClipboardCaptureService(
             store=mock_store,
-            structurer=None,
+            structurer=None,  # type: ignore[arg-type]
             clipboard_reader=fake_reader,
         )
 
@@ -124,7 +124,7 @@ def test_init_raises_on_non_callable_reader(
         ClipboardCaptureService(
             store=mock_store,
             structurer=mock_structurer,
-            clipboard_reader="not_callable",
+            clipboard_reader="not_callable",  # type: ignore[arg-type]
         )
 
 

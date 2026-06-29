@@ -61,7 +61,7 @@ import ast
 import json
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -460,13 +460,13 @@ class TestParseDraftResponse:
         """
         content = _valid_draft_json(tone="FORMAL")
         with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
-            _parse_draft_response(content, expected_tone="OOPS")
+            _parse_draft_response(content, expected_tone="OOPS")  # type: ignore[arg-type]
 
     def test_rejects_invalid_expected_tone_int(self) -> None:
         """**P2-1 (6/9 v1.0.2)**: expected_tone=123 → ValueError(编程错误)."""
         content = _valid_draft_json(tone="FORMAL")
         with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
-            _parse_draft_response(content, expected_tone=123)
+            _parse_draft_response(content, expected_tone=123)  # type: ignore[arg-type]
 
     def test_rejects_invalid_expected_tone_str_value(self) -> None:
         """**P2-1 (6/9 v1.0.2)**: expected_tone=DraftTone.FORMAL.value(str)→ ValueError.
@@ -475,7 +475,7 @@ class TestParseDraftResponse:
         """
         content = _valid_draft_json(tone="FORMAL")
         with pytest.raises(ValueError, match="expected_tone 必须是 DraftTone 枚举或 None"):
-            _parse_draft_response(content, expected_tone="FORMAL")
+            _parse_draft_response(content, expected_tone="FORMAL")  # type: ignore[arg-type]
 
     def test_accepts_body_with_inner_code_fence(self) -> None:
         """**契约 2 (6/9 P1-2 核心修复)**: body 内有 ```python ... ``` 围栏 → 接受.
@@ -719,11 +719,11 @@ class TestEmailDrafterDraft:
         mock_router = MagicMock()
         drafter = EmailDrafter(router=mock_router)
         with pytest.raises(ValueError):
-            drafter.draft(subject=123, sender="x", body_excerpt="y")
+            drafter.draft(subject=123, sender="x", body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            drafter.draft(subject="x", sender=123, body_excerpt="y")
+            drafter.draft(subject="x", sender=123, body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            drafter.draft(subject="x", sender="y", body_excerpt=123)
+            drafter.draft(subject="x", sender="y", body_excerpt=123)  # type: ignore[arg-type]
         mock_router.route.assert_not_called()
 
     def test_body_excerpt_truncated(self) -> None:
@@ -828,7 +828,7 @@ class TestEmailDrafterDraft:
                 subject="x",
                 sender="y",
                 body_excerpt="z",
-                email_category=123,
+                email_category=123,  # type: ignore[arg-type]
             )
         mock_router.route.assert_not_called()
 
@@ -1189,7 +1189,7 @@ class TestDraftResult:
             raw_content="r",
         )
         with pytest.raises(FrozenInstanceError):
-            result.subject = "new"
+            result.subject = "new"  # type: ignore[misc]
 
     def test_fields(self) -> None:
         """字段集合固定(6/9 v1.0.6 P2-1 + 6/10 v1.0.7 P2-1)."""
@@ -1485,7 +1485,7 @@ class TestDraftBatchV104PerEmailBoolStrict:
             [{"subject": "s", "sender": "x", "body_excerpt": "b"}],
         )
         with pytest.raises(ValueError, match="draft_batch 批级 allow_spam_reply 必须是 bool"):
-            drafter.draft_batch(emails, allow_spam_reply=1)
+            drafter.draft_batch(emails, allow_spam_reply=1)  # type: ignore[arg-type]
 
     def test_per_email_bool_true_accepted(self) -> None:
         """per-email 真正 bool=True 应接受(回归)."""
@@ -1870,7 +1870,7 @@ class TestBuildUserMessageV105AllowSpamReplyTypeGuard:
                 body_excerpt="z",
                 email_category="SPAM",
                 tone="FORMAL",
-                allow_spam_reply="true",
+                allow_spam_reply="true",  # type: ignore[arg-type]
             )
 
     def test_rejects_int_value(self) -> None:
@@ -1882,7 +1882,7 @@ class TestBuildUserMessageV105AllowSpamReplyTypeGuard:
                 body_excerpt="z",
                 email_category="SPAM",
                 tone="FORMAL",
-                allow_spam_reply=1,
+                allow_spam_reply=1,  # type: ignore[arg-type]
             )
 
     def test_accepts_bool_true(self) -> None:
@@ -2022,7 +2022,7 @@ class TestDraftBlockedCategoryV105StatsBumpedTypeGuard:
                 body_excerpt="z",
                 email_category="SPAM",
                 tone=DraftTone.CONCISE,
-                _stats_already_bumped="false",
+                _stats_already_bumped="false",  # type: ignore[arg-type]
             )
 
     def test_rejects_int_one(self) -> None:
@@ -2034,7 +2034,7 @@ class TestDraftBlockedCategoryV105StatsBumpedTypeGuard:
                 body_excerpt="z",
                 email_category="SPAM",
                 tone=DraftTone.CONCISE,
-                _stats_already_bumped=1,
+                _stats_already_bumped=1,  # type: ignore[arg-type]
             )
 
     def test_accepts_bool_true(self) -> None:
@@ -2176,7 +2176,7 @@ class TestDraftV106ToneValidationBeforeBlock:
                 sender="test@example.com",
                 body_excerpt="测试正文内容大于十字符的字数。",
                 email_category="SPAM",
-                tone=123,  # 非法 type, 运行时严判拦截
+                tone=123,  # type: ignore[arg-type]  # 非法 type, 运行时严判拦截
                 allow_spam_reply=False,
             )
         # 阻断计数应该是 0(不是 1)
@@ -2547,7 +2547,7 @@ class TestBuildUserMessageV106SpamReplyIntentPhrasing:
                 email_category="SPAM",
                 tone="CONCISE",
                 allow_spam_reply=True,
-                spam_reply_intent=123,
+                spam_reply_intent=123,  # type: ignore[arg-type]
             )
 
     def test_no_authorization_line_when_allow_false(self) -> None:
@@ -2606,14 +2606,14 @@ class TestDraftV106SpamReplyIntentPropagation:
                 body_excerpt="测试正文内容大于十字符的字数。",
                 email_category="URGENT",
                 tone=DraftTone.FORMAL,
-                spam_reply_intent=123,
+                spam_reply_intent=123,  # type: ignore[arg-type]
             )
 
     def test_draft_accepts_enum_value(self) -> None:
         """draft(spam_reply_intent=DraftSpamReplyIntent.REJECT) → 严判通过(调 LLM 之前)."""
         d = EmailDrafter(router=MagicMock())
         # 准备 mock LLM 响应
-        d._router.route.return_value = _mock_router_response(
+        cast(MagicMock, d._router.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
         result = d.draft(
@@ -2675,7 +2675,7 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
                 body_excerpt="测试正文",
                 email_category="SPAM",
                 tone=DraftTone.FORMAL,
-                spam_reply_authorized="true",
+                spam_reply_authorized="true",  # type: ignore[arg-type]
             )
 
     def test_param_rejects_int(self) -> None:
@@ -2688,7 +2688,7 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
                 body_excerpt="测试正文",
                 email_category="SPAM",
                 tone=DraftTone.FORMAL,
-                spam_reply_authorized=1,
+                spam_reply_authorized=1,  # type: ignore[arg-type]
             )
 
     def test_batch_propagates_to_blocked_result(self) -> None:
@@ -2699,7 +2699,7 @@ class TestDraftBlockedCategoryV106SpamReplyAuthorizedParam:
         d = self._make_drafter()
         # 准备 mock LLM 响应(SPAM 授权放行走 draft() 调 LLM 路径)
         router_mock = d._router
-        router_mock.route.return_value = _mock_router_response(
+        cast(MagicMock, router_mock.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
         emails = [
@@ -2766,7 +2766,7 @@ class TestDraftV107SpamReplyAuthorizedRequiresSPAM:
     def _mock_success(self, d: EmailDrafter) -> None:
         """配置 router mock 返回合法 JSON(SuSPAM 授权放行调 LLM 路径)."""
         router_mock = d._router
-        router_mock.route.return_value = _mock_router_response(
+        cast(MagicMock, router_mock.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
 
@@ -2835,7 +2835,7 @@ class TestDraftV107SpamReplyAuthorizedRequiresSPAM:
         d = self._make_drafter()
         # mock 返回 FRIENDLY(与请求 tone 一致, 契约 3 强制)
         router_mock = d._router
-        router_mock.route.return_value = _mock_router_response(
+        cast(MagicMock, router_mock.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FRIENDLY"), model="minimax/M3", latency=200
         )
         result = d.draft(
@@ -2889,7 +2889,7 @@ class TestDraftBatchV107SpamReplyIntentPropagation:
 
     def _mock_success(self, d: EmailDrafter) -> None:
         router_mock = d._router
-        router_mock.route.return_value = _mock_router_response(
+        cast(MagicMock, router_mock.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
 
@@ -3242,7 +3242,7 @@ class TestDraftV107SpamReplyIntentValidation:
 
     def _mock_success(self, d: EmailDrafter) -> None:
         router_mock = d._router
-        router_mock.route.return_value = _mock_router_response(
+        cast(MagicMock, router_mock.route).return_value = _mock_router_response(
             _valid_draft_json(tone="FORMAL"), model="minimax/M3", latency=200
         )
 
@@ -3275,7 +3275,7 @@ class TestDraftV107SpamReplyIntentValidation:
                 email_category="URGENT",
                 tone=DraftTone.FORMAL,
                 allow_spam_reply=False,
-                spam_reply_intent=123,
+                spam_reply_intent=123,  # type: ignore[arg-type]
             )
 
     def test_invalid_string_intent_with_urgent_allow_true_raises(self) -> None:
@@ -3408,7 +3408,7 @@ class TestDraftBlockedCategoryV107SpamReplyIntentParam:
                 email_category="SPAM",
                 tone=DraftTone.FORMAL,
                 spam_reply_authorized=True,
-                spam_reply_intent=123,
+                spam_reply_intent=123,  # type: ignore[arg-type]
             )
 
     def test_enum_directly_accepted(self) -> None:

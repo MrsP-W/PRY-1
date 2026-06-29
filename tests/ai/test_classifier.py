@@ -181,7 +181,7 @@ class TestParseClassificationResponse:
     def test_content_not_str(self) -> None:
         """编程错误: content 不是 str → ClassifierResponseError (业务层) + reason 含 type 信息."""
         with pytest.raises(ClassifierResponseError) as exc_info:
-            _parse_classification_response(123)
+            _parse_classification_response(123)  # type: ignore[arg-type]
         assert "type=" in exc_info.value.reason
 
 
@@ -214,11 +214,11 @@ class TestBuildUserMessage:
     def test_strict_type_rejection(self) -> None:
         """D4.4 P1 + D4.5 P0 教训: 严判非 str."""
         with pytest.raises(ValueError):
-            build_user_message(subject=123, sender="x", body_excerpt="y")
+            build_user_message(subject=123, sender="x", body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            build_user_message(subject="x", sender=123, body_excerpt="y")
+            build_user_message(subject="x", sender=123, body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            build_user_message(subject="x", sender="y", body_excerpt=123)
+            build_user_message(subject="x", sender="y", body_excerpt=123)  # type: ignore[arg-type]
 
     def test_system_prompt_contains_5_categories(self) -> None:
         """系统 prompt 必须列出 5 类(防 LLM 偏离)."""
@@ -297,11 +297,11 @@ class TestEmailClassifierClassify:
         mock_router = MagicMock()
         classifier = EmailClassifier(router=mock_router)
         with pytest.raises(ValueError):
-            classifier.classify(subject=123, sender="x", body_excerpt="y")
+            classifier.classify(subject=123, sender="x", body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            classifier.classify(subject="x", sender=123, body_excerpt="y")
+            classifier.classify(subject="x", sender=123, body_excerpt="y")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            classifier.classify(subject="x", sender="y", body_excerpt=123)
+            classifier.classify(subject="x", sender="y", body_excerpt=123)  # type: ignore[arg-type]
         # mock router 不应被调用
         mock_router.route.assert_not_called()
 
@@ -425,7 +425,7 @@ class TestEmailClassifierBatch:
         results = classifier.classify_batch(
             [
                 {"subject": "s1", "sender": "x", "body_excerpt": "b1"},
-                "not a dict",
+                "not a dict",  # type: ignore[list-item]
             ]
         )
         assert len(results) == 2

@@ -194,23 +194,23 @@ class TestFactoryFunctions:
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             build_sync_policy_context(result=result, consecutive_failures=True)
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
-            build_sync_policy_context(result=result, consecutive_failures="3")
+            build_sync_policy_context(result=result, consecutive_failures="3")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             build_sync_policy_context(result=result, consecutive_failures=-1)
 
         # branch_stale 严判 (核心修复: "false" 字符串不应通过)
         with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
-            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="false")
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="false")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
-            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="true")
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale="true")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="branch_stale 必须是原生 bool"):
-            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale=1)
+            build_sync_policy_context(result=result, consecutive_failures=0, branch_stale=1)  # type: ignore[arg-type]
 
         # now_ms 严判
         with pytest.raises(ValueError, match="now_ms 必须是 int 或 None"):
-            build_sync_policy_context(result=result, consecutive_failures=0, now_ms="12345")
+            build_sync_policy_context(result=result, consecutive_failures=0, now_ms="12345")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="now_ms 必须是 int 或 None"):
-            build_sync_policy_context(result=result, consecutive_failures=0, now_ms=12345.0)
+            build_sync_policy_context(result=result, consecutive_failures=0, now_ms=12345.0)  # type: ignore[arg-type]
 
     def test_build_sync_policy_context_accepts_native_types(self) -> None:
         """D4.5 P0: 原生 bool/int 必须通过严判, 不抛 ValueError。"""
@@ -255,7 +255,7 @@ class TestSyncPolicyAdapterInit:
     def test_init_rejects_non_str_source(self) -> None:
         """非 str source 抛 ValueError。"""
         with pytest.raises(ValueError, match="source 必填非空"):
-            SyncPolicyAdapter(source=123)
+            SyncPolicyAdapter(source=123)  # type: ignore[arg-type]
 
 
 # ===== 3. record_to_lane 测试 =====
@@ -337,9 +337,9 @@ class TestTickHeartbeat:
         """transport_alive 严判原生 bool（D4.5 P0 修复, 与 D4.4 P1 一致）。"""
         a = SyncPolicyAdapter(source="qq")
         with pytest.raises(ValueError, match="transport_alive 必须是原生 bool"):
-            a.tick_heartbeat(transport_alive="true")
+            a.tick_heartbeat(transport_alive="true")  # type: ignore[arg-type]
         with pytest.raises(ValueError, match="transport_alive 必须是原生 bool"):
-            a.tick_heartbeat(transport_alive=1)
+            a.tick_heartbeat(transport_alive=1)  # type: ignore[arg-type]
 
 
 # ===== 5. evaluate_and_emit 主入口测试 =====
@@ -434,7 +434,7 @@ class TestEvaluateAndEmit:
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
             a.evaluate_and_emit(result, consecutive_failures=True)
         with pytest.raises(ValueError, match="consecutive_failures 必须是原生 int"):
-            a.evaluate_and_emit(result, consecutive_failures="2")
+            a.evaluate_and_emit(result, consecutive_failures="2")  # type: ignore[arg-type]
 
     def test_acceptance_consistency_lane_heartbeat(self, store: Any) -> None:
         """D4.5 P0 修复 3: lane/heartbeat 成功判定用 acceptance_results, 单一真相源。

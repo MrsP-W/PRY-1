@@ -381,7 +381,7 @@ class TestChatProgrammingError:
         )
         # messages 传 None → TypeError 在 list[Any]() 转换时抛, 透传
         with pytest.raises(TypeError):
-            p.chat(LLMRequest(model_full_id="openai/gpt-4.1", messages=None))
+            p.chat(LLMRequest(model_full_id="openai/gpt-4.1", messages=None))  # type: ignore[arg-type]
 
 
 # ============================================================

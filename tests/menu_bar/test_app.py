@@ -148,7 +148,7 @@ def test_app_accepts_custom_service(fake_rumps: None) -> None:
         def get_tcc_authorization_status(self) -> bool:
             return False
 
-    app = NotesMenuBarApp(expense_service=_CustomService())
+    app = NotesMenuBarApp(expense_service=_CustomService())  # type: ignore[arg-type]
     assert app._notes_count == 42
     assert app._service.get_unsynced_count() == 7
     assert app._service.get_recent_note_titles() == ["Note A", "Note B"]
@@ -167,7 +167,7 @@ def test_app_invalid_service_raises(fake_rumps: None) -> None:
         pass
 
     with pytest.raises(TypeError, match="必须实现 ExpenseService 5 方法接口"):
-        NotesMenuBarApp(expense_service=_NotExpenseService())
+        NotesMenuBarApp(expense_service=_NotExpenseService())  # type: ignore[arg-type]
 
 
 # ===== T4. 初始 title 格式 =====
@@ -360,7 +360,7 @@ def test_poll_hotkey_queue_hotkey_event_triggers_capture(
 
     app = NotesMenuBarApp(capture_service=fake_capture)
     # 🔧 D9.6.4 P2-2:MagicMock 替代真 _on_clipboard_capture,验 queue 真分发到它
-    app._on_clipboard_capture = MagicMock()
+    app._on_clipboard_capture = MagicMock()  # type: ignore[method-assign]
     # 手动推 1 个 hotkey 事件到 Queue
     app._hotkey_queue.put({"event": "hotkey", "combo": "<alt>+<cmd>+n"})
 
@@ -492,7 +492,7 @@ def test_app_invalid_note_confirm_service_raises(fake_rumps: None) -> None:
         # 缺 list_pending_confirm + confirm_note
 
     with pytest.raises(TypeError, match="note_confirm_service 必须实现"):
-        NotesMenuBarApp(note_confirm_service=_IncompleteConfirmService())
+        NotesMenuBarApp(note_confirm_service=_IncompleteConfirmService())  # type: ignore[arg-type]
 
 
 # ===== T16. 新菜单项注册 "📥 待确认" + "📥 确认第 1 条" =====
@@ -821,4 +821,4 @@ def test_app_invalid_outbox_draft_service_raises(fake_rumps: None) -> None:
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     with pytest.raises(TypeError, match="outbox_draft_service 必须实现"):
-        NotesMenuBarApp(outbox_draft_service=_BadDraft())
+        NotesMenuBarApp(outbox_draft_service=_BadDraft())  # type: ignore[arg-type]

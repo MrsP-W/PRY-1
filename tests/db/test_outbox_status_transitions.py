@@ -209,7 +209,7 @@ def test_update_status_requires_from_status_keyword(store: OutboxStore) -> None:
         recipient_email="fs@example.com",
     )
     with pytest.raises(TypeError, match="from_status"):
-        store.update_status(entry.id, "approved")
+        store.update_status(entry.id, "approved")  # type: ignore[call-arg]
 
 
 def test_update_status_matching_from_status_succeeds(store: OutboxStore) -> None:

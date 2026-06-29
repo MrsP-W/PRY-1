@@ -210,7 +210,7 @@ def test_categorize_input_validation_raises() -> None:
 
     # 1. counterparty 类型非法
     with pytest.raises(TypeError, match="counterparty 必须是 str"):
-        categorize(123)
+        categorize(123)  # type: ignore[arg-type]
 
     # 2. counterparty 空字符串
     with pytest.raises(ValueError, match="counterparty 必填"):

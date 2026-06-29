@@ -110,7 +110,7 @@ def test_get_auth_url_rejects_invalid_config() -> Any:
 
     provider = GoogleOAuth2()
     with pytest.raises(ValueError, match="config 必须是 OAuth2Config"):
-        provider.get_auth_url("not a config")
+        provider.get_auth_url("not a config")  # type: ignore[arg-type]
 
 
 def test_get_auth_url_rejects_invalid_state() -> Any:
@@ -121,7 +121,7 @@ def test_get_auth_url_rejects_invalid_state() -> Any:
     config = OAuth2Config(client_id="x", redirect_uri="https://x.com/cb", scope=())
     provider = GoogleOAuth2()
     with pytest.raises(ValueError, match="state 必须是 str 或 None"):
-        provider.get_auth_url(config, state=123)
+        provider.get_auth_url(config, state=123)  # type: ignore[arg-type]
     with pytest.raises(ValueError, match="state 必填且必须非空字符串"):
         provider.get_auth_url(config, state="   ")
 
@@ -283,11 +283,11 @@ def test_default_scopes_validation() -> Any:
 
     # 4.1.1 非 tuple 拒绝
     with pytest.raises(ValueError, match="default_scopes 必须是 tuple"):
-        GoogleOAuth2(default_scopes=[])
+        GoogleOAuth2(default_scopes=[])  # type: ignore[arg-type]
 
     # 4.1.2 含非 str 元素拒绝
     with pytest.raises(ValueError, match="default_scopes.*必须是 str"):
-        GoogleOAuth2(default_scopes=("a", 123))
+        GoogleOAuth2(default_scopes=("a", 123))  # type: ignore[arg-type]
 
     # 4.1.3 仅空白字符串拒绝
     with pytest.raises(ValueError, match="default_scopes.*仅含空白字符"):

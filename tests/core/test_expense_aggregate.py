@@ -186,7 +186,7 @@ def test_session_factory_none_raises_type_error() -> None:
     from my_ai_employee.core.expense_aggregate import current_month_expense
 
     with pytest.raises(TypeError, match="session_factory"):
-        current_month_expense(None, today=date(2026, 6, 15))
+        current_month_expense(None, today=date(2026, 6, 15))  # type: ignore[arg-type]
 
 
 def test_today_non_date_raises_type_error() -> None:
@@ -204,4 +204,4 @@ def test_today_non_date_raises_type_error() -> None:
         engine = create_engine("sqlite:///:memory:", connect_args={"check_same_thread": False})
         Base.metadata.create_all(engine)
         sf = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-        current_month_expense(sf, today="2026-06-15")
+        current_month_expense(sf, today="2026-06-15")  # type: ignore[arg-type]

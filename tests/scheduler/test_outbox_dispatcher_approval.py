@@ -24,7 +24,7 @@ from __future__ import annotations
 from collections.abc import Iterator
 from email.message import EmailMessage
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
@@ -152,7 +152,7 @@ def _insert_entry(
     )
     assert entry.id is not None  # noqa: S101
     if status == OutboxStatus.PENDING_SEND.value:
-        return cast(int, entry.id)
+        return entry.id
     # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
     if status == OutboxStatus.FAILED.value:
         store.update_status(
@@ -167,7 +167,7 @@ def _insert_entry(
             from_status=OutboxStatus.APPROVED.value,
             last_approved_at_ms=None,
         )
-        return cast(int, entry.id)
+        return entry.id
     # APPROVED:走 PENDING_SEND → APPROVED
     store.update_status(
         entry.id,
@@ -175,7 +175,7 @@ def _insert_entry(
         from_status=OutboxStatus.PENDING_SEND.value,
         last_approved_at_ms=last_approved_at_ms,
     )
-    return cast(int, entry.id)
+    return entry.id
 
 
 # ===== L. D5.6.2 P1.2 审批契约修复专项测试 =====
@@ -300,7 +300,7 @@ def test_from_address_uses_smtp_username(dispatcher: OutboxDispatcher) -> None:
 
     send_adapter = dispatcher._send_adapter
     assert send_adapter is not None, "D5.6.2:dispatcher._send_adapter 必非 None(fixture 已注入)"
-    send_adapter.send_and_emit = capture_send
+    send_adapter.send_and_emit = capture_send  # type: ignore[method-assign]
 
     dispatcher.run_once()
 

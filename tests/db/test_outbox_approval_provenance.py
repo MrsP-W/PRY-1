@@ -27,7 +27,7 @@ from __future__ import annotations
 import sys
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -106,7 +106,7 @@ def _insert_pending(store: OutboxStore, *, email_id: int) -> int:
         recipient_email=f"customer{email_id}@example.com",
     )
     assert entry.id is not None
-    return cast(int, entry.id)
+    return entry.id
 
 
 # ===== A. APPROVED 必传规则(2 tests)=====
@@ -144,7 +144,7 @@ def test_approved_rejects_non_int_type(store: OutboxStore) -> None:
             outbox_id,
             "approved",
             from_status="pending_send",
-            last_approved_at_ms="1234567890",
+            last_approved_at_ms="1234567890",  # type: ignore[arg-type]
         )
     # 负数拒收
     with pytest.raises(ValueError, match="原生 int"):

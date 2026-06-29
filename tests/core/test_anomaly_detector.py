@@ -147,10 +147,10 @@ def test_anomaly_result_kind_whitelist_validates() -> None:
     )
     # 非法 kind → ValueError
     with pytest.raises(ValueError, match="kind 必 ∈ 6 类白名单"):
-        AnomalyResult(kind="invalid_kind", tx=tx, context={}, detected_at_ms=0)
+        AnomalyResult(kind="invalid_kind", tx=tx, context={}, detected_at_ms=0)  # type: ignore[arg-type]
     # 非法 kind 类型 → TypeError
     with pytest.raises(TypeError, match="kind 必须是 str"):
-        AnomalyResult(kind=123, tx=tx, context={}, detected_at_ms=0)
+        AnomalyResult(kind=123, tx=tx, context={}, detected_at_ms=0)  # type: ignore[arg-type]
 
 
 def test_anomaly_result_context_must_be_dict() -> None:
@@ -174,7 +174,7 @@ def test_anomaly_result_context_must_be_dict() -> None:
         AnomalyResult(
             kind="amount_3sigma",
             tx=tx,
-            context="not a dict[Any, Any]",
+            context="not a dict[Any, Any]",  # type: ignore[arg-type]
             detected_at_ms=0,
         )
 
@@ -585,7 +585,7 @@ def test_anomaly_result_is_signal_validates_and_new_merchant_sets_true(
             tx=tx,
             context={},
             detected_at_ms=0,
-            is_signal=1,
+            is_signal=1,  # type: ignore[arg-type]
         )
     # 合法 AnomalyResult 默认 is_signal=False
     result = AnomalyResult(kind="amount_3sigma", tx=tx, context={}, detected_at_ms=0)

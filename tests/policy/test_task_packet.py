@@ -224,7 +224,7 @@ class TestBackwardsCompat:
     def test_from_dict_rejects_non_dict(self) -> None:
         """非 dict 输入 → PolicyContractError."""
         with pytest.raises(PolicyContractError, match="data 必须是 dict"):
-            TaskPacket.from_dict("not a dict")
+            TaskPacket.from_dict("not a dict")  # type: ignore[arg-type]
 
 
 # ===== assert_packet_contract 8 字段不变量 =====
@@ -310,7 +310,7 @@ class TestContract:
     def test_non_taskpacket_input_fails(self) -> None:
         """非 TaskPacket 输入 → PolicyContractError."""
         with pytest.raises(PolicyContractError, match="packet 必须是 TaskPacket"):
-            assert_packet_contract({"objective": "x"})
+            assert_packet_contract({"objective": "x"})  # type: ignore[arg-type]
 
     def test_contract_error_is_policy_error(self, valid_packet: TaskPacket) -> None:
         """PolicyContractError 继承 PolicyError(可被基类 catch)."""
@@ -332,7 +332,7 @@ class TestProgrammingErrorsPropagate:
             scope=["y/"],
             acceptance_criteria=["z"],
         )
-        p.objective = 123
+        p.objective = 123  # type: ignore[assignment]
         with pytest.raises(PolicyContractError, match="objective 必须是 str"):
             assert_packet_contract(p)
 
@@ -340,7 +340,7 @@ class TestProgrammingErrorsPropagate:
         """scope 不是 list → PolicyContractError(业务错误, 非编程错误)."""
         p = TaskPacket(
             objective="x",
-            scope="not a list",
+            scope="not a list",  # type: ignore[arg-type]
             acceptance_criteria=["z"],
         )
         with pytest.raises(PolicyContractError, match="scope 必须是 list"):

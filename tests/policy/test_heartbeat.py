@@ -51,7 +51,7 @@ class TestPostInitValidation:
     def test_threshold_not_int_raises(self) -> None:
         """threshold 非 int → ValueError."""
         with pytest.raises(ValueError, match="idle_threshold_ms 必须是 int"):
-            Heartbeat(idle_threshold_ms="30000")
+            Heartbeat(idle_threshold_ms="30000")  # type: ignore[arg-type]
 
     def test_threshold_zero_raises(self) -> None:
         """threshold <= 0 → ValueError."""
@@ -66,12 +66,12 @@ class TestPostInitValidation:
     def test_transport_alive_not_bool_raises(self) -> None:
         """transport_alive 非 bool → ValueError."""
         with pytest.raises(ValueError, match="transport_alive 必须是 bool"):
-            Heartbeat(transport_alive="yes")
+            Heartbeat(transport_alive="yes")  # type: ignore[arg-type]
 
     def test_last_seen_not_int_raises(self) -> None:
         """last_seen_ms 非 int → ValueError."""
         with pytest.raises(ValueError, match="last_seen_ms 必须是 int"):
-            Heartbeat(last_seen_ms="123")
+            Heartbeat(last_seen_ms="123")  # type: ignore[arg-type]
 
 
 class TestUpdate:
@@ -101,31 +101,31 @@ class TestUpdate:
         """update(transport_alive="not_bool") → ValueError."""
         h = Heartbeat()
         with pytest.raises(ValueError, match="transport_alive 必须是 bool"):
-            h.update(transport_alive="not_bool")
+            h.update(transport_alive="not_bool")  # type: ignore[arg-type]
 
     def test_update_refresh_last_seen_int_0_raises(self) -> None:
         """update(refresh_last_seen=0) → ValueError(拒 int 真值陷阱,D5.5.4 P3)."""
         h = Heartbeat()
         with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
-            h.update(refresh_last_seen=0)
+            h.update(refresh_last_seen=0)  # type: ignore[arg-type]
 
     def test_update_refresh_last_seen_int_1_raises(self) -> None:
         """update(refresh_last_seen=1) → ValueError(拒 int 1 显式真值陷阱)."""
         h = Heartbeat()
         with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
-            h.update(refresh_last_seen=1)
+            h.update(refresh_last_seen=1)  # type: ignore[arg-type]
 
     def test_update_refresh_last_seen_str_false_raises(self) -> None:
         """update(refresh_last_seen="False") → ValueError(拒字符串真值)."""
         h = Heartbeat()
         with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
-            h.update(refresh_last_seen="False")
+            h.update(refresh_last_seen="False")  # type: ignore[arg-type]
 
     def test_update_refresh_last_seen_none_raises(self) -> None:
         """update(refresh_last_seen=None) → ValueError(拒 None,必须显式传 bool)."""
         h = Heartbeat()
         with pytest.raises(ValueError, match="refresh_last_seen 必须是原生 bool"):
-            h.update(refresh_last_seen=None)
+            h.update(refresh_last_seen=None)  # type: ignore[arg-type]
 
     def test_update_refresh_last_seen_false_keeps_last_seen(self) -> None:
         """update(refresh_last_seen=False) → 不动 last_seen_ms(D5.5.2 设计契约)."""

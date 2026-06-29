@@ -195,7 +195,7 @@ def _insert_entry(
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
     # D5.6.4 P1:再 update_status 推到目标状态(走状态机白名单 + last_approved_at_ms 严判)
     if status == OutboxStatus.PENDING_SEND.value:
-        return cast(int, entry.id)
+        return entry.id
     # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
     if status == OutboxStatus.FAILED.value:
         # 1) 先推 APPROVED(带审批凭据,记录"曾经被审批过")
@@ -212,7 +212,7 @@ def _insert_entry(
             from_status=OutboxStatus.APPROVED.value,
             last_approved_at_ms=None,
         )
-        return cast(int, entry.id)
+        return entry.id
     # APPROVED / 其他:走 PENDING_SEND → APPROVED
     store.update_status(
         entry.id,
@@ -220,7 +220,7 @@ def _insert_entry(
         from_status=OutboxStatus.PENDING_SEND.value,
         last_approved_at_ms=last_approved_at_ms,
     )
-    return cast(int, entry.id)
+    return entry.id
 
 
 # ===== A. DispatcherResult dataclass 字段契约 + __post_init__ 双层防御(8 tests)=====
@@ -352,7 +352,7 @@ def test_dispatcher_result_frozen() -> None:
         duration_seconds=0.0,
     )
     with pytest.raises(dataclasses.FrozenInstanceError):
-        r.sent = 5
+        r.sent = 5  # type: ignore[misc]
 
 
 def test_dispatcher_result_zero_total_balanced() -> None:
@@ -394,7 +394,7 @@ def test_dispatcher_init_whitespace_source_raises() -> None:
 def test_dispatcher_init_non_str_source_raises() -> None:
     """OutboxDispatcher source 非 str → ValueError。"""
     with pytest.raises(ValueError, match="source 必填非空白"):
-        OutboxDispatcher(source=123)
+        OutboxDispatcher(source=123)  # type: ignore[arg-type]
 
 
 def test_dispatcher_init_batch_size_zero_raises() -> None:
@@ -648,14 +648,14 @@ def test_run_once_failed_entry_skips_inside_retry_backoff(
     first = dispatcher.run_once(now_ms=1_000_000)
     assert first.total_picked == 1
     assert first.technical_failed == 1
-    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
 
     smtp_transport.inject_exception = None
     second = dispatcher.run_once(now_ms=1_030_000)
     assert second.total_picked == 1
     assert second.sent == 0
     assert second.skipped == 1
-    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
     assert smtp_transport.sent_log == []
 
 
@@ -687,7 +687,7 @@ def test_run_once_failed_entry_retries_after_backoff(
     assert second.total_picked == 1
     assert second.sent == 1
     assert second.skipped == 0
-    assert store.by_id(outbox_id).status == OutboxStatus.SENT.value
+    assert store.by_id(outbox_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
     assert outbox_id not in dispatcher._failure_state  # noqa: SLF001
     assert len(smtp_transport.sent_log) == 1
 
@@ -756,7 +756,7 @@ def test_run_once_value_error_treated_as_skipped(
         raise ValueError("programmer error: bad arg")
 
     original_send = adapter.send_and_emit
-    adapter.send_and_emit = raise_value_error
+    adapter.send_and_emit = raise_value_error  # type: ignore[method-assign]
     try:
         dispatcher = OutboxDispatcher(
             source="test-dispatcher",
@@ -767,7 +767,7 @@ def test_run_once_value_error_treated_as_skipped(
         )
         result = dispatcher.run_once()
     finally:
-        adapter.send_and_emit = original_send
+        adapter.send_and_emit = original_send  # type: ignore[method-assign]
     assert result.total_picked == 1
     assert result.sent == 0
     assert result.skipped == 1
@@ -919,7 +919,7 @@ def test_run_once_concurrent_state_change_to_sending(
             return [store.by_id(outbox_id)]
         return []
 
-    store.by_status = fake_by_status
+    store.by_status = fake_by_status  # type: ignore[method-assign]
     try:
         dispatcher = OutboxDispatcher(
             source="test-dispatcher",
@@ -930,7 +930,7 @@ def test_run_once_concurrent_state_change_to_sending(
         )
         result = dispatcher.run_once()
     finally:
-        store.by_status = original_by_status
+        store.by_status = original_by_status  # type: ignore[method-assign]
     # entry 状态在 _process_one_entry 入口已变 SENDING → skipped
     assert result.skipped >= 0  # 不崩溃
 
@@ -1017,7 +1017,7 @@ def test_dispatcher_close_idempotent() -> None:
 
 def smtp_transport_for(adapter: EmailSendAdapter) -> InMemorySmtpTransport | None:
     """从 EmailSendAdapter 拿 smtp_transport(测试替身)。"""
-    return adapter._smtp_transport  # noqa: SLF001
+    return cast(InMemorySmtpTransport | None, adapter._smtp_transport)  # noqa: SLF001
 
 
 # ===== H. D5.5.1 异常收窄专项(2 tests)=====
@@ -1085,7 +1085,7 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
     )
     first = dispatcher.run_once(now_ms=1_000_000)
     assert first.technical_failed == 1
-    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value
+    assert store.by_id(outbox_id).status == OutboxStatus.FAILED.value  # type: ignore[union-attr]
 
     # 模拟 FAILED → APPROVED 时 store 状态机抛 IllegalTransition(并发写等场景)
     # D5.6.2 修复:目标状态 PENDING_SEND → APPROVED(白名单 FAILED → APPROVED 直通)
@@ -1109,12 +1109,12 @@ def test_run_once_failed_unlock_illegal_transition_returns_skipped(
             row_id, new_status, from_status=from_status, last_approved_at_ms=last_approved_at_ms
         )
 
-    store.update_status = fake_update_status
+    store.update_status = fake_update_status  # type: ignore[method-assign,assignment]
     try:
         # 退避窗口已过(1_000_000 + 60_000 + 1 = 1_060_001)
         second = dispatcher.run_once(now_ms=1_060_001)
     finally:
-        store.update_status = original_update_status
+        store.update_status = original_update_status  # type: ignore[method-assign]
 
     # 异常被正确收口:skipped + retry_unlock_failed 标记,无崩溃
     assert second.total_picked == 1
@@ -1178,13 +1178,13 @@ def test_run_once_failed_retry_quota_does_not_starve_new_entries(
     #    - 总 picked=10
     assert result.total_picked == 10
     # 3) 新 PENDING_SEND 必被处理(不应被 50 个 FAILED 挤掉)→ 状态变 SENT
-    assert store.by_id(new_approved_id).status == OutboxStatus.SENT.value
+    assert store.by_id(new_approved_id).status == OutboxStatus.SENT.value  # type: ignore[union-attr]
     # 4) 9 个 FAILED 被处理(配额 5 + 回填 4),剩余 41 个仍 FAILED
     sent_failed = len(
-        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.SENT.value]
+        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.SENT.value]  # type: ignore[union-attr]
     )
     still_failed = len(
-        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.FAILED.value]
+        [fid for fid in old_failed_ids if store.by_id(fid).status == OutboxStatus.FAILED.value]  # type: ignore[union-attr]
     )
     assert sent_failed == 9
     assert still_failed == 41
@@ -1615,7 +1615,7 @@ def test_run_once_batch_size_1_only_new_pool_picks_pending(
     sent_ids = [
         eid
         for eid in inserted_ids
-        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"
+        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"  # type: ignore[union-attr]
     ]
     assert len(sent_ids) == 1, f"期望 1 个 SENT,实际 {len(sent_ids)}"
 
@@ -1657,7 +1657,7 @@ def test_run_once_batch_size_1_only_retry_pool_picks_failed(
     sent_ids = [
         eid
         for eid in inserted_ids
-        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"
+        if store.by_email_id(eid) is not None and store.by_email_id(eid).status == "sent"  # type: ignore[union-attr]
     ]
     assert len(sent_ids) == 1, f"期望 1 个 SENT,实际 {len(sent_ids)}"
 

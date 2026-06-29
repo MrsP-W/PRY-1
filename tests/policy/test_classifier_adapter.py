@@ -269,14 +269,14 @@ class TestFactoryFunctions:
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                branch_stale="false",
+                branch_stale="false",  # type: ignore[arg-type]
             )
         with pytest.raises(ValueError):
             build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                now_ms="123",
+                now_ms="123",  # type: ignore[arg-type]
             )
 
     def test_build_classify_policy_context_escalate_logic(self) -> None:
@@ -340,14 +340,14 @@ class TestFactoryFunctions:
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                last_classify_failed="true",
+                last_classify_failed="true",  # type: ignore[arg-type]
             )
         with pytest.raises(ValueError, match="last_classify_failed"):
             build_classify_policy_context(
                 category_value="URGENT",
                 confidence=0.9,
                 latency_ms=1000,
-                last_classify_failed=1,
+                last_classify_failed=1,  # type: ignore[arg-type]
             )
 
 
@@ -367,7 +367,7 @@ class TestEmailClassifierAdapterInit:
         with pytest.raises(ValueError):
             EmailClassifierAdapter(source="")
         with pytest.raises(ValueError):
-            EmailClassifierAdapter(source=None)
+            EmailClassifierAdapter(source=None)  # type: ignore[arg-type]
 
     def test_init_with_dependencies(self) -> None:
         eng = PolicyEngine()
@@ -399,7 +399,7 @@ class TestBuildLaneEntryId:
         with pytest.raises(ValueError):
             a.build_lane_entry_id("")
         with pytest.raises(ValueError):
-            a.build_lane_entry_id(None)
+            a.build_lane_entry_id(None)  # type: ignore[arg-type]
 
 
 # ============================================================
@@ -424,9 +424,9 @@ class TestTickHeartbeat:
         """D4.5 P0 修复: 拒 'true' 字符串."""
         a = EmailClassifierAdapter(source="qq")
         with pytest.raises(ValueError):
-            a.tick_heartbeat(transport_alive="true")
+            a.tick_heartbeat(transport_alive="true")  # type: ignore[arg-type]
         with pytest.raises(ValueError):
-            a.tick_heartbeat(transport_alive=1)
+            a.tick_heartbeat(transport_alive=1)  # type: ignore[arg-type]
 
 
 # ============================================================
@@ -592,7 +592,7 @@ class TestClassifyAndEmit:
         classification = FakeClassification.make()
         # 成功入口不能再传 consecutive_classify_failures(P1-1 强制拆入口)
         with pytest.raises(TypeError):
-            a.classify_and_emit(
+            a.classify_and_emit(  # type: ignore[call-arg]
                 email_id=1,
                 classification=classification,
                 consecutive_classify_failures=2,
@@ -707,14 +707,14 @@ class TestD46V101AdapterFixes:
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                transport_alive=1,
+                transport_alive=1,  # type: ignore[arg-type]
                 run_id="r-bool-transport",
             )
         with pytest.raises(ValueError, match="transport_alive"):
             a.classify_and_emit(
                 email_id=1,
                 classification=classification,
-                transport_alive="true",
+                transport_alive="true",  # type: ignore[arg-type]
                 run_id="r-str-transport",
             )
 
@@ -842,7 +842,7 @@ class TestD46V102AdapterFixes:
         classification = FakeClassification.make()
         # 1) 成功入口不再接受 cf 参数
         with pytest.raises(TypeError):
-            a.classify_and_emit(
+            a.classify_and_emit(  # type: ignore[call-arg]
                 email_id=1,
                 classification=classification,
                 consecutive_classify_failures=99,
@@ -850,7 +850,7 @@ class TestD46V102AdapterFixes:
             )
         # 2) 成功入口不再接受 last_classify_failed 参数
         with pytest.raises(TypeError):
-            a.classify_and_emit(
+            a.classify_and_emit(  # type: ignore[call-arg]
                 email_id=1,
                 classification=classification,
                 last_classify_failed=True,
@@ -1279,7 +1279,7 @@ class TestD46V102ThirdPassFixes:
                 event_id=None,
                 lane_entry_id="classify:qq:r",
                 liveness=Liveness.HEALTHY,
-                failed=False,
+                failed=False,  # type: ignore[arg-type]
                 last_error="err",
                 consecutive_classify_failures=1,
             )

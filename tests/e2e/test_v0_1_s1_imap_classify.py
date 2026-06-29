@@ -128,7 +128,7 @@ def test_s1_imap_circuit_breaker(monkeypatch: Any, tmp_path: Any) -> Any:
     async def _failing_fetch(since: Any) -> Any:  # noqa: ARG001
         raise ConnectionError("mock network failure for circuit breaker test")
 
-    conn.fetch = _failing_fetch
+    conn.fetch = _failing_fetch  # type: ignore[method-assign]
 
     import asyncio
 
@@ -171,7 +171,7 @@ def test_s1_classify_emails(monkeypatch: Any, session_factory: Any) -> Any:
                 latency_ms=10,
             )
 
-    classifier = EmailClassifier(router=_MockRouter())
+    classifier = EmailClassifier(router=_MockRouter())  # type: ignore[arg-type]
 
     emails = [
         {"subject": f"邮件 #{i}", "sender": f"u{i}@x.com", "body_excerpt": f"内容 {i}"}
