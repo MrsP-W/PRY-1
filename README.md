@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.53.37 7/1 月度复盘输入包 docs-only(2026-06-29)** — 质量门 **2518 passed / 1 skipped / 88.80%**(实测落档 · 从 v0.2.53.36 88.78% 前进 0.02pp · docs-only 不前进 quality_snapshot)/ MD lint **174 files**;把 `monthly-review-prep-2026-07-01.md` 的 22 项议程 + 主题 8 撞坑 #68 衍生 5 项 = **27 项议程总盘**(主题 1-8)转化为 7/1 月度复盘可执行输入包;7/1 复盘流程 12:00-16:30(4.5 小时窗口)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 沿用(本棒 docs-only 无新增)。
+> **状态**:🟢 **v0.2.53.38 launch-plan 补勾 docs-only(2026-06-29)** — 质量门 **2518 passed / 1 skipped / 88.80%** / MD lint **176 files**;补勾 `docs/v0.2-launch-plan.md` P0 执行清单 v0.2.53.26-37 共 12 项 commits(8b54d14 + 9a7b95c+31a2134 + e74b5e3+87caba7 + 915c7f8 + 5b8d518 + b035837+0fba278 + 4b8a4ad+7a299f0 + bec1460 + 8f8ed27 + 8b1c66c + 391777a)+ 新增"8/1 release tag readiness 锚定" + "7/1 月度复盘锚定"两段(沿 v0.2.47 + v0.2.53.36 + v0.2.53.37 三层决策矩阵)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike。**边界**:不真发邮件、不写凭据、不接真实业务 writer、不写 DB、不 kickstart launchd、不打 `v0.2.x` tag、`v0.1.0` tag(`2af775f`)永不动、`write_executed` 恒 False 不变式、撞坑累计 68 沿用(本棒 docs-only 无新增)。
 
 ---
 

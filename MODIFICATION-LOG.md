@@ -79,7 +79,10 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.37` 7/1 月度复盘输入包 docs-only(2026-06-29):**2518 passed / 1 skipped / 88.80%**(实测落档 · 从 v0.2.53.36 88.78% 前进 0.02pp · docs-only 不前进 quality_snapshot)/ MD lint **174 files** + 27 项议程总盘(22 + 5 撞坑 #68 衍生 · 主题 1-8)+ 7/1 复盘流程 12:00-16:30(4.5 小时窗口)+ 撞坑累计 68 沿用(本棒 docs-only 无新增)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike |
+| **当前阶段** | ✅ `v0.2.53.38` launch-plan 补勾 docs-only(2026-06-29):**2518 passed / 1 skipped / 88.80%** / MD lint **176 files** + 补勾 `docs/v0.2-launch-plan.md` P0 checklist v0.2.53.26-37 共 12 项 commits + 新增"8/1 release tag readiness 锚定" + "7/1 月度复盘锚定"两段(沿 v0.2.47 + v0.2.53.36 + v0.2.53.37 三层决策矩阵)+ 撞坑累计 68 沿用(本棒 docs-only 无新增)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68 衍生)+ outlook/gmail Keychain SMTP spike |
+| **上一阶段** | ✅ `v0.2.53.37` 7/1 月度复盘输入包 docs-only(2026-06-29 · `391777a`):27 项议程总盘(22 + 5 撞坑 #68 衍生 · 主题 1-8)+ 7/1 复盘流程 12:00-16:30(4.5h 窗口) |
+| **上一阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28 · `8b1c66c`):8/9 项实质满足,沿 v0.2.47 决策矩阵 |
+| **上一阶段** | ✅ `v0.2.53.35` sync MD lint 173 + audit semantics(2026-06-28 · `8f8ed27`):173 MD baseline 同步 |
 | **上一阶段** | ✅ `v0.2.53.34` HTML dry-run inspector 三门文案收口(2026-06-28):`THREE_GATE_COPY` 统一离线兜底 |
 | **上一阶段** | ✅ `4b8a4ad` BusinessWriter 实写路径设计稿(docs-only · 编号 v0.2.53.33 与 lint ignore 重复,由 v0.2.53.35 收口说明) |
 | **上一阶段** | ✅ `v0.2.53.30` BusinessWriter ready 语义加固(2026-06-26 · `is_runtime_impl` marker + evaluate_writer_dry_run 保守 501) |
@@ -100,7 +103,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | v0.2.53.36:**2518 passed / 1 skipped** / **88.78%** / mypy strict 0 / **235 files** / MD lint **174 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
+| **质量基线** | v0.2.53.38:**2518 passed / 1 skipped** / **88.80%** / mypy strict 0 / **235 files** / MD lint **176 files**(以 `make test` / `make coverage` / `make lint` 实测为准) |
 | **下一棒** | Keychain SMTP spike;8/1 截点 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(十二类报告累积 review);8/1 v0.2.1 release tag 锚定评估 |
 
