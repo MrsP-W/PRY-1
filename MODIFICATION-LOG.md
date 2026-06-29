@@ -79,6 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
+| **当前阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段。**上一阶段**:QQ-only SMTP 已收口 · Outlook/Gmail 用户决策不配置。**下一棒**:docs commit 同步 + 跨项目 memory 沉淀 + 8/1 后独立 launch 路径 4 切换 |
 | **当前阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告。**上一阶段**:QQ-only SMTP 已收口 · Outlook/Gmail 用户决策不配置。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC / 路径 4(8/1 后) |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
 | **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
@@ -136,6 +137,68 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-29 [v0.2.53.46 BusinessWriterImpl 4 动作实写骨架 + 9 质量门全绿] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**: `src/my_ai_employee/dashboard/business_writer_impl.py` — 4 动作实写骨架(`approve_outbox` / `cancel_outbox` / `confirm_note` / `dismiss_anomaly`)统一模式 `_check_dep(依赖检查) + _validate_target_id(参数校验) + 末尾 raise`(沿撞坑 #18 风险门控 · 沿 v0.2.53.22 8 路径决策矩阵)
+- **test(dashboard)**: `tests/dashboard/test_business_writer_impl.py` — 28 个新测试(沿 v0.2.53.27 opt-in 4 阶段范本)+ 4 个旧测试 `match` 字符串同步(`match="approve_outbox"` → `match="outbox_store"`,沿实写骨架 `_check_dep` 先 raise)+ SimpleNamespace mock 用 `cast(Any, SimpleNamespace())` 解决 mypy --strict Protocol 类型严格
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — `pytest: 2518 → 2546 passed` · `coverage: 88.78% → 88.81%`(撞坑 #50 第二层修复 self-claim vs 实际漂移)
+
+**2. 质量门 9/9 全绿**
+
+| 门 | 结果 |
+|---|------|
+| MD lint | 188 files 0 errors |
+| mypy --strict | 0 errors / 235 files |
+| ruff check | All checks passed |
+| ruff format | 249 files already formatted |
+| pytest | **2546 passed** / 1 skipped(2518 → 2546,+28) |
+| coverage | **88.81%**(88.78% → 88.81% · +0.03pp) |
+| alembic upgrade head --sql | exit 0 |
+| uv build | OK(sdist + wheel) |
+| FINAL_EXIT | 0 |
+
+**3. 沿用边界**(本棒 0 新增,全部沿用)
+
+- ❌ 不接真实业务 writer(实际写入路径留 8/1 后)
+- ❌ 不写 DB 实际数据(默认 raise / dry-run 模式)
+- ❌ 不发真实 SMTP(路径 4 启用后也仅 DB 状态更新)
+- ❌ 不读 Keychain 明文(沿 #59 撞坑规范)
+- ❌ 不打 `v0.2.x` tag(沿 D5.7.2 + 8/1 锚定)
+- ❌ 不移动 `v0.1.0` tag(`2af775f` 锚定不动)
+- ❌ 不接 outlook/gmail SMTP(用户决策豁免)
+- ✅ 撞坑累计 **70 类沿用**(本棒 0 新增)
+- ✅ write_executed 恒 False(沿 v0.2.53.11 不变式)
+- ✅ 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
+
+**4. 撞坑 #18 风险门控守住**
+
+- 默认 raise NotImplementedError(等同 Stub 行为)
+- 真实写入路径留 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
+- 8/1 后独立 launch 路径 4 切换(raise → 真实调 service)
+
+**5. 撞坑 #50 第二层修复(quality_snapshot 微涨)**
+
+- v0.2.53.27 落地后:quality_snapshot.py 报 `pytest: 2518 passed` / `coverage: 88.78%` 与实际不符
+- v0.2.53.46 实写骨架新增 28 个测试后,实测 2546 passed / 88.81%
+- 修复:同步 quality_snapshot.py 字段 `2518 → 2546` / `88.78% → 88.81%`(沿 v0.2.53.27 沿用规范)
+
+**6. 4 动作路径 4 启用后真实调用映射**(留 8/1 后切换)
+
+| 动作 | 切换前 raise 字符串 | 切换后真实调用 |
+|------|------------------|---------------|
+| approve_outbox | "...路径 4 启用后将调 OutboxStore.update_status(PENDING_SEND → APPROVED, last_approved_at_ms=now_ms)" | `update_status(int, APPROVED, PENDING_SEND, now_ms)` |
+| cancel_outbox | "...路径 4 启用后将调 OutboxStore.update_status(PENDING_SEND/APPROVED → CANCELLED, last_approved_at_ms=None)" | `update_status(int, CANCELLED, from, None)` |
+| confirm_note | "...路径 4 启用后将调 NoteConfirmServiceImpl.confirm_note(apple_note_id=target_id)" | `note_confirm_service.confirm_note(target_id)` |
+| dismiss_anomaly | "...路径 4 启用后将调 AnomalyDismissalService.dismiss(anomaly_id=target_id, reason=audit.reason)" | `anomaly_dismissal_service.dismiss(target_id, reason=audit.reason)` |
+
+**7. 关联 commit**
+
+- **build commit `e76d716`**: `feat(dashboard): v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(默认 raise)`(3 files +464/-27)
+- **docs commit**: `docs(state): v0.2.53.46 8 段沉淀 + 状态同步`
+- **跨项目沉淀 commit**: `docs(cross-project): v0.2.53.46 4 动作实写骨架跨项目 memory 沉淀`
 
 ### 2026-06-25 [v0.2.53.45 MD lint 188 口径稳定化 + HEAD 状态漂移收口] — 收口
 

@@ -1,7 +1,7 @@
-# SESSION-STATE — QQ SMTP 1 封 spike 复验通过(2026-06-29)
+# SESSION-STATE — v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29)
 
-> **最后更新**:2026-06-25 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `16fb78e`) · 工作区干净
-> **状态**:🟢 **QQ SMTP 1 封 spike 复验通过(2026-06-29)** — `sent=1/4.31s` · smtp.qq.com:465 SSL · 477***009@qq.com 自发自收 · 五重防误发全过 · 报告 `reports/qq-smtp-spike-2026-06-29.md`。**SMTP 范围**:**仅 QQ** — 用户决策 Outlook/Gmail **不配置、不使用**(代码 factory 保留,不跑凭据/spike)。**8/1 readiness**:QQ SMTP ✅ · #2/#9 outlook/gmail **用户决策豁免** · 路径 4 实写仍 8/1 后。**质量门**:mypy --strict 0 / 2518 passed / 88.78% / ruff + format 全绿。**下一棒**:8/1 readiness 二次刷新 docs-only / 7/10 WAIC 延后项 / 路径 4 实写(8/1 后)。**边界**:不接 BusinessWriter 实写 · 不打 tag · `write_executed` 恒 False。
+> **最后更新**:2026-06-29 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(本次实测 `e76d716`) · 工作区干净
+> **状态**:🟢 **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29)** — 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp)· 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段。**SMTP 范围**:**仅 QQ** — 用户决策 Outlook/Gmail **不配置、不使用**(代码 factory 保留,不跑凭据/spike)。**8/1 readiness**:QQ SMTP ✅ · #2/#9 outlook/gmail **用户决策豁免** · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / 2546 passed / 88.81% / lint 188 0 errors / ruff + format 全绿。**下一棒**:docs commit 同步 + 跨项目 memory 沉淀 + 8/1 后独立 launch 路径 4 切换。**边界**:默认 raise · 不接业务 writer 实写 · 不打 tag · `write_executed` 恒 False · 撞坑累计 70 类沿用。
 
 ---
 
