@@ -27,6 +27,10 @@ from my_ai_employee import __version__
 #   - 默认 None → 解析为 BusinessWriterStub(撞坑 #65 默认 Stub 边界)
 #   - with_business_writer() 不可变更新(沿 #64 公共 API 范本)
 from my_ai_employee.dashboard.business_writer import BusinessWriter, BusinessWriterStub
+from my_ai_employee.menu_bar.approval_gate_audit import (
+    ApprovalGateAuditStore,
+    ApprovalGateAuditStoreStub,
+)
 from my_ai_employee.menu_bar.expense_service import ExpenseService, ExpenseServiceStub
 from my_ai_employee.menu_bar.note_confirm_service import (
     NoteConfirmService,
@@ -69,6 +73,14 @@ class DashboardContext:
     business_writer: BusinessWriter | None = field(
         default=None  # 默认 None 表示使用 BusinessWriterStub.get_default_stub()
     )
+    # v0.2.53.52 audit_store 注入(沿 v0.2.53.51 + 撞坑 #65 opt-in 4 阶段范本)
+    #   - 默认 ApprovalGateAuditStoreStub(等效 is_enabled=False,record 永远不成功)
+    #   - DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 + session_factory 成功
+    #     → 尝试注入 InMemoryApprovalGateAuditStore(测试场景用)
+    #   - 单项失败静默降级 Stub(沿 v0.2.53.7 范本)
+    audit_store: ApprovalGateAuditStore = field(
+        default_factory=ApprovalGateAuditStoreStub.get_default_stub
+    )
     version: str = __version__
     quality_gates: QualityGateSnapshot = field(default_factory=lambda: DEFAULT_QUALITY_GATES)
     git_head_resolver: GitHeadResolver = field(default=lambda: _default_git_head())
@@ -110,6 +122,12 @@ class DashboardContext:
             writer = _try_build_business_writer_from_session_factory(session_factory)
             if writer is not None:
                 ctx = ctx.with_business_writer(writer)
+                # v0.2.53.52 联动注入 audit_store(沿 v0.2.53.27 范本)
+                #   - BusinessWriterImpl 注入成功 → 配套注入 InMemoryApprovalGateAuditStore
+                #   - 单项失败静默降级 Stub(撞坑 #65 单项失败降级)
+                audit_store = _try_build_audit_store()
+                if audit_store is not None:
+                    ctx = ctx.with_audit_store(audit_store)
         return ctx
 
     def with_outbox_drafts(self, service: OutboxDraftService) -> DashboardContext:
@@ -119,6 +137,7 @@ class DashboardContext:
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=service,
             business_writer=self.business_writer,
+            audit_store=self.audit_store,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -132,6 +151,7 @@ class DashboardContext:
             note_confirm_service=service,
             outbox_draft_service=self.outbox_draft_service,
             business_writer=self.business_writer,
+            audit_store=self.audit_store,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -145,6 +165,7 @@ class DashboardContext:
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
             business_writer=self.business_writer,
+            audit_store=self.audit_store,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -162,6 +183,27 @@ class DashboardContext:
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
             business_writer=writer if writer is not None else BusinessWriterStub(),
+            audit_store=self.audit_store,
+            version=self.version,
+            quality_gates=self.quality_gates,
+            git_head_resolver=self.git_head_resolver,
+            keychain_probe=self.keychain_probe,
+        )
+
+    def with_audit_store(self, store: ApprovalGateAuditStore) -> DashboardContext:
+        """返回替换 audit_store 的新 ctx(不可变更新,沿 #64 公共 API 范本).
+
+        v0.2.53.52:P2 联动 — BusinessWriterImpl 注入成功时配套注入 audit_store.
+
+        Args:
+            store: ApprovalGateAuditStore 实例(默认 ApprovalGateAuditStoreStub).
+        """
+        return DashboardContext(
+            expense_service=self.expense_service,
+            note_confirm_service=self.note_confirm_service,
+            outbox_draft_service=self.outbox_draft_service,
+            business_writer=self.business_writer,
+            audit_store=store,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,
@@ -303,6 +345,23 @@ def _try_build_business_writer_from_session_factory(
         from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
 
         return BusinessWriterImpl(session_factory=session_factory)
+    except Exception:  # noqa: BLE001 — 单项失败静默降级,不阻塞 Dashboard
+        return None
+
+
+def _try_build_audit_store() -> ApprovalGateAuditStore | None:
+    """v0.2.53.52 opt-in InMemoryApprovalGateAuditStore 构造 — 失败返回 None 降级 Stub.
+
+    边界(沿撞坑 #65 opt-in 4 阶段 + v0.2.53.51):
+        - 测试场景下使用 InMemoryApprovalGateAuditStore(无 DB 接入)
+        - 任何 Exception → 静默降级 None(由 caller 走默认 Stub)
+        - 不接真实 SQL DB(沿 v0.2.53.51 真实 Impl 留 8/1 后)
+        - 默认 ApprovalGateAuditStoreStub(is_enabled=False,record 永远失败)
+    """
+    try:
+        from my_ai_employee.menu_bar.approval_gate_audit import InMemoryApprovalGateAuditStore
+
+        return InMemoryApprovalGateAuditStore()
     except Exception:  # noqa: BLE001 — 单项失败静默降级,不阻塞 Dashboard
         return None
 

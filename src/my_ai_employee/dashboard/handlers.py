@@ -19,6 +19,7 @@ from my_ai_employee.dashboard.business_writer import (
 )
 from my_ai_employee.dashboard.context import DashboardContext, parse_limit
 from my_ai_employee.dashboard.responses import (
+    build_approval_gate_audits_payload,
     build_finance_anomalies_payload,
     build_notes_pending_payload,
     build_outbox_payload,
@@ -96,6 +97,16 @@ class DashboardHandler(BaseHTTPRequestHandler):
             self._send_json(
                 HTTPStatus.OK,
                 build_reports_payload(self.dashboard_context, limit=limit, type_filter=type_filter),
+            )
+            return
+        if path == "/api/approval-gate/audits":
+            # v0.2.53.52 GET audit 端点(沿 v0.2.53.7-10 GET 范本)
+            #   - 只读 + safe_list 静默降级
+            #   - 默认 ApprovalGateAuditStoreStub → enabled=False,空列表
+            #   - DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 → InMemory 注入
+            self._send_json(
+                HTTPStatus.OK,
+                build_approval_gate_audits_payload(self.dashboard_context, limit=limit),
             )
             return
         self._send_json(

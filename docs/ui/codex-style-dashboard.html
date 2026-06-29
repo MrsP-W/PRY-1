@@ -699,7 +699,7 @@
           <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
           <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
           <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 禁写(默认)</span></span>
-          <span class="pill">v0.2.53.34</span>
+          <span class="pill">v0.2.53.52</span>
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
@@ -913,6 +913,19 @@
                   <div class="gate"><strong>Keychain 写入</strong><span class="tag red">需确认</span></div>
                   <div class="gate"><strong>launchd/kickstart</strong><span class="tag red">需确认</span></div>
                   <div class="gate"><strong>真实账单导入</strong><span class="tag">仅人工触发</span></div>
+                </div>
+              </div>
+              <div class="card card-pad" id="audit-card">
+                <h3>Audit 落档 <span class="tag" id="audit-state-tag">默认 Stub</span></h3>
+                <p class="tiny" id="audit-source">v0.2.53.52 写操作 audit 记录(沿 #18 风险门控 + #65 opt-in)</p>
+                <div class="queue" id="audit-queue" style="margin-top: 12px">
+                  <div class="queue-item" id="audit-empty">
+                    <div>
+                      <div class="queue-title">暂无 audit 记录</div>
+                      <div class="queue-meta">默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory</div>
+                    </div>
+                    <span class="tag">0 条</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1882,6 +1895,82 @@
         if (badge) badge.textContent = String(total);
       }
 
+      // ===== v0.2.53.52 audit 落档列表渲染 =====
+      //   - 沿 v0.2.53.51 落档 design(action / target_id / actor / reason / write_executed / affected_id / error / executed_at_ms)
+      //   - 默认 Stub → enabled=false,空列表
+      //   - InMemory 注入 → enabled=true,按 executed_at_ms DESC 倒序
+      //   - 失败 audit(带 error 字段)用红色 tag 标识
+      function renderAudits(payload, sourceLabel) {
+        setText("audit-source", `audit 落档 · ${sourceLabel}`);
+        const enabled = payload.enabled === true;
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        const count = payload.count ?? items.length;
+        const stateTag = document.getElementById("audit-state-tag");
+        if (stateTag) {
+          stateTag.textContent = enabled ? "InMemory 已注入" : "默认 Stub";
+          stateTag.className = enabled ? "tag green" : "tag";
+        }
+        const container = document.getElementById("audit-queue");
+        if (!container) return;
+        container.innerHTML = "";
+        if (items.length === 0) {
+          const empty = document.createElement("div");
+          empty.className = "queue-item";
+          empty.id = "audit-empty";
+          const left = document.createElement("div");
+          const title = document.createElement("div");
+          title.className = "queue-title";
+          title.textContent = enabled ? "暂无 audit 记录" : "暂无 audit 记录";
+          const meta = document.createElement("div");
+          meta.className = "queue-meta";
+          meta.textContent = enabled
+            ? "InMemory 注入成功,等待首次写操作"
+            : "默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory";
+          left.appendChild(title);
+          left.appendChild(meta);
+          empty.appendChild(left);
+          const tag = document.createElement("span");
+          tag.className = "tag";
+          tag.textContent = "0 条";
+          empty.appendChild(tag);
+          container.appendChild(empty);
+          return;
+        }
+        for (const item of items) {
+          const row = document.createElement("div");
+          row.className = "queue-item";
+          const left = document.createElement("div");
+          const title = document.createElement("div");
+          title.className = "queue-title";
+          title.textContent = `${item.action} → ${item.target_id ?? "?"}`;
+          const meta = document.createElement("div");
+          meta.className = "queue-meta";
+          const reason = item.reason && item.reason.length > 0 ? ` · ${item.reason}` : "";
+          const actor = item.actor ?? "local_dashboard";
+          meta.textContent = `actor=${actor}${reason}`;
+          left.appendChild(title);
+          left.appendChild(meta);
+          row.appendChild(left);
+          const tag = document.createElement("span");
+          if (item.error) {
+            tag.className = "tag red";
+            tag.textContent = "失败";
+            tag.title = item.error;
+          } else if (item.write_executed) {
+            tag.className = "tag green";
+            tag.textContent = "已执行";
+          } else {
+            tag.className = "tag";
+            tag.textContent = "dry-run";
+          }
+          row.appendChild(tag);
+          container.appendChild(row);
+        }
+        const countTag = container.parentElement?.querySelector?.(".queue-item:last-child .tag");
+        // 不强制覆盖 — 列表已显示
+        void countTag;
+      }
+
       function renderReportsList() {
         const container = document.getElementById("reports-queue");
         if (!container) return;
@@ -1988,21 +2077,23 @@
 
       async function hydrateDashboard() {
         try {
-          const [status, tasks, outbox, notes, finance, reports] = await Promise.all([
+          const [status, tasks, outbox, notes, finance, reports, audits] = await Promise.all([
             fetchJson("/api/status"),
             fetchJson("/api/tasks/today"),
             fetchJson("/api/outbox?limit=10"),
             fetchJson("/api/notes/pending?limit=10"),
             fetchJson("/api/finance/anomalies?limit=10"),
             fetchJson("/api/reports?limit=50"),
+            fetchJson("/api/approval-gate/audits?limit=10"),
           ]);
           _apiOnline = true;
           renderStatus(status);
           renderTasks(tasks, "来自本地只读 API");
           renderExtendedViews(outbox, notes, finance, true);
           renderReports(reports, "本地只读 API · 文件系统扫描");
+          renderAudits(audits, "本地只读 API · audit 落档列表");
           setText("today-source", "今天 · 本地工作台 · 已连接 127.0.0.1:8765");
-          setApiState(true, "API 已连接 · 7 读 + dry-run 写门");
+          setApiState(true, "API 已连接 · 8 读 + dry-run 写门");
           setText("footer-dry-run", "ApprovalGate dry-run wired · write_executed=false");
         } catch (_err) {
           _apiOnline = false;
@@ -2010,6 +2101,7 @@
           renderTasks(fallbackTasks, "静态兜底数据");
           renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");
+          renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "API 离线兜底");
           setText("today-source", "今天 · 本地工作台 · API 未启动, 使用静态兜底");
           setApiState(false, "API 离线兜底");
         }

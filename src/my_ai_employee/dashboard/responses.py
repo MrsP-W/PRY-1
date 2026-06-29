@@ -186,6 +186,32 @@ def build_reports_payload(
     }
 
 
+def build_approval_gate_audits_payload(ctx: DashboardContext, *, limit: int = 10) -> dict[str, Any]:
+    """GET /api/approval-gate/audits — 最近写操作 audit 列表(只读).
+
+    沿 v0.2.53.7-10 GET 范本(只读 + safe_list 静默降级)+ v0.2.53.51 audit 落档:
+        - 默认 ApprovalGateAuditStoreStub(等效 is_enabled=False)→ 空列表
+        - DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 → 注入 InMemoryApprovalGateAuditStore
+        - 任何 list_recent 异常 → 静默降级 []
+
+    Args:
+        ctx: DashboardContext
+        limit: 最大返回条数,[1,100] int(由 parse_limit 严判)
+
+    Returns:
+        dict with: read_only, count, items[](action/target_id/actor/reason/
+        write_executed/affected_id/error/executed_at_ms), enabled(Stub=False)
+    """
+    enabled = ctx.audit_store.is_enabled()
+    raw_items = safe_list(lambda: ctx.audit_store.list_recent(limit=limit))
+    return {
+        "read_only": True,
+        "enabled": enabled,
+        "count": len(raw_items),
+        "items": list(raw_items),
+    }
+
+
 def build_report_preview_payload(rel_path: str) -> dict[str, Any] | None:
     """GET /api/reports/preview — 单份报告截断预览(只读).
 

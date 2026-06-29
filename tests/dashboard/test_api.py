@@ -256,6 +256,192 @@ def test_parse_limit_clamps() -> None:
     assert parse_limit("bad") == 10
 
 
+# ============================================================
+# v0.2.53.52 GET /api/approval-gate/audits 测试
+# ============================================================
+
+
+class TestApprovalGateAuditsPayload:
+    """v0.2.53.52 build_approval_gate_audits_payload 测试.
+
+    边界(沿 v0.2.53.51 + 撞坑 #65 opt-in 4 阶段):
+        - 默认 ApprovalGateAuditStoreStub → enabled=False,count=0
+        - InMemoryApprovalGateAuditStore 注入 → enabled=True,items 按 executed_at_ms DESC
+        - limit 严判由 parse_limit 处理
+    """
+
+    def test_default_stub_returns_empty(self) -> None:
+        """默认 Stub → enabled=False,空列表(撞坑 #65 默认禁写)."""
+        from my_ai_employee.dashboard.responses import build_approval_gate_audits_payload
+
+        ctx = DashboardContext()  # 默认 audit_store=Stub
+        payload = build_approval_gate_audits_payload(ctx)
+        assert payload["read_only"] is True
+        assert payload["enabled"] is False
+        assert payload["count"] == 0
+        assert payload["items"] == []
+
+    def test_inmemory_audit_returns_items(self) -> None:
+        """注入 InMemoryApprovalGateAuditStore → enabled=True,按时间倒序返回."""
+        from my_ai_employee.dashboard.responses import build_approval_gate_audits_payload
+        from my_ai_employee.menu_bar.approval_gate_audit import (
+            AuditRecord,
+            InMemoryApprovalGateAuditStore,
+        )
+
+        store = InMemoryApprovalGateAuditStore()
+        store.record(
+            AuditRecord(
+                action="approve_outbox",
+                target_id="100",
+                actor="tester",
+                reason="first",
+                write_executed=True,
+                affected_id="100",
+                error=None,
+                executed_at_ms=1000,
+            )
+        )
+        store.record(
+            AuditRecord(
+                action="cancel_outbox",
+                target_id="200",
+                actor="tester",
+                reason="second",
+                write_executed=True,
+                affected_id="200",
+                error=None,
+                executed_at_ms=2000,
+            )
+        )
+        ctx = DashboardContext(audit_store=store)
+        payload = build_approval_gate_audits_payload(ctx, limit=10)
+        assert payload["read_only"] is True
+        assert payload["enabled"] is True
+        assert payload["count"] == 2
+        # 按 executed_at_ms DESC 倒序(2000 先)
+        assert payload["items"][0]["action"] == "cancel_outbox"
+        assert payload["items"][1]["action"] == "approve_outbox"
+        assert payload["items"][0]["affected_id"] == "200"
+        assert payload["items"][1]["affected_id"] == "100"
+
+    def test_inmemory_audit_respects_limit(self) -> None:
+        """limit 严判 — InMemory 内部 list_recent limit 已严判 1-100."""
+        from my_ai_employee.dashboard.responses import build_approval_gate_audits_payload
+        from my_ai_employee.menu_bar.approval_gate_audit import (
+            AuditRecord,
+            InMemoryApprovalGateAuditStore,
+        )
+
+        store = InMemoryApprovalGateAuditStore()
+        for i in range(5):
+            store.record(
+                AuditRecord(
+                    action="approve_outbox",
+                    target_id=str(i),
+                    actor="tester",
+                    reason=f"r{i}",
+                    write_executed=True,
+                    affected_id=str(i),
+                    error=None,
+                    executed_at_ms=1000 + i,
+                )
+            )
+        ctx = DashboardContext(audit_store=store)
+        payload = build_approval_gate_audits_payload(ctx, limit=2)
+        assert payload["count"] == 2
+        # 倒序取最近 2 条
+        assert payload["items"][0]["target_id"] == "4"
+        assert payload["items"][1]["target_id"] == "3"
+
+    def test_failure_audit_recorded_with_error(self) -> None:
+        """失败 audit 落档(撞坑 #18 异常收窄)→ 仍返回 items,error 字段非 None."""
+        from my_ai_employee.dashboard.responses import build_approval_gate_audits_payload
+        from my_ai_employee.menu_bar.approval_gate_audit import (
+            AuditRecord,
+            InMemoryApprovalGateAuditStore,
+        )
+
+        store = InMemoryApprovalGateAuditStore()
+        store.record(
+            AuditRecord(
+                action="approve_outbox",
+                target_id="404",
+                actor="failure_tester",
+                reason="",
+                write_executed=True,
+                affected_id=None,
+                error="ValueError: outbox not found",
+                executed_at_ms=3000,
+            )
+        )
+        ctx = DashboardContext(audit_store=store)
+        payload = build_approval_gate_audits_payload(ctx)
+        assert payload["count"] == 1
+        assert payload["items"][0]["error"] == "ValueError: outbox not found"
+        assert payload["items"][0]["affected_id"] is None
+        assert payload["items"][0]["actor"] == "failure_tester"
+
+
+class TestApprovalGateAuditsEndpoint:
+    """v0.2.53.52 GET /api/approval-gate/audits 端点 e2e 测试(httptest)."""
+
+    def test_endpoint_default_stub_empty(self) -> None:
+        """默认 ctx → 端点返回 enabled=False,空列表."""
+        from my_ai_employee.dashboard.server import create_server
+
+        server = create_server(ctx=DashboardContext(), host="127.0.0.1", port=0)
+        host, port = server.server_address[:2]
+        # mypy --strict:server_address[0] 可能是 bytes,显式 str cast(沿 v0.2.53.7 范本)
+        host_str = host if isinstance(host, str) else host.decode("utf-8")
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            status, body = _fetch_json(f"http://{host_str}:{port}/api/approval-gate/audits")
+            assert status == 200
+            assert body["read_only"] is True
+            assert body["enabled"] is False
+            assert body["count"] == 0
+            assert body["items"] == []
+        finally:
+            server.shutdown()
+
+    def test_endpoint_inmemory_audits(self) -> None:
+        """注入 InMemory store → 端点返回 enabled=True,带 items."""
+        from my_ai_employee.dashboard.server import create_server
+        from my_ai_employee.menu_bar.approval_gate_audit import (
+            AuditRecord,
+            InMemoryApprovalGateAuditStore,
+        )
+
+        store = InMemoryApprovalGateAuditStore()
+        store.record(
+            AuditRecord(
+                action="dismiss_anomaly",
+                target_id="2026-06-29|星巴克|38.50",
+                actor="dashboard_tester",
+                reason="ok",
+                write_executed=True,
+                affected_id="2026-06-29|星巴克|38.50",
+                error=None,
+                executed_at_ms=9999,
+            )
+        )
+        ctx = DashboardContext(audit_store=store)
+        server = create_server(ctx=ctx, host="127.0.0.1", port=0)
+        host, port = server.server_address[:2]
+        host_str = host if isinstance(host, str) else host.decode("utf-8")
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            status, body = _fetch_json(f"http://{host_str}:{port}/api/approval-gate/audits?limit=5")
+            assert status == 200
+            assert body["enabled"] is True
+            assert body["count"] == 1
+            assert body["items"][0]["action"] == "dismiss_anomaly"
+            assert body["items"][0]["actor"] == "dashboard_tester"
+        finally:
+            server.shutdown()
+
+
 def _fetch_json(url: str) -> tuple[int, dict[str, Any]]:
     with urllib.request.urlopen(url, timeout=2) as resp:  # noqa: S310 — 测试 localhost
         return resp.status, json.loads(resp.read().decode("utf-8"))
