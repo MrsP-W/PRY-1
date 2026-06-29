@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29):mypy --strict 0 errors / 235 files / 2518 passed / 88.78% / MD lint 178 files;修 14 redundant-cast + 8 unused-ignore + 9 method-assign + 20 union-attr + 17 attr-defined + 18 misc + 221 arg-type(307 个错误清零);撞坑 #70(本棒新增)中文注释 + type:ignore 同行导致 mypy 不识别 + 沿用 #69(type: ignore 漂移)。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68/#69/#70 衍生)+ outlook/gmail Keychain SMTP spike |
+| **当前阶段** | ✅ **7/1 月度复盘收口 A1-A3 docs-only(2026-06-29)** — HEAD `7e0a1fd` / 9 质量门全绿 / **MD lint 178 = `git ls-files '*.md'` 已稳定**;`reports/2026-07-monthly-review.md` 刷新为最终版(覆盖 6/25 提前执行版)+ 32 项议程 + 9/9 项实质满足 + 撞坑 #69 + #70 沉淀 + §5.2 v0.2.1-rc1 决策表(选项 A/B/C · 7/1 议程 1 评估);`docs/v0.2-launch-plan.md` P0 checklist 补勾 v0.2.53.38-41 + `7e0a1fd` + `30297f9` + monthly report 共 6 项。**下一棒**:7/1 月度复盘会议统一评估(`v0.2.1-rc1` 候选 + 决策方法论第 12 版 + v3.0 SDK + 3 大文件拆分 + 7 个 Agent loop 范式 + 清洁度 + 撞坑 #68/#69/#70 衍生 5 项补强 → 32 项议程)+ outlook/gmail Keychain SMTP spike |
+| **上一阶段** | ✅ `v0.2.53.41` hotfix mypy 状态失真修复(2026-06-29 · 3 commits `0d21b50` + `545c56d` + `091f13a` · 307 个 mypy 错误清零 · 撞坑 #69 + #70)+ `7e0a1fd` lint 178 稳定化(`chore(lint): exclude gitignored review export from MD lint scan` · 闭环撞坑 #50 衍生第三版 self-claim vs 实际漂移)+ `30297f9` v0.2.53.40 § 8 漂移修正(docs-only +16/-8) |
 | **上一阶段** | ✅ `v0.2.53.40` mypy --strict tests 全清 300 errors(2026-06-29 · `cc39670`):三层修复范本(unused-ignore 脚本 + cast 范本 + # type: ignore[misc])+ 撞坑 #69(type: ignore 注释漂移) |
 | **上一阶段** | ✅ `v0.2.53.37` 7/1 月度复盘输入包 docs-only(2026-06-29 · `391777a`):27 项议程总盘(22 + 5 撞坑 #68 衍生 · 主题 1-8)+ 7/1 复盘流程 12:00-16:30(4.5h 窗口) |
 | **上一阶段** | ✅ `v0.2.53.36` 8/1 release tag readiness 刷新 docs-only(2026-06-28 · `8b1c66c`):8/9 项实质满足,沿 v0.2.47 决策矩阵 |
