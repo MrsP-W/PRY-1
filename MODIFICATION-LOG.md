@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试(2026-06-29 · HEAD 待提交)** — 2557 passed / 88.87% / MD lint **190** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.48 Dashboard 系统健康硬编码修复 · v0.2.53.47 状态快照同步。**下一棒**:P1-3 报告页强化 / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.50 Dashboard 报告页搜索 UX 强化(2026-06-29 · HEAD 待提交)** — 2557 passed / 88.85% / MD lint **191** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试。**下一棒**:v0.2.53.51 audit 真实落档 / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -108,8 +108,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2557 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **235 files** / MD lint **190 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | P1-3 报告页强化(撞坑 #66 扫描器 + 撞坑 #50 docstring/code 漂移防御 + 只读 GET);8/1 后实写 launch |
+| **质量基线** | **2557 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **235 files** / MD lint **191 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | v0.2.53.51 audit 真实落档(沿 v0.2.53.20 落档 design);8/1 后实写 launch |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -224,6 +224,60 @@
 
 - **P1-3 报告页强化** — `/api/reports/preview` + 搜索 UX 强化,沿 v0.2.53.10 范本,只读 GET
 - **v0.2.53.50 audit 真实落档** — audit_id 从 None 升级到真实 audit_log,留 8/1 后 + 用户授权
+- **8/1 后独立 launch 路径 4 切换** — 实际写入留 8/1 后 + 用户明确授权
+
+---
+
+### 2026-06-29 [v0.2.53.50 Dashboard 报告页搜索 UX 强化] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard-ui)**: `docs/ui/codex-style-dashboard.html` — 报告列表按日期倒序(`localeCompare` · null/空日期排末尾)· 搜索词 `<mark>` 高亮(标题 + 路径)· 清除按钮 + Escape 兜底 · 实时匹配计数(4 状态映射)· 空状态搜索词提示 · 1 file / +89 -22
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — `coverage: 88.87% → 88.85%` · `lint: 190 → 191`(撞坑 #50 第三层修复 self-claim vs 实际漂移)
+- **test(menu-bar)**: `tests/menu_bar/test_app.py:811` — `2546 passed` → `2557 passed`(沿 v0.2.53.49 同步)
+- **docs(state)**: README + SESSION-STATE + MODIFICATION-LOG 三入口同步 v0.2.53.50(`2557/88.85%/191`)
+
+**2. 质量门 9/9 全绿**
+
+| 门 | 结果 |
+|---|------|
+| MD lint | **191 files 0 errors**(190 → 191,本次新增 doc) |
+| mypy --strict | 0 errors / 235 files |
+| ruff check | All checks passed |
+| ruff format | 249 files already formatted |
+| pytest | 2557 passed / 1 skipped(0 新增 · 仅 test_app.py:811 沿撞坑 #50 同步) |
+| coverage | **88.85%**(88.87% → 88.85% · -0.02pp · 撞坑 #50 第三层修复) |
+| alembic upgrade head --sql | exit 0 |
+| uv build | OK(sdist + wheel) |
+| FINAL_EXIT | 0 |
+
+**3. 沿用边界**(本棒 0 新增,全部沿用)
+
+- ❌ 不接真实业务 writer(实际写入路径留 v0.2.53.19 handler 启用 + 8/1 后)
+- ❌ 不写 DB 实际数据(默认 raise / 测试场景用 fake store)
+- ❌ 不发真实 SMTP
+- ❌ 不读 Keychain 明文(沿 #59 撞坑规范)
+- ❌ 不打 `v0.2.x` tag(沿 D5.7.2 + 8/1 锚定)
+- ❌ 不移动 `v0.1.0` tag(`2af775f` 锚定不动)
+- ❌ 不接 outlook/gmail SMTP(用户决策豁免)
+- ❌ 不引入新依赖(纯原生 JS · 不引入 React/Vue/框架)
+- ❌ 不改后端 API 契约(只读 GET · 只改前端)
+- ✅ 撞坑累计 **70 类沿用**(本棒 0 新增)
+- ✅ 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
+- ✅ write_executed 恒 False(沿 v0.2.53.11 不变式)
+
+**4. 报告页 UX 4 强化点**
+
+| # | 强化点 | 沿用范本 |
+|---|--------|---------|
+| 1 | 按日期倒序 | `localeCompare` 倒序 · null/空日期排末尾 |
+| 2 | 搜索词高亮 | `<mark>` 标签 + `escapeHtml` 防 XSS |
+| 3 | 清除按钮 + Escape | 沿 `<button type="button">` + `hidden` 原生范本 |
+| 4 | 实时匹配计数 | 4 状态映射(无搜索+all / 无搜索+filter / 有搜索 / 空状态) |
+
+**5. 下一棒**
+
+- **v0.2.53.51 audit 真实落档** — audit_id 从 None 升级到真实 audit_log,留 8/1 后 + 用户授权
 - **8/1 后独立 launch 路径 4 切换** — 实际写入留 8/1 后 + 用户明确授权
 
 ---

@@ -983,6 +983,7 @@
                   placeholder="搜索标题或路径…"
                   aria-label="搜索报告"
                 />
+                <button id="reports-search-clear" class="filter" type="button" hidden aria-label="清除搜索">清除</button>
                 <button class="filter active" data-filter="all">全部</button>
                 <button class="filter" data-filter="doc">docs</button>
                 <button class="filter" data-filter="phase_report">reports</button>
@@ -993,6 +994,7 @@
               <div class="reports-summary" id="reports-summary" style="margin-top: 12px">
                 <span class="tag">合计 <strong id="reports-count">0</strong></span>
                 <span class="tag">最近 <strong id="reports-latest-date">—</strong></span>
+                <span class="tag" id="reports-match-count">0 项</span>
                 <span class="tag" id="reports-filter-hint">点击条目预览 · spike 可详情</span>
               </div>
 
@@ -1048,6 +1050,7 @@
               <span>docs/v0.2-launch-plan.md</span>
               <span>docs/ui/codex-style-dashboard.md</span>
               <span>docs/v0.2.53.4-dashboard-readonly-api-extended-2026-06-25.md</span>
+              <span>docs/v0.2.53.50-dashboard-reports-search-ux-2026-06-29.md</span>
             </div>
           </div>
 
@@ -1779,7 +1782,7 @@
 
       function filteredReports() {
         const q = _currentReportSearch.trim().toLowerCase();
-        return _currentReports.filter((r) => {
+        const out = _currentReports.filter((r) => {
           if (_currentReportFilter !== "all" && r.type !== _currentReportFilter) {
             return false;
           }
@@ -1791,6 +1794,28 @@
             String(r.path ?? "").toLowerCase().includes(q)
           );
         });
+        // v0.2.53.50 强化:按日期倒序(最近优先)·null/空日期排末尾
+        return out.sort((a, b) => {
+          const da = String(a.date ?? "");
+          const db = String(b.date ?? "");
+          if (!da && !db) return 0;
+          if (!da) return 1;
+          if (!db) return -1;
+          return db.localeCompare(da);
+        });
+      }
+
+      function highlightMatch(text, query) {
+        // v0.2.53.50 强化:搜索词高亮(标题/路径命中片段)
+        if (!text || !query) return escapeHtml(text || "");
+        const lowerText = String(text).toLowerCase();
+        const lowerQuery = query.toLowerCase();
+        const idx = lowerText.indexOf(lowerQuery);
+        if (idx < 0) return escapeHtml(text);
+        const before = text.slice(0, idx);
+        const hit = text.slice(idx, idx + query.length);
+        const after = text.slice(idx + query.length);
+        return `${escapeHtml(before)}<mark>${escapeHtml(hit)}</mark>${escapeHtml(after)}`;
       }
 
       function renderReportPreviewPanel(title, meta, body, truncated) {
@@ -1861,32 +1886,50 @@
         const container = document.getElementById("reports-queue");
         if (!container) return;
         const filtered = filteredReports();
+        const total = _currentReports.length;
         if (filtered.length === 0) {
-          container.innerHTML =
-            '<div class="queue-empty">暂无匹配报告 · 调整搜索或 filter</div>';
-          return;
-        }
-        container.innerHTML = filtered
-          .map((r) => {
-            const tone = statusToTagTone(r.status);
-            const label = statusToLabel(r.status);
-            const selected = r.path === _selectedReportPath ? " selected" : "";
-            return `
+          const q = _currentReportSearch.trim();
+          const emptyMsg = q
+            ? `<div class="queue-empty">未找到匹配「<mark>${escapeHtml(q)}</mark>」的报告 · 调整搜索或 filter</div>`
+            : '<div class="queue-empty">暂无匹配报告 · 调整 filter</div>';
+          container.innerHTML = emptyMsg;
+        } else {
+          container.innerHTML = filtered
+            .map((r) => {
+              const tone = statusToTagTone(r.status);
+              const label = statusToLabel(r.status);
+              const selected = r.path === _selectedReportPath ? " selected" : "";
+              const titleHtml = highlightMatch(r.title || "—", _currentReportSearch);
+              const pathHtml = highlightMatch(r.path || "", _currentReportSearch);
+              return `
               <div class="queue-item clickable${selected}" data-report-path="${escapeHtml(r.path)}" role="button" tabindex="0">
                 <div style="flex:1; min-width:0">
-                  <div class="queue-title">${escapeHtml(r.title)}</div>
+                  <div class="queue-title">${titleHtml}</div>
                   <div class="queue-meta">
                     <span class="tag ${tone}">${label}</span>
                     <span class="tag">${escapeHtml(r.type)}</span>
                     <span>${escapeHtml(r.date || "—")}</span>
                     <span>${formatBytes(r.size_bytes)}</span>
                   </div>
-                  <div class="queue-meta mono">${escapeHtml(r.path)}</div>
+                  <div class="queue-meta mono">${pathHtml}</div>
                 </div>
               </div>
             `;
-          })
-          .join("");
+            })
+            .join("");
+        }
+        // v0.2.53.50 强化:实时匹配数反馈
+        const matchHint = document.getElementById("reports-match-count");
+        if (matchHint) {
+          const q = _currentReportSearch.trim();
+          if (q) {
+            matchHint.textContent = `${filtered.length} / ${total} 项匹配「${q}」`;
+          } else if (_currentReportFilter !== "all") {
+            matchHint.textContent = `${filtered.length} / ${total} 项 (${_currentReportFilter})`;
+          } else {
+            matchHint.textContent = `${total} 项`;
+          }
+        }
         container.querySelectorAll("[data-report-path]").forEach((el) => {
           el.addEventListener("click", () => {
             const p = el.getAttribute("data-report-path");
@@ -1913,9 +1956,32 @@
       });
 
       const reportsSearch = document.getElementById("reports-search");
+      const reportsSearchClear = document.getElementById("reports-search-clear");
       if (reportsSearch) {
         reportsSearch.addEventListener("input", () => {
           _currentReportSearch = reportsSearch.value;
+          if (reportsSearchClear) {
+            reportsSearchClear.hidden = _currentReportSearch.length === 0;
+          }
+          renderReportsList();
+        });
+        reportsSearch.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && _currentReportSearch) {
+            reportsSearch.value = "";
+            _currentReportSearch = "";
+            if (reportsSearchClear) reportsSearchClear.hidden = true;
+            renderReportsList();
+          }
+        });
+      }
+      if (reportsSearchClear) {
+        reportsSearchClear.addEventListener("click", () => {
+          if (reportsSearch) {
+            reportsSearch.value = "";
+            reportsSearch.focus();
+          }
+          _currentReportSearch = "";
+          reportsSearchClear.hidden = true;
           renderReportsList();
         });
       }
