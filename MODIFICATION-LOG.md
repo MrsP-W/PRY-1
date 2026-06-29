@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.50 Dashboard 报告页搜索 UX 强化(2026-06-29 · HEAD 待提交)** — 2557 passed / 88.85% / MD lint **191** = `git ls-files '*.md'` · 三入口 + quality_snapshot 对齐。**上一阶段**:v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试。**下一棒**:v0.2.53.51 audit 真实落档 / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.51 状态快照漂移收口(2026-06-29 · `2950f6a`)** — v0.2.53.50 Dashboard 报告页搜索 UX 已提交;本轮同步 MD lint **192** = `git ls-files '*.md'` = `make lint`,并修正 SESSION-STATE 的 HEAD/待提交口径。**上一阶段**:v0.2.53.49 BusinessWriterImpl 写保护锁 + fake store 实写测试。**下一棒**:v0.2.53.51 audit 真实落档 / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -108,7 +108,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2557 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **235 files** / MD lint **191 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2557 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **235 files** / MD lint **192 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | **下一棒** | v0.2.53.51 audit 真实落档(沿 v0.2.53.20 落档 design);8/1 后实写 launch |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -138,6 +138,24 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-29 [v0.2.53.51 状态快照漂移收口 + 项目检查优化] — 收口
+
+**1. 本次修改内容**
+
+- **chore(snapshot)**: `src/my_ai_employee/quality_snapshot.py` — MD lint **191 → 192**(对齐 `git ls-files '*.md'` 与 `make lint`)。
+- **docs(state)**: SESSION-STATE / README / MODIFICATION-LOG — HEAD 口径从「待提交」修正为当前实测 `2950f6a`;质量基线 MD lint **191 → 192**;README quickstart 测试说明同步到 **2557 passed / 1 skipped / 88.85%**。
+
+**2. 风险点**
+
+- 🟢 本轮只改状态文档与只读质量快照字符串,不改业务逻辑、不写 DB、不发 SMTP、不读 Keychain、不打 tag。
+- 🟡 v0.2.53.50 历史段中的 190→191 仍保留为历史过程;当前状态以 192 为准。
+
+**3. 当前项目整体总结**
+
+- 质量门:2557 passed / 1 skipped / 88.85% / mypy --strict 0 / MD lint **192** / ruff + format 全绿。
+- 当前阶段:v0.2.53.50 已提交到 `2950f6a`;本轮工作区为状态同步待提交。
+- 下一棒:v0.2.53.51 audit 真实落档设计/实现评估;8/1 后再考虑实写 launch。
 
 ### 2026-06-29 [v0.2.53.47 状态快照同步 · HEAD 8edb592] — 收口
 
