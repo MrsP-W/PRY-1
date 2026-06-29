@@ -1,16 +1,24 @@
-"""v0.2.53.17 BusinessWriterImpl — 写操作 Impl 接入骨架(默认 raise NotImplementedError).
+"""v0.2.53.46 BusinessWriterImpl — 4 动作实写骨架(默认 raise NotImplementedError).
 
-承接 docs/v0.2.53.14-business-writer-design-2026-06-26.md §10 v0.2.53.17 范围:
-    - 接入 BusinessWriterImpl(approve_outbox / cancel_outbox / confirm_note 3 类已有 Service)
-    - 单项失败降级(沿 v0.2.53.8 单项失败降级范本)
-    - 默认行为 = raise NotImplementedError(沿撞坑 #65 默认 Stub 边界)
+承接 docs/v0.2.53.14-business-writer-design-2026-06-26.md §10 + v0.2.53.46 范围:
+    - 接入 BusinessWriterImpl(approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly 4 动作)
+    - 4 动作实写骨架:依赖检查 + 参数校验 + 状态守卫 + WriteResult 包装
+    - 默认行为 = raise NotImplementedError(沿撞坑 #18 风险门控)
+    - 真实写入路径留 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
+    - 仅 dry_run 真实实现(返回 WriteDecision)
 
-设计决策(2026-06-26 锁定):
+设计决策(2026-06-29 锁定):
     - 抽象 BusinessWriterImpl 类(3 已有 Service + dismiss_anomaly 占位)
     - 构造函数接受可选依赖(OutboxStore / NoteConfirmServiceImpl / AnomalyDismissalServiceStub)
     - 默认所有方法 raise NotImplementedError(等待 v0.2.53.19 handler 路径 4 启用)
-    - 仅 dry_run 实现(返回 WriteDecision)
+    - 仅 dry_run 真实实现(返回 WriteDecision)
     - 异常收窄(沿 note_confirm_service.py:113-115):用户主动操作异常必须透传
+
+v0.2.53.46 升级点(实写骨架):
+    - 4 动作方法统一骨架:_check_dep(依赖检查) + _validate_target_id(参数校验) + 末尾 raise
+    - 无效 target_id(非 str / 空字符串)→ WriteResult(success=False, error='invalid_target_id')
+    - 依赖未注入 → raise NotImplementedError(沿撞坑 #18)
+    - 默认 raise 字符串明确说明"路径 4 启用后调什么"
 
 D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - Protocol 类型鸭子类型友好(无需 isinstance)
@@ -18,7 +26,7 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - 单项失败不传播(approve_outbox 失败不影响 cancel_outbox)
     - 异常收容:dry_run 失败 → WriteDecision(error="internal_error");真实写入异常透传
 
-撞坑 #65 边界应用(默认禁写):
+撞坑 #18 边界应用(实际写入留 8/1 后):
     - 默认 raise NotImplementedError(等同 Stub 行为)
     - 不接 SMTP / 不读 Keychain 明文
     - 真实写入路径(env+confirm+writer 三道门齐全)留 v0.2.53.19 handler 启用
@@ -27,6 +35,8 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - 本棒默认 raise NotImplementedError,不真写 DB
     - 真实写入需 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
     - 不接真实 SMTP / 不读 Keychain 明文
+    - write_executed 恒 False(沿 v0.2.53.11 不变式)
+    - 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
 """
 
 from __future__ import annotations
@@ -148,12 +158,50 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """默认 raise — handler 路径 4 启用后改为调 OutboxStore.update_status.
+        """路径 4 实写骨架 — 默认 raise,等待 v0.2.53.19 handler 启用.
 
-        Raises:
-            NotImplementedError: 默认行为,留 v0.2.53.19 启用.
+        边界(沿撞坑 #18 + v0.2.53.14 §6 + v0.2.53.19):
+            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError)
+            - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False, error='invalid_target_id'))
+            - 默认 raise NotImplementedError(路径 4 启用后改 OutboxStore.update_status)
+            - 真实写入路径留 v0.2.53.19 handler 启用 + 用户明确授权
+
+        路径 4 启用后真实调用(沿 D5.6.3 P1-1 审批凭据必传规则):
+            outbox_store.update_status(
+                outbox_id=int(target_id),
+                new_status='APPROVED',
+                from_status='PENDING_SEND',
+                last_approved_at_ms=now_ms,
+            )
+
+        Args:
+            target_id: OutboxEntry.id(str 表示,与 Protocol 契约对齐)
+            audit: 审计上下文(AuditContext)
+
+        Returns:
+            WriteResult(参数非法时 success=False, error='invalid_target_id')
         """
-        raise NotImplementedError("BusinessWriterImpl.approve_outbox real_write_handler 未启用")
+        self._check_dep(self._outbox_store, "outbox_store")
+        err = self._validate_target_id(target_id)
+        if err is not None:
+            return WriteResult(
+                success=False,
+                affected_id=None,
+                error="invalid_target_id",
+                reason=err,
+            )
+        # 路径 4 启用后将调:
+        #   self._outbox_store.update_status(
+        #       outbox_id=int(target_id),
+        #       new_status='APPROVED',
+        #       from_status='PENDING_SEND',
+        #       last_approved_at_ms=_now_ms(),
+        #   )
+        raise NotImplementedError(
+            "BusinessWriterImpl.approve_outbox 路径 4 启用后将调 "
+            "OutboxStore.update_status(PENDING_SEND → APPROVED, last_approved_at_ms=now_ms);"
+            "实际写入留 8/1 后 + 用户明确授权"
+        )
 
     def cancel_outbox(
         self,
@@ -161,8 +209,43 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """默认 raise — handler 路径 4 启用后改为调 OutboxStore.update_status."""
-        raise NotImplementedError("BusinessWriterImpl.cancel_outbox real_write_handler 未启用")
+        """路径 4 实写骨架 — 默认 raise,等待 v0.2.53.19 handler 启用.
+
+        边界(沿撞坑 #18 + v0.2.53.14 §6 + D5.6.3 P1-1 必传 None 规则):
+            - 依赖检查:outbox_store 必须注入
+            - 参数校验:target_id 必须为非空 str
+            - 默认 raise(路径 4 启用后改 OutboxStore.update_status)
+            - 真实写入路径留 v0.2.53.19 handler 启用
+
+        路径 4 启用后真实调用(D5.6.3 P1-1:非 APPROVED 必传 None):
+            outbox_store.update_status(
+                outbox_id=int(target_id),
+                new_status='CANCELLED',
+                from_status='PENDING_SEND' or 'APPROVED',  # 调用方决策
+                last_approved_at_ms=None,
+            )
+        """
+        self._check_dep(self._outbox_store, "outbox_store")
+        err = self._validate_target_id(target_id)
+        if err is not None:
+            return WriteResult(
+                success=False,
+                affected_id=None,
+                error="invalid_target_id",
+                reason=err,
+            )
+        # 路径 4 启用后将调:
+        #   self._outbox_store.update_status(
+        #       outbox_id=int(target_id),
+        #       new_status='CANCELLED',
+        #       from_status=<status_before>,  # 调用方决策
+        #       last_approved_at_ms=None,  # D5.6.3 P1-1 必传 None
+        #   )
+        raise NotImplementedError(
+            "BusinessWriterImpl.cancel_outbox 路径 4 启用后将调 "
+            "OutboxStore.update_status(PENDING_SEND/APPROVED → CANCELLED, last_approved_at_ms=None);"
+            "实际写入留 8/1 后 + 用户明确授权"
+        )
 
     def confirm_note(
         self,
@@ -170,11 +253,33 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """默认 raise — handler 路径 4 启用后改为调 NoteConfirmServiceImpl.confirm_note.
+        """路径 4 实写骨架 — 默认 raise,等待 v0.2.53.19 handler 启用.
 
-        异常收窄(沿 note_confirm_service.py:113-115):用户主动操作异常必须透传.
+        边界(沿撞坑 #18 + note_confirm_service.py:113-115 异常透传):
+            - 依赖检查:note_confirm_service 必须注入
+            - 参数校验:target_id 必须为非空 str
+            - 默认 raise(路径 4 启用后改 NoteConfirmServiceImpl.confirm_note)
+            - 真实写入异常透传(不收容 — 用户主动操作必须看到 ValueError)
+
+        路径 4 启用后真实调用:
+            note_confirm_service.confirm_note(apple_note_id=target_id)
         """
-        raise NotImplementedError("BusinessWriterImpl.confirm_note real_write_handler 未启用")
+        self._check_dep(self._note_confirm_service, "note_confirm_service")
+        err = self._validate_target_id(target_id)
+        if err is not None:
+            return WriteResult(
+                success=False,
+                affected_id=None,
+                error="invalid_target_id",
+                reason=err,
+            )
+        # 路径 4 启用后将调:
+        #   self._note_confirm_service.confirm_note(apple_note_id=target_id)
+        raise NotImplementedError(
+            "BusinessWriterImpl.confirm_note 路径 4 启用后将调 "
+            "NoteConfirmServiceImpl.confirm_note(apple_note_id=target_id);"
+            "实际写入留 8/1 后 + 用户明确授权"
+        )
 
     def dismiss_anomaly(
         self,
@@ -182,8 +287,71 @@ class BusinessWriterImpl:
         *,
         audit: AuditContext,
     ) -> WriteResult:
-        """默认 raise — handler 路径 4 启用后改为调 AnomalyDismissalServiceStub.dismiss."""
-        raise NotImplementedError("BusinessWriterImpl.dismiss_anomaly real_write_handler 未启用")
+        """路径 4 实写骨架 — 默认 raise,等待 v0.2.53.19 handler 启用.
+
+        边界(沿撞坑 #18 + AnomalyDismissalService.dismiss 契约):
+            - 依赖检查:anomaly_dismissal_service 必须注入
+            - 参数校验:target_id 必须为非空 str(格式 {date}|{counterparty}|{amount})
+            - 默认 raise(路径 4 启用后改 AnomalyDismissalService.dismiss)
+            - reason 限 240 字符(沿 _MAX_REASON_LEN)
+            - 真实写入路径留 v0.2.53.19 handler 启用
+
+        路径 4 启用后真实调用:
+            anomaly_dismissal_service.dismiss(
+                anomaly_id=target_id,
+                reason=audit.reason,  # 限 240 字符
+            )
+        """
+        self._check_dep(self._anomaly_dismissal_service, "anomaly_dismissal_service")
+        err = self._validate_target_id(target_id)
+        if err is not None:
+            return WriteResult(
+                success=False,
+                affected_id=None,
+                error="invalid_target_id",
+                reason=err,
+            )
+        # 路径 4 启用后将调:
+        #   self._anomaly_dismissal_service.dismiss(
+        #       anomaly_id=target_id,
+        #       reason=audit.reason,  # 限 240 字符(沿 _MAX_REASON_LEN)
+        #   )
+        raise NotImplementedError(
+            "BusinessWriterImpl.dismiss_anomaly 路径 4 启用后将调 "
+            "AnomalyDismissalService.dismiss(anomaly_id=target_id, reason=audit.reason);"
+            "实际写入留 8/1 后 + 用户明确授权"
+        )
+
+    def _check_dep(self, dep: object, name: str) -> None:
+        """依赖检查 — 缺失时 raise NotImplementedError(沿撞坑 #18 风险门控).
+
+        Args:
+            dep: 依赖对象(可能是 None)
+            name: 依赖名称(用于错误信息)
+
+        Raises:
+            NotImplementedError: 依赖为 None 时(等同 Stub 行为)
+        """
+        if dep is None:
+            raise NotImplementedError(
+                f"BusinessWriterImpl 依赖 {name} 未注入(None);"
+                f"需 DashboardContext.default() 自动注入(沿 v0.2.53.27 opt-in 范本)"
+            )
+
+    @staticmethod
+    def _validate_target_id(target_id: object) -> str | None:
+        """统一 target_id 校验 — 返回错误 reason 字符串(无错返回 None).
+
+        边界(沿 note_confirm_service.py:confirm_note 校验模式):
+            - target_id 必须是 str(严判 type,非 bool)
+            - 去除首尾空白后非空
+        """
+        if not isinstance(target_id, str):
+            return f"target_id 必须是 str,实际 type={type(target_id).__name__}, value={target_id!r}"
+        stripped = target_id.strip()
+        if not stripped:
+            return f"target_id 必填且必须非空字符串(非纯空白),实际 {target_id!r}"
+        return None
 
     @staticmethod
     def _audit_timestamp(audit: AuditContext) -> int:
