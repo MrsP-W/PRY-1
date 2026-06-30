@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30)** — 承接 QQ SMTP 10 封 spike 收口(`sent=10 tech_fail=0`,撞坑 #78/#79)与 MODIFICATION-LOG 累计修正。**默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2595 passed / 1 skipped / 88.85% / mypy 0 / MD lint 203 / ruff + format 全绿。**下一棒**:后续 90 封 spike 或 Phase 1 维持期;不打 tag。
+> **状态**:🟢 **v0.2.56 D5.6.3 spike 严判放宽设计 docs-only(2026-06-30)** — 设计 + @审计员 review PASS(撞坑 #78 · 9 重门控 · `--multi-confirm`)。**代码未改** · **默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2595 passed / 1 skipped / 88.85% / mypy 0 / MD lint 205 / ruff + format 全绿。**下一棒**:用户授权后实施 spike 严判放宽;不打 tag。
 
 ---
 
