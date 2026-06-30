@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.56.1 D5.6.3 实施 + Phase 1 维持期(7/2-7/24 · 2026-06-30 锚定)** — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**默认仍拒写**。**SMTP**:仅 QQ。**质量门**:2605 passed / 1 skipped / 88.85% / mypy 0 / MD lint 206 / ruff + format 全绿。**Phase 1**:weekly `make ci`;不打 tag。
+> **状态**:🟢 **Phase 1 维持期(7/2-7/24)** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过** · 2605 passed / 88.85% · weekly `make ci` · 不打 tag。
 
 ---
 
