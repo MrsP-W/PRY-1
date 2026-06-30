@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.55 Path4 5th gate preflight(2026-06-30 · docs+test)** — 3 不变式测试锁定 Path 4 5th gate 安全状态(`ENABLE_PATH_4_WRITE` env 被忽略 / raise 时 audit 不落档 / `dry_run.required` 不含 env flag)+ 报告 `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md` 6 段沉淀。**上一阶段**:v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备 |
+| **当前阶段** | ✅ **v0.2.53.58 Path 4 5门只读预览 + A2 子任务复核(2026-06-30 · docs-only)** — codex-style-dashboard system 视图新增 Path 4 5门只读 card(5门全「未启用」静态 badge · 沿 `docs/v0.2.53.53` §2.3);A2-1/A2-2 子任务复核(沿 v0.2.53.32 + v0.2.53.50 已落地,无需改动)。**上一阶段**:v0.2.53.57 launch-plan baseline sync(`9dc9a08`)。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备 |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
@@ -139,6 +139,25 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.53.59 状态入口漂移修复] — 收口
+
+**1. 本次修改内容**
+
+- **docs(state)**: SESSION-STATE / MODIFICATION-LOG 顶部快照 v0.2.53.55 → v0.2.53.58 对齐 HEAD `5b0e66c`。
+- **docs(fix)**: `docs/v0.2.53.52-dashboard-audit-ui-2026-06-30.md` §3.5 更正误记(`tests/core/test_oauth2.py` 未纳入 v0.2.53.52 commit)。
+
+**2. 风险点**
+
+- 🟢 docs-only · 零源码改动 · `quality_snapshot.py` 2586/88.92%/196 不变 · 不启用 `ENABLE_PATH_4_WRITE=1`。
+- 🟡 v0.2.53.56–58 期间 SESSION 顶部滞后,本棒收口(沿撞坑 #50 衍生第三版 self-claim vs 实际漂移防御)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **196** / ruff + format 全绿。
+- 下一棒:8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备。
+
+---
 
 ### 2026-06-30 [v0.2.53.58 Path 4 5 门只读预览 + A2 子任务复核] — 收口
 

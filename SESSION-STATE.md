@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.53.55 Path4 5th gate preflight(2026-06-30)
+# SESSION-STATE — v0.2.53.58 Path 4 5门只读预览 + A2 子任务复核(2026-06-30)
 
 > **最后更新**:2026-06-30 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.53.55 Path4 5th gate preflight(2026-06-30)** — 3 不变式测试锁定 Path 4 5th gate 安全状态(`ENABLE_PATH_4_WRITE` env 被忽略 / raise 时 audit 不落档 / `dry_run.required` 不含 env flag);报告 `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md`。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**8/1 readiness**:QQ SMTP ✅ · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / **2586 passed** / **88.92%** / lint **196** 0 errors / ruff + format 全绿。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备。**边界**:默认 raise · 写保护锁锁定 · 不打 tag · `write_executed` dry-run 恒 False · 撞坑累计 70 类沿用。
+> **状态**:🟢 **v0.2.53.58 Path 4 5门只读预览 + A2 子任务复核(2026-06-30)** — codex-style-dashboard system 视图新增 Path 4 5门只读 card(5门全「未启用」静态 badge · 沿 `docs/v0.2.53.53` §2.3);A2-1 系统健康动态化(v0.2.53.32 已落地)/ A2-2 Reports 搜索 UX(v0.2.53.50 已落地)子任务复核完成。**上一阶段**:v0.2.53.55 Path4 5th gate preflight(3 不变式测试 · 报告 `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md`)。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**8/1 readiness**:QQ SMTP ✅ · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / **2586 passed** / **88.92%** / lint **196** 0 errors / ruff + format 全绿。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备。**边界**:默认 raise · 写保护锁锁定 · 不打 tag · `write_executed` dry-run 恒 False · 撞坑累计 70 类沿用。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.53.55 Path4 5th gate preflight 已落地(2026-06-30)** — 2586 passed / 88.92% / MD lint **196** = `git ls-files '*.md'` = `make lint`。**下一步候选**:8/1 后实写 launch 实施 / 月度复盘准备。
+**当前启动候选**:**v0.2.53.58 Path 4 5门只读预览 + A2 子任务复核 已落地(2026-06-30)** — 2586 passed / 88.92% / MD lint **196** = `git ls-files '*.md'` = `make lint`。**下一步候选**:8/1 后实写 launch 实施 / 月度复盘准备。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
