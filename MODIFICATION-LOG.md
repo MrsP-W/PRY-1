@@ -113,9 +113,9 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2605 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **237 files** / MD lint **218 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | 8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选 · tag readiness 继续不打 tag |
-| **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
+| **质量基线** | **2610 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **237 files** / MD lint **218 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 用户授权触发(3 项候选:Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· 9/1+ v0.2 launch plan 整体收口候选 · tag 暂无需再动 |
+| **后续锚点** | 9/1+ v0.2 launch plan 整体收口(用户授权后) |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -143,6 +143,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [项目检查 + 基线漂移修复 + check-snapshot 增强] — 收口
+
+**1. 本次修改内容**
+
+- **fix(snapshot)**: `quality_snapshot.py` — pytest 2605→**2610** / coverage 88.87%→**88.94%**(根因:`0e7775f` 新增 4 tests 未同步 + 本次 +1 pytest 收集校验)。
+- **chore(check)**: `scripts/check_quality_snapshot.py` — 新增 pytest `--collect-only` 与 snapshot passed+skipped 对齐校验。
+- **test**: `tests/test_quality_snapshot.py` — +1 收集数断言。
+- **docs(state)**: README / SESSION-STATE / MODIFICATION-LOG 当前态 / `docs/v0.2-launch-plan.md` 基线行同步。
+
+**2. 风险点**
+
+- 🟢 纯基线同步 + 防漂移增强 · 0 业务逻辑改动 · tag 不动。
+- ⚠️ coverage 以 `make coverage` 实测 88.94% 为准(与 `make test` 88.96% 存在四舍五入差,沿用 coverage 门口径)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2610 passed / 1 skipped** / **88.94%** / mypy --strict 0 / MD lint **218** / `make ci` 含 check-snapshot(MD + pytest)。
+- 下一棒:用户授权(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)。
+
+---
 
 ### 2026-06-30 [v0.2.55.3 真写 OutboxStore 契约测试] — 收口
 

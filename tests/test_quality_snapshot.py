@@ -11,7 +11,12 @@ from my_ai_employee.quality_snapshot import (
     DEFAULT_QUALITY_GATES,
     format_system_health_body,
 )
-from scripts.check_quality_snapshot import count_tracked_md_files, parse_lint_file_count
+from scripts.check_quality_snapshot import (
+    count_collected_tests,
+    count_tracked_md_files,
+    parse_lint_file_count,
+    parse_pytest_counts,
+)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,6 +26,13 @@ def test_tracked_md_count_matches_snapshot_lint() -> None:
     claimed = parse_lint_file_count(DEFAULT_QUALITY_GATES.lint)
     tracked = count_tracked_md_files(PROJECT_ROOT)
     assert tracked == claimed
+
+
+def test_collected_test_count_matches_snapshot_pytest() -> None:
+    """pytest 收集数必须等于 snapshot passed + skipped."""
+    passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
+    collected = count_collected_tests(PROJECT_ROOT)
+    assert collected == passed + skipped
 
 
 def test_dashboard_api_status_quality_gates_match_default() -> None:

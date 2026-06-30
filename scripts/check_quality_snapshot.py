@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "src"))
 from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES  # noqa: E402
 
 _LINT_RE = re.compile(r"^(\d+) files\b")
+_PYTEST_RE = re.compile(r"^(\d+) passed(?:\s*/\s*(\d+) skipped)?")
 
 
 def count_tracked_md_files(root: Path = ROOT) -> int:
@@ -32,6 +33,29 @@ def count_tracked_md_files(root: Path = ROOT) -> int:
     return len([line for line in result.stdout.splitlines() if line.strip()])
 
 
+def count_collected_tests(root: Path = ROOT) -> int:
+    """pytest --collect-only 计数(与 snapshot pytest 字段对齐)."""
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "pytest",
+            "--collect-only",
+            "-q",
+            "--no-cov",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    match = re.search(r"(\d+)\s+tests?\s+collected", result.stdout + result.stderr)
+    if not match:
+        msg = "无法解析 pytest --collect-only 输出"
+        raise RuntimeError(msg)
+    return int(match.group(1))
+
+
 def parse_lint_file_count(lint: str) -> int:
     """从 '218 files 0 errors' 解析文件数."""
     match = _LINT_RE.match(lint.strip())
@@ -39,6 +63,17 @@ def parse_lint_file_count(lint: str) -> int:
         msg = f"无法解析 quality_snapshot.lint 格式: {lint!r}"
         raise ValueError(msg)
     return int(match.group(1))
+
+
+def parse_pytest_counts(pytest: str) -> tuple[int, int]:
+    """从 '2610 passed / 1 skipped' 解析 passed 与 skipped."""
+    match = _PYTEST_RE.match(pytest.strip())
+    if not match:
+        msg = f"无法解析 quality_snapshot.pytest 格式: {pytest!r}"
+        raise ValueError(msg)
+    passed = int(match.group(1))
+    skipped = int(match.group(2) or 0)
+    return passed, skipped
 
 
 def check_snapshot(*, root: Path = ROOT) -> list[str]:
@@ -52,6 +87,17 @@ def check_snapshot(*, root: Path = ROOT) -> list[str]:
             f"quality_snapshot claims {claimed} files, "
             f"git ls-files '*.md' has {tracked}"
         )
+
+    passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
+    collected = count_collected_tests(root)
+    expected_collected = passed + skipped
+    if collected != expected_collected:
+        errors.append(
+            "pytest drift: "
+            f"quality_snapshot claims {passed} passed / {skipped} skipped "
+            f"(expected {expected_collected} collected), "
+            f"pytest --collect-only has {collected}"
+        )
     return errors
 
 
@@ -61,13 +107,17 @@ def main() -> int:
         for err in errors:
             print(f"ERROR: {err}", file=sys.stderr)
         print(
-            "Fix: update src/my_ai_employee/quality_snapshot.py lint field "
+            "Fix: update src/my_ai_employee/quality_snapshot.py "
             "and current-entry docs (README / SESSION-STATE / MODIFICATION-LOG).",
             file=sys.stderr,
         )
         return 1
     tracked = count_tracked_md_files()
-    print(f"OK: quality_snapshot MD lint matches git ls-files ({tracked} files)")
+    passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
+    print(
+        "OK: quality_snapshot matches live baseline "
+        f"({passed} passed / {skipped} skipped · {tracked} md files)"
+    )
     return 0
 
 
