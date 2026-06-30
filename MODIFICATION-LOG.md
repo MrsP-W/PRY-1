@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **Phase 1 维持期(7/2-7/24 · 2026-06-30 锚定)** — v0.2.56.1 D5.6.3 已实施(**2605 passed**)。**90 封 QQ SMTP spike 用户确认跳过(不测试)** — 10 封样本足够。**下一棒**:7/1 月度复盘 · weekly `make ci` |
+| **当前阶段** | ✅ **阶段 4 · 8/1 release tag 评估 docs-only 收官(2026-08-01 · `abc254a`)** — 7 月全链路收官(7/1 复盘 + Phase 1 weekly 4/4 + A3 readiness 3/3 + 8/1 tag 评估)。**9/9 项 readiness 实质满足**(QQ-only)· **8/1 不打 tag 维持**(决议 #25 + 撞坑 #60)。**下一棒**:8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选 |
 | **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2605 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **207 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | Phase 1 维持期 weekly `make ci`(7/2-7/24) · 7/1 月度复盘 · tag readiness 继续不打 tag |
+| **质量基线** | **2605 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **237 files** / MD lint **216 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | 8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选 · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -3362,13 +3362,13 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - ⚠️ **8/1 不打 tag 维持**(沿 7/1 复盘决议 #25 + 撞坑 #60 preliminary 范本)
 - ⚠️ **9/9 项 readiness 实质满足**(QQ-only 口径 · #2/#9 outlook/gmail 已豁免)
 - ⚠️ **撞坑累计 #71/#76/#78/#79 沿用**(连续 6 周 0 新增 · 6/30 → 8/1)
-- ⚠️ **MD lint 214 → 215**(docs-only +1)
+- ⚠️ **MD lint 214 → 216**(docs-only 累计 +2 · 实测校准)
 - ⚠️ **累计第 35 条**:7 月维持期 + 阶段 3 + 阶段 4 全链路收官
 - **P1**: 8/1 后用户授权触发(候选 4 项 — Path 4 spike / v0.2.1-rc1 tag / outlook/gmail Keychain / 跨项目沉淀)
 
 ### 3. 当前项目整体总结
 
-- 进度:**2605 passed / 88.85% / MD lint 215 / 9/9 质量门全绿 / 阶段 4 收官 / 7 月全链路收官**
+- 进度:**2605 passed / 88.87% / MD lint 216 / 9/9 质量门全绿 / 阶段 4 收官 / 7 月全链路收官**
 - 状态:**8/1 release tag 评估 docs-only 收官 · 不动 tag · 9/9 项 readiness 实质满足 · 撞坑 #71/#76/#78/#79 沿用 · 业务代码 0 改动**
 - 下一步:8/1 后用户授权触发(4 项候选)· 9/1+ v0.2 launch plan 整体收口候选
 - 下一棒:用户(8/1 后明确授权触发)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
