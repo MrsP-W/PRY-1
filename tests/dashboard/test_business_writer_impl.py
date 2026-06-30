@@ -1144,3 +1144,164 @@ class TestBusinessWriterImplPath4FifthGate:
         assert decision.error is None
         assert "ENABLE_PATH_4_WRITE=1" not in decision.required
         assert "real_write_handler_enabled" not in decision.required
+
+
+# ============================================================
+# v0.2.55.2 真 OutboxStore + 真写路径契约测试(防 #71 漂移)
+# 沿 tests/core/conftest.py 范本(InMemory SQLite + Base.metadata.create_all)
+# ============================================================
+
+
+class TestBusinessWriterImplRealWriteOutboxContract:
+    """v0.2.55.2 真 OutboxStore + 真写路径契约测试(撞坑 #71 防漂移).
+
+    与 v0.2.53.49 fake SimpleNamespace 关键差异:
+        - 真 OutboxStore(session_factory)+ InMemory SQLite + Base.metadata.create_all
+        - 断言用 OutboxStatus enum.value(自动跟踪 enum 改名,不是硬编码字符串)
+        - DB 真实状态变化验证(OutboxEntry.status / last_approved_at_ms)
+
+    撞坑 #71 修复(2026-06-30)防漂移:
+        - 任何调 outbox_store.update_status 时 status 字符串漂移(非 6 选 1)
+        - 立即被 OutboxStore._normalize_status 严判 ValueError(无需起 HTTP/真 SMTP)
+        - 测试断言用 enum.value 双重锁定,任何对 enum 改名都自动同步
+        - 沿 [[pitfall-71-outbox-status-case-mismatch]] + [[pitfall-65-opt-in-4-stages]]
+    """
+
+    @pytest.fixture
+    def engine(self: Any) -> Any:
+        """InMemory SQLite + Base.metadata.create_all(沿 tests/core/conftest.py 范本)."""
+        from sqlalchemy import create_engine
+
+        from my_ai_employee.core.models import Base
+        from my_ai_employee.core.outbox import OutboxEntry  # noqa: F401 — 注册到 Base.metadata
+        from my_ai_employee.events.models import Event  # noqa: F401 — FK 依赖
+
+        eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(eng)
+        yield eng
+        eng.dispose()
+
+    @pytest.fixture
+    def session_factory(self: Any, engine: Any) -> Any:
+        """sessionmaker 工厂."""
+        from sqlalchemy.orm import sessionmaker
+
+        return sessionmaker[Any](bind=engine)
+
+    @pytest.fixture
+    def outbox_store(self: Any, session_factory: Any) -> Any:
+        """真 OutboxStore(撞坑 #71 防漂移关键 — 不再用 SimpleNamespace)."""
+        from my_ai_employee.db.outbox import OutboxStore
+
+        return OutboxStore(session_factory)
+
+    def _seed_pending_outbox(self: Any, session_factory: Any, *, email_id: int = 1) -> int:
+        """种一条 status=pending_send 的 outbox 条目(供真写路径测试)."""
+        from my_ai_employee.core.outbox import OutboxEntry, OutboxStatus
+
+        with session_factory() as s:
+            entry = OutboxEntry(
+                email_id=email_id,
+                subject="真写契约测试",
+                body="approve_outbox 真写契约测试 body",
+                tone="FORMAL",
+                recipient_email="contract-test@example.com",
+                status=OutboxStatus.PENDING_SEND.value,
+                created_at=1_700_000_000_000,
+                last_approved_at_ms=None,
+            )
+            s.add(entry)
+            s.commit()
+            s.refresh(entry)
+            return int(entry.id)
+
+    def test_approve_outbox_writes_approved_status_to_db(
+        self: Any, session_factory: Any, outbox_store: Any
+    ) -> None:
+        """approve_outbox 真写 → DB row.status == OutboxStatus.APPROVED.value(enum 锁定).
+
+        撞坑 #71 修复(2026-06-30)防漂移:
+        - 断言用 OutboxStatus.APPROVED.value(enum 自动跟踪,不依赖硬编码字符串)
+        - 真 OutboxStore.update_status 严判 6 选 1,任何硬编码漂移立即 ValueError
+        - 双层防御:契约层(enum 严判)+ 测试层(enum.value 断言)
+        """
+        from my_ai_employee.core.outbox import OutboxEntry, OutboxStatus
+
+        outbox_id = self._seed_pending_outbox(session_factory, email_id=101)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=outbox_store,
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        result = writer.approve_outbox(str(outbox_id), audit=AuditContext.default())
+
+        # 业务层 WriteResult 断言
+        assert result.success is True
+        assert result.affected_id == str(outbox_id)
+        assert result.error is None
+        assert result.write_executed is True
+
+        # DB 真实状态断言(撞坑 #71 防漂移:用 enum.value 锁定)
+        with session_factory() as s:
+            row = s.get(OutboxEntry, outbox_id)
+            assert row is not None
+            assert row.status == OutboxStatus.APPROVED.value
+            # D5.6.3 P1-1:APPROVED 时 last_approved_at_ms 必写入(非 None,int > 0)
+            assert row.last_approved_at_ms is not None
+            assert isinstance(row.last_approved_at_ms, int)
+            assert row.last_approved_at_ms > 0
+
+        # audit 落档断言
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "approve_outbox"
+        assert record["affected_id"] == str(outbox_id)
+        assert record["write_executed"] is True
+        assert record["error"] is None
+
+    def test_cancel_outbox_writes_cancelled_status_to_db(
+        self: Any, session_factory: Any, outbox_store: Any
+    ) -> None:
+        """cancel_outbox 真写 → DB row.status == OutboxStatus.CANCELLED.value(enum 锁定).
+
+        撞坑 #71 修复防漂移 + last_approved_at_ms 保留原值(PENDING_SEND 来 NULL):
+        - cancel_outbox 必传 last_approved_at_ms=None(D5.6.3 P1-1 严判)
+        - 保留 row.last_approved_at_ms(PENDING_SEND 时 None,继续 None,不动)
+        """
+        from my_ai_employee.core.outbox import OutboxEntry, OutboxStatus
+
+        outbox_id = self._seed_pending_outbox(session_factory, email_id=202)
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=outbox_store,
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        result = writer.cancel_outbox(str(outbox_id), audit=AuditContext.default())
+
+        # 业务层 WriteResult 断言
+        assert result.success is True
+        assert result.affected_id == str(outbox_id)
+        assert result.error is None
+        assert result.write_executed is True
+
+        # DB 真实状态断言(撞坑 #71 防漂移:用 enum.value 锁定)
+        with session_factory() as s:
+            row = s.get(OutboxEntry, outbox_id)
+            assert row is not None
+            assert row.status == OutboxStatus.CANCELLED.value
+            # D5.6.3 P1-1:CANCELLED 时 last_approved_at_ms 必传 None,保留原值(PENDING_SEND 来 None)
+            assert row.last_approved_at_ms is None
+
+        # audit 落档断言
+        assert result.audit_id == "audit:1"
+        assert audit_store.count() == 1
+        record = audit_store.list_recent(limit=1)[0]
+        assert record["action"] == "cancel_outbox"
+        assert record["affected_id"] == str(outbox_id)
+        assert record["write_executed"] is True
+        assert record["error"] is None
