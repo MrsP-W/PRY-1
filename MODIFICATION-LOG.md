@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30)** — 临时 DB 5 门全开 2 笔实写(outbox.approve + notes.confirm)实测通过;`OutboxStatus` 大小写契约对齐。**下一棒**:Phase 1 维持期 · 可选补真写契约测试 |
+| **当前阶段** | ✅ **v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30 · `00dc257`)** — `TestBusinessWriterImplRealWriteOutboxContract` +2 tests 覆盖真 OutboxStore 写路径(撞坑 #76 防 #71 回归)。**下一棒**:Phase 1 维持期(7/2-7/24) |
+| **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
 | **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
@@ -111,8 +112,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **201 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | Phase 1 维持期(7/2-7/24 weekly `make ci`) · 可选补 1-2 真写契约测试 · tag readiness 继续不打 tag |
+| **质量基线** | **2595 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **237 files** / MD lint **201 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | Phase 1 维持期(7/2-7/24 weekly `make ci`) · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -142,6 +143,25 @@
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
 
+### 2026-06-30 [v0.2.55.3 真写 OutboxStore 契约测试] — 收口
+
+**1. 本次修改内容**
+
+- **test**: `tests/dashboard/test_business_writer_impl.py` — 新增 `TestBusinessWriterImplRealWriteOutboxContract`(+2 tests → 2595 passed · 撞坑 #76 防 #71 回归)。
+- **docs(state)**: 同步 SESSION / README / quality_snapshot / launch-plan 基线 2593→2595 · coverage 88.85%→88.87%。
+
+**2. 风险点**
+
+- 🟢 纯测试加固 · 0 src 改动 · 默认仍拒写 · 不打 tag。
+- ⚠️ **撞坑 #76**: v0.2.53.49 fake SimpleNamespace 测试与真 OutboxStore 契约测试双层共存,不互相替换。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2595 passed / 1 skipped** / **88.87%** / mypy --strict 0 / MD lint **201** / ruff + format 全绿。
+- 下一棒:Phase 1 维持期;tag readiness 继续不打 tag。
+
+---
+
 ### 2026-06-30 [v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复] — 收口
 
 **1. 本次修改内容**
@@ -156,7 +176,7 @@
 - 🟢 默认仍拒写 · 不启用长期 `ENABLE_PATH_4_WRITE=1` · 不打 tag · 不恢复 Outlook/Gmail SMTP。
 - ⚠️ **撞坑 #71(P0 已修)**:五门全开时大写 status 会 ValueError→409;已改小写 + 契约测试防漂移。
 - ⚠️ **撞坑 #72-#75 spike 限定**:ThreadingHTTPServer + Database 单线程 engine 跨线程冲突;生产 launchd 单线程不受影响。
-- **P1**: 可选补 1-2 个"真写 + 真 OutboxStore"契约测试。
+- **P1**: 可选补 1-2 个"真写 + 真 OutboxStore"契约测试。→ **v0.2.55.3 已落地**
 
 **3. 当前项目整体总结**
 
@@ -2925,44 +2945,5 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:21 条 / 2026-06-18-24(...+ v0.2.26 W3 虚拟 spike + v0.2.27 W3 真实 spike + v0.2.28 L2 sign-lock 修复 + v0.2.29 候选 review/export + v0.2.30 候选导出硬化 + v0.2.31 候选 review 汇总闭环 + v0.2.32 W3 真账单 spike + 撞坑 #49 faker≠真实格式)
-> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
-
----
-
-## 22. 2026-06-30 · v0.2.55.2 真写 OutboxStore 契约测试(撞坑 #76 防 #71 漂移)(累计 21 → 22)
-
-### 1. 本次修改
-
-- **新测试** `tests/dashboard/test_business_writer_impl.py:1149+` `TestBusinessWriterImplRealWriteOutboxContract`(2 个新契约测试):
-  - `test_approve_outbox_writes_approved_status_to_db` — 真 OutboxStore + 真 session_factory + InMemory SQLite + Base.metadata.create_all → 真实写入 → DB `row.status == OutboxStatus.APPROVED.value` + `last_approved_at_ms > 0` + audit 落档 1 条
-  - `test_cancel_outbox_writes_cancelled_status_to_db` — 同上路径 → DB `row.status == OutboxStatus.CANCELLED.value` + `last_approved_at_ms is None`(保留原值)+ audit 落档 1 条
-- **关键差异**(与 v0.2.53.49 fake SimpleNamespace 测试对比):
-  - 真 `OutboxStore(session_factory)`(非 `SimpleNamespace(update_status=...)`)
-  - 真 `session_factory`(InMemory SQLite + `Base.metadata.create_all`,沿 `tests/core/conftest.py` 范本)
-  - 断言用 `OutboxStatus.APPROVED.value` / `CANCELLED.value`(enum 自动跟踪改名,不依赖硬编码字符串)
-  - DB 真实状态变化验证(`OutboxEntry.status` / `last_approved_at_ms`)
-- **新 memory** `memory/pitfall-76-real-write-outbox-contract.md`:撞坑 #71 漏测根因 + v0.2.55.2 修复 + 双层防漂移机制(契约层 enum 严判 + 测试层 enum.value 断言)+ 沿用边界 + How to apply
-- 沿 `pitfall-71-outbox-status-case-mismatch.md` + `pitfall-65-opt-in-4-stages`
-
-### 2. 风险点
-
-- ⚠️ **撞坑 #76(本轮新增) v0.2.53.49 fake 测试 + v0.2.55.2 真写测试共存**:v0.2.53.49 的 4 个 fake SimpleNamespace 测试(`TestBusinessWriterImplRealWriteHandlerApproved` / `Cancelled` / `ConfirmNote` / `DismissAnomaly`)覆盖**写保护锁 raise / 异常透传 / audit 不落档 / 参数校验**路径,价值保留 — 不要替换,只新增真写契约测试覆盖**真 service 调用 → 真 DB 状态变化**路径(双层覆盖)
-- ⚠️ **InMemory SQLite 与 SQLCipher 行为差异**:测试用 `sqlite:///:memory:` + `Base.metadata.create_all`,与生产 SQLCipher `make_sqlalchemy_engine` 在 `OutboxStore._normalize_status` 严判逻辑一致(纯业务逻辑,不依赖 DB dialect),但若 OutboxStore 升级涉及 dialect-specific 行为(如 FK 严判、PRAGMA foreign_keys),真写测试可能漏检 → 缓解:测试不依赖 FK 检查(FK 字段 nullable)
-- ⚠️ **撞坑 #71 已修,本轮新增测试是防回归**:2 个新测试断言 `OutboxStatus.APPROVED.value`(enum 自动跟踪),任何对 `_call_service_approve_outbox` / `_call_service_cancel_outbox` 的字符串硬编码漂移,立即被 `OutboxStore._normalize_status` 严判 `ValueError`(契约层)+ 测试断言捕获(测试层)
-- **P1**:真 SMTP spike 恢复(等 Outlook/Gmail Keychain 凭据 + 授权 + B 类白名单决策)
-- **P2**:Phase 1 维持期(7/2-7/24)— weekly `make ci` + docs sync
-- **P3**:A3 readiness 3 次 docs-only 刷新(7/25 / 7/28 / 7/31)
-
-### 3. 当前项目整体总结
-
-- 进度:**2595 passed / 1 skipped / 9/9 质量门全绿 / coverage 88.85% / 撞坑 #76 真写契约测试落地**
-- 状态:**v0.2.55.2 真写 OutboxStore 契约测试收口(纯测试加固 · 0 src 改动 · 0 docs 改动)**
-- 风险:3 项已知风险(见上),撞坑 #71 已通过双层防御加固,撞坑 #76 沿用边界清晰
-- 下一步:真 SMTP spike 恢复(等用户授权决策)→ v0.2.55 docs 收口(可选 docs 同步)→ Phase 1 维持期
-- 下一棒:用户(真 SMTP spike 授权决策 / v0.2.55 docs 收口确认)→ 主 Agent(下一棒执行)→ 检查员(7/1 月度复盘)
-
----
-
-> **累计**:22 条 / 2026-06-18-30(...+ v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复 + v0.2.55.2 真写契约测试 · 撞坑 #76)
+> **累计**:22 条 / 2026-06-18-30(...+ v0.2.55.1 Path 4 spike + v0.2.55.3 真写契约测试 · 撞坑 #71/#76)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
