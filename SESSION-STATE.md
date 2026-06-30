@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.56.1 D5.6.3 实施 + Phase 1 维持期(2026-06-30)
+# SESSION-STATE — 7/1 月度复盘提前执行收官 + Phase 1 维持期(2026-06-30)
 
 > **最后更新**:2026-06-30 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.56.1 D5.6.3 已实施 + Phase 1 维持期(7/2-7/24)** — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**QQ SMTP**:10 封 spike 已收口 · **90 封 spike 用户确认跳过(不测试)**。**质量门**:2605 passed / 88.85% / lint 207。**Phase 1**:weekly `make ci`。**边界**:不打 tag · finance dismiss 仍拒写。
+> **状态**:🟢 **7/1 月度复盘提前执行收官(2026-06-30 · 用户授权"直接复盘")+ Phase 1 维持期(7/2-7/24)** — **27 项决议维持 + 8 项专属议程 A1-A8 全维持**。`v0.2.56.1 D5.6.3 已实施` — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**QQ SMTP**:10 封 spike 已收口 · **90 封 spike 用户确认跳过(不测试)**。**质量门**:2605 passed / 88.85% / lint 207。**Phase 1**:weekly `make ci`。**边界**:不打 tag · finance dismiss 仍拒写。**复盘**:详细 `reports/2026-07-01-monthly-review-decision.md`。
 
 ---
 
@@ -143,6 +143,7 @@
 | 6/30 | 周一 | **v0.2.56 D5.6.3 spike 严判放宽设计 docs-only** — 设计 + @审计员 review PASS(撞坑 #78 · 9 重门控 · `--multi-confirm`) · 代码未改 · 等用户授权后实施 | ✅ |
 | 6/30 | 周一 | **v0.2.56.1 D5.6.3 实施 + Phase 1 维持期锚定** — `spike_send_100.py` `--count 1-10` + `--multi-confirm` + 10 pytest · 2605 passed | ✅ |
 | 6/30 | 周一 | **用户决策:90 封 QQ SMTP spike 跳过** — 不追加真实发送 · 10 封样本视为足够 · Phase 1 维持期继续 | ✅ |
+| 6/30 | 周一 | **7/1 月度复盘提前执行收官**(用户授权"直接复盘")— 27 项决议维持 + 8 项专属议程 A1-A8 全部维持 + 议程 6 归档不执行(6/22 仅 9 天 · 远未到 1 月边界)+ 撞坑 #71/#76/#78/#79 沿用 + 8/1 不打 tag 维持 · reports/2026-07-01-monthly-review-decision.md 改为正式版 · 本棒三入口同步 + commit | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 
@@ -154,7 +155,9 @@
 6. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist)
 7. **P1-1 mypy tests 13 errors 修复**(纯工程债,撞坑 #31 6/22 实测命中,沿 v0.2.23 cast(int, ...) 范本)
 8. ✅ **7/1 月度复盘提前执行** — B 类延后清单已三态归档(D4.7.4 v1.0.3 / W3 / mypy strict / SMTP provider 白名单已完成;真实 SMTP 送达继续延后)+ 状态漂移审查机制实战 + v0.2.1 release tag readiness 7/8 实质满足但暂不打 tag
-9. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 全量跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
+8. ✅ **7/1 月度复盘提前执行** — B 类延后清单已三态归档(D4.7.4 v1.0.3 / W3 / mypy strict / SMTP provider 白名单已完成;真实 SMTP 送达继续延后)+ 状态漂移审查机制实战 + v0.2.1 release tag readiness 7/8 实质满足但暂不打 tag
+9. ✅ **7/1 月度复盘提前执行收官(2026-06-30)** — 27 项决议维持 + 8 项专属议程 A1-A8 全维持 + 撞坑 #71/#76/#78/#79 沿用 + 8/1 不打 tag 维持 + Phase 1 维持期进行中
+10. **8/1** — v0.2.1 release tag 锚定(沿 D5.7.2 范本,W3 真账单 spike 全量跑通 + outlook/gmail 真实 SMTP 发送 spike 跑通)
 
 ## 🔒 端午不休息期间禁止触碰(范围收窄)
 

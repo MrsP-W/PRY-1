@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **Phase 1 维持期(7/2-7/24)** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过** · 2605 passed / 88.85% · weekly `make ci` · 不打 tag。
+> **状态**:🟢 **7/1 月度复盘提前执行已收官(2026-06-30)· Phase 1 维持期(7/2-7/24)** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过** · **27 项决议维持 + A1-A8 专属议程全部维持** · 2605 passed / 88.85% · weekly `make ci` · 不打 tag。复盘详情:`reports/2026-07-01-monthly-review-decision.md`。
 
 ---
 

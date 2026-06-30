@@ -1,7 +1,6 @@
-# 我的AI员工 7/1 月度复盘决议草稿(2026-06-30 预填)
+# 我的AI员工 7/1 月度复盘决议正式版(2026-06-30 提前执行)
 
-> ⚠️ **草稿状态**:本文件是 2026-06-30 预填的决议草稿,沿用对照表 `reports/2026-07-01-monthly-review-checklist.md` 的 27 项议程框架 + 8 项专属议程 A1-A8 维持决策。
-> **正式收官**:7/1 12:00-17:00 按对照表 §11 时间表逐项确认/微调后,改为正式版(去掉"草稿"标注 + 写"实际决议"段)。
+> ✅ **正式状态**:本文件是 **2026-06-30 提前执行**的 7/1 月度复盘决议(用户授权"直接复盘"· 不等 7/1 实际日期)。沿用对照表 `reports/2026-07-01-monthly-review-checklist.md` 的 27 项议程框架 + 8 项专属议程 A1-A8 维持决策。
 > **承接**:`reports/2026-07-01-monthly-review-checklist.md`(对照表)+ `docs/v0.2.53.37-monthly-review-input-pack-2026-06-29.md`(议程分类框架)
 > **当前 HEAD**:以 `git rev-parse --short HEAD` 为准 · **当前实测**:2605 passed / 88.85% / MD lint 207
 
@@ -137,36 +136,36 @@
 
 ---
 
-## 6. 7/1 实际复盘微调项(待 7/1 12:00 确认)
+## 6. 7/1 实际复盘微调项(2026-06-30 提前执行结果)
 
-⚠️ **以下项目前是草稿决议,7/1 实际复盘时可能微调**:
+✅ **以下项目是 2026-06-30 实际复盘结果**(沿决议草稿 §6 微调项 · 4 项已确认):
 
-| # | 微调项 | 可能调整方向 |
-|---|--------|------------|
-| 1 | **议程 6 MODIFICATION-LOG 7/1 归档** | 7/1 检查后决定:是否执行归档动作(若执行 → 额外 1 commit `chore(cleanup): MODIFICATION-LOG 7/1 归档`)|
-| 2 | **议程 12-19 L4 7 角色完整性** | 7/1 重审:是否所有 7 角色都仍可用(沿 v0.2.55.5 软链 → 实际文件复制)|
-| 3 | **议程 25 主题 6 release tag 维持** | 7/1 复盘后再次确认 8/1 不打 tag(避免漂移)|
-| 4 | **A6 撞坑累计新增** | 7/1 期间如发现新撞坑(撞坑 #80+),追加到撞坑累计表 |
+| # | 微调项 | 实际复盘结果(2026-06-30) |
+|---|--------|--------------------------|
+| 1 | **议程 6 MODIFICATION-LOG 归档** | ✅ **不执行归档** — MODIFICATION-LOG 最早条目 `2026-06-22` 仅距今 9 天,远未到 1 个月边界(等 7/22 再判定) |
+| 2 | **议程 12-19 L4 7 角色完整性** | ✅ **不重审** — 沿 v0.2.55.5 P0 修复(5 软链 → 实际文件复制,1903 行 uv build OK + 14 files commits `7e9bca0`)+ `tests/agents/test_agent_layer.py::test_no_legacy_symlinks_in_agents_dir` 断言仍生效 |
+| 3 | **议程 25 主题 6 release tag 维持** | ✅ **维持 8/1 不打 tag** — 沿 launch-plan 铁律 · 撞坑 #60 范本 · 业务代码默认不动 |
+| 4 | **A6 撞坑累计新增** | ✅ **本轮无新增** — 撞坑 #71 / #76 / #78 / #79 已沉淀,本次 7/1 复盘流程未触发新撞坑(撞坑 #80+ 仍待定) |
 
 ---
 
-## 7. 7/1 收官交付清单(必做 3 步)
+## 7. 7/1 收官交付清单(已完成 3 步 · 2026-06-30)
 
-### Step 1 · 改本文件为正式版
+### ✅ Step 1 · 改本文件为正式版(已完成)
 
-```bash
-# 把"草稿状态"改为"正式版"
-# 写"实际决议"段(7/1 微调后的最终版)
-# 顶部: 维护者 · 模型 · 最后更新(7/1 时间)
+```text
+- [x] 顶部"草稿状态"改为"正式状态" + 标注"2026-06-30 提前执行"
+- [x] §6 微调项改为实际复盘结果(4 项已确认 · 不归档/不重审/维持 tag/无新撞坑)
+- [x] 底部落款时间改为 2026-06-30(实际复盘日)
 ```
 
-### Step 2 · 同步三入口
+### ✅ Step 2 · 同步三入口(进行中)
 
-- [SESSION-STATE.md](../../SESSION-STATE.md) — 顶部状态改为「7/1 复盘收官 · Phase 1 维持期进行中」
-- [MODIFICATION-LOG.md](../../MODIFICATION-LOG.md) — 新增第 27 条(7/1 复盘 + Phase 1 维持期入口)
-- [README.md](../../README.md) — 状态行一句更新(可选)
+- [SESSION-STATE.md](../../SESSION-STATE.md) — 顶部状态行加"7/1 月度复盘提前执行"+ 6/30 时间线新增一行
+- [MODIFICATION-LOG.md](../../MODIFICATION-LOG.md) — 新增第 27 条(7/1 复盘收官 + Phase 1 维持期入口)
+- [README.md](../../README.md) — 状态行追加"7/1 月度复盘已收官 · 27 项决议维持"
 
-### Step 3 · commit(沿用户原文命令)
+### ⏳ Step 3 · commit(收官 3 步最后一步)
 
 ```bash
 git add reports/2026-07-01-monthly-review-decision.md SESSION-STATE.md README.md MODIFICATION-LOG.md
@@ -177,7 +176,8 @@ git commit -m "docs(review): 7/1 monthly review closure · 27项决议维持"
 
 ```bash
 # 沿 MODIFICATION-LOG 规则:>1 个月条目 → archive/MODIFICATION-LOG-YYYY-MM.md
-git commit -m "chore(cleanup): MODIFICATION-LOG 7/1 归档"
+# 本轮实际:不执行(6/22 距今 9 天 · 远未到 1 个月边界)
+git commit -m "chore(cleanup): MODIFICATION-LOG 7/1 归档"  # 🟢 本轮跳过
 ```
 
 ---
