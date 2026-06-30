@@ -270,6 +270,11 @@ build: ## 9 质量门 — uv build 本地构建 wheel + sdist(沿 D1.1 范本)
 	fi
 	@echo "$(GREEN)✅ 构建完成(见 dist/)$(RESET)"
 
+.PHONY: check-snapshot
+check-snapshot: ## 校验 quality_snapshot.py MD lint 计数与 git ls-files 对齐
+	@echo "$(BLUE)🔍 quality_snapshot 防漂移检查$(RESET)"
+	@$(PYTHON) scripts/check_quality_snapshot.py
+
 .PHONY: ci
 ci: ## 9 质量门 — 一键跑 9 质量门全链(沿 v0.1.0-preseal-runbook 范本)
 	@echo "$(BOLD)🚀 9 质量门一键跑$(RESET)"
