@@ -993,3 +993,97 @@ class TestBusinessWriterImplAuditStoreFallback:
         assert result.affected_id == "999"
         # audit_id=None(落档失败,但不抛异常)
         assert result.audit_id is None
+
+
+# ============================================================
+# v0.2.53.55 Path 4 5th gate preflight — 沿 docs/v0.2.53.53 §7
+# 不实施 5th gate,仅断言当前安全状态不变式(撞坑 #18)
+# ============================================================
+
+
+class TestBusinessWriterImplPath4FifthGatePreflight:
+    """v0.2.53.55 Path 4 5th gate preflight — 不实施 ENABLE_PATH_4_WRITE env 读取,仅锁定 3 不变式.
+
+    设计意图(沿 docs/v0.2.53.53-path4-launch-checklist §2.3 + §7):
+        - 5th gate flag `ENABLE_PATH_4_WRITE` 是 docs-only 计划代码,**本棒不实施**
+        - preflight 锁定 3 不变式:① env 被忽略 ② raise 时 audit 不落档 ③ dry_run.required 不含 env flag
+        - 8/1 后独立 commit 才实施 env 读取,届时这 3 测试需要更新(替换为"env flag 生效")
+    """
+
+    def test_enable_path_4_write_env_is_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """不变式 #1:设 `ENABLE_PATH_4_WRITE=1` 后,默认构造仍 raise(证明 env 未在代码中读取).
+
+        撞坑 #18 风险门控:即便运维误设 5th flag env,只要 `_real_write_handler_enabled=False`
+        (默认) 且 handler 未启用,4 动作方法依然 raise NotImplementedError → 不实写.
+
+        注入全部依赖后,4 动作方法必定撞到「写保护锁未开」(4th gate),而非 dep 检查;
+        这能证明 5th gate env flag 不能绕过 4th gate(更不能直接放开实写路径).
+        """
+        monkeypatch.setenv("ENABLE_PATH_4_WRITE", "1")
+        # 默认构造(_real_write_handler_enabled=False)+ 全部依赖注入
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, SimpleNamespace()),
+            note_confirm_service=cast(Any, SimpleNamespace()),
+            anomaly_dismissal_service=cast(Any, SimpleNamespace()),
+        )
+        audit = AuditContext.default()
+        # 4 动作方法仍 raise(写保护锁未开,沿 v0.2.53.49 + 撞坑 #18)
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            writer.approve_outbox("123", audit=audit)
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            writer.cancel_outbox("123", audit=audit)
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            writer.confirm_note("note-abc", audit=audit)
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            writer.dismiss_anomaly("anomaly-key", audit=audit)
+
+    def test_4_actions_dont_audit_when_raising(self) -> None:
+        """不变式 #2:写保护锁 raise 时 `audit_store.record()` 不被调用.
+
+        撞坑 #18 「日志」语义:audit 落档仅在写保护锁开 + 真实 service 调用后发生;
+        raise 路径绝不落档(避免「silent success」假象).
+        """
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, SimpleNamespace()),
+            note_confirm_service=cast(Any, SimpleNamespace()),
+            anomaly_dismissal_service=cast(Any, SimpleNamespace()),
+            audit_store=cast(Any, audit_store),
+            # real_write_handler_enabled 默认 False
+        )
+        audit = AuditContext.default()
+        # 触发 4 动作(全部 raise)
+        for action_call in (
+            lambda: writer.approve_outbox("123", audit=audit),
+            lambda: writer.cancel_outbox("123", audit=audit),
+            lambda: writer.confirm_note("note-abc", audit=audit),
+            lambda: writer.dismiss_anomaly("anomaly-key", audit=audit),
+        ):
+            with pytest.raises(NotImplementedError):
+                action_call()
+        # audit_store._records 保持空(raise 路径绝不落档)
+        assert audit_store._records == [], (
+            f"写保护锁 raise 不应落档 audit,实际记录 {len(audit_store._records)} 条"
+        )
+
+    def test_dry_run_required_excludes_env_flag(self) -> None:
+        """不变式 #3:`dry_run.required` 不含 `ENABLE_PATH_4_WRITE` env flag(因未实施).
+
+        沿 v0.2.53.53 §2.3:env flag 是 5th gate 计划代码,本棒 docs-only 不实施;
+        当前 `dry_run.required` 仅列 4 项(DASHBOARD_WRITE_API=1 / confirm_text /
+        BUSINESS_WRITER_ENABLED=1 / real_write_handler_enabled).8/1 后实施 env 读取时,
+        本测试需要替换为「required 含 ENABLE_PATH_4_WRITE=1」断言.
+        """
+        writer = BusinessWriterImpl()
+        audit = AuditContext.default()
+        for action in SUPPORTED_ACTIONS:
+            decision = writer.dry_run(action, "any_target", audit=audit)
+            assert "ENABLE_PATH_4_WRITE" not in (decision.required or ()), (
+                f"action={action}: dry_run.required 不应包含 ENABLE_PATH_4_WRITE,"
+                "因本棒 docs-only 不实施 env 读取"
+            )
+            # 沿 v0.2.53.17 既有契约:4 项 required 仍存在
+            assert "DASHBOARD_WRITE_API=1" in decision.required
+            assert "confirm_text=CONFIRM_WRITE" in decision.required
+            assert "BUSINESS_WRITER_ENABLED=1" in decision.required
+            assert "real_write_handler_enabled" in decision.required

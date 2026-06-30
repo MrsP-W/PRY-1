@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · 待 commit)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.55 Path4 5th gate preflight(2026-06-30 · docs+test)** — 3 不变式测试锁定 Path 4 5th gate 安全状态(`ENABLE_PATH_4_WRITE` env 被忽略 / raise 时 audit 不落档 / `dry_run.required` 不含 env flag)+ 报告 `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md` 6 段沉淀。**上一阶段**:v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备 |
+| **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -108,8 +109,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2582 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **195 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | P4 项目状态复盘(本轮 docs-only)· 8/1 后实写 launch |
+| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **195 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -138,6 +139,29 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.53.55 Path4 5th gate preflight] — 收口
+
+**1. 本次修改内容**
+
+- **test**: `tests/dashboard/test_business_writer_impl.py` — 追加 `TestBusinessWriterImplPath4FifthGatePreflight` 类 3 测试(+3 tests → 2586 passed):
+  - `test_enable_path_4_write_env_is_ignored`:`monkeypatch.setenv("ENABLE_PATH_4_WRITE", "1")` + 默认构造 + 注入全部依赖 → 4 动作方法 raise `NotImplementedError("写保护锁未开")`(证明 env 未在代码中读取)
+  - `test_4_actions_dont_audit_when_raising`:注入 `InMemoryApprovalGateAuditStore` + 触发 4 动作 raise → `audit_store._records == []`(撞坑 #18 「日志」语义)
+  - `test_dry_run_required_excludes_env_flag`:4 类 action dry_run → `ENABLE_PATH_4_WRITE not in decision.required` + 既有 4 项仍存在
+- **docs**: `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md` 新建(6 段):背景与目标(沿 v0.2.53.53 §7 不实施 5th gate)/ 3 不变式 + 测试映射 / 实施边界(❌ 不做的事 + ✅ 做的事) / 8/1 后实施路径 / 撞坑沿用累计(70 类沿用,本棒无新增) / 收口动作 checklist。
+
+**2. 风险点**
+
+- 🟢 默认 raise 不变 · 写保护锁锁定 · 不启用 `ENABLE_PATH_4_WRITE=1` · 不打 tag · 不动 `BusinessWriterImpl` 源码。
+- 🟡 8/1 后实施 5th gate 时,本测试 #1 和 #3 需要替换为「env flag 生效」断言(详见 docs §4.2)。
+- ⚠️ 实际写入仍 8/1 后 + 用户授权 + 真实 QQ SMTP 凭据激活后才解锁(沿 v0.2.53.53 §1.3)。
+
+**3. 当前项目整体总结**
+
+- 质量门:2586 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **195** / ruff + format 全绿。
+- 下一棒:8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备(7/1 12:00-17:00)。
+
+---
 
 ### 2026-06-30 [v0.2.53.54 AuditStore 同源修复] — 收口
 
