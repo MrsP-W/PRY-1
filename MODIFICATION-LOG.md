@@ -3377,3 +3377,40 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:35 条 / 2026-06-30-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 · 7 月全链路 + 阶段 4 收官)
 > **下次清理**:2026-07-22 检查员判定(等 1 个月边界 · 累计 35 条仍轻量)
+
+---
+
+## 36. 2026-08-01 · `v0.2.1-rc1` tag 落地 + 跨项目沉淀(累计 35 → 36 · 棒 B)
+
+### 1. 本次修改
+
+**棒 B 子动作**(沿 8/1 用户授权,撞坑 #60 preliminary 范本应用):
+- **本地 git tag 操作**:`git tag -a v0.2.1-rc1 b0e7f94 -m "..."` · annotated tag 绑 `b0e7f94`(8/1 baseline sync)
+- **新文件(本项目)**:`docs/v0.2.60-v0.2.1-rc1-tag-decision-2026-08-01.md`(决策报告 · 8 节 · 沿 v0.2.47 决策矩阵)+ `docs/v0.2.61-v0.2.1-rc1-tag-closure-2026-08-01.md`(收口报告 · 7 节)
+- **新文件(兄弟项目)**:`../Agent Assistant/memory/_cross-project/v0.2.59-stage4-closure-2026-08-01.md`(7 月全链路跨项目沉淀 · 8 节 · 248 行)
+- **跨项目沉淀 commit `a01c2a2`**(兄弟项目 Agent Assistant):CLAUDE.md + L2_memory/MEMORY.md + L2_memory/_cross-project/v0.2.59-stage4-closure-2026-08-01.md 同步
+- **本项目 commit `73e29a0`**:`docs/v0.2.60-v0.2.1-rc1-tag-decision-2026-08-01.md`
+- **代码**:零改动 · 业务代码 0 改动(连续 5+ 周维持)
+
+### 2. 风险点
+
+- 🟢 **`v0.2.1-rc1` annotated tag 绑 `b0e7f94` 成功落地**(沿撞坑 #60 preliminary 范本)
+- ⚠️ **tag 列表状态**:`v0.1.0`(2af775f,锚定永不动)+ `v0.2.1-rc1`(b0e7f94,release candidate)
+- ⚠️ **撞坑 #60 范本应用**:`v0.2.1` 仍严禁打(8/1 锚定策略维持)
+- ⚠️ **撞坑累计 #71/#76/#78/#79 沿用**:连续 6 周 0 新增(7/2 → 8/1)
+- ⚠️ **跨项目沉淀 commit `a01c2a2`** 在兄弟项目 commit 成功,push to main 被 auto mode 拦截(留给用户手动 push)
+- ⚠️ **`v0.2.1-rc1` tag 仅本地**(本项目无 remote,`git remote -v` 空)
+- **P1**: 8/1 后用户授权触发 3 项候选(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)
+- **P2**: 若加 remote 后,可手动 `git push origin v0.2.1-rc1`(不 push `v0.1.0`)
+
+### 3. 当前项目整体总结
+
+- 进度:**2605 passed / 88.87% / MD lint 216 / 9/9 质量门全绿 / `v0.2.1-rc1` tag 落地 + 7 月全链路收官**
+- 状态:**`v0.2.1-rc1` annotated tag 绑 `b0e7f94`(8/1 baseline sync) · tag 列表 v0.1.0 + v0.2.1-rc1 · 撞坑 #60 范本应用 · 业务代码 0 改动**
+- 下一步:8/1 后用户授权触发(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)
+- 下一棒:用户(8/1 后明确授权触发)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:36 条 / 2026-06-30-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界)

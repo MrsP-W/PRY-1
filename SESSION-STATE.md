@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.59 阶段 4 · 8/1 tag 评估 docs-only 收官(2026-08-01)
+# SESSION-STATE — `v0.2.1-rc1` tag 落地 + 7 月全链路收官(2026-08-01)
 
 > **最后更新**:2026-08-01 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **阶段 4 · 8/1 release tag 评估 docs-only 收官(2026-08-01 · 不动 tag) · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 全收官 · 阶段 3 A3 readiness 3/3 全收官** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过(不测试)**。**质量门**:2605 passed / 88.87% / lint **216**。**9/9 项 readiness 实质满足**(QQ-only 口径)· **8/1 不打 tag 维持**(7/1 复盘决议 #25 + 撞坑 #60 preliminary 范本)。**下一棒**:8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选。**边界**:不打 tag · finance dismiss 仍拒写。
+> **状态**:🟢 **`v0.2.1-rc1` tag 已落地** · annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7 月全链路收官(7/1 月度复盘 + Phase 1 weekly 4/4 + 阶段 3 A3 readiness 3/3 + 阶段 4 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 commit `a01c2a2`)。**质量门**:2605 passed / 88.87% / lint **216**(沿 `b0e7f94` 锚定)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate)。**下一棒**:8/1 后用户授权触发 3 项候选(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· tag 暂无需再动。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile。
 
 ---
 
