@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.54.1 7/1 checkpoint baseline refresh(2026-06-30 · docs-only)** — launch-plan P0 checklist 补勾 v0.2.53.57/58/59 + HEAD baseline 改写为 `26b1d75` + 新建 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md)(9 段 docs-only)+ `quality_snapshot.py` MD lint 计数 196 → 197 同步。**上一阶段**:v0.2.53.59 状态同步(`26b1d75`)。**下一棒**:Phase 0.3-0.5 三入口二次同步 / 7/1 12:00 月度复盘 / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.54.2 三入口同步 + 撞坑 #68/#69/#70 复核(2026-06-30 · docs-only)** — SESSION-STATE / README / MODIFICATION-LOG 三入口对齐 `v0.2.54.1` + checkpoint doc §10 撞坑 #68 衍生 5 项 复核(议程 23 仍 B 类 · 24/25/26/27 已决议)+ 新建 [`docs/v0.2.54-mypy-drift-sop.md`](docs/v0.2.54-mypy-drift-sop.md) 6 段 docs-only(撞坑 #69 + #70 合并 SOP)+ quality_snapshot.py MD lint 197 → 198 同步。**上一阶段**:v0.2.54.1 7/1 checkpoint baseline refresh(`e5f39cd`)。**下一棒**:launch-plan drift fix(v0.2.54.3)/ Phase 1 维持期(7/2-7/6)/ A3 readiness 三次刷新(7/25-7/31)/ 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
@@ -139,6 +139,31 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.54.2 三入口同步 + 撞坑 #68/#69/#70 复核 + mypy drift SOP] — 收口
+
+**1. 本次修改内容**
+
+- **docs(state) 三入口同步**:SESSION-STATE.md 顶部 `v0.2.53.58` → `v0.2.54.1` + MD lint 计数 `196 → 197` 三处更新;README.md 顶部状态从「QQ-only SMTP 已收口(2026-06-29)」→ `v0.2.54.1 checkpoint refresh`;MODIFICATION-LOG.md 当前阶段 + 质量基线同步 + 累计记录加 `v0.2.54.1` 收口条(3 段结构)。
+- **docs(new) §10 撞坑 #68 衍生 5 项 复核**:在 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md) 新增 §10 状态表(对照 [`reports/monthly-review-decision-2026-07-01.md` §6 议程 23-27](../../reports/monthly-review-decision-2026-07-01.md)):**议程 23(launchd 12:00)仍 B 类**(需用户授权)+ **议程 24/25/26/27 已决议/合并**。
+- **docs(new) mypy drift SOP**:新建 [`docs/v0.2.54-mypy-drift-sop.md`](docs/v0.2.54-mypy-drift-sop.md)(6 段 · 沿 [`reports/2026-07-01-loop-patterns-prep.md` §2/§3](../../reports/2026-07-01-loop-patterns-prep.md)):**§1 背景**(撞坑 #69 + #70 起源 + 累计 70 类沿用)+ **§2 撞坑 #69 SOP**(7 步骤 + checklist + 沿用边界)+ **§3 撞坑 #70 SOP**(中文注释 + type:ignore 同行规则 + 反例/正例对照)+ **§4 综合预防 checklist** + **§5 实施触发条件 C1-C4** + **§6 关联与依据**。
+- **chore(sync)**:`src/my_ai_employee/quality_snapshot.py` MD lint 计数 197 → 198(沿 docs-only 规则)。
+
+**2. 风险点**
+
+- 🟢 docs-only · 6 files / +255 -9 · 0 源码行为改动 · pytest/coverage/mypy 数字不变。
+- 🟢 mypy drift SOP 为草案就位状态,**未来 mypy 升级时启用**(沿 §5 触发条件 C1-C4)。
+- 🟡 议程 23(launchd 12:00)仍 B 类,需用户在 7/1 12:00 复盘前/中明确授权(沿 monthly-review-decision-2026-07-01.md §6)。
+- ⚠️ docs-only 漂移已闭环(撞坑 #50 衍生第三版预防)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **198 files** / ruff + format 全绿。
+- v0.2.54.1 → v0.2.54.2 · docs-only · commit `9cb717f` · HEAD 锚定 `9cb717f`。
+- 累计 commits 锚:`e5f39cd`(v0.2.54.1)+ `9cb717f`(v0.2.54.2)· 6/30 当日 2 commit。
+- 下一棒:launch-plan drift fix(v0.2.54.3)/ Phase 1 维持期(7/2-7/6)/ A3 readiness 三次刷新(7/25-7/31)/ B 阶段 Path 4 实写 Launch(8/1 后 + 用户授权)。
+
+---
 
 ### 2026-06-30 [v0.2.54.1 7/1 checkpoint baseline refresh] — 收口
 
