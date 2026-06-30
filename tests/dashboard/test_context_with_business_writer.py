@@ -209,6 +209,39 @@ class TestBusinessWriterOptInEnabled:
         assert ctx.is_business_writer_impl_injected() is True
         assert ctx.is_business_writer_ready() is True
 
+    def test_env_set_with_real_db_shares_audit_store(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """v0.2.53.54:ctx.audit_store 与 BusinessWriterImpl._audit_store 同源.
+
+        防止 Dashboard Audit UI 读取的是 InMemory store,而 writer 落档仍写到默认 Stub。
+        """
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+
+        monkeypatch.setenv("DASHBOARD_REAL_DB", "1")
+        monkeypatch.setenv("BUSINESS_WRITER_ENABLED", "1")
+        monkeypatch.setattr(
+            "my_ai_employee.dashboard.context._try_build_real_session_factory",
+            lambda: object(),
+        )
+        monkeypatch.setattr(
+            "my_ai_employee.dashboard.context._try_build_outbox_from_session_factory",
+            lambda _sf: None,
+        )
+        monkeypatch.setattr(
+            "my_ai_employee.dashboard.context._try_build_note_confirm_from_session_factory",
+            lambda _sf: None,
+        )
+        monkeypatch.setattr(
+            "my_ai_employee.dashboard.context._try_build_expense_from_session_factory",
+            lambda _sf: None,
+        )
+
+        ctx = DashboardContext.default()
+        writer = ctx.resolve_business_writer()
+
+        assert isinstance(writer, BusinessWriterImpl)
+        assert ctx.audit_store.is_enabled() is True
+        assert writer._audit_store is ctx.audit_store  # noqa: SLF001
+
     def test_env_set_with_real_db_failure_returns_stub(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

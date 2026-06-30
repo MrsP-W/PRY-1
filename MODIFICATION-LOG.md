@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.53 路径 4 实写 launch checklist v2 收口(2026-06-30 · `82574ec`)** — docs-only 提交 v2 升级版路径 4 实写 launch checklist(5 门 + 5th flag `ENABLE_PATH_4_WRITE=1` + 失败回滚 plan)。**上一阶段**:v0.2.53.52 Dashboard Audit UI(GET `/api/approval-gate/audits` + HTML inspector audit-card)。**上上一阶段**:v0.2.53.51 audit 落档骨架(`approval_gate_audits` 表 + `ApprovalGateAuditStore` Protocol/Stub/InMemory + `BusinessWriterImpl` 4 动作成功/失败 audit 真实落档)。**下一棒**:P4 项目状态复盘(SESSION-STATE/MODIFICATION-LOG/docs/v0.2-launch-plan.md) / 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · 待 commit)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
 | **上一阶段** | ✅ 7/1 月度复盘决策收官 docs-only(2026-06-29 · `monthly-review-decision-2026-07-01.md` · 选项 B 继续延后 rc1 · v0.2.53.44) |
@@ -138,6 +138,28 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.53.54 AuditStore 同源修复] — 收口
+
+**1. 本次修改内容**
+
+- **fix(dashboard)**: `context.py` — v0.2.53.54 audit_store 同源修复:先构造 audit_store,再传入 `BusinessWriterImpl`,确保 `ctx.audit_store` 与 `writer._audit_store` 指向同一对象;`_try_build_audit_store` 失败时复用默认 Stub 保持单对象同源。
+- **test**: `test_context_with_business_writer.py` — 新增 `test_env_set_with_real_db_shares_audit_store` 同源不变式测试(+1 test → 2583 passed)。
+- **test**: `test_app.py` — 系统健康通知断言 2582→2583 passed 对齐 `quality_snapshot`。
+- **docs**: README / SESSION-STATE / `quality_snapshot.py` 三入口同步 2583/88.92%/195。
+
+**2. 风险点**
+
+- 🟢 默认 raise 不变 · 写保护锁锁定 · 不启用 `ENABLE_PATH_4_WRITE=1` · 不打 tag。
+- 🟡 修复前 Dashboard Audit UI 读 InMemory store 而 writer 落档写 Stub 的漂移风险已消除;8/1 后实写 launch 仍需 5 门 preflight。
+- ⚠️ 实际写入仍 8/1 后 + 用户授权 + 真实 QQ SMTP 凭据激活后才解锁。
+
+**3. 当前项目整体总结**
+
+- 质量门:2583 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **195** / ruff + format 全绿。
+- 下一棒:Path4 5th gate preflight(只补测试/文档,确认 `ENABLE_PATH_4_WRITE` 未启用时绝不实写) / 8/1 后实写 launch。
+
+---
 
 ### 2026-06-30 [v0.2.53.53 路径 4 实写 launch checklist v2] — 收口
 
