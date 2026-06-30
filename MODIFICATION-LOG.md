@@ -109,7 +109,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **199 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 → 198 → 199 同步) |
+| **质量基线** | **2586 passed / 1 skipped** / **88.90%** / mypy --strict 0 / **237 files** / MD lint **199 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 → 198 → 199 同步) |
 | **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -165,7 +165,7 @@
 
 **3. 当前项目整体总结**
 
-- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **199 files** / ruff + format 全绿。
+- 质量门:**2586 passed / 1 skipped** / **88.90%** / mypy --strict 0 / **237 files** / MD lint **199 files** / ruff + format 全绿。
 - v0.2.54.3 → v0.2.54.4 · docs-only · commit `3dec658` · HEAD 锚定 `3dec658`。
 - 累计 commits 锚:`e5f39cd`(v0.2.54.1)+ `9cb717f`(v0.2.54.2)+ `deb363a`(v0.2.54.3)+ `3dec658`(v0.2.54.4)· 6/30 当日 4 commit。
 - 下一棒:7/2 Phase 1 维持期(被动监控 + docs 同步)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch 实施(需用户授权 · 沿 `docs/v0.2.54.4` §2 runbook)。
