@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2605 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **237 files** / MD lint **216 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2605 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **216 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 8/1 make ci 实测校准 · 撞坑 #50 第三层防御 self-claim) |
 | **下一棒** | 8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选 · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -3405,7 +3405,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2605 passed / 88.87% / MD lint 216 / 9/9 质量门全绿 / `v0.2.1-rc1` tag 落地 + 7 月全链路收官**
+- 进度:**2605 passed / 88.85% / MD lint 216 / 9/9 质量门全绿 / `v0.2.1-rc1` tag 落地 + 7 月全链路收官**
 - 状态:**`v0.2.1-rc1` annotated tag 绑 `b0e7f94`(8/1 baseline sync) · tag 列表 v0.1.0 + v0.2.1-rc1 · 撞坑 #60 范本应用 · 业务代码 0 改动**
 - 下一步:8/1 后用户授权触发(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)
 - 下一棒:用户(8/1 后明确授权触发)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)

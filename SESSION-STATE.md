@@ -1,7 +1,7 @@
 # SESSION-STATE — `v0.2.1-rc1` tag 落地 + 7 月全链路收官(2026-08-01)
 
 > **最后更新**:2026-08-01 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **`v0.2.1-rc1` tag 已落地** · annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7 月全链路收官(7/1 月度复盘 + Phase 1 weekly 4/4 + 阶段 3 A3 readiness 3/3 + 阶段 4 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 commit `a01c2a2`)。**质量门**:2605 passed / 88.87% / lint **216**(沿 `b0e7f94` 锚定)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate)。**下一棒**:8/1 后用户授权触发 3 项候选(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· tag 暂无需再动。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile。
+> **状态**:🟢 **`v0.2.1-rc1` tag 已落地** · annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7 月全链路收官(7/1 月度复盘 + Phase 1 weekly 4/4 + 阶段 3 A3 readiness 3/3 + 阶段 4 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 commit `a01c2a2`)。**质量门**:2605 passed / 88.85% / lint **216**(沿 `b0e7f94` 锚定 · 8/1 make ci 实测校准)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate)。**下一棒**:8/1 后用户授权触发 3 项候选(Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· tag 暂无需再动。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**阶段 4 · 8/1 release tag 评估 docs-only 收官(2026-08-01)** — 2605 passed / 88.87% / MD lint **216**。**7 月全链路收官**(7/1 复盘 + Phase 1 weekly 4/4 + A3 readiness 3/3 + 8/1 tag 评估)。**8/1 不打 tag 维持**(决议 #25)。**下一棒**:8/1 后用户授权触发(4 项候选:Path 4 spike / v0.2.1-rc1 tag / outlook-gmail Keychain / 跨项目沉淀)· 9/1+ v0.2 launch plan 整体收口候选 · tag readiness 继续不打 tag。
+**当前启动候选**:**`v0.2.1-rc1` tag 已落地(2026-08-01)** — `git tag -a v0.2.1-rc1 b0e7f94`(annotated,本项目无 remote 无 push)· 2605 passed / 88.85% / MD lint **216**。**7 月全链路收官**(7/1 复盘 + Phase 1 weekly 4/4 + A3 readiness 3/3 + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀)。**下一棒**:8/1 后用户授权触发(3 项候选:Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· tag 暂无需再动。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2605 passed / 1 skipped** · **88.87%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **216 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| 核心质量门 | **2605 passed / 1 skipped** · **88.85%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **216 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · 撞坑 #50 第三层防御校准 8/1 make ci 实测) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
