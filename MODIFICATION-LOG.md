@@ -109,7 +109,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **195 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **196 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -140,13 +140,32 @@
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
 
+### 2026-06-30 [v0.2.53.56 mypy preflight hotfix + 状态同步] — 收口
+
+**1. 本次修改内容**
+
+- **fix(test)**: `test_business_writer_impl.py` — `test_4_actions_dont_audit_when_raising` 去掉 untyped lambda 循环(修复 mypy `[no-untyped-call]`),改用显式 4 动作调用 + `audit_store.count() == 0` 公共 API 断言。
+- **docs**: SESSION-STATE / README / `quality_snapshot.py` / `test_app.py` 三入口同步 v0.2.53.55 基线(2586/88.92%/196 md)。
+
+**2. 风险点**
+
+- 🟢 行为不变 · 仅测试写法 + 文档漂移修复 · 不启用真实写 · 不打 tag。
+- 🟡 v0.2.53.55 commit 遗留 SESSION-STATE 仍写 v0.2.53.54,本棒收口。
+
+**3. 当前项目整体总结**
+
+- 质量门:2586 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **196** / ruff + format 全绿。
+- 下一棒:8/1 后实写 launch 实施(沿 v0.2.53.53 §4) / 月度复盘准备。
+
+---
+
 ### 2026-06-30 [v0.2.53.55 Path4 5th gate preflight] — 收口
 
 **1. 本次修改内容**
 
 - **test**: `tests/dashboard/test_business_writer_impl.py` — 追加 `TestBusinessWriterImplPath4FifthGatePreflight` 类 3 测试(+3 tests → 2586 passed):
   - `test_enable_path_4_write_env_is_ignored`:`monkeypatch.setenv("ENABLE_PATH_4_WRITE", "1")` + 默认构造 + 注入全部依赖 → 4 动作方法 raise `NotImplementedError("写保护锁未开")`(证明 env 未在代码中读取)
-  - `test_4_actions_dont_audit_when_raising`:注入 `InMemoryApprovalGateAuditStore` + 触发 4 动作 raise → `audit_store._records == []`(撞坑 #18 「日志」语义)
+  - `test_4_actions_dont_audit_when_raising`:注入 `InMemoryApprovalGateAuditStore` + 触发 4 动作 raise → `audit_store.count() == 0`(撞坑 #18 「日志」语义)
   - `test_dry_run_required_excludes_env_flag`:4 类 action dry_run → `ENABLE_PATH_4_WRITE not in decision.required` + 既有 4 项仍存在
 - **docs**: `docs/v0.2.53.55-path4-5th-gate-preflight-2026-06-30.md` 新建(6 段):背景与目标(沿 v0.2.53.53 §7 不实施 5th gate)/ 3 不变式 + 测试映射 / 实施边界(❌ 不做的事 + ✅ 做的事) / 8/1 后实施路径 / 撞坑沿用累计(70 类沿用,本棒无新增) / 收口动作 checklist。
 
@@ -158,7 +177,7 @@
 
 **3. 当前项目整体总结**
 
-- 质量门:2586 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **195** / ruff + format 全绿。
+- 质量门:2586 passed / 1 skipped / 88.92% / mypy --strict 0 / 237 files / MD lint **196** / ruff + format 全绿。
 - 下一棒:8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备(7/1 12:00-17:00)。
 
 ---

@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2583 passed / 1 skipped / 88.92% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2586 passed / 1 skipped / 88.92% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2583 passed / 1 skipped / 88.92% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2586 passed / 1 skipped / 88.92% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

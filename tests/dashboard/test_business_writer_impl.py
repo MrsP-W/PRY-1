@@ -1052,19 +1052,15 @@ class TestBusinessWriterImplPath4FifthGatePreflight:
             # real_write_handler_enabled 默认 False
         )
         audit = AuditContext.default()
-        # 触发 4 动作(全部 raise)
-        for action_call in (
-            lambda: writer.approve_outbox("123", audit=audit),
-            lambda: writer.cancel_outbox("123", audit=audit),
-            lambda: writer.confirm_note("note-abc", audit=audit),
-            lambda: writer.dismiss_anomaly("anomaly-key", audit=audit),
-        ):
-            with pytest.raises(NotImplementedError):
-                action_call()
-        # audit_store._records 保持空(raise 路径绝不落档)
-        assert audit_store._records == [], (
-            f"写保护锁 raise 不应落档 audit,实际记录 {len(audit_store._records)} 条"
-        )
+        with pytest.raises(NotImplementedError):
+            writer.approve_outbox("123", audit=audit)
+        with pytest.raises(NotImplementedError):
+            writer.cancel_outbox("123", audit=audit)
+        with pytest.raises(NotImplementedError):
+            writer.confirm_note("note-abc", audit=audit)
+        with pytest.raises(NotImplementedError):
+            writer.dismiss_anomaly("anomaly-key", audit=audit)
+        assert audit_store.count() == 0, "写保护锁 raise 不应落档 audit"
 
     def test_dry_run_required_excludes_env_flag(self) -> None:
         """不变式 #3:`dry_run.required` 不含 `ENABLE_PATH_4_WRITE` env flag(因未实施).
