@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30)** — 真 OutboxStore 写路径 +2 契约测试(撞坑 #76 防 #71 回归)。**默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2595 passed / 1 skipped / 88.87% / mypy 0 / MD lint 201 / ruff + format 全绿。**下一棒**:Phase 1 维持期;不打 tag。
+> **状态**:🟢 **v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30)** — 承接 QQ SMTP 10 封 spike 收口(`sent=10 tech_fail=0`,撞坑 #78/#79)与 MODIFICATION-LOG 累计修正。**默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2595 passed / 1 skipped / 88.85% / mypy 0 / MD lint 203 / ruff + format 全绿。**下一棒**:后续 90 封 spike 或 Phase 1 维持期;不打 tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.87% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.87% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

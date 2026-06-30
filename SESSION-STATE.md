@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30)
+# SESSION-STATE — v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30)
 
 > **最后更新**:2026-06-30 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30)** — `TestBusinessWriterImplRealWriteOutboxContract` 2 测试覆盖真 OutboxStore 写路径(撞坑 #76 防 #71 回归)。**v0.2.55.1 spike** 已收口;**默认仍拒写**。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**质量门**:mypy --strict 0 / **2595 passed** / **88.87%** / lint **201** 0 errors / ruff + format 全绿。**下一棒**:Phase 1 维持期(7/2-7/24)。**边界**:不打 tag · 不真发 SMTP · 不读写 Keychain · finance dismiss 未接真实 Impl 仍拒写。
+> **状态**:🟢 **v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30)** — 承接 `v0.2.55.5` QQ SMTP 10 封 spike 收口(`sent=10 tech_fail=0`,撞坑 #78/#79)与 MODIFICATION-LOG 累计 22→23 修正。**默认仍拒写**。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**质量门**:mypy --strict 0 / **2595 passed** / **88.85%** / lint **203** 0 errors / ruff + format 全绿。**下一棒**:后续 90 封 spike 或 Phase 1 维持期(7/2-7/24)。**边界**:不打 tag · 不追加真发 SMTP · 不读写 Keychain · finance dismiss 未接真实 Impl 仍拒写。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30)** — 2595 passed / 88.87% / MD lint **201** = `git ls-files '*.md'` = `make lint`。**Phase 0 全部收口**。**Dashboard 5 门 card 已接线 `/api/status`**。**下一步候选**:Phase 1 维持期(7/2-7/24) · tag readiness 继续不打 tag。
+**当前启动候选**:**v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30)** — 2595 passed / 88.85% / MD lint **203** = `git ls-files '*.md'` = `make lint`。**Phase 0 全部收口**。**v0.2.55.5 QQ SMTP 10 封 spike 已收口**。**下一步候选**:后续 90 封 spike 或 Phase 1 维持期(7/2-7/24) · tag readiness 继续不打 tag。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2595 passed / 1 skipped** · **88.87%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **201 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| 核心质量门 | **2595 passed / 1 skipped** · **88.85%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **203 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
@@ -138,6 +138,8 @@
 | 6/30 | 周一 | **v0.2.53.52 Dashboard Audit UI**(`8b224a2` · feat dashboard · `GET /api/approval-gate/audits?limit=10` 端点 + `build_approval_gate_audits_payload` 响应 + `DashboardContext.audit_store` 字段 + `with_audit_store()` 不可变更新(撞坑 #64)+ `_try_build_audit_store()` 联动注入(BUSINESS_WRITER_ENABLED=1)+ HTML inspector `audit-card` + `renderAudits()` 8 端点 hydrate · 6 tests + 9 质量门全绿 **2582 passed / 88.92%** / mypy --strict 0 / 237 files / MD lint **193 files** · 撞坑累计 70 类沿用 · docs `docs/v0.2.53.52-dashboard-audit-ui-2026-06-30.md` 10 段 · §3.5 oauth2 误记已更正) | ✅ |
 | 6/30 | 周一 | **v0.2.53.53 路径 4 实写 launch checklist v2**(`82574ec` · docs-only · 8/1 后启动用 · 5 门 v2 升级(DASHBOARD_WRITE_API + confirm_text + BUSINESS_WRITER_ENABLED + real_write_handler_enabled + 新增顶级 `ENABLE_PATH_4_WRITE=1`)+ 8 项前置条件(6 沿用 + 2 新增已落地)+ 8 步骤实施 checklist(4 已落地 + 4 剩余)+ 4 重防误发 + 实施失败回滚 plan(4 门任一未达 → 立即 raise NotImplementedError)· 不打 v0.2.x tag · 不移动 v0.1.0 tag · docs `docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md` 271 lines) | ✅ |
 | 6/30 | 周一 | **v0.2.55 Path 4 实写提前落地**(用户授权"8/1 的任务提前到今天" · handler 路径 4 `dry_run=false` 分发接通 · `ENABLE_PATH_4_WRITE=1` 第 5 门代码落地 · `/api/status` 暴露第 5 门与 `path4_write_ready` · 默认仍拒写 · 2591 passed / 88.85% / MD lint 200) | ✅ |
+| 6/30 | 周一 | **v0.2.55.5 QQ SMTP 10 封 spike 收口**(`a0a4956` · 10 批 × 1 封 · `sent=10 tech_fail=0` · 撞坑 #78/#79 · 100 封拆为 10+90,后续 90 封需再授权) | ✅ |
+| 6/30 | 周一 | **v0.2.55.6 MODIFICATION-LOG 累计修正 + 项目检查漂移修复**(`696b9ee` 起点 · 累计 22→23 · 当前 live 基线 2595 passed / 88.85% / MD lint 203) | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 

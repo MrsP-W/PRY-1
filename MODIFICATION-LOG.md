@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.55.3 真写 OutboxStore 契约测试(2026-06-30 · `00dc257`)** — `TestBusinessWriterImplRealWriteOutboxContract` +2 tests 覆盖真 OutboxStore 写路径(撞坑 #76 防 #71 回归)。**下一棒**:Phase 1 维持期(7/2-7/24) |
+| **当前阶段** | ✅ **v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30 · `696b9ee` 起点)** — 承接 v0.2.55.5 QQ SMTP 10 封 spike 收口(`sent=10 tech_fail=0`,撞坑 #78/#79)与 MODIFICATION-LOG 累计 22→23 修正。**下一棒**:后续 90 封 spike 或 Phase 1 维持期(7/2-7/24) |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
 | **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
@@ -112,7 +112,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2595 passed / 1 skipped** / **88.87%** / mypy --strict 0 / **237 files** / MD lint **201 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2595 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **203 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | **下一棒** | Phase 1 维持期(7/2-7/24 weekly `make ci`) · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -2945,7 +2945,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:22 条 / 2026-06-18-30(...+ v0.2.55.1 Path 4 spike + v0.2.55.3 真写契约测试 · 撞坑 #71/#76)
+> **累计**:23 条 / 2026-06-18-30(...+ v0.2.55.1 Path 4 spike + v0.2.55.3 真写契约测试 + v0.2.55.5 QQ SMTP 10 封 spike · 撞坑 #71/#76/#78/#79)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
 
 ---
