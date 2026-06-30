@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.54.1 7/1 checkpoint baseline refresh(2026-06-30)** — launch-plan 补勾 v0.2.53.57/58/59 + 新建 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md)(9 段 docs-only) + MD lint 196 → 197 同步。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**8/1 readiness**:QQ SMTP ✅ · outlook/gmail #2/#9 **用户决策豁免** · 路径 4 实写仍 8/1 后。**下一棒**:Phase 0.3-0.5 三入口二次同步 / 7/1 12:00 月度复盘 / 路径 4(8/1 后)。**边界**:不接 BusinessWriter · 不打 tag · `write_executed` 恒 False · `ENABLE_PATH_4_WRITE` 未启用。
+> **状态**:🟢 **v0.2.54.4 B 阶段 docs 预制(2026-06-30)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)。**Phase 0 全收口**(v0.2.54.1/.2/.3 · 7/1 checkpoint + 三入口同步 + 撞坑 #68/#69/#70 复核 + mypy drift SOP + launch-plan drift fix)。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**8/1 readiness**:QQ SMTP ✅ · outlook/gmail #2/#9 **用户决策豁免** · 路径 4 实写仍 8/1 后。**下一棒**:7/2 Phase 1 维持期(被动监控)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch(需用户授权)。**边界**:不接 BusinessWriter · 不打 tag · `write_executed` 恒 False · `ENABLE_PATH_4_WRITE` 未启用 · docs-only 阶段不前进 pytest/coverage。
 
 ---
 

@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.54.2 三入口同步 + 撞坑 #68/#69/#70 复核(2026-06-30 · docs-only)** — SESSION-STATE / README / MODIFICATION-LOG 三入口对齐 `v0.2.54.1` + checkpoint doc §10 撞坑 #68 衍生 5 项 复核(议程 23 仍 B 类 · 24/25/26/27 已决议)+ 新建 [`docs/v0.2.54-mypy-drift-sop.md`](docs/v0.2.54-mypy-drift-sop.md) 6 段 docs-only(撞坑 #69 + #70 合并 SOP)+ quality_snapshot.py MD lint 197 → 198 同步。**上一阶段**:v0.2.54.1 7/1 checkpoint baseline refresh(`e5f39cd`)。**下一棒**:launch-plan drift fix(v0.2.54.3)/ Phase 1 维持期(7/2-7/6)/ A3 readiness 三次刷新(7/25-7/31)/ 8/1 后实写 launch |
+| **当前阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`)。**下一棒**:7/2 Phase 1 维持期(被动监控)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch 实施(需用户授权) |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
@@ -109,7 +109,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **197 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 同步) |
+| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **199 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 → 198 → 199 同步) |
 | **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -139,6 +139,38 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.54.4 B 阶段 docs 预制(8/1 后 Path 4 实写 Launch)] — 收口
+
+**1. 本次修改内容**
+
+- **docs(new)**: 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook):
+  - **§1 范围与边界**:docs-only · 不接 `ENABLE_PATH_4_WRITE=1` · 不打 tag · 不动 BusinessWriterImpl 源码
+  - **§2 8/1 当天启动 runbook**:6 阶段命令序列(make ci → 步骤 4-5 → 步骤 6 → 步骤 7 spike → 步骤 8 收口 → tag 决策)
+  - **§3 5 重防误发验证 stubs**:python sketch(5 门全开/dry_run 区分/audit 落档/write_executed 转 True/沿 D5.6.5 SMTP spike)
+  - **§4 100 封 spike 数据集准备 docs**:沿 D5.6.5 范本对照 + spike fixture + spike 验证脚本伪代码
+  - **§5 失败回滚命令 runbook**:3 种回滚场景(步骤 4-5 失败 / 步骤 7 spike 失败 / tag 误打回滚)
+  - **§6 撞坑累计 + 不前进原则**:8/1 后预计 +3(env-flag-2026 + spike-write-2026 + tag-rollback-2026)
+  - **§7 实施触发条件**:T1-T5(其中 T3 用户授权是唯一硬性条件)
+  - **§8 关联与依据**:沿 v0.2.53.53 / .55 / .33 / .51 / .52 / .54 / mypy-drift-sop / 7-1-checklist 范本
+- **docs(state) 三入口同步**:SESSION-STATE.md 顶部 `v0.2.54.1` → `v0.2.54.4` + MD count `197 → 199` 三处更新;README.md 顶部状态 `v0.2.54.1 checkpoint refresh` → `v0.2.54.4 B 阶段 docs 预制`;MODIFICATION-LOG.md 当前阶段 + 质量基线同步。
+- **chore(sync)**: `src/my_ai_employee/quality_snapshot.py` MD lint 计数 198 → 199(沿 docs-only 规则)。
+
+**2. 风险点**
+
+- 🟢 docs-only · 0 源码行为改动 · pytest/coverage/mypy 数字不变。
+- 🟢 8/1 触发条件 T3(用户授权)是唯一硬性条件,其余 4 项均为 docs/time 锚定。
+- 🟡 B 阶段实施后撞坑累计预计 +3(env-flag-2026 + spike-write-2026 + tag-rollback-2026)· 70 → 73。
+- ⚠️ 8/1 前 docs-only 阶段**严禁**:启用 `ENABLE_PATH_4_WRITE=1` · 实施 Path 4 实写 · 移动 `v0.1.0` tag · 前进 pytest/coverage/mypy。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **199 files** / ruff + format 全绿。
+- v0.2.54.3 → v0.2.54.4 · docs-only · commit `3dec658` · HEAD 锚定 `3dec658`。
+- 累计 commits 锚:`e5f39cd`(v0.2.54.1)+ `9cb717f`(v0.2.54.2)+ `deb363a`(v0.2.54.3)+ `3dec658`(v0.2.54.4)· 6/30 当日 4 commit。
+- 下一棒:7/2 Phase 1 维持期(被动监控 + docs 同步)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch 实施(需用户授权 · 沿 `docs/v0.2.54.4` §2 runbook)。
+
+---
 
 ### 2026-06-30 [v0.2.54.2 三入口同步 + 撞坑 #68/#69/#70 复核 + mypy drift SOP] — 收口
 
