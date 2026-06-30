@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`)。**下一棒**:7/2 Phase 1 维持期(被动监控)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch 实施(需用户授权) |
+| **当前阶段** | ✅ **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权"8/1 的任务提前到今天";handler 路径 4 `dry_run=false` 分发接通 + `ENABLE_PATH_4_WRITE=1` 第 5 门落地 + `/api/status` 暴露第 5 门与 `path4_write_ready`。默认仍拒写,必须五门全开才执行。详见 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md)。**下一棒**:Dashboard 第 5 门展示 + 临时 DB Path 4 spike |
+| **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
@@ -109,8 +110,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2586 passed / 1 skipped** / **88.90%** / mypy --strict 0 / **237 files** / MD lint **199 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 → 198 → 199 同步) |
-| **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
+| **质量基线** | **2591 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **200 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | Dashboard 第 5 门展示 / 临时 DB Path 4 spike / tag readiness 继续评估但不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -139,6 +140,30 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.55 Path 4 实写提前落地] — 收口
+
+**1. 本次修改内容**
+
+- **feat(dashboard)**:用户授权"8/1 的任务提前到今天",提前接通 Path 4 `dry_run=false` handler 分发;新增 `_execute_writer_action()` / `_call_writer_action()`,成功返回 `read_only=false`、`write_executed=true`、`affected_id`、`audit_id`。
+- **feat(writer)**:`BusinessWriterImpl` 新增 `ENABLE_PATH_4_WRITE=1` 第 5 门;真实动作入口按"参数校验 → 写保护锁 → 依赖检查 → service → audit"执行,默认仍拒写。
+- **feat(context/status)**:`DashboardContext.default()` 在 `DASHBOARD_REAL_DB=1` + `BUSINESS_WRITER_ENABLED=1` 下自动注入 Outbox/Note/Audit 依赖;`/api/status` 新增 `enable_path_4_write_env_enabled` 与 `path4_write_ready`。
+- **docs(state)**:新增 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md),并同步 README / SESSION-STATE / quality_snapshot。
+
+**2. 风险点**
+
+- 🟢 默认仍拒写:五门缺任一门均不会真实写入。
+- 🟢 不真发 SMTP / 不读写 Keychain / 不配置 Outlook 或 Gmail / 不打 tag / 不移动 `v0.1.0`。
+- 🟡 `finance.dismiss_anomaly` 尚无真实 Impl 注入,保持拒写,避免假成功。
+- ⚠️ 不要把 `ENABLE_PATH_4_WRITE=1` 写入长期 shell profile;本阶段只允许显式临时环境验证。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2591 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **200 files** / ruff + format 全绿。
+- 当前阶段:v0.2.55 Path 4 代码提前接通,但默认仍为五门严判。
+- 下一棒:Dashboard 第 5 门展示 + 临时 DB Path 4 spike;tag readiness 继续评估但不打 tag。
+
+---
 
 ### 2026-06-30 [v0.2.54.4 B 阶段 docs 预制(8/1 后 Path 4 实写 Launch)] — 收口
 

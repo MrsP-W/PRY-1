@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.54.4 B 阶段 docs 预制(2026-06-30)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)。**Phase 0 全收口**(v0.2.54.1/.2/.3 · 7/1 checkpoint + 三入口同步 + 撞坑 #68/#69/#70 复核 + mypy drift SOP + launch-plan drift fix)。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**8/1 readiness**:QQ SMTP ✅ · outlook/gmail #2/#9 **用户决策豁免** · 路径 4 实写仍 8/1 后。**下一棒**:7/2 Phase 1 维持期(被动监控)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch(需用户授权)。**边界**:不接 BusinessWriter · 不打 tag · `write_executed` 恒 False · `ENABLE_PATH_4_WRITE` 未启用 · docs-only 阶段不前进 pytest/coverage。
+> **状态**:🟢 **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权将 8/1 任务提前到今天;已接通 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md) 所述五门实写路径。默认仍拒写,必须 `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + writer 内部写保护锁 + `ENABLE_PATH_4_WRITE=1` 全齐才执行。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2591 passed / 1 skipped / 88.85% / mypy 0 / MD lint 200 / ruff + format 全绿。**下一棒**:Dashboard 第 5 门展示 + 临时 DB Path 4 spike;不打 tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2586 passed / 1 skipped / 88.90% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2591 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2586 passed / 1 skipped / 88.90% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2591 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

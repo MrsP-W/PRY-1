@@ -5,13 +5,13 @@
     - 接入 BusinessWriterImpl(approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly 4 动作)
     - 4 动作实写骨架:依赖检查 + 参数校验 + 写保护锁 + service 调用 + audit 落档 + WriteResult 包装
     - 默认行为 = raise NotImplementedError(沿撞坑 #18 风险门控 · _real_write_handler_enabled=False)
-    - 真实写入路径留 v0.2.53.19 handler 路径 4 启用 + 用户明确授权 + 8/1 后
+    - Path 4 实写路径已提前接通,但必须写保护锁 + 第 5 门 + 用户确认全齐
     - audit 落档:写保护锁开 + 真实 service 调用(成功/失败)都落档;dry-run / 写保护锁 raise 不落档
 
 设计决策(2026-06-29 锁定):
     - 抽象 BusinessWriterImpl 类(3 已有 Service + dismiss_anomaly + audit_store)
     - 构造函数接受可选依赖(OutboxStore / NoteConfirmServiceImpl / AnomalyDismissalServiceStub / ApprovalGateAuditStore)
-    - 默认所有方法 raise NotImplementedError(等待 v0.2.53.19 handler 路径 4 启用)
+    - 默认所有方法 raise NotImplementedError(等待显式五门全开)
     - 写保护锁 _real_write_handler_enabled:bool=False(默认锁定,撞坑 #18)
     - 仅 dry_run 真实实现(返回 WriteDecision)
     - 异常收窄(沿 note_confirm_service.py:113-115):用户主动操作异常必须透传
@@ -45,10 +45,10 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - 异常收容:dry_run 失败 → WriteDecision(error="internal_error");真实写入异常透传
     - audit 落档失败:返回 audit_id=None,但不抛异常(撞坑 #18 「日志语义」)
 
-撞坑 #18 边界应用(实际写入留 8/1 后):
+撞坑 #18 边界应用(Path 4 提前接通后的默认锁定):
     - 默认 _real_write_handler_enabled=False(写保护锁锁定)
     - 不接 SMTP / 不读 Keychain 明文
-    - 真实写入路径(env+confirm+writer+handler 四道门齐全)留 v0.2.53.19 handler 启用
+    - 真实写入路径需 env+confirm+writer+handler+ENABLE_PATH_4_WRITE 五门齐全
     - audit 落档仅在写保护锁开 + 真实 service 调用后发生(撞坑 #18 「日志」语义)
 
 撞坑 #64 公共 API 一致性:
@@ -61,10 +61,10 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
     - 单项失败静默降级 Stub(沿 v0.2.53.7 范本)
 
 沿用边界:
-    - 本棒默认 raise NotImplementedError(等同 v0.2.53.46 行为)
-    - 真实写入需 v0.2.53.19 handler 路径 4 启用 + 用户明确授权 + 8/1 后
+    - 默认 raise NotImplementedError(等同 v0.2.53.46 行为)
+    - 真实写入需 Path 4 handler + 写保护锁 + 第 5 门 + 用户明确授权全齐
     - 不接真实 SMTP / 不读 Keychain 明文
-    - write_executed 恒 False(沿 v0.2.53.11 不变式,本棒真实调 service 时也 False)
+    - write_executed 在 dry-run 恒 False;真实 service 调用后返回 True
     - 不动 ApprovalGate 决策矩阵(沿 v0.2.53.22 8 路径)
     - dry-run 不落档(沿 v0.2.53.51 范本)
     - 写保护锁 raise 不落档(沿 v0.2.53.51 范本)
@@ -72,6 +72,7 @@ D4.7.3 教训应用(沿撞坑 #65 + v0.2.53.8):
 
 from __future__ import annotations
 
+import os
 import time
 from typing import TYPE_CHECKING, Any, ClassVar
 
@@ -101,6 +102,16 @@ def _now_ms() -> int:
     return int(time.time() * 1000)
 
 
+ENABLE_PATH_4_WRITE_ENV = "ENABLE_PATH_4_WRITE"
+_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
+
+
+def _is_enable_path_4_write_enabled() -> bool:
+    """第 5 门 env 判定 — 默认关闭,仅识别 truthy 字面量."""
+    raw = os.environ.get(ENABLE_PATH_4_WRITE_ENV, "").strip().lower()
+    return raw in _TRUTHY_ENV_VALUES
+
+
 class BusinessWriterImpl:
     """BusinessWriter 真实实现骨架 — 默认所有方法 raise NotImplementedError.
 
@@ -124,6 +135,7 @@ class BusinessWriterImpl:
         anomaly_dismissal_service: AnomalyDismissalServiceStub | None = None,
         audit_store: ApprovalGateAuditStore | None = None,
         real_write_handler_enabled: bool = False,
+        enable_path_4_write: bool | None = None,
     ) -> None:
         """构造 — 所有依赖可选(默认 None 表示 raise NotImplementedError).
 
@@ -136,7 +148,9 @@ class BusinessWriterImpl:
             real_write_handler_enabled: 写保护锁(默认 False = 锁定,沿撞坑 #18 风险门控)。
                 False → 4 动作 raise NotImplementedError(等同 v0.2.53.46 行为)
                 True → 4 动作真实调 service(仅测试场景用 fake store 验证整条链)
-                生产环境必须保持 False,等 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
+                生产环境必须只在第 5 门 + POST 确认 + 用户明确授权齐全时开启
+            enable_path_4_write: 第 5 门。None 表示读取 `ENABLE_PATH_4_WRITE` env;
+                True 表示测试/显式注入放行;False 表示锁定。
         """
         self._session_factory = session_factory
         self._outbox_store = outbox_store
@@ -147,6 +161,11 @@ class BusinessWriterImpl:
             audit_store if audit_store is not None else ApprovalGateAuditStoreStub()
         )
         self._real_write_handler_enabled = real_write_handler_enabled
+        self._enable_path_4_write = (
+            _is_enable_path_4_write_enabled()
+            if enable_path_4_write is None
+            else enable_path_4_write
+        )
 
     def dry_run(
         self,
@@ -178,23 +197,31 @@ class BusinessWriterImpl:
                     reason=f"未知 action:{action}",
                 )
 
-            # 默认 would_allow=False — real_write_handler 启用后改为 True
+            required = [
+                "DASHBOARD_WRITE_API=1",
+                "confirm_text=CONFIRM_WRITE",
+                "BUSINESS_WRITER_ENABLED=1",
+            ]
+            if not self._real_write_handler_enabled:
+                required.append("real_write_handler_enabled")
+            if not self._enable_path_4_write:
+                required.append(f"{ENABLE_PATH_4_WRITE_ENV}=1")
+            write_ready = self._real_write_handler_enabled and self._enable_path_4_write
             return WriteDecision(
                 action=action,
                 target_id=target_id,
-                write_enabled=False,
-                would_allow=False,
+                write_enabled=write_ready,
+                would_allow=write_ready,
                 write_executed=False,
                 dry_run=True,
                 audit=audit,
-                error="write_not_implemented",
-                reason="BusinessWriterImpl 骨架就绪,real_write_handler 未启用",
-                required=(
-                    "DASHBOARD_WRITE_API=1",
-                    "confirm_text=CONFIRM_WRITE",
-                    "BUSINESS_WRITER_ENABLED=1",
-                    "real_write_handler_enabled",
+                error=None if write_ready else "write_not_implemented",
+                reason=(
+                    "BusinessWriterImpl 5 门已齐,可执行 Path 4 实写"
+                    if write_ready
+                    else "BusinessWriterImpl 已构造,Path 4 实写门未全开"
                 ),
+                required=tuple(required),
             )
         except Exception as e:
             # dry_run 异常收容(沿 v0.2.53.14 §7.4)
@@ -219,13 +246,13 @@ class BusinessWriterImpl:
         """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
         边界(沿撞坑 #18 + v0.2.53.14 §6 + v0.2.53.19 + v0.2.53.51 audit 落档):
-            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
             - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
             - 写保护锁:_real_write_handler_enabled=False → raise(撞坑 #18 默认行为,无 audit)
+            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
             - 写保护锁开 + 依赖注入 → 真实调 outbox_store.update_status(路径 4 启用)
             - 成功后 audit 落档(success=True, affected_id, audit_id 真实字符串)
             - 失败后 audit 落档(success=False, error, audit_id 真实字符串)
-            - 真实写入路径留 v0.2.53.19 handler 启用 + 用户明确授权 + 8/1 后
+            - 真实写入路径需 Path 4 handler + 第 5 门 + 用户明确授权全齐
 
         路径 4 启用后真实调用(沿 D5.6.3 P1-1 审批凭据必传规则):
             outbox_store.update_status(
@@ -242,7 +269,6 @@ class BusinessWriterImpl:
         Returns:
             WriteResult(参数非法时 success=False, error='invalid_target_id')
         """
-        self._check_dep(self._outbox_store, "outbox_store")
         err = self._validate_target_id(target_id)
         if err is not None:
             return WriteResult(
@@ -252,6 +278,7 @@ class BusinessWriterImpl:
                 reason=err,
             )
         self._check_write_protection()
+        self._check_dep(self._outbox_store, "outbox_store")
         return self._call_service_approve_outbox(target_id, audit=audit)
 
     def cancel_outbox(
@@ -263,9 +290,9 @@ class BusinessWriterImpl:
         """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
         边界(沿撞坑 #18 + v0.2.53.14 §6 + D5.6.3 P1-1 必传 None 规则 + v0.2.53.51 audit 落档):
-            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
             - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
             - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
+            - 依赖检查:outbox_store 必须注入(无则 raise NotImplementedError,无 audit)
             - 写保护锁开 → 真实调 outbox_store.update_status(CANCELLED, None)
             - 成功后 audit 落档(success=True, affected_id)
             - 失败后 audit 落档(success=False, error)
@@ -279,7 +306,6 @@ class BusinessWriterImpl:
                 last_approved_at_ms=None,
             )
         """
-        self._check_dep(self._outbox_store, "outbox_store")
         err = self._validate_target_id(target_id)
         if err is not None:
             return WriteResult(
@@ -289,6 +315,7 @@ class BusinessWriterImpl:
                 reason=err,
             )
         self._check_write_protection()
+        self._check_dep(self._outbox_store, "outbox_store")
         return self._call_service_cancel_outbox(target_id, audit=audit)
 
     def confirm_note(
@@ -300,15 +327,14 @@ class BusinessWriterImpl:
         """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
         边界(沿撞坑 #18 + note_confirm_service.py:113-115 异常透传 + v0.2.53.51 audit 落档):
-            - 依赖检查:note_confirm_service 必须注入(无则 raise NotImplementedError,无 audit)
             - 参数校验:target_id 必须为非空 str(否则 WriteResult(success=False),无 audit)
             - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
+            - 依赖检查:note_confirm_service 必须注入(无则 raise NotImplementedError,无 audit)
             - 写保护锁开 → 真实调 note_confirm_service.confirm_note
             - 成功后 audit 落档(success=True, affected_id=target_id)
             - 失败后 audit 落档(success=False, error)
             - 真实写入异常透传(不收容 — 用户主动操作必须看到 ValueError)
         """
-        self._check_dep(self._note_confirm_service, "note_confirm_service")
         err = self._validate_target_id(target_id)
         if err is not None:
             return WriteResult(
@@ -318,6 +344,7 @@ class BusinessWriterImpl:
                 reason=err,
             )
         self._check_write_protection()
+        self._check_dep(self._note_confirm_service, "note_confirm_service")
         return self._call_service_confirm_note(target_id, audit=audit)
 
     def dismiss_anomaly(
@@ -329,16 +356,15 @@ class BusinessWriterImpl:
         """路径 4 实写 — 默认 raise(写保护锁),handler 启用后真实调 service + audit 落档.
 
         边界(沿撞坑 #18 + AnomalyDismissalService.dismiss 契约 + v0.2.53.51 audit 落档):
-            - 依赖检查:anomaly_dismissal_service 必须注入(无则 raise NotImplementedError,无 audit)
             - 参数校验:target_id 必须为非空 str(格式 {date}|{counterparty}|{amount})
             - 写保护锁:False → raise(撞坑 #18 默认行为,无 audit)
+            - 依赖检查:anomaly_dismissal_service 必须注入(无则 raise NotImplementedError,无 audit)
             - 写保护锁开 → 真实调 anomaly_dismissal_service.dismiss
             - 成功后 audit 落档(success=True, affected_id=target_id)
             - 失败后 audit 落档(success=False, error)
             - reason 限 240 字符(沿 _MAX_REASON_LEN)
             - 真实写入路径留 v0.2.53.19 handler 启用
         """
-        self._check_dep(self._anomaly_dismissal_service, "anomaly_dismissal_service")
         err = self._validate_target_id(target_id)
         if err is not None:
             return WriteResult(
@@ -348,6 +374,7 @@ class BusinessWriterImpl:
                 reason=err,
             )
         self._check_write_protection()
+        self._check_dep(self._anomaly_dismissal_service, "anomaly_dismissal_service")
         return self._call_service_dismiss_anomaly(target_id, audit=audit)
 
     def _check_dep(self, dep: object, name: str) -> None:
@@ -372,7 +399,7 @@ class BusinessWriterImpl:
         边界(沿 v0.2.53.49 + 撞坑 #18 风险门控):
             - _real_write_handler_enabled=False → raise(默认行为,等同 v0.2.53.46)
             - _real_write_handler_enabled=True → 放行(仅测试场景用 fake store 验证)
-            - 生产环境必须保持 False,等 v0.2.53.19 handler 路径 4 启用 + 用户明确授权
+            - 生产环境必须只在第 5 门 + POST 确认 + 用户明确授权齐全时开启
             - 写保护锁 raise 不落档(沿 v0.2.53.51 范本 · 撞坑 #18 「日志」语义)
 
         Raises:
@@ -381,7 +408,12 @@ class BusinessWriterImpl:
         if not self._real_write_handler_enabled:
             raise NotImplementedError(
                 "BusinessWriterImpl 写保护锁未开(_real_write_handler_enabled=False);"
-                "路径 4 实际写入留 v0.2.53.19 handler 启用 + 8/1 后 + 用户明确授权"
+                "Path 4 实写必须显式开启写保护锁 + 第 5 门 + 用户明确授权"
+            )
+        if not self._enable_path_4_write:
+            raise NotImplementedError(
+                f"BusinessWriterImpl 第 5 门未开({ENABLE_PATH_4_WRITE_ENV}=1);"
+                "Path 4 实写必须显式启用第 5 门"
             )
 
     def _call_service_approve_outbox(self, target_id: str, *, audit: AuditContext) -> WriteResult:

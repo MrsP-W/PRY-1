@@ -1,14 +1,14 @@
 """v0.2.53.11 — Dashboard ApprovalGate 写操作契约(默认禁写).
 
-本模块只负责"写操作是否允许进入业务实现"的统一判定,当前阶段不执行任何
+本模块只负责"写操作是否允许进入业务实现"的统一判定,自身不直接执行任何
 真实写入:
     - 不写 DB
     - 不发 SMTP
     - 不写 Keychain
     - 不 kickstart launchd
 
-未来真实写动作必须先通过这里的 env + 确认口令 + 审计字段校验,再委派到具体
-业务服务。
+真实写动作必须先通过这里的 env + 确认口令 + 审计字段校验,再委派到具体
+业务服务,由 BusinessWriterImpl 继续严判第 4/5 门。
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ CONFIRM_TEXT: Final = "CONFIRM_WRITE"
 # v0.2.53.22 第三道门(沿 v0.2.53.19 §设计)
 #   - 默认未设 → 路径 3 仍 `501 write_not_implemented`
 #   - 设为 truthy 字面量 → writer 就绪时走 writer.dry_run 路径(仍 write_executed=False)
-#   - 实际写入路径(路径 4)留 8/1 后 + 用户明确授权
+#   - 实际写入路径(路径 4)需 writer ready + 第 5 门 + 用户明确授权
 BUSINESS_WRITER_ENABLED_ENV: Final = "BUSINESS_WRITER_ENABLED"
 
 _TRUTHY: Final = {"1", "true", "yes", "on"}
@@ -242,7 +242,7 @@ def evaluate_writer_dry_run(
         - 路径 2 (env 已开但 confirm_text 错):          403 confirmation_required
         - 路径 3 (env+confirm 通过 + writer 未启用):     501 write_not_implemented
         - 路径 3.5 (env+confirm+writer 都启用 + dry_run=True):  200 OK + approval_gate_passed=True + would_allow 由 writer 决定
-        - 路径 3.5-dry_run_false:                        501 write_not_implemented(dry-run 默认,实际写入留 8/1 后)
+        - 路径 4 (env+confirm+writer 都启用 + dry_run=False): 200 OK + handler 委派 writer 实写
 
     Args:
         payload: 同 evaluate_approval_action_request 的 JSON object body.
@@ -303,18 +303,18 @@ def evaluate_writer_dry_run(
             writer_impl_injected=writer_impl_injected,
         )
 
-    # 路径 3.5-dry_run_false:实际写入路径留 8/1 后
+    # 路径 4:真实写入请求进入 handler,由 BusinessWriterImpl 的 5 门继续严判。
     if not parsed.dry_run:
         return _decision(
-            HTTPStatus.NOT_IMPLEMENTED,
-            error="real_write_disabled",
-            reason="实际写入路径留 v0.2.53.19 后 + 用户明确授权。",
+            HTTPStatus.OK,
+            error=None,
+            reason="ApprovalGate 三门已通过(write + confirm + writer),进入 writer 实写路径。",
             write_enabled=enabled,
             action=parsed.action,
             target_id=parsed.target_id,
             dry_run=parsed.dry_run,
             payload=payload,
-            would_allow=False,
+            would_allow=True,
             approval_gate_passed=True,
             writer_enabled=True,
             writer_env_enabled=True,

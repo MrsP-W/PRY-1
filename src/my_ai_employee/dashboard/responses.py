@@ -28,6 +28,8 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
     writer_env = ctx.is_business_writer_env_enabled()
     writer_injected = ctx.is_business_writer_impl_injected()
     writer_ready = ctx.is_business_writer_ready()
+    path4_write_env = ctx.is_path4_write_env_enabled()
+    path4_write_ready = ctx.is_path4_write_ready()
     return {
         "read_only": True,
         "version": ctx.version,
@@ -58,11 +60,14 @@ def build_status_payload(ctx: DashboardContext) -> dict[str, Any]:
             "business_writer_env_enabled": writer_env,
             "business_writer_impl_injected": writer_injected,
             "business_writer_ready": writer_ready,
+            "enable_path_4_write_env_enabled": path4_write_env,
+            "path4_write_ready": path4_write_ready,
             "write_contract_version": approval_gate["contract_version"],
             "write_actions": approval_gate["actions"],
             "v0_2_53_26_dry_run_status": _dry_run_three_gate_status(
                 approval_gate,
                 business_writer_ready=writer_ready,
+                path4_write_ready=path4_write_ready,
             ),
         },
     }
@@ -72,6 +77,7 @@ def _dry_run_three_gate_status(
     approval_gate: dict[str, Any],
     *,
     business_writer_ready: bool,
+    path4_write_ready: bool,
 ) -> dict[str, str]:
     """v0.2.53.28 三门联调状态展示 — 第三道门以 Impl 实际注入为准.
 
@@ -93,6 +99,7 @@ def _dry_run_three_gate_status(
         "first_gate": "open" if write_enabled else "closed",
         "second_gate": "confirm_required_per_action",
         "third_gate": "open" if business_writer_ready else "closed",
+        "fifth_gate": "open" if path4_write_ready else "closed",
         "outcome": outcome,
     }
 

@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.54.4 B 阶段 docs 预制(2026-06-30)
+# SESSION-STATE — v0.2.55 Path 4 实写提前落地(2026-06-30)
 
 > **最后更新**:2026-06-30 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.54.4 B 阶段 docs 预制(2026-06-30)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)。**承接**:v0.2.54.1/.2/.3 Phase 0 全部收口(7/1 checkpoint + 三入口同步 + 撞坑 #68/#69/#70 复核 + mypy drift SOP + launch-plan drift fix)。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**8/1 readiness**:QQ SMTP ✅ · 路径 4 实际写入仍 8/1 后。**质量门**:mypy --strict 0 / **2586 passed** / **88.90%** / lint **199** 0 errors / ruff + format 全绿。**下一棒**:7/2 Phase 1 维持期(被动监控 + docs 同步)/ 7/25-7/31 A3 readiness 三次刷新 / 8/1 后实写 launch 实施(需用户授权)。**边界**:默认 raise · 写保护锁锁定 · 不打 tag · `write_executed` dry-run 恒 False · 撞坑累计 70 类沿用 · `ENABLE_PATH_4_WRITE` **未启用**。
+> **状态**:🟢 **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权"8/1 的任务提前到今天",已接通 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md) 五门实写路径。默认仍拒写;必须 `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + writer 内部写保护锁 + `ENABLE_PATH_4_WRITE=1` 全齐才执行。**SMTP 范围**:**仅 QQ** — Outlook/Gmail **不配置、不使用**。**质量门**:mypy --strict 0 / **2591 passed** / **88.85%** / lint **200** 0 errors / ruff + format 全绿。**下一棒**:Dashboard 第 5 门展示 + 临时 DB Path 4 spike。**边界**:不打 tag · 不真发 SMTP · 不读写 Keychain · finance dismiss 未接真实 Impl 仍拒写。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**v0.2.54.4 B 阶段 docs 预制 已落地(2026-06-30)** — 2586 passed / 88.90% / MD lint **199** = `git ls-files '*.md'` = `make lint`(同步沿 docs-only 规则)。**Phase 0 全部收口**(v0.2.54.1/.2/.3 · launch-plan drift fix 闭环撞坑 #50 衍生第三版)。**下一步候选**:7/2 Phase 1 维持期(被动监控)· 7/25-7/31 A3 readiness 三次刷新 · 8/1 后实写 launch 实施(需用户授权)。
+**当前启动候选**:**v0.2.55 Path 4 实写提前落地(2026-06-30)** — 2591 passed / 88.85% / MD lint **200** = `git ls-files '*.md'` = `make lint`(新增本文档后同步)。**Phase 0 全部收口**(v0.2.54.1/.2/.3/.4)。**下一步候选**:Dashboard 第 5 门展示 · 临时 DB Path 4 spike · tag readiness 继续不打 tag。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2586 passed / 1 skipped** · **88.90%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **199 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 → 198 → 199 同步) |
+| 核心质量门 | **2591 passed / 1 skipped** · **88.85%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **200 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
@@ -137,6 +137,7 @@
 | 6/29 | 周日 | **v0.2.53.51 audit 落档骨架**(`bcf7706` · feat dashboard · approval_gate_audits 表 + ApprovalGateAuditStore Protocol/Stub/InMemory + BusinessWriterImpl 4 动作成功/失败 audit 真实落档 + audit_id 字符串 `"audit:{id}"` 沿撞坑 #64 公共 API 范本 · 11 tests + 9 质量门全绿 **2576 passed / 88.84%** / mypy --strict 0 / 235 files / MD lint 192 files / 撞坑累计 70 类沿用 · 撞坑 #18 风险门控应用 · docs `docs/v0.2.53.51-audit-filing-skeleton-2026-06-29.md` 10 段) | ✅ |
 | 6/30 | 周一 | **v0.2.53.52 Dashboard Audit UI**(`8b224a2` · feat dashboard · `GET /api/approval-gate/audits?limit=10` 端点 + `build_approval_gate_audits_payload` 响应 + `DashboardContext.audit_store` 字段 + `with_audit_store()` 不可变更新(撞坑 #64)+ `_try_build_audit_store()` 联动注入(BUSINESS_WRITER_ENABLED=1)+ HTML inspector `audit-card` + `renderAudits()` 8 端点 hydrate · 6 tests + 9 质量门全绿 **2582 passed / 88.92%** / mypy --strict 0 / 237 files / MD lint **193 files** / 撞坑 #69 顺手修 test_oauth2.py 3 处 unused-ignore · 撞坑累计 70 类沿用 · docs `docs/v0.2.53.52-dashboard-audit-ui-2026-06-30.md` 10 段) | ✅ |
 | 6/30 | 周一 | **v0.2.53.53 路径 4 实写 launch checklist v2**(`82574ec` · docs-only · 8/1 后启动用 · 5 门 v2 升级(DASHBOARD_WRITE_API + confirm_text + BUSINESS_WRITER_ENABLED + real_write_handler_enabled + 新增顶级 `ENABLE_PATH_4_WRITE=1`)+ 8 项前置条件(6 沿用 + 2 新增已落地)+ 8 步骤实施 checklist(4 已落地 + 4 剩余)+ 4 重防误发 + 实施失败回滚 plan(4 门任一未达 → 立即 raise NotImplementedError)· 不打 v0.2.x tag · 不移动 v0.1.0 tag · docs `docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md` 271 lines) | ✅ |
+| 6/30 | 周一 | **v0.2.55 Path 4 实写提前落地**(用户授权"8/1 的任务提前到今天" · handler 路径 4 `dry_run=false` 分发接通 · `ENABLE_PATH_4_WRITE=1` 第 5 门代码落地 · `/api/status` 暴露第 5 门与 `path4_write_ready` · 默认仍拒写 · 2591 passed / 88.85% / MD lint 200) | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 

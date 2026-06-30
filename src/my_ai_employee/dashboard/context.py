@@ -57,6 +57,8 @@ _DASHBOARD_REAL_DB_ENV = "DASHBOARD_REAL_DB"
 #   - "1" / "true" / "yes" → 尝试注入 BusinessWriterImpl(session_factory)
 #   - 单项失败静默降级 Stub(沿 v0.2.53.8 单项失败降级范本)
 _BUSINESS_WRITER_ENABLED_ENV = "BUSINESS_WRITER_ENABLED"
+_ENABLE_PATH_4_WRITE_ENV = "ENABLE_PATH_4_WRITE"
+_TRUTHY_ENV_VALUES = {"1", "true", "yes", "on"}
 
 
 @dataclass(slots=True)
@@ -117,7 +119,7 @@ class DashboardContext:
         #   - BUSINESS_WRITER_ENABLED 未设 → 保持默认 BusinessWriterStub(沿 v0.2.53.18)
         #   - 已设 + session_factory 可用 → 尝试注入 Impl
         #   - 任一失败 → 静默降级 Stub(沿 v0.2.53.8 单项失败降级)
-        #   - write_executed 恒 False(沿 v0.2.53.11 不变式,Impl 默认 raise)
+        #   - dry-run write_executed 恒 False;实写仍由 Path 4 五门严判
         if _is_business_writer_enabled():
             # v0.2.53.54 audit_store 同源修复:
             #   - 先构造 audit_store,再传给 BusinessWriterImpl
@@ -241,6 +243,14 @@ class DashboardContext:
         """
         return self.is_business_writer_env_enabled() and self.is_business_writer_impl_injected()
 
+    def is_path4_write_env_enabled(self) -> bool:
+        """第 5 门 env 开关 — `ENABLE_PATH_4_WRITE=1`."""
+        return _is_path4_write_enabled()
+
+    def is_path4_write_ready(self) -> bool:
+        """Path 4 实写运行时就绪 — writer ready + 第 5 门显式开启."""
+        return self.is_business_writer_ready() and self.is_path4_write_env_enabled()
+
 
 def _is_real_db_enabled() -> bool:
     """`DASHBOARD_REAL_DB=1` opt-in 判定 — 仅识别 truthy 字面量,避免意外触发."""
@@ -258,7 +268,13 @@ def _is_business_writer_enabled() -> bool:
         - 运行时就绪以 `DashboardContext.is_business_writer_ready()` 为准
     """
     raw = os.environ.get(_BUSINESS_WRITER_ENABLED_ENV, "").strip().lower()
-    return raw in {"1", "true", "yes", "on"}
+    return raw in _TRUTHY_ENV_VALUES
+
+
+def _is_path4_write_enabled() -> bool:
+    """`ENABLE_PATH_4_WRITE=1` 第 5 门判定 — 默认关闭,仅识别 truthy 字面量."""
+    raw = os.environ.get(_ENABLE_PATH_4_WRITE_ENV, "").strip().lower()
+    return raw in _TRUTHY_ENV_VALUES
 
 
 def _try_build_real_session_factory() -> Any | None:
@@ -342,13 +358,29 @@ def _try_build_business_writer_from_session_factory(
     边界(沿 v0.2.53.27 + v0.2.53.17 + v0.2.53.18):
         - 构造注入 session_factory + audit_store(其他依赖可选,None 表示不接)
         - 任一 ImportError / Exception → 静默降级 None(由 caller 走默认 Stub)
-        - 不接 SMTP / 不读 Keychain 明文 / 不真写 DB
-        - Impl 4 类动作方法默认 raise NotImplementedError(handler 路径 4 启用前)
+        - 不接 SMTP / 不读 Keychain 明文
+        - Impl 4 类动作只有 Path 4 五门全开后才实写
     """
     try:
         from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+        from my_ai_employee.db.notes import NoteStore
+        from my_ai_employee.db.outbox import OutboxStore
 
-        return BusinessWriterImpl(session_factory=session_factory, audit_store=audit_store)
+        outbox_store = OutboxStore(session_factory)
+        note_confirm_service = (
+            NoteConfirmServiceImpl(NoteStore(session_factory))
+            if callable(session_factory)
+            else None
+        )
+        return BusinessWriterImpl(
+            session_factory=session_factory,
+            outbox_store=outbox_store,
+            note_confirm_service=note_confirm_service,
+            anomaly_dismissal_service=None,
+            audit_store=audit_store,
+            real_write_handler_enabled=_is_path4_write_enabled(),
+            enable_path_4_write=_is_path4_write_enabled(),
+        )
     except Exception:  # noqa: BLE001 — 单项失败静默降级,不阻塞 Dashboard
         return None
 
@@ -359,7 +391,7 @@ def _try_build_audit_store() -> ApprovalGateAuditStore | None:
     边界(沿撞坑 #65 opt-in 4 阶段 + v0.2.53.51):
         - 测试场景下使用 InMemoryApprovalGateAuditStore(无 DB 接入)
         - 任何 Exception → 静默降级 None(由 caller 走默认 Stub)
-        - 不接真实 SQL DB(沿 v0.2.53.51 真实 Impl 留 8/1 后)
+        - 当前 InMemory 实现仅供 Dashboard 进程内 audit 展示
         - 默认 ApprovalGateAuditStoreStub(is_enabled=False,record 永远失败)
     """
     try:
@@ -451,6 +483,7 @@ def parse_limit(raw: str | None, *, default: int = 10, maximum: int = 100) -> in
 __all__ = [
     "DashboardContext",
     "QualityGateSnapshot",
+    "_is_path4_write_enabled",
     "parse_limit",
     "safe_count",
     "safe_list",

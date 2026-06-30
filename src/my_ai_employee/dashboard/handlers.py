@@ -12,10 +12,18 @@ from http.server import BaseHTTPRequestHandler
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
+from my_ai_employee.dashboard.action_contracts import (
+    ACTION_FINANCE_DISMISS_ANOMALY,
+    ACTION_NOTES_CONFIRM,
+    ACTION_OUTBOX_APPROVE,
+    ACTION_OUTBOX_CANCEL,
+)
 from my_ai_employee.dashboard.approval_gate import evaluate_writer_dry_run
 from my_ai_employee.dashboard.business_writer import (
     SUPPORTED_ACTIONS,
     AuditContext,
+    BusinessWriter,
+    WriteResult,
 )
 from my_ai_employee.dashboard.context import DashboardContext, parse_limit
 from my_ai_employee.dashboard.responses import (
@@ -133,7 +141,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
             )
             # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
             if status == HTTPStatus.OK:
-                decision = self._merge_writer_dry_run(decision)
+                if decision.get("dry_run"):
+                    decision = self._merge_writer_dry_run(decision)
+                else:
+                    status, decision = self._execute_writer_action(decision)
             self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
             return
         self._method_not_allowed()
@@ -191,6 +202,88 @@ class DashboardHandler(BaseHTTPRequestHandler):
         merged["required"] = existing_required
         # write_executed 保持 False(沿 v0.2.53.11 不变式)
         return merged
+
+    def _execute_writer_action(self, decision: dict[str, Any]) -> tuple[HTTPStatus, dict[str, Any]]:
+        """Path 4 实写分发 — ApprovalGate 三门通过后,委派 BusinessWriterImpl 继续严判第 4/5 门.
+
+        边界:
+            - 仅处理 `dry_run=False`
+            - writer 抛 NotImplementedError → 501,write_executed=False
+            - writer 真实 service 抛异常 → 409,write_executed=True(尝试过,且 writer 负责 audit)
+            - 成功 → 200,write_executed=True,返回 affected_id/audit_id
+        """
+        if not decision.get("approval_gate_passed") or decision.get("dry_run"):
+            return HTTPStatus.NOT_IMPLEMENTED, decision
+        action = decision.get("action")
+        target_id = decision.get("target_id")
+        if not isinstance(action, str) or action not in SUPPORTED_ACTIONS:
+            return HTTPStatus.BAD_REQUEST, {**decision, "error": "unsupported_action"}
+        if not isinstance(target_id, str) or not target_id:
+            return HTTPStatus.BAD_REQUEST, {**decision, "error": "missing_target_id"}
+        audit = AuditContext(
+            actor=str(decision.get("audit", {}).get("actor", "local_dashboard")),
+            reason=str(decision.get("audit", {}).get("reason", "")),
+            source=str(decision.get("audit", {}).get("source", "dashboard")),
+        )
+        try:
+            writer = self.dashboard_context.resolve_business_writer()
+            result = self._call_writer_action(
+                writer, action=action, target_id=target_id, audit=audit
+            )
+        except NotImplementedError as e:
+            return (
+                HTTPStatus.NOT_IMPLEMENTED,
+                {
+                    **decision,
+                    "error": "write_not_implemented",
+                    "reason": str(e),
+                    "would_allow": False,
+                    "write_executed": False,
+                },
+            )
+        except Exception as e:
+            return (
+                HTTPStatus.CONFLICT,
+                {
+                    **decision,
+                    "error": "write_failed",
+                    "reason": f"{type(e).__name__}:{e}",
+                    "would_allow": False,
+                    "write_executed": True,
+                },
+            )
+        return (
+            HTTPStatus.OK,
+            {
+                **decision,
+                "read_only": False,
+                "error": result.error,
+                "reason": result.reason,
+                "would_allow": result.success,
+                "write_executed": result.write_executed,
+                "affected_id": result.affected_id,
+                "audit_id": result.audit_id,
+            },
+        )
+
+    @staticmethod
+    def _call_writer_action(
+        writer: BusinessWriter,
+        *,
+        action: str,
+        target_id: str,
+        audit: AuditContext,
+    ) -> WriteResult:
+        """把 action 白名单映射到 BusinessWriter 4 动作方法."""
+        if action == ACTION_OUTBOX_APPROVE:
+            return writer.approve_outbox(target_id, audit=audit)
+        if action == ACTION_OUTBOX_CANCEL:
+            return writer.cancel_outbox(target_id, audit=audit)
+        if action == ACTION_NOTES_CONFIRM:
+            return writer.confirm_note(target_id, audit=audit)
+        if action == ACTION_FINANCE_DISMISS_ANOMALY:
+            return writer.dismiss_anomaly(target_id, audit=audit)
+        raise NotImplementedError(f"unsupported action: {action}")
 
     def do_PUT(self) -> None:  # noqa: N802
         self._method_not_allowed()

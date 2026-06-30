@@ -14,7 +14,8 @@ import urllib.error
 import urllib.request
 from collections.abc import Generator
 from http.server import HTTPServer
-from typing import Any
+from types import SimpleNamespace
+from typing import Any, cast
 
 import pytest
 
@@ -302,7 +303,9 @@ class TestApprovalGateWriterDryRunHttp:
         assert payload["business_writer_error"] == "write_not_implemented"
         assert payload["would_allow"] is False
 
-    def test_post_all_gates_real_write_disabled_501(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_post_all_gates_real_write_missing_internal_gates_501(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
 
         monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
@@ -319,9 +322,49 @@ class TestApprovalGateWriterDryRunHttp:
                 },
             )
         assert status == 501
-        assert payload["error"] == "real_write_disabled"
+        assert payload["error"] == "write_not_implemented"
+        assert "写保护锁未开" in payload["reason"]
         assert payload["write_executed"] is False
         assert "business_writer_error" not in payload
+
+    def test_post_all_five_gates_real_write_ok_200(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """五门全开 + fake outbox store → handler 执行 writer 实写分发."""
+        from my_ai_employee.dashboard.business_writer_impl import BusinessWriterImpl
+        from my_ai_employee.menu_bar.approval_gate_audit import InMemoryApprovalGateAuditStore
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        monkeypatch.setenv("ENABLE_PATH_4_WRITE", "1")
+        audit_store = InMemoryApprovalGateAuditStore()
+        writer = BusinessWriterImpl(
+            outbox_store=cast(
+                Any,
+                SimpleNamespace(update_status=lambda **kw: SimpleNamespace(id=321)),
+            ),
+            audit_store=audit_store,
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        ctx = DashboardContext(audit_store=audit_store).with_business_writer(writer)
+        for base_url in _serve_dashboard(ctx):
+            status, payload = _post_json(
+                f"{base_url}/api/approval-gate/actions",
+                {
+                    "action": "outbox.approve",
+                    "target_id": "321",
+                    "confirm_text": CONFIRM_TEXT,
+                    "dry_run": False,
+                    "actor": "tester",
+                    "reason": "advance 8/1 task",
+                },
+            )
+        assert status == 200
+        assert payload["read_only"] is False
+        assert payload["error"] is None
+        assert payload["write_executed"] is True
+        assert payload["affected_id"] == "321"
+        assert payload["audit_id"] == "audit:1"
+        assert audit_store.count() == 1
 
 
 class TestEvaluateWriterDryRunContract:
@@ -345,7 +388,9 @@ class TestEvaluateWriterDryRunContract:
         assert payload["approval_gate_passed"] is True
         assert payload["write_executed"] is False
 
-    def test_real_write_disabled_when_dry_run_false(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_real_write_request_passes_to_handler_when_dry_run_false(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
         monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
         status, payload = evaluate_writer_dry_run(
@@ -358,8 +403,9 @@ class TestEvaluateWriterDryRunContract:
             writer_enabled=True,
             writer_impl_injected=True,
         )
-        assert status.value == 501
-        assert payload["error"] == "real_write_disabled"
+        assert status.value == 200
+        assert payload["error"] is None
+        assert payload["would_allow"] is True
         assert payload["write_executed"] is False
 
 

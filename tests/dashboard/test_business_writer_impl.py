@@ -6,8 +6,8 @@ v0.2.53.17 测试(默认 raise):
     - 真实写入路径留 v0.2.53.19 handler 启用
 
 v0.2.53.46 升级(实写骨架):
-    - 4 动作方法统一骨架:依赖检查 + 参数校验 + 状态守卫 + 默认 raise
-    - 无依赖 → raise NotImplementedError(沿撞坑 #18 风险门控)
+    - 4 动作方法统一骨架:参数校验 + 写保护锁 + 依赖检查 + 状态守卫
+    - 默认未开写保护锁 → raise NotImplementedError(沿撞坑 #18 风险门控)
     - 有依赖 + 无效 target_id → WriteResult(success=False, error='invalid_target_id')
     - 有依赖 + 有效 target_id → raise NotImplementedError(默认 raise,等待路径 4)
     - 2 个辅助方法:_check_dep + _validate_target_id
@@ -127,20 +127,19 @@ class TestBusinessWriterImplActionsRaise:
         return AuditContext.default()
 
     def test_approve_outbox_raises(self, writer: BusinessWriterImpl, audit: AuditContext) -> None:
-        # v0.2.53.46:无依赖 → _check_dep 先 raise(消息含依赖名 "outbox_store",非 "approve_outbox")
-        with pytest.raises(NotImplementedError, match="outbox_store"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.approve_outbox("123", audit=audit)
 
     def test_cancel_outbox_raises(self, writer: BusinessWriterImpl, audit: AuditContext) -> None:
-        with pytest.raises(NotImplementedError, match="outbox_store"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.cancel_outbox("123", audit=audit)
 
     def test_confirm_note_raises(self, writer: BusinessWriterImpl, audit: AuditContext) -> None:
-        with pytest.raises(NotImplementedError, match="note_confirm_service"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.confirm_note("note-abc", audit=audit)
 
     def test_dismiss_anomaly_raises(self, writer: BusinessWriterImpl, audit: AuditContext) -> None:
-        with pytest.raises(NotImplementedError, match="anomaly_dismissal_service"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=audit)
 
 
@@ -204,11 +203,20 @@ class TestBusinessWriterImplDryRunInvariants:
 
 
 class TestBusinessWriterImplApproveOutboxSkeleton:
-    """v0.2.53.46 approve_outbox 实写骨架 — 依赖检查 + 参数校验 + 默认 raise."""
+    """approve_outbox 实写骨架 — 参数校验 + 写保护锁 + 依赖检查."""
 
     def test_no_deps_raises_not_implemented(self) -> None:
-        """无依赖 → raise NotImplementedError(沿撞坑 #18 风险门控)."""
+        """默认未开写保护锁 → 先 raise NotImplementedError(沿撞坑 #18 风险门控)."""
         writer = BusinessWriterImpl()
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
+            writer.approve_outbox("123", audit=AuditContext.default())
+
+    def test_five_gates_open_without_dep_raises_dep_error(self) -> None:
+        """五门全开后才暴露具体依赖缺失,避免依赖错误绕过风险门控."""
+        writer = BusinessWriterImpl(
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
         with pytest.raises(NotImplementedError, match="outbox_store"):
             writer.approve_outbox("123", audit=AuditContext.default())
 
@@ -246,7 +254,7 @@ class TestBusinessWriterImplCancelOutboxSkeleton:
 
     def test_no_deps_raises_not_implemented(self) -> None:
         writer = BusinessWriterImpl()
-        with pytest.raises(NotImplementedError, match="outbox_store"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.cancel_outbox("123", audit=AuditContext.default())
 
     def test_with_deps_invalid_target_id_returns_write_result(self) -> None:
@@ -269,7 +277,7 @@ class TestBusinessWriterImplConfirmNoteSkeleton:
 
     def test_no_deps_raises_not_implemented(self) -> None:
         writer = BusinessWriterImpl()
-        with pytest.raises(NotImplementedError, match="note_confirm_service"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.confirm_note("note-abc", audit=AuditContext.default())
 
     def test_with_deps_invalid_target_id_returns_write_result(self) -> None:
@@ -300,7 +308,7 @@ class TestBusinessWriterImplDismissAnomalySkeleton:
 
     def test_no_deps_raises_not_implemented(self) -> None:
         writer = BusinessWriterImpl()
-        with pytest.raises(NotImplementedError, match="anomaly_dismissal_service"):
+        with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=AuditContext.default())
 
     def test_with_deps_invalid_target_id_returns_write_result(self) -> None:
@@ -473,6 +481,7 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
             outbox_store=cast(Any, fake_store),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         result = writer.approve_outbox("123", audit=AuditContext.default())
 
@@ -500,6 +509,7 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
             outbox_store=cast(Any, fake_store),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         writer.approve_outbox("888", audit=AuditContext.default())
 
@@ -539,6 +549,7 @@ class TestBusinessWriterImplRealWriteHandlerCancelled:
             outbox_store=cast(Any, fake_store),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         result = writer.cancel_outbox("777", audit=AuditContext.default())
 
@@ -575,6 +586,7 @@ class TestBusinessWriterImplRealWriteHandlerConfirmNote:
             note_confirm_service=cast(Any, fake_service),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         result = writer.confirm_note("note-xyz", audit=AuditContext.default())
 
@@ -610,6 +622,7 @@ class TestBusinessWriterImplRealWriteHandlerDismissAnomaly:
             anomaly_dismissal_service=cast(Any, fake_service),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         audit = AuditContext(actor="tester", reason="test reason for pitfall #18")
         result = writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=audit)
@@ -673,6 +686,7 @@ class TestBusinessWriterImplWriteProtectionDefaultLocked:
                 Any, SimpleNamespace(update_status=lambda **kw: SimpleNamespace(id=1))
             ),
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         assert writer._real_write_handler_enabled is True  # noqa: SLF001
 
@@ -748,6 +762,7 @@ class TestBusinessWriterImplAuditSuccess:
         writer = BusinessWriterImpl(
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
             **cast(Any, fake_dep_kw),
         )
         result = getattr(writer, method_name)(
@@ -789,6 +804,7 @@ class TestBusinessWriterImplAuditFailure:
             outbox_store=cast(Any, fake_store),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         with pytest.raises(ValueError, match="outbox not found"):
             writer.approve_outbox("404", audit=AuditContext(actor="audit_failure_test", reason=""))
@@ -815,6 +831,7 @@ class TestBusinessWriterImplAuditFailure:
             outbox_store=cast(Any, fake_store),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         with pytest.raises(RuntimeError, match="DB connection lost"):
             writer.cancel_outbox("500", audit=AuditContext.default())
@@ -835,6 +852,7 @@ class TestBusinessWriterImplAuditFailure:
             note_confirm_service=cast(Any, fake_service),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         with pytest.raises(ValueError, match="not confirmed"):
             writer.confirm_note("note-404", audit=AuditContext.default())
@@ -855,6 +873,7 @@ class TestBusinessWriterImplAuditFailure:
             anomaly_dismissal_service=cast(Any, fake_service),
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         with pytest.raises(ValueError, match="invalid"):
             writer.dismiss_anomaly("2026-06-26|星巴克|38.50", audit=AuditContext.default())
@@ -877,6 +896,7 @@ class TestBusinessWriterImplAuditDryRunNoRecord:
         writer = BusinessWriterImpl(
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         decision = writer.dry_run(ACTION_OUTBOX_APPROVE, "123", audit=AuditContext.default())
         # dry_run 返回 WriteDecision(dry_run=True, write_executed=False)
@@ -892,6 +912,7 @@ class TestBusinessWriterImplAuditDryRunNoRecord:
         writer = BusinessWriterImpl(
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         writer.dry_run(action, "1", audit=AuditContext.default())
         assert audit_store.count() == 0
@@ -925,6 +946,7 @@ class TestBusinessWriterImplAuditInvalidTargetNoRecord:
         writer = BusinessWriterImpl(
             audit_store=audit_store,
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
             **cast(Any, kw),
         )
         result = getattr(writer, method_name)(bad_target_id, audit=AuditContext.default())
@@ -956,6 +978,7 @@ class TestBusinessWriterImplAuditStoreFallback:
         writer = BusinessWriterImpl(
             outbox_store=cast(Any, fake_store),
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         result = writer.approve_outbox("123", audit=AuditContext.default())
         assert result.success is True
@@ -986,6 +1009,7 @@ class TestBusinessWriterImplAuditStoreFallback:
             outbox_store=cast(Any, fake_store),
             audit_store=cast(Any, broken_audit_store),
             real_write_handler_enabled=True,
+            enable_path_4_write=True,
         )
         # audit_store 抛异常,但业务 WriteResult 仍正常
         result = writer.approve_outbox("123", audit=AuditContext.default())
@@ -1001,26 +1025,24 @@ class TestBusinessWriterImplAuditStoreFallback:
 # ============================================================
 
 
-class TestBusinessWriterImplPath4FifthGatePreflight:
-    """v0.2.53.55 Path 4 5th gate preflight — 不实施 ENABLE_PATH_4_WRITE env 读取,仅锁定 3 不变式.
+class TestBusinessWriterImplPath4FifthGate:
+    """Path 4 5th gate — ENABLE_PATH_4_WRITE env 已实施,锁定 4 个不变式.
 
     设计意图(沿 docs/v0.2.53.53-path4-launch-checklist §2.3 + §7):
-        - 5th gate flag `ENABLE_PATH_4_WRITE` 是 docs-only 计划代码,**本棒不实施**
-        - preflight 锁定 3 不变式:① env 被忽略 ② raise 时 audit 不落档 ③ dry_run.required 不含 env flag
-        - 8/1 后独立 commit 才实施 env 读取,届时这 3 测试需要更新(替换为"env flag 生效")
+        - 5th gate flag `ENABLE_PATH_4_WRITE` 已从 docs-only 升级为代码严判
+        - 锁定 4 不变式:① env 不绕过写保护锁 ② 4th 开但 5th 关仍拒写
+          ③ raise 时 audit 不落档 ④ dry_run.required 含 env flag
     """
 
-    def test_enable_path_4_write_env_is_ignored(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """不变式 #1:设 `ENABLE_PATH_4_WRITE=1` 后,默认构造仍 raise(证明 env 未在代码中读取).
+    def test_enable_path_4_write_env_does_not_bypass_write_protection(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """不变式 #1:设 `ENABLE_PATH_4_WRITE=1` 后,默认写保护锁未开仍 raise.
 
         撞坑 #18 风险门控:即便运维误设 5th flag env,只要 `_real_write_handler_enabled=False`
         (默认) 且 handler 未启用,4 动作方法依然 raise NotImplementedError → 不实写.
-
-        注入全部依赖后,4 动作方法必定撞到「写保护锁未开」(4th gate),而非 dep 检查;
-        这能证明 5th gate env flag 不能绕过 4th gate(更不能直接放开实写路径).
         """
         monkeypatch.setenv("ENABLE_PATH_4_WRITE", "1")
-        # 默认构造(_real_write_handler_enabled=False)+ 全部依赖注入
         writer = BusinessWriterImpl(
             outbox_store=cast(Any, SimpleNamespace()),
             note_confirm_service=cast(Any, SimpleNamespace()),
@@ -1037,8 +1059,39 @@ class TestBusinessWriterImplPath4FifthGatePreflight:
         with pytest.raises(NotImplementedError, match="写保护锁未开"):
             writer.dismiss_anomaly("anomaly-key", audit=audit)
 
+    def test_real_write_handler_true_but_fifth_gate_closed_raises(self) -> None:
+        """不变式 #2:4th gate 开但 5th gate 关 → 仍拒写."""
+        writer = BusinessWriterImpl(
+            outbox_store=cast(
+                Any, SimpleNamespace(update_status=lambda **kw: SimpleNamespace(id=1))
+            ),
+            real_write_handler_enabled=True,
+            enable_path_4_write=False,
+        )
+        with pytest.raises(NotImplementedError, match="ENABLE_PATH_4_WRITE=1"):
+            writer.approve_outbox("1", audit=AuditContext.default())
+
+    def test_five_gates_open_allows_fake_service_call(self) -> None:
+        """不变式 #3:4th + 5th 全开 → 允许进入 fake service 调用."""
+        captured: dict[str, Any] = {}
+
+        def _fake_update_status(**kw: Any) -> SimpleNamespace:
+            captured.update(kw)
+            return SimpleNamespace(id=42)
+
+        writer = BusinessWriterImpl(
+            outbox_store=cast(Any, SimpleNamespace(update_status=_fake_update_status)),
+            audit_store=InMemoryApprovalGateAuditStore(),
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        result = writer.approve_outbox("42", audit=AuditContext.default())
+        assert result.success is True
+        assert result.write_executed is True
+        assert captured["outbox_id"] == 42
+
     def test_4_actions_dont_audit_when_raising(self) -> None:
-        """不变式 #2:写保护锁 raise 时 `audit_store.record()` 不被调用.
+        """不变式 #4:写保护锁 raise 时 `audit_store.record()` 不被调用.
 
         撞坑 #18 「日志」语义:audit 落档仅在写保护锁开 + 真实 service 调用后发生;
         raise 路径绝不落档(避免「silent success」假象).
@@ -1062,24 +1115,26 @@ class TestBusinessWriterImplPath4FifthGatePreflight:
             writer.dismiss_anomaly("anomaly-key", audit=audit)
         assert audit_store.count() == 0, "写保护锁 raise 不应落档 audit"
 
-    def test_dry_run_required_excludes_env_flag(self) -> None:
-        """不变式 #3:`dry_run.required` 不含 `ENABLE_PATH_4_WRITE` env flag(因未实施).
-
-        沿 v0.2.53.53 §2.3:env flag 是 5th gate 计划代码,本棒 docs-only 不实施;
-        当前 `dry_run.required` 仅列 4 项(DASHBOARD_WRITE_API=1 / confirm_text /
-        BUSINESS_WRITER_ENABLED=1 / real_write_handler_enabled).8/1 后实施 env 读取时,
-        本测试需要替换为「required 含 ENABLE_PATH_4_WRITE=1」断言.
-        """
+    def test_dry_run_required_includes_env_flag_until_open(self) -> None:
+        """不变式 #5:`dry_run.required` 含 `ENABLE_PATH_4_WRITE=1` 直到第 5 门开启."""
         writer = BusinessWriterImpl()
         audit = AuditContext.default()
         for action in SUPPORTED_ACTIONS:
             decision = writer.dry_run(action, "any_target", audit=audit)
-            assert "ENABLE_PATH_4_WRITE" not in (decision.required or ()), (
-                f"action={action}: dry_run.required 不应包含 ENABLE_PATH_4_WRITE,"
-                "因本棒 docs-only 不实施 env 读取"
-            )
-            # 沿 v0.2.53.17 既有契约:4 项 required 仍存在
+            assert "ENABLE_PATH_4_WRITE=1" in decision.required
             assert "DASHBOARD_WRITE_API=1" in decision.required
             assert "confirm_text=CONFIRM_WRITE" in decision.required
             assert "BUSINESS_WRITER_ENABLED=1" in decision.required
             assert "real_write_handler_enabled" in decision.required
+
+    def test_dry_run_would_allow_true_when_internal_gates_open(self) -> None:
+        """4th + 5th 内部门全开 → writer dry_run would_allow=True."""
+        writer = BusinessWriterImpl(
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        decision = writer.dry_run(ACTION_OUTBOX_APPROVE, "1", audit=AuditContext.default())
+        assert decision.would_allow is True
+        assert decision.error is None
+        assert "ENABLE_PATH_4_WRITE=1" not in decision.required
+        assert "real_write_handler_enabled" not in decision.required

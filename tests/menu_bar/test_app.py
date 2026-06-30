@@ -796,6 +796,7 @@ def test_on_system_health_notification(fake_rumps: None, monkeypatch: pytest.Mon
     """v0.2.53 P1:T25 系统健康 → notification 含质量门基线."""
     from my_ai_employee.menu_bar import NotesMenuBarApp
     from my_ai_employee.menu_bar import app as app_module
+    from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES
 
     monkeypatch.setattr(
         subprocess,
@@ -808,7 +809,7 @@ def test_on_system_health_notification(fake_rumps: None, monkeypatch: pytest.Mon
     app_module._notification_func.assert_called_once()
     call_args = app_module._notification_func.call_args
     assert call_args[0][0] == "系统健康"
-    assert "2586 passed" in call_args[0][2]
+    assert DEFAULT_QUALITY_GATES.pytest in call_args[0][2]
     assert "abc123" in call_args[0][2]
 
 
