@@ -3,8 +3,8 @@
 > **承接**:
 > - 用户决策:Phase 1 维持期入口(7/2-7/24)锚定 2026-06-30
 > - 议程分类框架:[docs/v0.2.53.37-monthly-review-input-pack-2026-06-29.md](../docs/v0.2.53.37-monthly-review-input-pack-2026-06-29.md)(Agent Assistant 27 项议程,跨项目引用)
-> - 当前实测:**2605 passed / 88.85% / MD lint 206**
-> - HEAD:`32d079b docs(state): user skips 90-email QQ SMTP spike`
+> - 当前实测:**2605 passed / 88.85% / MD lint 207**
+> - HEAD:以 `git rev-parse --short HEAD` 为准(避免报告自身提交后继续漂移)
 > - v0.1.0 tag 锚定:`2af775f`(不动)
 >
 > **目的**:把 Agent Assistant 27 项议程**逐项映射到我的AI员工项目的当前状态 + 7/1 决议建议**,节省 4.5h 复盘窗口的决议时间
@@ -16,12 +16,12 @@
 
 | 维度 | 实际值 |
 |------|--------|
-| HEAD | `32d079b` |
+| HEAD | 以 `git rev-parse --short HEAD` 为准 |
 | 工作区 | clean |
 | pytest | 2605 passed / 1 skipped |
 | coverage | 88.85% |
 | mypy --strict | 0 errors(237 files)|
-| MD lint | 206 files / 0 errors |
+| MD lint | 207 files / 0 errors |
 | v0.2.x 版本锚 | v0.2.56.1 D5.6.3 已实施(撞坑 #78 修正)|
 | v0.1.0 tag | `2af775f` 不动 |
 | QQ SMTP spike | 10 封 0% 严格失败率 ✅ / 90 封跳过(撞坑 #18 风险门控)|
@@ -258,7 +258,7 @@
 | 6 | mypy src+tests | no issues found | ✅ |
 | 7 | alembic --sql | exit 0 · head = 0016_approval_gate_audits | ✅ |
 | 8 | uv build | sdist + wheel OK | ✅ |
-| 9 | MD lint | 206 files / 0 errors | ✅ |
+| 9 | MD lint | 207 files / 0 errors | ✅ |
 
 ---
 

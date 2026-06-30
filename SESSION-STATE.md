@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.56.1 D5.6.3 实施 + Phase 1 维持期(2026-06-30)
 
 > **最后更新**:2026-06-30 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.56.1 D5.6.3 已实施 + Phase 1 维持期(7/2-7/24)** — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**QQ SMTP**:10 封 spike 已收口 · **90 封 spike 用户确认跳过(不测试)**。**质量门**:2605 passed / 88.85% / lint 206。**Phase 1**:weekly `make ci`。**边界**:不打 tag · finance dismiss 仍拒写。
+> **状态**:🟢 **v0.2.56.1 D5.6.3 已实施 + Phase 1 维持期(7/2-7/24)** — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**QQ SMTP**:10 封 spike 已收口 · **90 封 spike 用户确认跳过(不测试)**。**质量门**:2605 passed / 88.85% / lint 207。**Phase 1**:weekly `make ci`。**边界**:不打 tag · finance dismiss 仍拒写。
 
 ---
 
@@ -9,7 +9,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**Phase 1 维持期(7/2-7/24 · 2026-06-30 起锚定)** — 2605 passed / 88.85% / MD lint **206**。**v0.2.56.1 D5.6.3 已实施**。**90 封 QQ SMTP spike 用户确认跳过** — 10 封样本视为足够,不追加真实发送。**下一棒**:7/1 月度复盘 · Phase 1 weekly `make ci` · tag readiness 继续不打 tag。
+**当前启动候选**:**Phase 1 维持期(7/2-7/24 · 2026-06-30 起锚定)** — 2605 passed / 88.85% / MD lint **207**。**v0.2.56.1 D5.6.3 已实施**。**90 封 QQ SMTP spike 用户确认跳过** — 10 封样本视为足够,不追加真实发送。**下一棒**:7/1 月度复盘 · Phase 1 weekly `make ci` · tag readiness 继续不打 tag。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -24,7 +24,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2605 passed / 1 skipped** · **88.85%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **206 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| 核心质量门 | **2605 passed / 1 skipped** · **88.85%** coverage · mypy --strict 0 errors(**237 files**) · MD lint **207 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
