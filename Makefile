@@ -284,6 +284,7 @@ ci: ## 9 质量门 — 一键跑 9 质量门全链(沿 v0.1.0-preseal-runbook �
 	@$(MAKE) format
 	@$(MAKE) coverage
 	@$(MAKE) lint
+	@$(MAKE) check-snapshot
 	@$(MAKE) alembic
 	@$(MAKE) build
 	@echo "$(GREEN)✅ 9 质量门全绿$(RESET)"
