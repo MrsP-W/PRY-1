@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.53.58 Path 4 5门只读预览 + A2 子任务复核(2026-06-30 · docs-only)** — codex-style-dashboard system 视图新增 Path 4 5门只读 card(5门全「未启用」静态 badge · 沿 `docs/v0.2.53.53` §2.3);A2-1/A2-2 子任务复核(沿 v0.2.53.32 + v0.2.53.50 已落地,无需改动)。**上一阶段**:v0.2.53.57 launch-plan baseline sync(`9dc9a08`)。**下一棒**:8/1 后实写 launch 实施 / 月度复盘准备 |
+| **当前阶段** | ✅ **v0.2.54.1 7/1 checkpoint baseline refresh(2026-06-30 · docs-only)** — launch-plan P0 checklist 补勾 v0.2.53.57/58/59 + HEAD baseline 改写为 `26b1d75` + 新建 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md)(9 段 docs-only)+ `quality_snapshot.py` MD lint 计数 196 → 197 同步。**上一阶段**:v0.2.53.59 状态同步(`26b1d75`)。**下一棒**:Phase 0.3-0.5 三入口二次同步 / 7/1 12:00 月度复盘 / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
 | **上一阶段** | ✅ **MD lint 188 口径稳定化(2026-06-25)** — `make lint` 改扫 `git ls-files '*.md'` · 188 = tracked · 排除 gitignore spike 本地报告 |
@@ -109,7 +109,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **196 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **197 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'` · 沿 docs-only 规则 196 → 197 同步) |
 | **下一棒** | 8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备 |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -139,6 +139,30 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.54.1 7/1 checkpoint baseline refresh] — 收口
+
+**1. 本次修改内容**
+
+- **docs(state)**: launch-plan P0 checklist 补勾 v0.2.53.57/58/59 三行(沿 docs-only)+ HEAD baseline 改写为 `26b1d75`(v0.2.53.59 锚定)。
+- **docs(new)**: 新建 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md)(9 段 docs-only):§1 数字对账(vs `quality_snapshot.py` 单源)· §2 4 入口状态对齐 · §3 撞坑累计 70 类沿用 · §4 Path 4 实施进度(步骤 1-3 ✅ / 4-8 ⏳)· §5 7/1 月度复盘预热(沿 v0.2.53.37 输入包)· §6 8/1 readiness 9 项核对(QQ-only 口径 9/9)· §7 约束(docs-only)· §8 下一棒(7/1 12:00 复盘 + 7/2-7/24 维持期)· §9 关联与依据。
+- **chore(sync)**: `src/my_ai_employee/quality_snapshot.py` MD lint 计数 196 → 197(沿 docs-only 规则:新增 Markdown 后必同步 `git ls-files '*.md'`)。
+
+**2. 风险点**
+
+- 🟢 docs-only · 3 files / +161 -2 · 0 源码行为改动 · pytest/coverage/mypy 数字不变。
+- 🟢 MD count sync 是规则允许的副作用,非前进 coverage/pytest。
+- 🟡 撞坑累计 70 类沿用 · 无新增。
+- ⚠️ 7/1 12:00 月度复盘启动后,本 checkpoint doc 将作为评估输入(沿 v0.2.53.37 输入包)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **197 files** / ruff + format 全绿。
+- v0.2.53.59 → v0.2.54.1 · docs-only · commit `e5f39cd` · HEAD 锚定 `e5f39cd`。
+- 累计 commits 锚:`9dc9a08`(v0.2.53.57)+ `5b0e66c`(v0.2.53.58)+ `26b1d75`(v0.2.53.59)+ `e5f39cd`(v0.2.54.1)· 6/30 当日 4 commit。
+- 下一棒:Phase 0.3-0.5 三入口二次同步 / 撞坑 #68/#69/#70 复核 / 7/1 12:00 月度复盘 / A3 readiness 三次刷新(7/25-7/31)/ B 阶段 Path 4 实写 Launch(8/1 后 + 用户授权)。
+
+---
 
 ### 2026-06-30 [v0.2.53.59 状态入口漂移修复] — 收口
 

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **QQ-only SMTP 已收口(2026-06-29)** — `sent=1/4.31s` · 五重防误发全过 · 报告 `reports/qq-smtp-spike-2026-06-29.md` · **Outlook/Gmail 用户决策不配置/不使用**。**8/1 readiness**:QQ SMTP ✅ · outlook/gmail #2/#9 **用户决策豁免** · 路径 4 实写仍 8/1 后。**下一棒**:8/1 readiness 二次刷新 / 7/10 WAIC / 路径 4(8/1 后)。**边界**:不接 BusinessWriter · 不打 tag · `write_executed` 恒 False。
+> **状态**:🟢 **v0.2.54.1 7/1 checkpoint baseline refresh(2026-06-30)** — launch-plan 补勾 v0.2.53.57/58/59 + 新建 [`docs/v0.2.54-7-1-checkpoint-2026-06-30.md`](docs/v0.2.54-7-1-checkpoint-2026-06-30.md)(9 段 docs-only) + MD lint 196 → 197 同步。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**8/1 readiness**:QQ SMTP ✅ · outlook/gmail #2/#9 **用户决策豁免** · 路径 4 实写仍 8/1 后。**下一棒**:Phase 0.3-0.5 三入口二次同步 / 7/1 12:00 月度复盘 / 路径 4(8/1 后)。**边界**:不接 BusinessWriter · 不打 tag · `write_executed` 恒 False · `ENABLE_PATH_4_WRITE` 未启用。
 
 ---
 
