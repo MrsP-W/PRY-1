@@ -79,7 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权"8/1 的任务提前到今天";handler 路径 4 `dry_run=false` 分发接通 + `ENABLE_PATH_4_WRITE=1` 第 5 门落地 + `/api/status` 暴露第 5 门与 `path4_write_ready` + Dashboard 5 门 card 接线。**下一棒**:临时 DB Path 4 spike |
+| **当前阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30)** — 临时 DB 5 门全开 2 笔实写(outbox.approve + notes.confirm)实测通过;`OutboxStatus` 大小写契约对齐。**下一棒**:Phase 1 维持期 · 可选补真写契约测试 |
+| **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
 | **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
@@ -110,8 +111,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **200 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | Dashboard 第 5 门展示 / 临时 DB Path 4 spike / tag readiness 继续评估但不打 tag |
+| **质量基线** | **2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **201 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | Phase 1 维持期(7/2-7/24 weekly `make ci`) · 可选补 1-2 真写契约测试 · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -140,6 +141,29 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复] — 收口
+
+**1. 本次修改内容**
+
+- **fix(writer)**: `business_writer_impl.py` — `approve_outbox` / `cancel_outbox` 的 `update_status` 参数大写改小写,与 `OutboxStatus` StrEnum 契约对齐(撞坑 #71)。
+- **test**: `test_business_writer_impl.py` — 2 契约测试 4 断言同步小写。
+- **docs**: 新增 `reports/v0.2.55.1-path4-spike-2026-06-30.md`(spike 收口 9 段);同步 SESSION / README / quality_snapshot MD lint 200→201。
+- **spike 结论**(不入 commit):临时 DB 5 门全开 2 笔实写 + audit 2 笔 + DB 状态正确;撞坑 #72-#75 spike 限定(主线程直调 writer 绕开)。
+
+**2. 风险点**
+
+- 🟢 默认仍拒写 · 不启用长期 `ENABLE_PATH_4_WRITE=1` · 不打 tag · 不恢复 Outlook/Gmail SMTP。
+- ⚠️ **撞坑 #71(P0 已修)**:五门全开时大写 status 会 ValueError→409;已改小写 + 契约测试防漂移。
+- ⚠️ **撞坑 #72-#75 spike 限定**:ThreadingHTTPServer + Database 单线程 engine 跨线程冲突;生产 launchd 单线程不受影响。
+- **P1**: 可选补 1-2 个"真写 + 真 OutboxStore"契约测试。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / MD lint **201** / ruff + format 全绿。
+- 下一棒:Phase 1 维持期;tag readiness 继续不打 tag。
+
+---
 
 ### 2026-06-30 [v0.2.55.2 项目检查 + 文档/UI 漂移修复] — 收口
 

@@ -430,8 +430,8 @@ class BusinessWriterImpl:
             # 异常透传,不收容(用户主动操作必须看到 ValueError)
             updated = self._outbox_store.update_status(  # type: ignore[union-attr]
                 outbox_id=int(target_id),
-                new_status="APPROVED",
-                from_status="PENDING_SEND",
+                new_status="approved",
+                from_status="pending_send",
                 last_approved_at_ms=_now_ms(),
             )
             affected_id = str(updated.id)
@@ -476,8 +476,8 @@ class BusinessWriterImpl:
         try:
             updated = self._outbox_store.update_status(  # type: ignore[union-attr]
                 outbox_id=int(target_id),
-                new_status="CANCELLED",
-                from_status="PENDING_SEND",
+                new_status="cancelled",
+                from_status="pending_send",
                 last_approved_at_ms=None,
             )
             affected_id = str(updated.id)

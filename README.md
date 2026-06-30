@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权将 8/1 任务提前到今天;已接通 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md) 所述五门实写路径。默认仍拒写,必须 `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + writer 内部写保护锁 + `ENABLE_PATH_4_WRITE=1` 全齐才执行。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2593 passed / 1 skipped / 88.85% / mypy 0 / MD lint 200 / ruff + format 全绿。**下一棒**:临时 DB Path 4 spike;不打 tag。
+> **状态**:🟢 **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30)** — 临时 DB 5 门全开 2 笔实写实测通过;OutboxStatus 大小写契约已对齐。**默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2593 passed / 1 skipped / 88.85% / mypy 0 / MD lint 201 / ruff + format 全绿。**下一棒**:Phase 1 维持期;不打 tag。
 
 ---
 

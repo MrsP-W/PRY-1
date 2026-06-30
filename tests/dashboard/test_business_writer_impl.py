@@ -495,8 +495,10 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
         assert audit_store.count() == 1
 
     def test_real_write_passes_last_approved_at_ms(self) -> None:
-        """approve_outbox 必须传 last_approved_at_ms(沿 D5.6.3 P1-1 审批凭据必传规则)."""
+        """approve_outbox 必须传 last_approved_at_ms(沿 D5.6.3 P1-1 审批凭据必传规则).
 
+        撞坑 #71 修复(2026-06-30):契约值改为小写,与 OutboxStatus StrEnum 对齐。
+        """
         captured: dict[str, Any] = {}
 
         def _fake_update_status(**kw: Any) -> SimpleNamespace:
@@ -513,8 +515,9 @@ class TestBusinessWriterImplRealWriteHandlerApproved:
         )
         writer.approve_outbox("888", audit=AuditContext.default())
 
-        assert captured.get("new_status") == "APPROVED"
-        assert captured.get("from_status") == "PENDING_SEND"
+        # 撞坑 #71 修复:new_status 与 OutboxStatus 枚举值一致(小写)
+        assert captured.get("new_status") == "approved"
+        assert captured.get("from_status") == "pending_send"
         assert captured.get("outbox_id") == 888
         assert isinstance(captured.get("last_approved_at_ms"), int)
         assert captured["last_approved_at_ms"] > 0
@@ -535,8 +538,10 @@ class TestBusinessWriterImplRealWriteHandlerCancelled:
     """
 
     def test_real_write_calls_update_status_with_none_approved_at(self) -> None:
-        """cancel_outbox 必须传 last_approved_at_ms=None(D5.6.3 P1-1 必传 None 规则)."""
+        """cancel_outbox 必须传 last_approved_at_ms=None(D5.6.3 P1-1 必传 None 规则).
 
+        撞坑 #71 修复(2026-06-30):契约值改为小写,与 OutboxStatus StrEnum 对齐。
+        """
         captured: dict[str, Any] = {}
 
         def _fake_update_status(**kw: Any) -> SimpleNamespace:
@@ -555,8 +560,9 @@ class TestBusinessWriterImplRealWriteHandlerCancelled:
 
         assert result.success is True
         assert result.affected_id == "999"
-        assert captured.get("new_status") == "CANCELLED"
-        assert captured.get("from_status") == "PENDING_SEND"
+        # 撞坑 #71 修复:new_status 与 OutboxStatus 枚举值一致(小写)
+        assert captured.get("new_status") == "cancelled"
+        assert captured.get("from_status") == "pending_send"
         assert captured.get("last_approved_at_ms") is None
         # v0.2.53.51 audit 落档
         assert result.audit_id == "audit:1"
