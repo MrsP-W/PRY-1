@@ -881,6 +881,20 @@
                   <div class="gate"><strong>make lint</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
                 </div>
               </div>
+              <div class="card card-pad" id="path4-five-gate-card">
+                <!-- v0.2.53.58 Path 4 5 门只读预览 · 不接线 · 全部未启用 · 8/1 后实施 ENABLE_PATH_4_WRITE 时更新 -->
+                <h3>Path 4 5 门 <span class="tag gray" title="v0.2.53.53 v2 launch checklist · 8/1 后实施">未启用</span></h3>
+                <div class="gate-list">
+                  <div class="gate"><strong>1. DASHBOARD_WRITE_API</strong><span class="tag red">未启用</span></div>
+                  <div class="gate"><strong>2. confirm_text=CONFIRM_WRITE</strong><span class="tag red">未启用</span></div>
+                  <div class="gate"><strong>3. BUSINESS_WRITER_ENABLED</strong><span class="tag red">未启用</span></div>
+                  <div class="gate"><strong>4. real_write_handler_enabled</strong><span class="tag red">未启用</span></div>
+                  <div class="gate"><strong>5. ENABLE_PATH_4_WRITE</strong><span class="tag red">未启用</span></div>
+                </div>
+                <div class="card-footnote" style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+                  沿 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> v2 5 门 · 8/1 后 <code>ENABLE_PATH_4_WRITE=1</code> 实施时由代码驱动 · 当前为静态只读 badge
+                </div>
+              </div>
               <div class="card card-pad">
                 <h3>Provider</h3>
                 <div class="gate-list">

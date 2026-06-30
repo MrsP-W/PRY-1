@@ -140,6 +140,28 @@
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
 
+### 2026-06-30 [v0.2.53.58 Path 4 5 门只读预览 + A2 子任务复核] — 收口
+
+**1. 本次修改内容**
+
+- **docs(ui)**: `docs/ui/codex-style-dashboard.html` — system 视图新增「Path 4 5 门」只读 card(沿 [docs/v0.2.53.53 §2.3](./v0.2.53.53-path4-launch-checklist-2026-06-30.md))。列出 5 门:`DASHBOARD_WRITE_API=1` / `confirm_text=CONFIRM_WRITE` / `BUSINESS_WRITER_ENABLED=1` / `real_write_handler_enabled=True` / `ENABLE_PATH_4_WRITE=1`,全部标记「未启用」红 tag(因 Path 4 实际写入仍 8/1 后)。8/1 后实施 `ENABLE_PATH_4_WRITE` 时由代码驱动,当前为静态只读 badge。
+- **A2 子任务复核**(不实施, 仅沿用既有代码):
+  - **A2-1 系统健康动态化**:`menu_bar/app.py:473` 已调 `format_system_health_body` 读 `DEFAULT_QUALITY_GATES`,无需改动(沿 v0.2.53.32 设计)。
+  - **A2-2 Reports 搜索 UX**:已在 v0.2.53.50 (`docs/v0.2.53.50-dashboard-reports-search-ux-2026-06-29.md`) 落地,HTML 含 search input + type filter (all/doc/phase_report/spike/agent_output) + clear button + 匹配计数。
+
+**2. 风险点**
+
+- 🟢 静态 HTML badge · 不接线 · 不读 env · 不改 `BusinessWriterImpl` · 8/1 后由代码驱动刷新。
+- 🟡 5 门预览当前全「未启用」是设计意图(沿撞坑 #18 风险门控 + docs/v0.2.53.53 §7),任何人在 8/1 前看到都不会误以为路径 4 已上线。
+- ⚠️ 实际写入仍 8/1 后 + 用户授权(沿 v0.2.53.53 §1.3)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2586 passed / 1 skipped** / **88.92%** / mypy --strict 0 / **237 files** / MD lint **196** / ruff + format 全绿。
+- 下一棒:8/1 后实写 launch 实施(沿 v0.2.53.53 §4 8 步骤) / 月度复盘准备(7/1 12:00-17:00) / A3 7/25-7/31 readiness 三次刷新。
+
+---
+
 ### 2026-06-30 [v0.2.53.56 mypy preflight hotfix + 状态同步] — 收口
 
 **1. 本次修改内容**
