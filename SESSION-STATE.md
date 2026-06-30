@@ -148,6 +148,7 @@
 | 7/9 | 周三 | **Phase 1 维持期第 2 次 weekly `make ci` 全绿** — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 209 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(本周无 commit)· 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57.2-phase1-weekly-checkpoint-2026-07-09.md 新建(第 2 个 weekly 周检范本)+ 三入口同步 + commit | ✅ |
 | 7/16 | 周三 | **Phase 1 维持期第 3 次 weekly `make ci` 全绿** — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 210 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(本周无 commit)· 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md 新建(第 3 个 weekly 周检范本)+ 三入口同步 + commit | ✅ |
 | 7/23 | 周三 | **Phase 1 维持期收官前第 4 次 weekly `make ci` 全绿**(Phase 1 维持期 4/4 全收官) — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 211 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(连续 4 周 0 commit)· 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57.4-phase1-weekly-checkpoint-2026-07-23.md 新建(Phase 1 收官前最后一次周检)+ 三入口同步 + commit | ✅ |
+| 7/25 | 周六 | **阶段 3 第 1 次 A3 readiness docs-only 刷新** — 9 项前置条件实质满足(QQ-only 口径 · #2/#9 outlook/gmail 已豁免)· 撞坑累计 #71/#76/#78/#79 沿用 · 业务代码 0 改动 · docs/v0.2.58-a3-readiness-2026-07-25.md 新建 + 三入口同步 + commit | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 
