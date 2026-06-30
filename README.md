@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **阶段 3 第 1 次 A3 readiness docs-only 刷新(2026-07-25) · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 全收官** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过** · **27 项决议维持 + A1-A8 专属议程全部维持** · 2605 passed / 88.85% · MD lint 212 · 撞坑 #71/#76/#78/#79 沿用 · 阶段 3 A3 readiness 进行中(已完成 7/25 / 待 7/28 / 7/31)· 不打 tag。复盘详情:`reports/2026-07-01-monthly-review-decision.md` · 周检笔记:`docs/v0.2.57-...2026-07-02.md` + `docs/v0.2.57.2-...2026-07-09.md` + `docs/v0.2.57.3-...2026-07-16.md` + `docs/v0.2.57.4-...2026-07-23.md` + A3 readiness `docs/v0.2.58-a3-readiness-2026-07-25.md`。
+> **状态**:🟢 **阶段 4 · 8/1 release tag 评估 docs-only 收官(2026-08-01 · 不动 tag) · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 全收官 · 阶段 3 A3 readiness 3/3 全收官** — v0.2.56.1 D5.6.3 已实施 · **90 封 QQ SMTP spike 用户确认跳过** · **27 项决议维持 + A1-A8 专属议程全部维持** · 2605 passed / 88.85% · MD lint 215 · 撞坑 #71/#76/#78/#79 沿用(连续 6 周 0 新增)· 9/9 项 readiness 实质满足(QQ-only 口径)· **8/1 不打 tag 维持(7/1 复盘决议 #25 + 撞坑 #60 preliminary 范本)**。复盘详情:`reports/2026-07-01-monthly-review-decision.md` · 周检笔记 v0.2.57(.2/.3/.4)+ A3 readiness v0.2.58(.2/.3)+ 8/1 tag 评估 `docs/v0.2.59-8-1-tag-evaluation-2026-08-01.md`。
 
 ---
 
