@@ -23,6 +23,7 @@ CLI 必传(防误发):
     --recipient <email>      必传白名单:--real 模式只允许发到这一个地址
     --max-recipients 1       --real 模式强制 1 收件人(避免群发扰民)
     --confirm <text>         --real 模式必传 "yes-i-understand-this-sends-real-email"
+    --multi-confirm <text>   --real 模式 --count > 1 时必传 "yes-i-understand-batch-send"
     --smtp-host <host>       SMTP 服务器(默认 "smtp.qq.com",--real 模式必显式传)
     --smtp-port <port>       SMTP 端口(默认 465)
     --smtp-username <user>   SMTP 用户名(必传,非空)
@@ -74,6 +75,7 @@ from my_ai_employee.scheduler.outbox_dispatcher import OutboxDispatcher  # noqa:
 # ===== 0. 防误发常量(D5.6.1 P1.2 修复)=====
 
 _CONFIRM_PHRASE: str = "yes-i-understand-this-sends-real-email"
+_MULTI_CONFIRM_PHRASE: str = "yes-i-understand-batch-send"
 _REAL_MODE_MAX_RECIPIENTS: int = 1
 _REAL_MODE_MAX_COUNT: int = 10
 _INMEMORY_MAX_COUNT: int = 500
@@ -306,6 +308,7 @@ def run_spike(
     recipient_email: str | None = None,
     max_recipients: int = 0,
     confirm: str | None = None,
+    multi_confirm: str = "",
     smtp_host: str = "smtp.qq.com",
     smtp_port: int = 465,
     smtp_username: str = "spike@qq.com",
@@ -328,6 +331,7 @@ def run_spike(
         recipient_email: --real 模式必传,统一收件人(防群发扰民)
         max_recipients: --real 模式必传 1(InMemory 模式忽略)
         confirm: --real 模式必传 "yes-i-understand-this-sends-real-email"
+        multi_confirm: --real 模式 --count > 1 时必传 "yes-i-understand-batch-send"
         smtp_host: SMTP 服务器地址(--real 必传真实地址,如 "smtp.qq.com")
         smtp_port: SMTP 端口(1-65535,默认 465)
         smtp_username: SMTP 用户名(--real 必传真实地址)
@@ -379,9 +383,17 @@ def run_spike(
             raise ValueError(
                 f"D5.6.2 防误发:--real 模式 --confirm 必传 {_CONFIRM_PHRASE!r},实际 {confirm!r}"
             )
-        # 4. D5.6.2 检查员反馈:--real 模式强制 count == 1(防止"我以为是 1 封但实际 10")
-        if count != 1:
-            raise ValueError(f"D5.6.2 防误发:--real 模式 --count 必传 1(只能 1 封),实际 {count!r}")
+        # 4. D5.6.3 spike 严判放宽:--real 模式 --count 范围 1-_REAL_MODE_MAX_COUNT
+        if count < 1 or count > _REAL_MODE_MAX_COUNT:
+            raise ValueError(
+                f"D5.6.3 防误发:--real 模式 --count 必传 1-{_REAL_MODE_MAX_COUNT},实际 {count!r}"
+            )
+        # 4b. D5.6.3 多重防御:--count > 1 必传额外 confirm(防"我以为是 1 封但实际 10")
+        if count > 1 and multi_confirm != _MULTI_CONFIRM_PHRASE:
+            raise ValueError(
+                f"D5.6.3 防误发:--real 模式 --count > 1 时必传 {_MULTI_CONFIRM_PHRASE!r},"
+                f"实际 {multi_confirm!r}(--count=1 时不需)"
+            )
         # 5. smtp_host / smtp_username 不能是占位
         if "test.local" in smtp_host or smtp_host.startswith("smtp.test."):
             raise ValueError(
@@ -975,6 +987,15 @@ def main() -> None:
         default=None,
         help=f"REAL 模式必传 {_CONFIRM_PHRASE!r} 二次确认口令",
     )
+    parser.add_argument(
+        "--multi-confirm",
+        type=str,
+        default="",
+        help=(
+            f"D5.6.3 防误发:--real 模式 --count > 1 时必传 "
+            f"{_MULTI_CONFIRM_PHRASE!r}(--count=1 时不需)"
+        ),
+    )
     # ===== SMTP 配置 4 参数(D5.6.1 P0 修复 + D5.6.2 P0 凭证链路强化)=====
     # D5.6.2 关键: --smtp-password 已删除(防 shell history 泄露)
     # REAL 模式从系统 Keychain 真读: get_smtp_password_for_provider(provider, email)
@@ -1004,7 +1025,7 @@ def main() -> None:
         # v0.2.43: provider 白名单解封。
         # spike_set_smtp_password.py 已支持 qq/outlook/gmail provider-aware
         # Keychain 写入/检查/删除;真实发送仍受 SMTP_REAL_NETWORK +
-        # --max-recipients 1 + --confirm + count==1 + Keychain round-trip 保护。
+        # --max-recipients 1 + --confirm + count 1-10 + --multi-confirm(count>1) + Keychain round-trip 保护。
         choices=["qq", "outlook", "gmail"],
         help=(
             "SMTP provider 白名单(D5.6.2 P0 修复:REAL 模式必传,真读 Keychain 凭证)。"
@@ -1054,6 +1075,7 @@ def main() -> None:
         recipient_email=args.recipient,
         max_recipients=args.max_recipients,
         confirm=args.confirm,
+        multi_confirm=args.multi_confirm,
         smtp_host=args.smtp_host,
         smtp_port=args.smtp_port,
         smtp_username=args.smtp_username,

@@ -79,8 +79,8 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.56 D5.6.3 spike 严判放宽设计 docs-only(2026-06-30)** — 设计 + @审计员 review PASS(撞坑 #78 · 9 重门控 · `--multi-confirm` 二次确认)。**代码未改**。**下一棒**:用户授权后实施 `spike_send_100.py` + pytest · 或 Phase 1 维持期(7/2-7/24) |
-| **上一阶段** | ✅ **v0.2.55.6 项目检查 + 状态漂移修复(2026-06-30 · `39e36d6`)** — 三入口/quality_snapshot 同步 live 基线 2595/88.85%/203 md |
+| **当前阶段** | ✅ **Phase 1 维持期(7/2-7/24 · 2026-06-30 锚定)** — 承接 v0.2.56.1 D5.6.3 实施(`--count 1-10` + `--multi-confirm` · 撞坑 #78 · +10 tests → **2605 passed**)。**weekly `make ci`** + docs 变更同步基线。**下一棒**:7/1 月度复盘 · 90 封 SMTP spike(需单独授权) |
+| **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
 | **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2595 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **205 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
-| **下一棒** | Phase 1 维持期(7/2-7/24 weekly `make ci`) · tag readiness 继续不打 tag |
+| **质量基线** | **2605 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **206 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **下一棒** | Phase 1 维持期 weekly `make ci`(7/2-7/24) · 7/1 月度复盘 · 90 封 SMTP spike 需单独授权 · tag readiness 继续不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -3016,5 +3016,37 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:24 条 / 2026-06-18-30(...+ v0.2.56 D5.6.3 设计 docs-only · 撞坑 #78)
+---
+
+> **累计**:25 条 / 2026-06-18-30(...+ v0.2.56 D5.6.3 设计 + v0.2.56.1 实施 · 撞坑 #78)
+> **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)
+
+---
+
+## 25. 2026-06-30 · v0.2.56.1 D5.6.3 实施 + Phase 1 维持期锚定(累计 24 → 25)
+
+### 1. 本次修改
+
+- **feat**: `scripts/spike_send_100.py` — `--count 1-10` + `--multi-confirm` 二次确认(撞坑 #78)
+- **test**: `tests/scripts/test_spike_send_100.py` — 新增 10 case · `test_spike_send_100_real_mode.py` 更新 1 case
+- **docs**: `reports/v0.2.56-d5.6.3-relax-2026-06-30.md` 收口报告 · 设计/审计 doc 状态更新
+- **docs(state)**: SESSION / README / MODIFICATION-LOG / launch-plan / quality_snapshot — 2605 passed · MD lint 206 · Phase 1 锚定
+
+### 2. 风险点
+
+- ⚠️ **batch=10 真实 SMTP 未跑**:代码已放宽,90 封 spike 仍需单独用户授权
+- ⚠️ **QQ 反垃圾(撞坑 #80 待定)**:一次性 10 封重复内容可能拒收 → A3 readiness 需包含
+- **P1**: 7/1 月度复盘(12:00-17:00)
+- **P2**: 90 封 SMTP spike(9 批 × 10 + `--multi-confirm`,需授权)
+- **P3**: Phase 1 weekly `make ci`(7/2-7/24)
+
+### 3. 当前项目整体总结
+
+- 进度:**2605 passed / 1 skipped / 88.85% coverage / 9/9 质量门全绿 / Phase 1 维持期锚定**
+- 状态:**v0.2.56.1 D5.6.3 实施收口 · 不打 tag · v0.1.0 不动**
+- 下一步:Phase 1 weekly `make ci` · 7/1 复盘 · 90 封 spike(需授权)
+
+---
+
+> **累计**:25 条 / 2026-06-18-30(...+ v0.2.56.1 D5.6.3 实施 · Phase 1 锚定)
 > **下次清理**:2026-07-01 12:00+ 检查员归档 2026-06 旧记录(> 1 个月条目移到 archive/)

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.56 D5.6.3 spike 严判放宽设计 docs-only(2026-06-30)** — 设计 + @审计员 review PASS(撞坑 #78 · 9 重门控 · `--multi-confirm`)。**代码未改** · **默认仍拒写**。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2595 passed / 1 skipped / 88.85% / mypy 0 / MD lint 205 / ruff + format 全绿。**下一棒**:用户授权后实施 spike 严判放宽;不打 tag。
+> **状态**:🟢 **v0.2.56.1 D5.6.3 实施 + Phase 1 维持期(7/2-7/24 · 2026-06-30 锚定)** — `--count 1-10` + `--multi-confirm`(撞坑 #78 · +10 tests)。**默认仍拒写**。**SMTP**:仅 QQ。**质量门**:2605 passed / 1 skipped / 88.85% / mypy 0 / MD lint 206 / ruff + format 全绿。**Phase 1**:weekly `make ci`;不打 tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2605 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2595 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2605 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
