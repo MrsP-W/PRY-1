@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权"8/1 的任务提前到今天";handler 路径 4 `dry_run=false` 分发接通 + `ENABLE_PATH_4_WRITE=1` 第 5 门落地 + `/api/status` 暴露第 5 门与 `path4_write_ready`。默认仍拒写,必须五门全开才执行。详见 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md)。**下一棒**:Dashboard 第 5 门展示 + 临时 DB Path 4 spike |
+| **当前阶段** | ✅ **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权"8/1 的任务提前到今天";handler 路径 4 `dry_run=false` 分发接通 + `ENABLE_PATH_4_WRITE=1` 第 5 门落地 + `/api/status` 暴露第 5 门与 `path4_write_ready` + Dashboard 5 门 card 接线。**下一棒**:临时 DB Path 4 spike |
 | **上一阶段** | ✅ **v0.2.54.4 B 阶段 docs 预制(2026-06-30 · docs-only)** — 新建 [`docs/v0.2.54.4-b-stage-prep-2026-06-30.md`](docs/v0.2.54.4-b-stage-prep-2026-06-30.md)(8 段 docs-only · 8/1 后实施 runbook + 5 重防误发验证 stubs + 100 封 spike 数据集准备 docs + 失败回滚 runbook)+ 三入口同步 v0.2.54.4 + quality_snapshot.py MD lint 198 → 199。**承接**:Phase 0 全部收口(v0.2.54.1 + .2 + .3)。**上一阶段**:v0.2.54.3 launch-plan drift fix(`deb363a`) |
 | **上一阶段** | ✅ **v0.2.53.54 AuditStore 同源修复(2026-06-30 · `7f7b286`)** — `DashboardContext.default()` 先构造 audit_store 再传入 BusinessWriterImpl,新增同源不变式测试(+1 test → 2583 passed)。**上一阶段**:v0.2.53.53 路径 4 实写 launch checklist v2 收口(`82574ec`)。**下一棒**:Path4 5th gate preflight(不启用真实写) / 8/1 后实写 launch |
 | **上一阶段** | ✅ **v0.2.53.46 BusinessWriterImpl 4 动作实写骨架(2026-06-29 · `e76d716`)** — 4 动作统一骨架:依赖检查 + 参数校验 + 默认 raise(撞坑 #18 风险门控)· 28 个新测试 + 9 质量门全绿 + coverage 88.81%(88.78% → 88.81% 微涨 0.03pp · 撞坑 #50 第二层修复)· 报告 `docs/v0.2.53.46-business-writer-impl-skeleton-2026-06-29.md` 10 段 |
@@ -110,7 +110,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2591 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **200 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
+| **质量基线** | **2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / **237 files** / MD lint **200 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make lint` = `git ls-files '*.md'`) |
 | **下一棒** | Dashboard 第 5 门展示 / 临时 DB Path 4 spike / tag readiness 继续评估但不打 tag |
 | **后续锚点** | 7/1 月度复盘 12:00 → 17:00(32 项议程 review);8/1 v0.2.1 release tag 锚定评估 |
 
@@ -140,6 +140,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [v0.2.55.2 项目检查 + 文档/UI 漂移修复] — 收口
+
+**1. 本次修改内容**
+
+- **fix(ui)**: `docs/ui/codex-style-dashboard.html` — Path 4 5 门 card 从静态 badge 改为 `/api/status` 实时驱动(`renderPath4FiveGates`)。
+- **test**: `tests/dashboard/test_api.py` — 新增 `TestPath4FiveGateStatus`(+2 tests → 2593 passed)。
+- **docs**: 修正 SESSION-STATE / launch-plan 中 v0.2.53.52 oauth2 误记;launch-plan 基线 2586→2593 + 补勾 v0.2.55;SESSION 维护者段更新 v0.2.55 状态。
+- **chore(snapshot)**: `quality_snapshot.py` pytest 2591 → 2593。
+
+**2. 风险点**
+
+- 🟢 默认仍拒写 · UI 仅展示门控状态 · 不启用长期 shell profile 中的 `ENABLE_PATH_4_WRITE=1`。
+- 🟡 launch-plan 历史条目(v0.2.53.55 preflight)保留但标注已被 v0.2.55 取代。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2593 passed / 1 skipped** / **88.85%** / mypy --strict 0 / MD lint **200** / ruff + format 全绿。
+- 下一棒:临时 DB Path 4 spike;tag readiness 继续不打 tag。
+
+---
 
 ### 2026-06-30 [v0.2.55 Path 4 实写提前落地] — 收口
 

@@ -217,6 +217,59 @@ class TestDryRunThreeGateStatus:
         assert status["outcome"] == "dry_run_ready"
 
 
+class TestPath4FiveGateStatus:
+    """v0.2.55 /api/status Path 4 五门字段 — Dashboard 5 门 card 数据源."""
+
+    @staticmethod
+    def _make_ctx() -> DashboardContext:
+        return DashboardContext(
+            git_head_resolver=lambda: "abc123",
+            keychain_probe=lambda _s: False,
+        )
+
+    def test_default_path4_gates_closed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.approval_gate import (
+            BUSINESS_WRITER_ENABLED_ENV,
+            DASHBOARD_WRITE_API_ENV,
+        )
+        from my_ai_employee.dashboard.business_writer_impl import (
+            ENABLE_PATH_4_WRITE_ENV,
+            BusinessWriterImpl,
+        )
+
+        monkeypatch.delenv(DASHBOARD_WRITE_API_ENV, raising=False)
+        monkeypatch.delenv(BUSINESS_WRITER_ENABLED_ENV, raising=False)
+        monkeypatch.delenv(ENABLE_PATH_4_WRITE_ENV, raising=False)
+        payload = build_status_payload(self._make_ctx().with_business_writer(BusinessWriterImpl()))
+        ag = payload["approval_gates"]
+        assert ag["enable_path_4_write_env_enabled"] is False
+        assert ag["path4_write_ready"] is False
+        assert ag["v0_2_53_26_dry_run_status"]["fifth_gate"] == "closed"
+
+    def test_path4_env_and_writer_ready(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from my_ai_employee.dashboard.approval_gate import (
+            BUSINESS_WRITER_ENABLED_ENV,
+            DASHBOARD_WRITE_API_ENV,
+        )
+        from my_ai_employee.dashboard.business_writer_impl import (
+            ENABLE_PATH_4_WRITE_ENV,
+            BusinessWriterImpl,
+        )
+
+        monkeypatch.setenv(DASHBOARD_WRITE_API_ENV, "1")
+        monkeypatch.setenv(BUSINESS_WRITER_ENABLED_ENV, "1")
+        monkeypatch.setenv(ENABLE_PATH_4_WRITE_ENV, "1")
+        writer = BusinessWriterImpl(
+            real_write_handler_enabled=True,
+            enable_path_4_write=True,
+        )
+        payload = build_status_payload(self._make_ctx().with_business_writer(writer))
+        ag = payload["approval_gates"]
+        assert ag["enable_path_4_write_env_enabled"] is True
+        assert ag["path4_write_ready"] is True
+        assert ag["v0_2_53_26_dry_run_status"]["fifth_gate"] == "open"
+
+
 def test_build_tasks_today_payload_counts(dashboard_ctx: DashboardContext) -> None:
     payload = build_tasks_today_payload(dashboard_ctx)
     assert payload["read_only"] is True

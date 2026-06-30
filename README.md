@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权将 8/1 任务提前到今天;已接通 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md) 所述五门实写路径。默认仍拒写,必须 `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + writer 内部写保护锁 + `ENABLE_PATH_4_WRITE=1` 全齐才执行。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2591 passed / 1 skipped / 88.85% / mypy 0 / MD lint 200 / ruff + format 全绿。**下一棒**:Dashboard 第 5 门展示 + 临时 DB Path 4 spike;不打 tag。
+> **状态**:🟢 **v0.2.55 Path 4 实写提前落地(2026-06-30)** — 用户授权将 8/1 任务提前到今天;已接通 [`docs/v0.2.55-path4-early-launch-2026-06-30.md`](docs/v0.2.55-path4-early-launch-2026-06-30.md) 所述五门实写路径。默认仍拒写,必须 `DASHBOARD_WRITE_API=1` + `confirm_text=CONFIRM_WRITE` + `BUSINESS_WRITER_ENABLED=1` + writer 内部写保护锁 + `ENABLE_PATH_4_WRITE=1` 全齐才执行。**SMTP**:仅 QQ — Outlook/Gmail **不配置/不使用**。**质量门**:2593 passed / 1 skipped / 88.85% / mypy 0 / MD lint 200 / ruff + format 全绿。**下一棒**:临时 DB Path 4 spike;不打 tag。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2591 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2593 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2591 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2593 passed / 1 skipped / 88.85% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

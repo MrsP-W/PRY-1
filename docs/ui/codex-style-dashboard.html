@@ -882,17 +882,17 @@
                 </div>
               </div>
               <div class="card card-pad" id="path4-five-gate-card">
-                <!-- v0.2.53.58 Path 4 5 门只读预览 · 不接线 · 全部未启用 · 8/1 后实施 ENABLE_PATH_4_WRITE 时更新 -->
-                <h3>Path 4 5 门 <span class="tag gray" title="v0.2.53.53 v2 launch checklist · 8/1 后实施">未启用</span></h3>
+                <!-- v0.2.55 Path 4 5 门 · 由 /api/status 驱动 -->
+                <h3>Path 4 5 门 <span class="tag gray" id="path4-five-gate-header" title="v0.2.53.53 v2 launch checklist">待读取</span></h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>1. DASHBOARD_WRITE_API</strong><span class="tag red">未启用</span></div>
-                  <div class="gate"><strong>2. confirm_text=CONFIRM_WRITE</strong><span class="tag red">未启用</span></div>
-                  <div class="gate"><strong>3. BUSINESS_WRITER_ENABLED</strong><span class="tag red">未启用</span></div>
-                  <div class="gate"><strong>4. real_write_handler_enabled</strong><span class="tag red">未启用</span></div>
-                  <div class="gate"><strong>5. ENABLE_PATH_4_WRITE</strong><span class="tag red">未启用</span></div>
+                  <div class="gate"><strong>1. DASHBOARD_WRITE_API</strong><span class="tag red" id="path4-gate-1">待读取</span></div>
+                  <div class="gate"><strong>2. confirm_text=CONFIRM_WRITE</strong><span class="tag red" id="path4-gate-2">待读取</span></div>
+                  <div class="gate"><strong>3. BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="path4-gate-3">待读取</span></div>
+                  <div class="gate"><strong>4. real_write_handler_enabled</strong><span class="tag red" id="path4-gate-4">待读取</span></div>
+                  <div class="gate"><strong>5. ENABLE_PATH_4_WRITE</strong><span class="tag red" id="path4-gate-5">待读取</span></div>
                 </div>
-                <div class="card-footnote" style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
-                  沿 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> v2 5 门 · 8/1 后 <code>ENABLE_PATH_4_WRITE=1</code> 实施时由代码驱动 · 当前为静态只读 badge
+                <div class="card-footnote" id="path4-five-gate-footnote" style="font-size: 12px; color: var(--text-muted); margin-top: 8px">
+                  沿 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> v2 5 门 · 由 <code>/api/status</code> 实时刷新
                 </div>
               </div>
               <div class="card card-pad">
@@ -1498,6 +1498,50 @@
         }
       }
 
+      function renderPath4FiveGates(approval, options = {}) {
+        const offline = options.offline === true;
+        if (offline) {
+          setTag("path4-five-gate-header", "API 离线", "gray");
+          setTag("path4-gate-1", "未知", "red");
+          setTag("path4-gate-2", "未知", "red");
+          setTag("path4-gate-3", "未知", "red");
+          setTag("path4-gate-4", "未知", "red");
+          setTag("path4-gate-5", "未知", "red");
+          setText(
+            "path4-five-gate-footnote",
+            "API 离线 · 五门状态见 quality_snapshot / 启动 dashboard-api 后刷新",
+          );
+          return;
+        }
+        const writeApi = approval.dashboard_write_api === true;
+        const writerEnv = approval.business_writer_env_enabled === true;
+        const writerInjected = approval.business_writer_impl_injected === true;
+        const path4Env = approval.enable_path_4_write_env_enabled === true;
+        const path4Ready = approval.path4_write_ready === true;
+        const dryRun = approval.v0_2_53_26_dry_run_status ?? {};
+        const fourthOpen = path4Env && writerInjected;
+        setTag("path4-gate-1", writeApi ? "已启用" : "未启用", writeApi ? "green" : "red");
+        setTag(
+          "path4-gate-2",
+          writeApi ? "POST 级" : "未启用",
+          writeApi ? "yellow" : "red",
+        );
+        setTag("path4-gate-3", writerEnv ? "已启用" : "未启用", writerEnv ? "green" : "red");
+        setTag("path4-gate-4", fourthOpen ? "已启用" : "未启用", fourthOpen ? "green" : "red");
+        setTag("path4-gate-5", path4Env ? "已启用" : "未启用", path4Env ? "green" : "red");
+        setTag(
+          "path4-five-gate-header",
+          path4Ready ? "实写就绪" : "未就绪",
+          path4Ready ? "green" : "gray",
+        );
+        setText(
+          "path4-five-gate-footnote",
+          path4Ready
+            ? "五门全开 · Path 4 实写路径已就绪(仍需 POST confirm_text=CONFIRM_WRITE)"
+            : "默认拒写 · 五门缺任一门均不会真实写入",
+        );
+      }
+
       function renderStatus(payload) {
         const quality = payload.quality_gates ?? {};
         const providers = payload.providers ?? {};
@@ -1528,6 +1572,7 @@
         setText("header-keychain", `${presentCount}/3 Keychain`);
         // v0.2.53.28 三门联调 — 第三道门以 Impl 实际注入为准
         renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected);
+        renderPath4FiveGates(approval);
       }
 
       function renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected, options = {}) {
@@ -1564,6 +1609,7 @@
 
       function renderOfflineApprovalState() {
         renderDryRunThreeGate(FALLBACK_DRY_RUN_STATUS, false, false, false, false, { offline: true });
+        renderPath4FiveGates({}, { offline: true });
         setTag("gate-approval", "禁写", "red");
         setTag("inspect-approval", "disabled", "red");
         setText("header-quality", "API 离线 · 质量门见 quality_snapshot");
