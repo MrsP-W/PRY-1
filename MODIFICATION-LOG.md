@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **224 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -154,12 +154,12 @@
 
 **2. 风险点**
 
-- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 223 / pytest 2611 不变。
+- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 224 / pytest 2611 不变。
 - ⚠️ coverage 门口径沿用 `make coverage`(88.97%),与 `make test` 88.95% 存在四舍五入差。
 
 **3. 当前项目整体总结**
 
-- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **223** / `make check-snapshot` 全绿。
+- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **224** / `make check-snapshot` 全绿。
 - 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据激活 / 9→11 e2e spike(均须用户授权)。
 
 ---
@@ -3727,3 +3727,82 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:39 条 / 2026-07-01-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 + Phase A Path 4 + Phase B Outlook/Gmail Keychain 沙箱 + Phase C `v0.2.1` tag readiness 复盘)
 > **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 39 条仍轻量)
+
+## 40. 2026-07-01 · v0.2.63 commit 1 · `CLAUDE.md` 阶段号漂移修复(累计 39 → 40)
+
+> **用户授权**:"按推荐执行" · 第一步 docs-only · **撞坑 #80 新增**(CLAUDE.md 阶段号漂移 · 即时修复)· **docs-only 不前进 pytest/coverage**
+
+### 1. 本次修改
+
+- **修改**:`CLAUDE.md` L7(顶部"最后更新"段)+ L16("当前阶段"段)— regex 精准替换
+- **L7 翻牌**:`2026-06-14 D5.7.2 docs 收口最后一致性修正 真正锁定` → `2026-07-01 v0.2.1-rc1 维持期 + Phase A+B+C docs 三棒收口`
+- **L16 翻牌**:`当前阶段: D5.7.2 docs 收口最后一致性修正 真正锁定` → `当前阶段: v0.2.1-rc1 维持期`
+- **L259 不动**(L4 Agent 层落地 + D-step 收官标准动作历史快照,沿撞坑 #50 第三层范本)
+- **L46/L80 不动**(D-step 历史范本引用 + 7/1 月度复盘 review 提及,沿撞坑 #50)
+- **撞坑 #80 沉淀**:**CLAUDE.md 阶段号漂移**(Phase A/B/C 收口后,跨 30+ 天 L7/L16 未跟翻)
+- **修复范本**:docs-only docs 收口后,强制检查入口 docs 三件套顶部状态是否需翻
+- **代码**:零改动 · docs-only · 撞坑 #71 沿用
+
+### 2. 风险点
+
+- 🟢 **`CLAUDE.md` 阶段号漂移修复**:撞坑 #80 即时发现即时修复,无业务影响
+- ⚠️ **撞坑 #80 避坑范本缺失**:docs-only docs 收口后未强制检查入口顶部状态翻牌
+- ⚠️ **下次类似漂移**:Phase C 收口后跨 30+ 天 docs-only 累积,可能再次发生
+- ⚠️ **`v0.2.1` tag 仍不打**(撞坑 #60)|
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / MD lint 223 / `CLAUDE.md` L7/L16 翻牌完成**
+- 状态:**撞坑 #80 修复 + docs-only 0 commit 完成 · 撞坑累计 79 + 80 类 · 业务代码 0 改动**
+- 下一步:v0.2.63 commit 2 月度复盘 docs-only 收口
+- 下一棒:月度复盘 docs-only entry 41 写入
+
+---
+
+## 41. 2026-07-01 · v0.2.63 commit 2 · 7/1 月度复盘正式 docs-only 收口(累计 40 → 41)
+
+> **用户授权**:"按推荐执行" · 第二步 docs-only · **沿 v0.2.62 readiness 范本 + `reports/2026-07-01-monthly-review-decision.md` 6/30 提前执行版** · **docs-only 不前进 pytest/coverage**
+
+### 1. 本次修改
+
+- **新文件**:`docs/v0.2.63-7-1-monthly-review-closure-2026-07-01.md`(10 节 · 月度复盘正式收口)
+- **三入口同步**:
+  - `SESSION-STATE.md` L1 翻牌(Phase C → v0.2.63)+ L4 状态追加 + 时间线表追加 v0.2.63 行 + 关键文件指针追加
+  - `MODIFICATION-LOG.md` 本 entry 41 写入 + 累计 39 → 41(commit 1 entry 40 + commit 2 entry 41)
+- **9 节内容**:
+  - §1 复盘前置条件(5/5 满足)
+  - §2 27 项决议 + 8 项专属议程沿用状态
+  - §3 撞坑累计基线(撞坑 #80 新增 · 业务风险类 0 新增)
+  - §4 v0.2.1 release tag 8/8 readiness 沿用(决议不打)
+  - §5 阶段 1 维持期 weekly 4/4 详细
+  - §6 tag 列表沿用
+  - §7 沿用边界 7 项铁律
+  - §8 关键产出(本棒 2 commits)
+  - §9 下一棒(候选 A/B/C/D 4 项)
+  - §10 维护者
+- **撞坑 #80**:**CLAUDE.md 阶段号漂移**(Phase A/B/C 收口后跨 30+ 天 docs-only 累积,本 commit 1 即时修复)
+- **代码**:零改动 · docs-only · 撞坑 #71 沿用
+
+### 2. 风险点
+
+- 🟢 **撞坑 #80 修复**:`CLAUDE.md` L7/L16 翻牌完成,撞坑累计 79 + 80 类
+- ⚠️ **撞坑 #80 避坑范本**:`docs-only` docs 收口后 → 强制检查入口 docs 三件套(README / SESSION-STATE / CLAUDE.md)顶部状态是否需翻
+- ⚠️ **`v0.2.1` tag 仍不打**(撞坑 #60 · 决议维持)
+- ⚠️ **撞坑累计 #80 沿用**:业务风险类 0 新增(连续 6 周 + 1 天 · 撞坑 #71 沿用)
+- ⚠️ **`v0.2.1-rc1`(b0e7f94)维持**:annotated 已落地,撞坑 #60 永不动
+- **P1**: 候选 A(下次月度复盘 docs-only · 8 月内任意时间)
+- **P2**: 候选 B(outlook-gmail 真实凭据激活 · 撞坑 #59 红线 · 用户单独决策)
+- **P3**: 候选 C(9→11 e2e spike · 撞坑 #71 docs-only 边界 · 用户单独授权)
+- **P3-docs**: 候选 D(撞坑 #50 衍生第三版补完 · `check-snapshot` 加 pytest/coverage 校验)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / MD lint 223 / 9/9 质量门全绿 / v0.2.63 收口(2 docs-only commits)/ Phase A+B+C 沿用 / 撞坑累计 80 类 / 业务风险类 0 新增**
+- 状态:**v0.2.63 月度复盘正式 docs-only 收口完成 · `v0.2.1-rc1` 维持期 · 撞坑 #60 决议维持 · 等用户单独决策触发下一棒**
+- 下一步:候选 A/B/C/D 等用户授权触发
+- 下一棒:用户(候选 A 月度复盘 docs-only / 候选 B outlook-gmail 真实凭据 / 候选 C e2e spike / 候选 D docs 债)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:41 条 / 2026-07-01 v0.2.63 docs-only 收口(撞坑 #80 修复 + 月度复盘正式入库 + `CLAUDE.md` 阶段号翻牌)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 41 条仍轻量)
