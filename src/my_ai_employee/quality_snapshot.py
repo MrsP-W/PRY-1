@@ -18,7 +18,7 @@ class QualityGateSnapshot:
     coverage: str = "88.95%"
     mypy: str = "0 errors"
     mypy_files: str = "238 files"
-    lint: str = "242 files 0 errors"
+    lint: str = "243 files 0 errors"
 
 
 DEFAULT_QUALITY_GATES = QualityGateSnapshot()

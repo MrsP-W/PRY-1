@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **242 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)|
+| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **243 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 8 候选 A:1-click 审批 UI 化(撞坑 #71 解除 · 业务代码首次改动 · 4 候选 · 推荐 A 🟢 低风险) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4461,5 +4461,38 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2620 passed / 88.95% / 242 md / mypy 238 files / `v0.2.1` tag 已落地 / 主库 wechat 真实 1 行 + notes 真实 4 笔**
 - 撞坑累计:**83 类**(撞坑 #82 + #83 真链路验证通过)
-- 下一棒:**Day 8+ 维护当前状态 + 9/9 质量门守住 + 等用户明确重启信号**
+- 下一棒:**Day 8+ 维护当前状态 + 9/9 质量门守住 + 等用户明确重启信号** → **用户已决议 Day 8 = 撞坑 #71 解除 · 业务代码改动日 · 4 候选(见 entry #61)**
 - 记忆锚点:`~/.claude/projects/-Users-wei-Documents-DesktopOrganizer---AI--/memory/day7-closeout-2026-07-01.md`
+
+---
+
+## 61. 2026-07-01 · Day 8 启动准备 docs-only(撞坑 #71 解除 · 业务代码改动日)
+
+> **触发**:用户在 Day 7 收口后明确指令「开启 Day 8+」· 沿 Day 1-6 启动准备范本 docs-only 准备,等用户选 Day 8 业务改动候选
+
+### 1. 本次决议
+
+- **Day 8 方向**:撞坑 #71 解除 · 业务代码改动日(6 周+7 天 业务代码 0 改动 首次解除)
+- **4 业务改动候选**(沿 §2 详细方案):
+  - **A. 1-click 审批 UI 化(推荐 ⭐⭐⭐)** — 🟢 低风险 · `src/my_ai_employee/dashboard/server.py` POST 端点 + BusinessWriter 接入 + Dashboard HTML 1-click button · 撞坑 #65 沿用
+  - **B. Dashboard 真实写路径** — 🟡 中风险 · `BusinessWriter` 真链路 + 撞坑 #18 反转(需用户明确)
+  - **C. 移动伴侣 API 设计** — 🟡 中风险 · `src/my_ai_employee/api/`(新模块)+ D5+ 接口 · docs 先行
+  - **D. Notes 加密增强** — 🟢 低风险 · `src/my_ai_employee/core/notes_encryption.py`(新模块)+ 字段级加密
+- **启动准备文档**:`ops/day8-launch.md`(8 节 · 决策表 + 4 候选 + 推荐 A 详细方案 + 业务代码改动范围 + 9/9 质量门预期 + 撞坑关联 + 实施步骤 + 决策待办)
+- **MD count 242 → 243**(撞坑 #50 漂移防御自动触发 · 6 文件同步)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #71 解除信号** — 业务代码 6 周+7 天 0 改动首次解除,Day 8 业务改动将是 `src/` 首次出现 `+` 行数
+- 🟢 **撞坑 #59 红线维持** — outlook/gmail 仍不配置 · 业务改动不碰 SMTP 多账户
+- 🟢 **撞坑 #18 风险门控沿用** — ENABLE_PATH_4_WRITE 维持 UNSET · 5 重门控替代
+- 🟢 **撞坑 #65 沿用** — BusinessWriter + AuditContext + WriteResult/Decision 已就位(6/26 落地)
+- 🟢 **撞坑 #76/#78/#79 5 重门控沿用** — actor ≤ 80 / reason ≤ 240 严判 + --count=1
+- 🟢 **撞坑 #50 漂移防御** — `make check-snapshot` 检测 MD count 漂移 → 同步 6 文件 → 二次校验 OK
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 243 md / mypy 238 files / `v0.2.1` tag 已落地 / 主库 wechat 真实 1 行 + notes 真实 4 笔 / Day 8 启动准备 docs-only 4 候选**
+- 撞坑累计:**83 类**(撞坑 #71 即将解除 · Day 8 候选 A 实施后将写 entry #62)
+- 下一棒:**用户选 Day 8 候选(A/B/C/D)→ 实施候选 → 9/9 质量门 baseline 推进(预期 2620 → 2700+ passed · 88.95% → 89.0%+ coverage · 243 → 245 MD)**
+- 决策待办:Day 8 业务改动候选(推荐 A 1-click 审批 UI 化)· 撞坑 #18 是否反转(候选 B 需要 · 默认 NO)· 9/9 质量门 baseline 前进策略(全推进)
