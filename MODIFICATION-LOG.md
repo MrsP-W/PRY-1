@@ -165,6 +165,43 @@
 
 ---
 
+### 2026-07-01 [v0.2 launch plan 整体收口 docs · 7 月全链路闭环] — 收口
+
+**1. 本次修改内容**
+
+- **docs(new)**: 新建 [`docs/v0.2-launch-plan-closure-2026-07-01.md`](docs/v0.2-launch-plan-closure-2026-07-01.md)(13 节 docs-only · 沿 v0.2.61 + v0.1-closure-preview 范本):
+  - §1 背景:v0.2 启动(6/16 端午不休息)→ v0.2.1+ 子阶段 → v0.2.1-rc1 tag 落地 → 整体收口(2026-07-01)
+  - §2 v0.2 6 子阶段总盘点(B1/B2/B4/B-5/outlook-gmail/D8)· **5/6 完全 + 1/6 部分** = 92%
+  - §3 v0.2.1+ 子阶段总盘点(6 子项 · **6/6** = 100%)
+  - §4 v0.2.53.x Codex UI 主线总盘点(50 commits · **50/50** = 100%)
+  - §5 v0.2.54+ 评估线(8/1 tag 锚定评估 · 沿撞坑 #60 preliminary 范本)
+  - §6 撞坑累计(#71/#76/#78/#79 沿用 · 连续 6 周 0 新增业务风险类撞坑)
+  - §7 数字基线(2610/88.94/218 · 9 质量门全绿 · check-snapshot 三重防御)
+  - §8 tag 列表(`v0.1.0` 锚定 + `v0.2.1-rc1` release candidate)
+  - §9 沿用边界 7 项铁律全部维持
+  - §10 收官总评(整体达成率 95%+:outlook/gmail 真实 SMTP + 真账单 spike 实跑仍需用户授权触发)
+  - §11 下一棒候选(用户授权触发 3 项 + 1 项跳过)
+  - §12 跨项目路径索引(本项目 + Agent Assistant + 撞坑累计沉淀)
+  - §13 commit 计划
+- **docs(state) 三入口同步**:SESSION-STATE.md 顶部状态 → `v0.2 launch plan 整体收口(2026-07-01)`;本文件 +1 条收口条目(累计 36 → 37)。
+
+**2. 风险点**
+
+- 🟢 docs-only · 0 源码改动 · 0 业务行为改动 · pytest/coverage/mypy 不变 · tag 不动。
+- 🟢 沿用边界 7 项铁律全部维持:`v0.1.0` 不动 / `v0.2.1` tag 仍不打 / `v0.2.1-rc1` 已落地 / `ENABLE_PATH_4_WRITE=1` 不写 shell profile / Outlook·Gmail SMTP 不配置 / docs-only 不前进 pytest/coverage。
+- 🟡 outlook/gmail 真实 SMTP 发送 + 真账单 spike 实跑仍需用户授权触发(95% 之外的 5% 留作未来 spike 候选)。
+- ⚠️ 撞坑 #78/#79 由本棒项目检查 commit `aea5c37` 沉淀(状态文档 stale + quality_snapshot.py 漂移)· 已通过 `check-snapshot` 三重防御自动化收敛。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2610 passed / 1 skipped** / **88.94%** / mypy --strict 0 / MD lint **218** / `make ci` 含 check-snapshot / ruff + format 全绿。
+- 撞坑累计:**#71/#76/#78/#79 沿用** · 连续 6 周 0 新增业务风险类撞坑。
+- 当前阶段:**v0.2 launch plan 整体收口** + **`v0.2.1-rc1` tag 已落地** + 跨项目沉淀 commit `a01c2a2` 已落地。
+- 下一棒:用户授权触发(Path 4 spike 实写 / Outlook·Gmail Keychain / v0.2 launch plan 整体收口 — **本棒已落地**);9/1+ 撞坑 #50 衍生第三版补完候选(`check-snapshot` 增加 pytest/coverage 校验)。
+- tag 列表:`v0.1.0`(`2af775f` · anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` · release candidate · 沿撞坑 #60 preliminary 范本)。
+
+---
+
 ### 2026-06-30 [v0.2.55.3 真写 OutboxStore 契约测试] — 收口
 
 **1. 本次修改内容**
