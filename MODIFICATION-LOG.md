@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **224 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **225 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -154,12 +154,12 @@
 
 **2. 风险点**
 
-- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 224 / pytest 2611 不变。
+- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 225 / pytest 2611 不变。
 - ⚠️ coverage 门口径沿用 `make coverage`(88.97%),与 `make test` 88.95% 存在四舍五入差。
 
 **3. 当前项目整体总结**
 
-- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **224** / `make check-snapshot` 全绿。
+- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **225** / `make check-snapshot` 全绿。
 - 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据激活 / 9→11 e2e spike(均须用户授权)。
 
 ---
@@ -3832,3 +3832,49 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:42 条 / 2026-07-01 项目检查(CLAUDE 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口)
 > **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 42 条仍轻量)
+
+## 43. 2026-07-01 · v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转· 用户明确授权)(累计 42 → 43)
+
+> **用户授权**:"#2 OK 打 tag" 明确反转撞坑 #60 preliminary 范本 · **撞坑 #60 解除** · **docs-only 收口**
+
+### 1. 本次修改
+
+- **tag 创建**:`git tag -a v0.2.1 71b4602 -m "..."`(annotated · tagger + date + message 完整)
+  - 绑 commit:`71b46023f96a89728a4fb888651484cd4181b51a`(撞坑 #80 衍生闭环 commit)
+  - tagger:`Mr-PRY <mr-pry@example.com>`
+  - 日期:`2026-07-01`(timestamp 1782875466 +0800)
+  - 类型:`git cat-file -t v0.2.1` 验证 = `tag`(annotated,非 lightweight)
+- **不可逆**:✅ 是(本地删除需 `git tag -d` 强制 · 跨项目引用都受影响)
+- **push**:❌ 无 remote(沿用 · `git remote -v` 空)
+- **新文件**:`docs/v0.2.64-v0.2.1-tag-decision-execution-2026-07-01.md`(8 节 · 撞坑 #60 反转决议文档化)
+- **三入口同步**:
+  - `SESSION-STATE.md` L1 / L4 / L18 / L32 / L34 / 时间线表 / 关键文件指针
+  - tag 列表翻牌:`v0.2.1` ❌ 不打 → ✅ 已落地(`71b4602`)
+- **反转决议**:
+  - `v0.2.1-rc1`(`b0e7f94` annotated)+ 维持期 → `v0.2.1`(`71b4602` annotated)+ **正式落地**
+  - `v0.2.1-rc1` 仍维持作为历史快照(撞坑 #60 反转但保留 rc 历史)
+  - 9/9 readiness 实质满足(沿 v0.2.62 复盘 + #80 衍生闭环)
+- **代码**:零改动 · docs-only 收口
+
+### 2. 风险点
+
+- 🟢 **`v0.2.1` tag 落地**:`71b4602` annotated + 撞坑 #60 反转决议明确
+- ⚠️ **不可逆**:tag 是 git 公开历史 · 删除需 force-delete
+- ⚠️ **`v0.2.1-rc1`(`b0e7f94`)沿用为历史快照**:**语义上被 `v0.2.1` 取代** · 但仍作为 rc 阶段历史保留
+- ⚠️ **撞坑 #60 解除**:本棒反转决议明确 · 后续决议不再受撞坑 #60 约束
+- ⚠️ **撞坑 #71 docs-only 不前进 pytest/coverage 沿用**:业务代码 0 改动
+- **P1**: #3 outlook-gmail 真实凭据激活(待用户明确)
+- **P2**: #4 9→11 e2e spike(待用户明确)
+- **P3**: 候选 A(8/1+ 月度复盘 docs-only)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / **225 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增**
+- 状态:**`v0.2.1` 正式 tag 落地(`71b4602` annotated)+ 撞坑 #60 反转决议明确 + `v0.2.1-rc1` 仍作历史快照**
+- 下一步:#3 / #4 / 候选 A 等待用户逐项授权触发
+- 下一棒:用户(#3 outlook-gmail 真实凭据激活 / #4 9→11 e2e spike / 候选 A 月度复盘)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:43 条 / 2026-07-01 `v0.2.1` tag 落地(撞坑 #60 反转 · `#2 OK 打 tag`)+ 周三例行周检 baseline 确认(撞坑 #80 衍生闭环维持)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 43 条仍轻量)
