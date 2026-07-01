@@ -114,8 +114,8 @@
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **233 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
-| **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
+| **下一棒** | Day 4 启动候选(财务+Notes / Dashboard 只读 / Path 4 实写 / 一键启动包) / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 |
+| **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -4186,7 +4186,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   - **1 封 SENT 成功**:`SMTP 发送成功: from=477753009@qq.com to=['477753009@qq.com'] host=smtp.qq.com:465`
   - **OutboxDispatcher 调度证据**:`total_picked=1 sent=1 business_blocked=0 technical_failed=0 skipped=0 skip_breach=0 duration=4.639s liveness=stalled`
   - **Keychain 真读**:`✅ Keychain 命中: provider=qq email=477753009@qq.com (auth_code 16 chars)`(撞坑 #1 教训维持 · 不打印内容)
-  - **7 验证项全绿**:状态机全最终态 + Heartbeat HEALTHY + SLA skip_breach=0 + 退避回路 OK
+  - **6 项通过 + 1 项 REAL 模式不适用**:状态机全最终态 + Heartbeat HEALTHY + SLA skip_breach=0 + 退避回路 OK(InMemory sent_log 项 N/A)
   - **报告归档**:`output/spike/spike_send_100_20260701_140144.md`(2.6KB · 7 验证项 + 7 字段 DispatcherResult 累加)
 - **`ops/day3-c-real-send-1-closure.md`** 新写(9 节 · 200+ 行):
   - §1 用户决策(C 路径 + 发到自己 + 5 重门控全 OK)

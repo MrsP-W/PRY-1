@@ -33,10 +33,7 @@ def redact_email(email: str) -> str:
     if "@" not in email:
         return "***"
     local, domain = email.split("@", 1)
-    if len(local) <= 2:
-        redacted_local = "*" * len(local)
-    else:
-        redacted_local = local[:2] + "***"
+    redacted_local = "*" * len(local) if len(local) <= 2 else local[:2] + "***"
     return f"{redacted_local}@{domain}"
 
 

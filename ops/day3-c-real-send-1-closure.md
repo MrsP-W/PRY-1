@@ -53,7 +53,7 @@ SMTP_REAL_NETWORK=1 uv run python scripts/spike_send_100.py \
 - duration=4.639s liveness=stalled
 ```
 
-### 3.3 关键验证项(7 项全绿)
+### 3.3 关键验证项(6 项通过 + 1 项 REAL 模式不适用)
 
 | # | 验证项 | 期望 | 实际 | 通过 |
 |---|--------|------|------|------|
@@ -140,7 +140,7 @@ SMTP_REAL_NETWORK=1 uv run python scripts/spike_send_100.py \
 | 6 | mypy src+tests | 0 errors |
 | 7 | alembic --sql | OK |
 | 8 | uv build | OK |
-| 9 | MD lint | 232 files 0 errors |
+| 9 | MD lint | 233 files 0 errors |
 | check-snapshot | 四重防御 | OK |
 
 **业务代码改动**:**0**(撞坑 #71 沿用 · spike 模式不影响 baseline)
@@ -170,6 +170,6 @@ SMTP_REAL_NETWORK=1 uv run python scripts/spike_send_100.py \
 
 ## §9 维护者
 
-**Mr-PRY** · 2026-07-01 Day 3 C 路径真发 1 封收口(撞坑 #76/#78/#79 5 重门控全开 + 撞坑 #59 QQ 例外激活 + 撞坑 #81 已修复)· 1 封 SENT 成功(发件人/收件人 477753009@qq.com · 调度延迟 4.6s · Keychain 真读 16 字符授权码)· 报告 `output/spike/spike_send_100_20260701_140144.md` · 撞坑累计 81 类 0 新增 · 业务代码 0 改动(连续 6 周 + 1 天 · 撞坑 #71 沿用)· 9/9 质量门 baseline 不变(2611 / 88.97% / 232 md / 238 mypy)· outlook/gmail 红线维持(撞坑 #59 不构成真实凭据激活)· 等 Day 4 启动授权。
+**Mr-PRY** · 2026-07-01 Day 3 C 路径真发 1 封收口(撞坑 #76/#78/#79 5 重门控全开 + 撞坑 #59 QQ 例外激活 + 撞坑 #81 已修复)· 1 封 SENT 成功(发件人/收件人 477753009@qq.com · 调度延迟 4.6s · Keychain 真读 16 字符授权码)· 报告 `output/spike/spike_send_100_20260701_140144.md` · 撞坑累计 81 类 0 新增 · 业务代码 0 改动(连续 6 周 + 1 天 · 撞坑 #71 沿用)· 9/9 质量门 baseline 不变(2611 / 88.97% / 233 md / 238 mypy)· outlook/gmail 红线维持(撞坑 #59 不构成真实凭据激活)· 等 Day 4 启动授权。
 
 **模型**:MiniMax-M3 · **最后更新**:2026-07-01 · **沿用范本**:[[v0.2.5-smtp-real-send-preflight-2026-06-18]] + [[v0.2.6-d4.7.4-v1.0.3-deferred-2026-06-20]] + `scripts/spike_send_100.py` + 撞坑 #81 runbook · **下一棒**:Day 4(财务 + Apple Notes / Dashboard 只读 / Path 4 实写 / 一键启动包 · 用户逐项 OK)。
