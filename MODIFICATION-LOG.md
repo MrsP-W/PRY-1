@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **234 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 5 Dashboard 只读驾驶舱 / 真实 CSV 1 行导入(4 重门控) / Notes 真同步(候选) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **235 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 6 真实 CSV 1 行 / Notes 真同步 / 一键启动包(候选) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4259,3 +4259,28 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2611 passed / 88.97% / 234 md / Day 4 验收 5/7 通过 + 2 N/A**
 - 下一棒:**Day 5 Dashboard 只读驾驶舱**
+
+---
+
+## 54. 2026-07-01 · Day 5 A 路径 Dashboard 只读收口(累计 53 → 54)
+
+> **路径**:7 天计划 D5 选项 A · `DASHBOARD_REAL_DB=1` 只读 hydrate
+
+### 1. 本次修改
+
+- **Dashboard API 实测**:主库打开 · 7 hydrate 端点 HTTP 200 · read_only 全 true
+- **`/api/status`**:git_head=abfa69d · smtp_qq Keychain present · path4_write_ready=false
+- **`/api/reports`**:count=50(git-tracked MD 索引)
+- **`ops/day5-dashboard-closure.md`** 新写(7 节)
+- **MD count 234 → 235**
+
+### 2. 风险点
+
+- 🟢 **Path 4 五门未误开**(只读 · writer Stub)
+- 🟢 **真实 CSV/Notes 真同步未触发**(留 Day 6 候选)
+- 🟢 **撞坑 #71 沿用** · 业务代码 0 改动
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / 235 md / Day 5 验收 6/6 通过**
+- 下一棒:**Day 6 真实 CSV / Notes 真同步 / 一键启动包**
