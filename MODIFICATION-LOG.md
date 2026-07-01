@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **229 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **230 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -154,12 +154,12 @@
 
 **2. 风险点**
 
-- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 229 / pytest 2611 不变。
+- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 230 / pytest 2611 不变。
 - ⚠️ coverage 门口径沿用 `make coverage`(88.97%),与 `make test` 88.95% 存在四舍五入差。
 
 **3. 当前项目整体总结**
 
-- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **229** / `make check-snapshot` 全绿。
+- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **230** / `make check-snapshot` 全绿。
 - 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据激活 / 9→11 e2e spike(均须用户授权)。
 
 ---
@@ -3869,7 +3869,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2611 passed / 88.97% / **229 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增**
+- 进度:**2611 passed / 88.97% / **230 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增**
 - 状态:**`v0.2.1` 正式 tag 落地(`71b4602` annotated)+ 撞坑 #60 反转决议明确 + `v0.2.1-rc1` 仍作历史快照**
 - 下一步:#3 / #4 / 候选 A 等待用户逐项授权触发
 - 下一棒:用户(#3 outlook-gmail 真实凭据激活 / #4 9→11 e2e spike / 候选 A 月度复盘)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
@@ -3916,7 +3916,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2611 passed / 88.95% / **229 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增 / Day 1 阶段 1 完成**
+- 进度:**2611 passed / 88.95% / **230 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增 / Day 1 阶段 1 完成**
 - 状态:**Day 1 阶段 1 基础设施落地完成 · 撞坑 #71 决议 B 范围内放行 · 撞坑 #59 红线维持 · 等用户输入触发 Day 1 阶段 2**
 - 下一步:用户(提供 LLM API Key + QQ 授权码 / 不提供延后)/ 主 Agent(Day 2 启动 TCC 授权 + 菜单栏后台常驻)
 - 下一棒:#3 outlook-gmail 真实凭据激活(撞坑 #59 红线)/ #4 9→11 e2e spike(撞坑 #71 业务推进)/ 候选 A(8/1+ 月度复盘 docs-only)/ Day 1 阶段 2 / Day 2 TCC 授权
