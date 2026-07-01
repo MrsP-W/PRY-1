@@ -173,7 +173,7 @@ def _insert_pending_entry(store: OutboxStore, *, email_id: int) -> int:
         recipient_email=f"customer{email_id}@example.com",
     )
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
-    return entry.id
+    return int(entry.id)
 
 
 # ===== A. 5 helper / factory / acceptance(7 tests)=====

@@ -106,7 +106,7 @@ def _insert_pending(store: OutboxStore, *, email_id: int) -> int:
         recipient_email=f"customer{email_id}@example.com",
     )
     assert entry.id is not None
-    return entry.id
+    return int(entry.id)
 
 
 # ===== A. APPROVED 必传规则(2 tests)=====

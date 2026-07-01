@@ -1379,4 +1379,4 @@ def blacklist_check_helper(
     email: str,
 ) -> bool:
     """Helper:hot-path check(沿 D4.8 业务层范本:helper 提到模块顶层,不在 class 内)。"""
-    return store.is_blocked(email)
+    return bool(store.is_blocked(email))

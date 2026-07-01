@@ -4358,9 +4358,29 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **撞坑 #81 沿用**(⌥⌘N 已修复 · Day 6 C 首次启动须手动 TCC 授权)
 - 🟢 **撞坑 #82 验证推迟**(等用户下会话真导 1 行时验证 4 重门控生效)
 - 🟢 **撞坑 #83 验证推迟**(等用户 Apple ID + TCC + 真同步授权)
-- ⚠️ **撞坑 #31 mypy tests 13 errors**(Day 7 候选 C 修复)
+- ⚠️ **撞坑 #31 mypy tests 14 errors** → ✅ 2026-07-01 已修复(7 文件 cast 范本)
 
 ### 3. 当前项目整体总结
 
 - 进度:**2620 passed / 88.95% / 240 md / 9/9 质量门全绿 / 撞坑累计 83 类**
-- 下一棒:**Day 7 候选(A 真实 CSV 1 行真导 / B Notes 真同步 5 条 / C mypy 13 errors 修复 / D outlook-gmail 反转 / E 留 Day 8+)**
+- 下一棒:**Day 7 候选(A 真实 CSV 1 行真导 / B Notes 真同步 5 条 / D outlook-gmail 反转 / E 留 Day 8+)**
+
+---
+
+## 57. 2026-07-01 · Day 7 前低风险修复(Keychain 探测 + mypy tests 14 errors)(累计 56 → 57)
+
+### 1. 本次修改
+
+- **Keychain 探测修复**:`ops/start-digital-employee.sh` service 改 `my-ai-employee.smtp.qq` + account 读 `.env` `IMAP_USER`(去重 helper 块)
+- **mypy tests 14 errors 修复**:7 文件 `[no-any-return]` → `cast(int/bool, ...)`(含 `test_api.py` 新增 1 error)
+- **文档同步**:Day 7 C 口径 13→14 errors 并标记已修复(CLAUDE.md · day6-d-closure.md)
+
+### 2. 风险点
+
+- 🟢 **真实 CSV/Notes 真同步仍未触发**
+- 🟢 **outlook/gmail 红线维持**
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 240 md / `uv run mypy tests/` 0 errors**
+- 下一棒:**Day 7 A/B(用户授权后)**

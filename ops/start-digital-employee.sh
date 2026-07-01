@@ -56,6 +56,38 @@ ok() { echo -e "${GREEN}✅${NC} $*"; }
 warn() { echo -e "${YELLOW}⚠️${NC} $*"; }
 err() { echo -e "${RED}❌${NC} $*" >&2; }
 
+# Keychain 探测(沿 core/keychain.py SERVICE_SMTP_QQ + account=IMAP_USER)
+KEYCHAIN_SMTP_QQ_SERVICE="my-ai-employee.smtp.qq"
+
+_get_imap_user_from_env() {
+    if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
+        return 1
+    fi
+    local line account
+    line=$(grep -E "^IMAP_USER=" "$PROJECT_ROOT/.env" | head -1 || true)
+    if [[ -z "$line" ]]; then
+        return 1
+    fi
+    account="${line#IMAP_USER=}"
+    account="${account%\"}"
+    account="${account#\"}"
+    account="${account%\'}"
+    account="${account#\'}"
+    if [[ -z "$account" ]]; then
+        return 1
+    fi
+    printf '%s' "$account"
+}
+
+_check_keychain_qq_smtp_present() {
+    if ! command -v security >/dev/null 2>&1; then
+        return 2
+    fi
+    local account
+    account=$(_get_imap_user_from_env) || return 1
+    security find-generic-password -s "$KEYCHAIN_SMTP_QQ_SERVICE" -a "$account" -w >/dev/null 2>&1
+}
+
 # dry-run 模式
 DRY_RUN=false
 if [[ "${1:-}" == "--dry-run" ]]; then
@@ -130,18 +162,20 @@ preflight_check() {
         fail=$((fail + 1))
     fi
 
-    # 3. Keychain QQ SMTP 授权码
-    if command -v security >/dev/null 2>&1; then
-        if security find-generic-password -s "my-ai-employee-smtp-qq" -w >/dev/null 2>&1; then
-            ok "  [3/9] Keychain QQ SMTP 授权码 present(沿 Day 1 阶段 2 范本)"
-        else
-            warn "  [3/9] Keychain QQ SMTP 授权码 missing(撞坑 #59 部分激活缺失)"
+    # 3. Keychain QQ SMTP 授权码(service=my-ai-employee.smtp.qq · account=IMAP_USER)
+    case "$(_check_keychain_qq_smtp_present; echo $?)" in
+        0)
+            ok "  [3/9] Keychain QQ SMTP 授权码 present(沿 Day 1 阶段 2 范本 · service=$KEYCHAIN_SMTP_QQ_SERVICE)"
+            ;;
+        2)
+            warn "  [3/9] security CLI 不可用(非 macOS?)"
             fail=$((fail + 1))
-        fi
-    else
-        warn "  [3/9] security CLI 不可用(非 macOS?)"
-        fail=$((fail + 1))
-    fi
+            ;;
+        *)
+            warn "  [3/9] Keychain QQ SMTP 授权码 missing(需 IMAP_USER + service=$KEYCHAIN_SMTP_QQ_SERVICE)"
+            fail=$((fail + 1))
+            ;;
+    esac
 
     # 4. alembic head 状态(仅检查 DDL,不实际升级)
     if cd "$PROJECT_ROOT" && uv run alembic current >/dev/null 2>&1; then
@@ -364,10 +398,10 @@ cmd_health() {
 
     # Keychain 检查
     if command -v security >/dev/null 2>&1; then
-        if security find-generic-password -s "my-ai-employee-smtp-qq" -w >/dev/null 2>&1; then
-            ok "Keychain QQ SMTP:present(不打印内容 · 撞坑 #1)"
+        if _check_keychain_qq_smtp_present; then
+            ok "Keychain QQ SMTP:present(不打印内容 · 撞坑 #1 · service=$KEYCHAIN_SMTP_QQ_SERVICE)"
         else
-            warn "Keychain QQ SMTP:missing"
+            warn "Keychain QQ SMTP:missing(需 IMAP_USER + service=$KEYCHAIN_SMTP_QQ_SERVICE)"
         fi
     fi
 

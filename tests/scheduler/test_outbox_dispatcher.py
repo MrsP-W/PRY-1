@@ -195,7 +195,7 @@ def _insert_entry(
     assert entry.id is not None  # noqa: S101 — insert 必返回 id
     # D5.6.4 P1:再 update_status 推到目标状态(走状态机白名单 + last_approved_at_ms 严判)
     if status == OutboxStatus.PENDING_SEND.value:
-        return entry.id
+        return int(entry.id)
     # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
     if status == OutboxStatus.FAILED.value:
         # 1) 先推 APPROVED(带审批凭据,记录"曾经被审批过")
@@ -212,7 +212,7 @@ def _insert_entry(
             from_status=OutboxStatus.APPROVED.value,
             last_approved_at_ms=None,
         )
-        return entry.id
+        return int(entry.id)
     # APPROVED / 其他:走 PENDING_SEND → APPROVED
     store.update_status(
         entry.id,
@@ -220,7 +220,7 @@ def _insert_entry(
         from_status=OutboxStatus.PENDING_SEND.value,
         last_approved_at_ms=last_approved_at_ms,
     )
-    return entry.id
+    return int(entry.id)
 
 
 # ===== A. DispatcherResult dataclass 字段契约 + __post_init__ 双层防御(8 tests)=====

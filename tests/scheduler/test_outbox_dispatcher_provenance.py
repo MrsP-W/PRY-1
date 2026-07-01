@@ -157,7 +157,7 @@ def _insert_entry_raw(
     )
     assert entry.id is not None
     if status == OutboxStatus.PENDING_SEND.value:
-        return entry.id
+        return int(entry.id)
     # D5.6.3 P1-1:FAILED 状态需要 last_approved_at_ms 走 APPROVED 中转保留
     if status == OutboxStatus.FAILED.value:
         if last_approved_at_ms is not None:
@@ -174,7 +174,7 @@ def _insert_entry_raw(
                 from_status=OutboxStatus.APPROVED.value,
                 last_approved_at_ms=None,
             )
-            return entry.id
+            return int(entry.id)
         # caller 显式 None 走"用户取消"场景: PENDING_SEND → FAILED 无审批
         store.update_status(
             entry.id,
@@ -182,7 +182,7 @@ def _insert_entry_raw(
             from_status=OutboxStatus.PENDING_SEND.value,
             last_approved_at_ms=None,
         )
-        return entry.id
+        return int(entry.id)
     # APPROVED:走 PENDING_SEND → APPROVED(必传 last_approved_at_ms,D5.6.3 P1-1)
     store.update_status(
         entry.id,
@@ -190,7 +190,7 @@ def _insert_entry_raw(
         from_status=OutboxStatus.PENDING_SEND.value,
         last_approved_at_ms=last_approved_at_ms,
     )
-    return entry.id
+    return int(entry.id)
 
 
 # ===== M. D5.6.3 P1-1 拉批审批凭据严判专项测试(4 cases)=====

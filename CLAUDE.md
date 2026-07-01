@@ -80,11 +80,8 @@ Step 6: 提交 commit + push
 > ⚠️ **mypy 门盲区 + 撞坑 #31 已知技术债**(2026-06-23 检查报告第二轮沉淀 · 7/1 月度复盘 review):
 >
 > - `make mypy` = `mypy src tests` 联跑 → **0 errors**(宽松版 — 当前门)
-> - `uv run mypy tests/` 单独跑 → **13 errors**(严格版 — 撞坑 #31 真实状态)
-> - 根因:mypy 2.1.0 路径依赖性检查行为 — `mypy src tests` 时 src 类型 stub 已加载,部分 tests 文件 follow_imports 优化被跳过独立检查
-> - 13 errors 全是 `[no-any-return]`,SQLAlchemy `store.insert().id` 类型推断为 `Any`,helper 声明返回 `int`/`bool` 触发
-> - 决策:接受现状(宽松版门维持),登记为已知技术债,7/1 月度复盘 review 是否收紧门
-> - 修复范本(已实测):用 `cast(int, ...)` 替代 `type: ignore`,详见 v0.2.23 沿用范本
+> - `uv run mypy tests/` 单独跑 → **0 errors**(2026-07-01 Day 7 前修复 · 历史 14 errors 撞坑 #31)
+> - 历史 14 errors 全是 `[no-any-return]`,SQLAlchemy `store.insert().id` 类型推断为 `Any`,helper 声明返回 `int`/`bool` 触发 · 沿 v0.2.23 `cast(int, ...)` 范本已修复
 
 ---
 

@@ -180,7 +180,7 @@
 4. **outlook/gmail SMTP 真实发送 spike 启动** — 沿 v0.2.2 #8 工厂模式(`b2cf3c5`)+ OAuth/XOAUTH2 真链路(`9966ad0`)+ D5.6.5 4 重防误发范本
 5. ✅ **D8 改进项延后**(2026-06-20 关闭 — `f0d8bd3` feat + docs closure · 沿 [[d4.7.4-v1.0.3-deferred]] 范本 · B 类自动解封)
 6. **状态漂移审查机制实战演练**(沿 [[v0.2.4-drift-review-mechanism-2026-06-18]] §3 撞坑恢复 3 步范本 + §4 7/1 月度复盘 checklist)
-7. **P1-1 mypy tests 13 errors 修复**(纯工程债,撞坑 #31 6/22 实测命中,沿 v0.2.23 cast(int, ...) 范本)
+7. ~~**P1-1 mypy tests 13 errors 修复**~~ ✅ 2026-07-01 已修复(14 errors → 0 · 撞坑 #31 · cast 范本)
 8. ✅ **7/1 月度复盘提前执行** — B 类延后清单已三态归档(D4.7.4 v1.0.3 / W3 / mypy strict / SMTP provider 白名单已完成;真实 SMTP 送达继续延后)+ 状态漂移审查机制实战 + v0.2.1 release tag readiness 7/8 实质满足但暂不打 tag
 8. ✅ **7/1 月度复盘提前执行** — B 类延后清单已三态归档(D4.7.4 v1.0.3 / W3 / mypy strict / SMTP provider 白名单已完成;真实 SMTP 送达继续延后)+ 状态漂移审查机制实战 + v0.2.1 release tag readiness 7/8 实质满足但暂不打 tag
 9. ✅ **7/1 月度复盘提前执行收官(2026-06-30)** — 27 项决议维持 + 8 项专属议程 A1-A8 全维持 + 撞坑 #71/#76/#78/#79 沿用 + 8/1 不打 tag 维持 + Phase 1 维持期进行中

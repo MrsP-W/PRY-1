@@ -119,7 +119,8 @@ class TestDryRunThreeGateStatus:
     def _base_payload(self) -> dict[str, Any]:
         from my_ai_employee.dashboard.responses import build_status_payload
 
-        return build_status_payload(self._make_ctx())
+        payload: dict[str, Any] = build_status_payload(self._make_ctx())
+        return payload
 
     @staticmethod
     def _make_ctx() -> DashboardContext:

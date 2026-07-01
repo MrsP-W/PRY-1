@@ -152,7 +152,7 @@ def _insert_entry(
     )
     assert entry.id is not None  # noqa: S101
     if status == OutboxStatus.PENDING_SEND.value:
-        return entry.id
+        return int(entry.id)
     # D5.6.3 P1-1:FAILED 也需 last_approved_at_ms(防绕过重试),先经 APPROVED 中转
     if status == OutboxStatus.FAILED.value:
         store.update_status(
@@ -167,7 +167,7 @@ def _insert_entry(
             from_status=OutboxStatus.APPROVED.value,
             last_approved_at_ms=None,
         )
-        return entry.id
+        return int(entry.id)
     # APPROVED:走 PENDING_SEND → APPROVED
     store.update_status(
         entry.id,
@@ -175,7 +175,7 @@ def _insert_entry(
         from_status=OutboxStatus.PENDING_SEND.value,
         last_approved_at_ms=last_approved_at_ms,
     )
-    return entry.id
+    return int(entry.id)
 
 
 # ===== L. D5.6.2 P1.2 审批契约修复专项测试 =====
