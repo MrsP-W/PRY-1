@@ -18,7 +18,7 @@ from my_ai_employee.dashboard.action_contracts import (
     ACTION_OUTBOX_APPROVE,
     ACTION_OUTBOX_CANCEL,
 )
-from my_ai_employee.dashboard.approval_gate import evaluate_writer_dry_run
+from my_ai_employee.dashboard.approval_gate import evaluate_decide_request, evaluate_writer_dry_run
 from my_ai_employee.dashboard.business_writer import (
     SUPPORTED_ACTIONS,
     AuditContext,
@@ -140,6 +140,28 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 writer_impl_injected=writer_impl,
             )
             # v0.2.53.22 第三道门:仅路径 3.5(200 OK)合并 writer.dry_run
+            if status == HTTPStatus.OK:
+                if decision.get("dry_run"):
+                    decision = self._merge_writer_dry_run(decision)
+                else:
+                    status, decision = self._execute_writer_action(decision)
+            self._send_json(status, decision, allow_methods=_APPROVAL_GATE_METHODS)
+            return
+        if path == "/api/approval-gate/decide":
+            # v0.2.57 / Day 8 候选 A — 1-click 审批 decide 高阶封装
+            # 入参:{audit_id, decision, actor, reason, confirm_text, dry_run}
+            # 沿用 evaluate_writer_dry_run 5 门 + dry-run / 实写两路径
+            error_status, payload = self._read_json_object()
+            if error_status is not None:
+                self._send_json(error_status, payload, allow_methods=_APPROVAL_GATE_METHODS)
+                return
+            writer_env = self.dashboard_context.is_business_writer_env_enabled()
+            writer_impl = self.dashboard_context.is_business_writer_impl_injected()
+            status, decision = evaluate_decide_request(
+                payload,
+                writer_enabled=writer_env,
+                writer_impl_injected=writer_impl,
+            )
             if status == HTTPStatus.OK:
                 if decision.get("dry_run"):
                     decision = self._merge_writer_dry_run(decision)
@@ -295,9 +317,10 @@ class DashboardHandler(BaseHTTPRequestHandler):
         """允许静态 file:// 原型读取本地只读 GET API."""
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
-        allow_methods = (
-            _APPROVAL_GATE_METHODS if path == "/api/approval-gate/actions" else _READ_ONLY_METHODS
-        )
+        if path in {"/api/approval-gate/actions", "/api/approval-gate/decide"}:
+            allow_methods = _APPROVAL_GATE_METHODS
+        else:
+            allow_methods = _READ_ONLY_METHODS
         self.send_response(HTTPStatus.NO_CONTENT.value)
         self._send_common_headers(content_length=0, allow_methods=allow_methods)
         self.end_headers()

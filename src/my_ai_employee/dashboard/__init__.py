@@ -11,6 +11,10 @@ v0.2.53.11 起提供 `POST /api/approval-gate/actions` 写操作契约端点,当
 
 v0.2.53.15 起新增 `BusinessWriter` Protocol + Stub + `AuditContext` +
 `WriteResult` + `WriteDecision`(沿 v0.2.53.14 设计骨架;默认全 Stub)。
+
+v0.2.57 / Day 8 候选 A 起新增 `POST /api/approval-gate/decide` 1-click 审批
+高阶封装(沿 evaluate_decide_request),`{audit_id, decision: approve|reject,
+actor, reason, confirm_text, dry_run}` → 现有 4 类 action 契约,沿用同 5 门。
 """
 
 from my_ai_employee.dashboard.business_writer import (

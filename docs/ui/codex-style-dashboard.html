@@ -189,6 +189,21 @@
         pointer-events: none;
       }
 
+      /* v0.2.57 / Day 8 候选 A — 1-click 审批 button(沿 v0.2.53.34 三门 badge 文案) */
+      .btn.decide-btn {
+        border-color: rgb(80 220 140 / 35%);
+        color: #b8ffd4;
+        white-space: nowrap;
+      }
+      .btn.decide-btn.reject {
+        border-color: rgb(255 130 130 / 35%);
+        color: #ffc0c0;
+      }
+      .btn.decide-btn.loading {
+        opacity: 0.65;
+        pointer-events: none;
+      }
+
       .workspace {
         display: grid;
         grid-template-columns: 220px minmax(460px, 1fr) 340px;
@@ -1114,7 +1129,7 @@
           <div class="inspector-section">
             <h3>下一步动作</h3>
             <div class="tiny">
-              dry-run 按钮联调 `POST /api/approval-gate/actions`(默认禁写);三门状态见上方 inspector;API 离线时静态兜底,write_executed 恒 false。
+              dry-run 按钮联调 `POST /api/approval-gate/actions`(默认禁写);1-click 审批按钮联调 `POST /api/approval-gate/decide`(v0.2.57 / Day 8 候选 A,沿 5 门);三门状态见上方 inspector;API 离线时静态兜底,write_executed 恒 false。
             </div>
           </div>
         </section>
@@ -1438,7 +1453,7 @@
           status ? `status: ${status}` : "",
         ].filter(Boolean);
         const meta = metaParts.join(" · ") || "outbox 草稿";
-        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}">${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn">${escapeHtml(btnLabel)}</button></div></div>`;
+        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}">${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn">${escapeHtml(btnLabel)}</button><button type="button" class="btn btn-sm decide-btn" data-decision="approve">1-click 批准</button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject">1-click 拒绝</button></div></div>`;
       }
 
       function renderNotesItem(item) {
@@ -1816,6 +1831,92 @@
         });
       }
 
+      // ===== v0.2.57 / Day 8 候选 A — 1-click 审批 decide 端点 =====
+      //   - POST /api/approval-gate/decide
+      //   - 入参:{audit_id=target_id, decision, actor, reason, confirm_text=CONFIRM_WRITE, dry_run=true}
+      //   - 撞坑 #59 红线维持:仅当 dry_run=false 且 ENABLE_PATH_4_WRITE=1 时才真发邮件
+      async function submitApprovalDecide(decision, targetId, label, btn) {
+        const buttonEl = btn;
+        if (buttonEl) {
+          buttonEl.classList.add("loading");
+          buttonEl.disabled = true;
+        }
+        try {
+          if (!_apiOnline) {
+            renderDryRunResult(
+              {
+                endpoint: "decide",
+                error: "api_offline",
+                reason: "API 离线,1-click decide 静态兜底:仍需 user 在 UI 二次确认,write_executed 恒 false。",
+                decision,
+                audit_id: targetId,
+                mapped_action:
+                  decision === "approve" ? "outbox.approve" :
+                  decision === "reject" ? "outbox.cancel" : null,
+                write_executed: false,
+                dry_run: true,
+                contract_version: "v0.2.57",
+              },
+              null,
+              label || `1-click ${decision}`,
+            );
+            return;
+          }
+          const { status, body } = await postJson("/api/approval-gate/decide", {
+            audit_id: targetId,
+            decision,
+            confirm_text: "CONFIRM_WRITE",
+            dry_run: true,
+            reason: `dashboard 1-click ${decision} dry-run`,
+            actor: "local_dashboard",
+          });
+          renderDryRunResult(body, status, label || `1-click ${decision}`);
+        } catch (_err) {
+          renderDryRunResult(
+            {
+              endpoint: "decide",
+              error: "request_failed",
+              reason: "POST /api/approval-gate/decide 请求失败,仍保持禁写。",
+              decision,
+              audit_id: targetId,
+              write_executed: false,
+              dry_run: true,
+            },
+            null,
+            label || `1-click ${decision}`,
+          );
+        } finally {
+          if (buttonEl) {
+            buttonEl.classList.remove("loading");
+            buttonEl.disabled = false;
+          }
+        }
+      }
+
+      function bindApprovalDecideClick() {
+        document.addEventListener("click", (ev) => {
+          const btn = ev.target.closest(".decide-btn");
+          if (!btn) {
+            return;
+          }
+          const item = btn.closest("[data-approval-action]");
+          if (!item) {
+            return;
+          }
+          const decision = btn.dataset.decision;
+          if (decision !== "approve" && decision !== "reject") {
+            return;
+          }
+          ev.preventDefault();
+          submitApprovalDecide(
+            decision,
+            item.dataset.targetId,
+            item.dataset.approvalLabel ?? "",
+            btn,
+          );
+        });
+      }
+
       // ===== v0.2.53.9 + v0.2.53.10 报告页渲染 =====
       let _currentReports = [];
       let _currentReportFilter = "all";
@@ -2178,6 +2279,7 @@
       });
 
       bindApprovalDryRunClick();
+      bindApprovalDecideClick();
       hydrateDashboard();
     </script>
   </body>

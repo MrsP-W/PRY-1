@@ -9,6 +9,10 @@
 
 真实写动作必须先通过这里的 env + 确认口令 + 审计字段校验,再委派到具体
 业务服务,由 BusinessWriterImpl 继续严判第 4/5 门。
+
+v0.2.57 / Day 8 候选 A:`evaluate_decide_request` 高阶封装,把 UI 1-click
+`{audit_id, decision, actor, reason, confirm_text}` 映射到现有 4 类
+action 契约,沿用同 5 门严判;撞坑 #71 解除(业务代码首次 + 改动日)。
 """
 
 from __future__ import annotations
@@ -19,9 +23,25 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from typing import Any, Final
 
-from my_ai_employee.dashboard.action_contracts import ACTION_CONTRACTS, is_supported_action
+from my_ai_employee.dashboard.action_contracts import (
+    ACTION_CONTRACTS,
+    ACTION_OUTBOX_APPROVE,
+    ACTION_OUTBOX_CANCEL,
+    is_supported_action,
+)
 
-CONTRACT_VERSION: Final = "v0.2.53.22"
+CONTRACT_VERSION: Final = "v0.2.57"
+
+# v0.2.57 / Day 8 候选 A — 1-click 审批 decision 映射
+#   - decision="approve" → ACTION_OUTBOX_APPROVE
+#   - decision="reject"  → ACTION_OUTBOX_CANCEL
+#   - 仅映射 outbox 类决策(notes/finance 决策走 /api/approval-gate/actions 直接契约)
+DECISION_OUTBOX_APPROVE: Final = "approve"
+DECISION_OUTBOX_REJECT: Final = "reject"
+SUPPORTED_DECISIONS: Final[tuple[str, ...]] = (DECISION_OUTBOX_APPROVE, DECISION_OUTBOX_REJECT)
+
+# audit_id / target_id 长度上限(沿 AuditContext MAX_ACTOR_LEN=80 范本)
+_MAX_DECIDE_TARGET_ID_LEN: Final = 80
 DASHBOARD_WRITE_API_ENV: Final = "DASHBOARD_WRITE_API"
 CONFIRM_TEXT: Final = "CONFIRM_WRITE"
 # v0.2.53.22 第三道门(沿 v0.2.53.19 §设计)
@@ -434,13 +454,229 @@ def _bounded_text(
     return text[:limit]
 
 
+# ===== v0.2.57 / Day 8 候选 A — 1-click 审批 decide 高阶封装 =====
+
+
+def _parse_decide_request(
+    payload: Mapping[str, Any],
+    *,
+    write_enabled: bool,
+) -> tuple[_ParsedActionRequest | None, tuple[HTTPStatus, dict[str, Any]] | None]:
+    """v0.2.57 / Day 8 候选 A — 解析 1-click decide 请求,把 decision 映射到 4 类 action.
+
+    入参字段(沿 HTML 1-click button 范本):
+        - audit_id: str(必填,非空,目标 outbox id;与 `target_id` 二选一)
+        - decision: "approve" | "reject"(必填)
+        - confirm_text: "CONFIRM_WRITE"(必填,第二道门)
+        - dry_run: bool(默认 True,决定 3.5/4 路径分支)
+        - actor: str(可选,默认 'local_dashboard',≤ 80 字符)
+        - reason: str(可选,≤ 240 字符)
+
+    映射规则:
+        - decision="approve" → action=ACTION_OUTBOX_APPROVE
+        - decision="reject"  → action=ACTION_OUTBOX_CANCEL
+
+    Returns:
+        `(parsed_action_request, None)` 成功; `(None, error_decision)` 校验失败。
+    """
+    # 1. decision 字段(必填 + 白名单)
+    decision = _text_field(payload, "decision")
+    if not decision:
+        return None, _decide_error(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_decision",
+            reason="缺少 decision。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision="",
+            audit_id=_text_field(payload, "audit_id"),
+        )
+    if decision not in SUPPORTED_DECISIONS:
+        return None, _decide_error(
+            HTTPStatus.BAD_REQUEST,
+            error="unsupported_decision",
+            reason=f"不支持的 decision:{decision}(仅 approve / reject)。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision=decision,
+            audit_id=_text_field(payload, "audit_id"),
+        )
+    action = ACTION_OUTBOX_APPROVE if decision == DECISION_OUTBOX_APPROVE else ACTION_OUTBOX_CANCEL
+    # 2. audit_id / target_id(必填,非空,≤ 80)
+    audit_id = _text_field(payload, "audit_id")
+    if not audit_id:
+        return None, _decide_error(
+            HTTPStatus.BAD_REQUEST,
+            error="missing_audit_id",
+            reason="缺少 audit_id。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision=decision,
+            audit_id=audit_id,
+        )
+    if len(audit_id) > _MAX_DECIDE_TARGET_ID_LEN:
+        return None, _decide_error(
+            HTTPStatus.BAD_REQUEST,
+            error="audit_id_too_long",
+            reason=f"audit_id 超长({len(audit_id)}>{_MAX_DECIDE_TARGET_ID_LEN})。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision=decision,
+            audit_id=audit_id,
+        )
+    target_id = audit_id
+    # 3. dry_run(bool 严判)
+    dry_run_raw = payload.get("dry_run", True)
+    if type(dry_run_raw) is not bool:
+        return None, _decide_error(
+            HTTPStatus.BAD_REQUEST,
+            error="invalid_dry_run",
+            reason="dry_run 必须是 bool。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision=decision,
+            audit_id=audit_id,
+        )
+    dry_run = dry_run_raw
+    # 4. write_enabled 第一道门(沿 _parse_action_request 范本)
+    if not write_enabled:
+        return None, _decide_error(
+            HTTPStatus.FORBIDDEN,
+            error="write_disabled",
+            reason=f"默认禁写;需显式设置 {DASHBOARD_WRITE_API_ENV}=1。",
+            write_enabled=write_enabled,
+            payload=payload,
+            decision=decision,
+            audit_id=audit_id,
+            dry_run=dry_run,
+        )
+    return _ParsedActionRequest(action=action, target_id=target_id, dry_run=dry_run), None
+
+
+def _decide_error(
+    status: HTTPStatus,
+    *,
+    error: str,
+    reason: str,
+    write_enabled: bool,
+    payload: Mapping[str, Any],
+    decision: str,
+    audit_id: str,
+    dry_run: bool = True,
+) -> tuple[HTTPStatus, dict[str, Any]]:
+    """v0.2.57 / Day 8 候选 A — 构造 1-click decide 错误响应(回显 decision/audit_id/mapped_action).
+
+    比 `_decision` 多 3 字段:
+        - decision: 回显
+        - audit_id: 回显
+        - mapped_action: 决策→action 映射(若可映射)
+        - endpoint: "decide"
+    """
+    mapped_action: str | None = None
+    if decision in SUPPORTED_DECISIONS:
+        mapped_action = (
+            ACTION_OUTBOX_APPROVE if decision == DECISION_OUTBOX_APPROVE else ACTION_OUTBOX_CANCEL
+        )
+    return (
+        status,
+        {
+            "endpoint": "decide",
+            "decision": decision or None,
+            "audit_id": audit_id[:_MAX_DECIDE_TARGET_ID_LEN] if audit_id else None,
+            "mapped_action": mapped_action,
+            "error": error,
+            "reason": reason,
+            "write_enabled": write_enabled,
+            "write_executed": False,
+            "approval_gate_passed": False,
+            "would_allow": False,
+            "dry_run": dry_run,
+            "contract_version": CONTRACT_VERSION,
+        },
+    )
+
+
+def evaluate_decide_request(
+    payload: Mapping[str, Any],
+    *,
+    write_enabled: bool | None = None,
+    writer_enabled: bool | None = None,
+    writer_impl_injected: bool | None = None,
+) -> tuple[HTTPStatus, dict[str, Any]]:
+    """v0.2.57 / Day 8 候选 A — 1-click decide 高阶封装.
+
+    把 HTML 1-click button `{audit_id, decision, actor, reason, confirm_text, dry_run}`
+    解析并沿用 `evaluate_writer_dry_run` 5 门(双门 + writer env + writer impl)。
+    撞坑 #71 解除(业务代码改动日)· 撞坑 #59 红线维持(不自动真发邮件,需 UI 1-click 审批)。
+
+    决策矩阵(沿 evaluate_writer_dry_run 8 路径,撞坑 #68 决策矩阵与可视化拆分模式):
+        - 路径 1: DASHBOARD_WRITE_API 未设 → 403 write_disabled
+        - 路径 2: env 已开 + decision 错 / confirm_text 错 → 400 / 403
+        - 路径 3: env+confirm 通过 + writer 未启用 → 501 write_not_implemented
+        - 路径 3.5: env+confirm+writer 都启用 + dry_run=True → 200 dry-run-ready
+        - 路径 4: env+confirm+writer 都启用 + dry_run=False → 200 实写(由 BusinessWriterImpl 5 门严判)
+
+    响应字段扩展(v0.2.57 / Day 8 候选 A):
+        - endpoint: "decide"
+        - decision: "approve" | "reject"(回显,便于前端展示)
+        - audit_id: str(回显)
+        - mapped_action: action(决策映射后的 action,便于调试)
+        - 其它字段沿 evaluate_writer_dry_run 不变
+
+    Args:
+        payload: JSON object body。
+        write_enabled: 测试注入;None 时读 DASHBOARD_WRITE_API。
+        writer_enabled: 测试注入;None 时读 BUSINESS_WRITER_ENABLED。
+        writer_impl_injected: 测试/handler 注入;None 时保守视为未注入(501,不返回 200)。
+
+    Returns:
+        `(HTTPStatus, payload)`. 所有返回都保证 `write_executed=False`(dry-run)或
+        由 BusinessWriterImpl 实写后置 True。
+    """
+    enabled = is_dashboard_write_api_enabled() if write_enabled is None else write_enabled
+    writer_on = is_business_writer_enabled() if writer_enabled is None else writer_enabled
+    parsed, err = _parse_decide_request(payload, write_enabled=enabled)
+    if err is not None:
+        # err 已经是完整 _decide_error 响应(已含 decision/audit_id/mapped_action/endpoint)
+        return err
+    assert parsed is not None
+    # 沿用 evaluate_writer_dry_run 的 5 门(双门 + writer env + writer impl)
+    status, payload_out = evaluate_writer_dry_run(
+        {
+            "action": parsed.action,
+            "target_id": parsed.target_id,
+            "confirm_text": payload.get("confirm_text", ""),
+            "dry_run": parsed.dry_run,
+            "actor": payload.get("actor", "local_dashboard"),
+            "reason": payload.get("reason", ""),
+            "source": payload.get("source", "dashboard"),
+        },
+        write_enabled=enabled,
+        writer_enabled=writer_on,
+        writer_impl_injected=writer_impl_injected,
+    )
+    # 扩展响应:回显 decision / audit_id / mapped_action / endpoint(便于前端展示)
+    payload_out = dict(payload_out)
+    decision = _text_field(payload, "decision")
+    audit_id = _text_field(payload, "audit_id")[:_MAX_DECIDE_TARGET_ID_LEN]
+    payload_out["endpoint"] = "decide"
+    payload_out["decision"] = decision or None
+    payload_out["audit_id"] = audit_id or None
+    payload_out["mapped_action"] = parsed.action
+    return status, payload_out
+
+
 __all__ = [
     "BUSINESS_WRITER_ENABLED_ENV",
     "CONFIRM_TEXT",
     "CONTRACT_VERSION",
     "DASHBOARD_WRITE_API_ENV",
+    "DECISION_OUTBOX_APPROVE",
+    "DECISION_OUTBOX_REJECT",
+    "SUPPORTED_DECISIONS",
     "build_approval_gate_status",
     "evaluate_approval_action_request",
+    "evaluate_decide_request",
     "evaluate_writer_dry_run",
     "is_business_writer_enabled",
     "is_dashboard_write_api_enabled",
