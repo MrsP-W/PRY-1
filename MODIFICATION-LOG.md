@@ -4436,4 +4436,30 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2620 passed / 88.95% / 242 md / mypy 238 files / `v0.2.1` tag 已落地 / 主库 wechat 真实 1 行(id=90) + notes 真实 4 笔(id=32-35)**
 - 撞坑累计:**83 类**(撞坑 #83 从 docs-only 翻牌为真链路验证通过 · Day 7 A 撞坑 #82 实测通过(微信 1 行)· Day 7 B 撞坑 #83 实测通过(Notes 5 条))
-- 下一棒:**Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)**
+- 下一棒:**Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)** → **用户已决议 A/D 暂时不做 · 走 E 留 Day 8+**(见 entry #60)
+
+---
+
+## 60. 2026-07-01 · Day 7 全部收口(用户决议 A/D 不做 · 走 E)
+
+> **触发**:用户在 Day 7 B 收口 commit (`933b41d` + `ab22dcb`) 后明确决议「A D 暂时不做了」
+
+### 1. 本次决议
+
+- **A(支付宝 zip 真导 1 行)暂时不做** — 需要用户额外提供 zip 解压密码(用户没给)· 微信路径已 ✅ · 不阻塞主线
+- **D(outlook/gmail 真实凭据激活)暂时不做** — 撞坑 #59 红线反转会扩大攻击面(QQ SMTP 凭据已就位就够)· 不需要打开
+- **Day 7 走 E 留 Day 8+** — 7 天计划 Day 1-7 全部收口 · 撞坑累计 83 类 · 9/9 质量门 baseline 维持
+
+### 2. 风险点
+
+- 🟢 **撞坑 #59 红线维持** — outlook/gmail 仍不配置(用户放心当前 QQ SMTP 已够)
+- 🟢 **撞坑 #71 沿用** — 业务代码 0 改动(6 周 + 7 天)
+- 🟢 **撞坑 #82/#83 已实测** — 撞坑 #82 微信真导 1 行(parsed=1 inserted=1)· 撞坑 #83 Notes 真同步 5 条(parsed=5 inserted=4 skipped=1)
+- 🟢 **撞坑 #31 已清零** — mypy tests 14 errors(commit `3d8157e`)
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 242 md / mypy 238 files / `v0.2.1` tag 已落地 / 主库 wechat 真实 1 行 + notes 真实 4 笔**
+- 撞坑累计:**83 类**(撞坑 #82 + #83 真链路验证通过)
+- 下一棒:**Day 8+ 维护当前状态 + 9/9 质量门守住 + 等用户明确重启信号**
+- 记忆锚点:`~/.claude/projects/-Users-wei-Documents-DesktopOrganizer---AI--/memory/day7-closeout-2026-07-01.md`

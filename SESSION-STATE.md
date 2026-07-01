@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
 > **最后更新**:2026-07-01 项目检查 · `make ci` 9/9 全绿 + CLAUDE.md 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.64 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转决议 · 用户明确授权「#2 OK 打 tag」)+ v0.2.63 7/1 月度复盘正式 docs-only 收口(沿用)+ Phase A+B+C 三棒全部收口(沿用)+ **`v0.2.1-rc1` tag 维持期**(**语义上被 `v0.2.1` 取代 · 仍维持作为历史快照**)+ **`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)**。**质量门**:2620 passed / 88.95% / lint **242** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移四重防御)。**tag 列表**:`v0.1.0`(`2af775f` anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` release candidate 维持期 · 历史快照)+ `v0.2.1`(`71b4602` **✅ 已落地** · 撞坑 #60 反转决议 · 2026-07-01)。**下一棒**:Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)。**边界**:`v0.1.0` 永不动 · `v0.2.1-rc1` 历史快照沿用 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)
+> **状态**:🟢 **v0.2.64 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转决议 · 用户明确授权「#2 OK 打 tag」)+ v0.2.63 7/1 月度复盘正式 docs-only 收口(沿用)+ Phase A+B+C 三棒全部收口(沿用)+ **`v0.2.1-rc1` tag 维持期**(**语义上被 `v0.2.1` 取代 · 仍维持作为历史快照**)+ **`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)**。**质量门**:2620 passed / 88.95% / lint **242** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移四重防御)。**tag 列表**:`v0.1.0`(`2af775f` anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` release candidate 维持期 · 历史快照)+ `v0.2.1`(`71b4602` **✅ 已落地** · 撞坑 #60 反转决议 · 2026-07-01)。**7 天计划 Day 1-7 全部收口**(2026-07-01):Day 7 用户明确决议**A(支付宝 zip 真导)和 D(outlook/gmail 真实凭据)暂时不做,Day 7 走 E(留 Day 8+)**。**下一棒**:Day 8+ 维护当前状态 + 9/9 质量门守住 + 等用户明确重启信号。**边界**:`v0.1.0` 永不动 · `v0.2.1-rc1` 历史快照沿用 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)· 撞坑 #59 红线维持(outlook/gmail 仍不配置)· 撞坑 #71 业务代码 0 改动
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)** + **`v0.2.1-rc1` tag 维持期作为历史快照沿用** + **Phase A+B+C 已收口(2026-07-01)** + **7 天计划 Day 1-7 连续收口(Day 7 A 微信 ✅ + B Notes 真同步 ✅ · 支付宝 zip 待密码)** — 2620 passed / 88.95% / MD lint **242**。**下一棒**:Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选 · 90 封 QQ SMTP spike 仍跳过。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)** + **`v0.2.1-rc1` tag 维持期作为历史快照沿用** + **Phase A+B+C 已收口(2026-07-01)** + **7 天计划 Day 1-7 全部收口(2026-07-01 用户决议 A/D 不做 · 走 E)** — 2620 passed / 88.95% / MD lint **242**。**下一棒**:Day 8+ 维护当前状态 + 9/9 质量门守住 + 等用户明确重启信号 · 90 封 QQ SMTP spike 仍跳过。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
