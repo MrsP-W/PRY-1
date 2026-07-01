@@ -185,6 +185,48 @@
 
 ---
 
+### 2026-07-01 [Phase B Outlook/Gmail Keychain 沙箱化收口 · B1 18/18 + B2 49/49 + B3 5/5] — 收口
+
+**1. 本次修改内容**
+
+- **scripts(new)**: 新建 [`scripts/check_keychain_redaction.py`](scripts/check_keychain_redaction.py)(B1 脱敏检查脚本 · 6 项检查 + 18/18 pass):
+  - 邮箱脱敏:redact_email() 保留前 2 + @ + 域名
+  - token 脱敏:redact_token() 保留前 4 + 后 4
+  - 密码脱敏:redact_password() 全星号 + 长度
+  - Keychain round-trip 脱敏范式:set/get/delete 三路径不泄漏
+  - OAuth token JSON 序列化脱敏
+  - git 历史凭据关键字扫描范式(5 个敏感 pattern)
+- **docs(new)**: 新建 [`docs/v0.2.7.1-keychain-runbook-and-redaction-2026-07-01.md`](docs/v0.2.7.1-keychain-runbook-and-redaction-2026-07-01.md)(B1 Keychain runbook docs 沉淀):
+  - §1 决策反转记录(6/29 → 7/1)
+  - §2 Keychain 接口清单(14 个函数 · `core/keychain.py`)
+  - §2.2 Keychain round-trip 脱敏范式(set/get/delete)
+  - §2.3 撞坑 #59 outlook/gmail 凭据激活红线(维持)
+  - §3 脱敏检查脚本(6 项 + 18/18 pass)
+  - §4 5 重防误发维持
+  - §5 沿用边界 7 项铁律
+  - §7 关键产出
+- **spike 脚本**: `/tmp/xoauth2_smtp_inmemory_spike.py`(B3 沙箱 spike · 不入 commit)+ `/tmp/xoauth2_smtp_inmemory_spike_report.json`(详细报告 JSON)
+- **docs(state)**: SESSION-STATE.md 顶部状态同步(本次收口累计 38 → 39)。
+
+**2. 风险点**
+
+- 🟢 **沙箱不真发** · **dummy 凭据** · **不读 Keychain** · 不动业务代码。
+- 🟢 沿用边界 7 项铁律全部维持:`v0.1.0` 不动 / `v0.2.1` tag 仍不打 / `v0.2.1-rc1` 不动 / `ENABLE_PATH_4_WRITE=1` 不写 shell profile / 不动 SMTP / docs-only 不前进 pytest/coverage。
+- 🟢 Phase B 沙箱 spike 链路(B1-B3)与"真实凭据激活 + 真发邮件"严格分离(撞坑 #59 红线维持)。
+- 🟡 outlook/gmail 真实凭据激活仍需用户单独决策(撞坑 #59 红线不动)。
+- 🟡 `SMTP_REAL_NETWORK=1` + `XOAUTH2_REAL_NETWORK=1` 双重 env 门控 — 沙箱全 unset。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / MD lint **219** / `make ci` 全绿 / `make check-snapshot` OK(本次不动业务代码,沿用 9770e38 基线)。
+- Phase B 收口:**B1 18/18 脱敏 + B2 49/49 OAuth + B3 5/5 XOAUTH2 InMemory 1 封** = 沙箱 spike 链路**已就绪**。
+- 撞坑累计:#71/#76/#78/#79 沿用 · 撞坑 #59 outlook/gmail 部分实化(代码 + OAuth + XOAUTH2 + 工厂 + 沙箱 spike)· 真实激活仍需用户授权 · 连续 6 周 + 1 天 0 新增业务风险类撞坑。
+- 当前阶段:**Phase B 沙箱 spike 收口** + **Phase A Path 4 L0+L1+L2 阶梯 spike 收口(12/12 全绿)** + `v0.2.1-rc1` 维持期。
+- tag 列表:`v0.1.0`(`2af775f` · anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` · release candidate · 沿撞坑 #60 preliminary 范本)。
+- 下一棒:**Phase C `v0.2.1` 正式 tag 评估**(docs-only · 沿撞坑 #60 不主动打 tag · 9 项 readiness 实质满足但仍不打)。
+
+---
+
 ### 2026-07-01 [v0.2.55.2 Path 4 L0+L1+L2 阶梯 spike 收口 · 12/12 全绿] — 收口
 
 **1. 本次修改内容**

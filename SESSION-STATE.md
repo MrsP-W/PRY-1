@@ -1,7 +1,11 @@
-# SESSION-STATE — Phase A Path 4 L0+L1+L2 spike 收口 + `v0.2.1-rc1` 维持期(2026-07-01)
+# SESSION-STATE — Phase B Outlook/Gmail Keychain 沙箱 spike 收口 + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-01 Phase A spike 收口 + lint/mypy 计数同步 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Phase A Path 4 L0+L1+L2 阶梯 spike 收口**(2026-07-01) + **`v0.2.1-rc1` tag 维持期** · spike 报告 [`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md`](reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md) 8 节(L0 2/2 撞坑 #71 回归 + L1 10/10 规模化 + L2 4/4 严判边界 = **12/12 全绿**)+ 业务代码 0 改动 + 沿用 checklist 8/8。**质量门**:2611 passed / 88.94% / lint **219** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)。**下一棒**:Phase B Outlook/Gmail Keychain + Phase C `v0.2.1` tag 评估(用户授权"都执行"已覆盖决策反转 6/29)。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 默认仍拒写(env unset 后 /api/status 五门关闭)。
+> **最后更新**:2026-07-01 Phase B 沙箱 spike 收口 + lint/mypy 计数同步 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Phase B Outlook/Gmail Keychain 沙箱 spike 收口**(2026-07-01) + **`v0.2.1-rc1` tag 维持期** · B1 脱敏 18/18 + B2 OAuth 49/49 + B3 XOAUTH2 InMemory 1 封 5/5 + **撞坑 #59 outlook/gmail 部分实化**(代码 + OAuth + XOAUTH2 + 工厂 + 沙箱 spike)+ 真实凭据激活仍需用户单独决策 + Phase A Path 4 L0+L1+L2 12/12 全绿。**质量门**:2611 passed / 88.94% / lint **219** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)。**下一棒**:Phase C `v0.2.1` 正式 tag 评估(docs-only · 沿撞坑 #60 不主动打 tag)。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)。
+>
+> **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
+>
+> **Phase B 沿用**:`reports/v0.2.7.2-xoauth2-smtp-inmemory-spike-2026-07-01.md` 10 节(B1 18/18 脱敏 + B2 49/49 OAuth + B3 5/5 XOAUTH2 InMemory 1 封)· 沙箱不真发 + dummy 凭据 + 不读 Keychain。
 
 ---
 
