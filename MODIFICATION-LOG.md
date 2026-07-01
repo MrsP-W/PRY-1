@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **235 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **236 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | Day 6 真实 CSV 1 行 / Notes 真同步 / 一键启动包(候选) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
@@ -4284,3 +4284,29 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2611 passed / 88.97% / 235 md / Day 5 验收 6/6 通过**
 - 下一棒:**Day 6 真实 CSV / Notes 真同步 / 一键启动包**
+
+---
+
+## 55. 2026-07-01 · Day 4 月报产物补入库 + 工作区 clean(撞坑 #50 漂移防御收口)
+
+> **触发**:Day 5 收口文档落 commit `1b0fc14` 后,`git status` 显示 `reports/finance-monthly-2026-06.md` 仍 untracked(2.4KB · 37 笔 transactions · 月报生成于 14:38:09 早于 Day 4 commit `abfa69d` 14:42,Day 4 提交时未 add)
+
+### 1. 本次修改
+
+- **`reports/finance-monthly-2026-06.md`** 补入库(Day 4 财务 faker 导入产物 · 撞坑 #50 第三层范本:spike 报告 gitignored,常规月报应入库)
+- **`git status --short`** → clean(为 Day 6 启动铺路)
+- **`make check-snapshot`** 四重防御重验 → OK(无漂移 · 235 MD 不变)
+- **业务代码改动**:**0**(撞坑 #71 沿用)
+- **MD count 235**(月报入库后,撞坑 #50 漂移防御闭环 — `git ls-files '*.md'` 与质量快照对齐)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #50 漂移防御闭环**(月报入库后 9/9 质量门仍全绿)
+- 🟢 **撞坑 #71 沿用**(业务代码 0 改动 · 仅 docs-only + 1 数据产物 add)
+- 🟢 **撞坑 #59 红线维持**(本棒不读 SMTP 凭据 · 不发邮件)
+- ⚠️ **下次月起月度报告需在 commit 时同步 add**(撞坑 #50 第三层范本延伸)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / 236 md / 9/9 质量门全绿 / working tree clean**
+- 下一棒:**Day 6 真实 CSV / Notes 真同步 / 一键启动包**(用户逐项 OK)
