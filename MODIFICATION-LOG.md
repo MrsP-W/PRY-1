@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **243 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 8 候选 A:1-click 审批 UI 化(撞坑 #71 解除 · 业务代码首次改动 · 4 候选 · 推荐 A 🟢 低风险) |
+| **质量基线** | **2720 passed / 1 skipped** / **89.07%** / mypy --strict 0 / **245 files** / MD lint **243 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地(2026-07-02 · 用户明确授权「ABCD都执行」)→ commit 4-5 笔 + @检查员复核 + @教练员沉淀 + @回顾员复盘 + push |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4496,3 +4496,35 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 撞坑累计:**83 类**(撞坑 #71 即将解除 · Day 8 候选 A 实施后将写 entry #62)
 - 下一棒:**用户选 Day 8 候选(A/B/C/D)→ 实施候选 → 9/9 质量门 baseline 推进(预期 2620 → 2700+ passed · 88.95% → 89.0%+ coverage · 243 → 245 MD)**
 - 决策待办:Day 8 业务改动候选(推荐 A 1-click 审批 UI 化)· 撞坑 #18 是否反转(候选 B 需要 · 默认 NO)· 9/9 质量门 baseline 前进策略(全推进)
+
+## 62. 2026-07-02 · Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地
+
+> **触发**:用户在 Day 8 启动准备后明确指令「ABCD都执行」· 业务代码 6 周+7 天 0 改动首次解除 · 4 候选并发实施
+
+### 1. 本次修改内容
+
+- **候选 A · 1-click 审批 UI 化(🟢 低风险)** — `src/my_ai_employee/dashboard/approval_gate.py` 新增 `evaluate_decide_request` + `_parse_decide_request` + `_decide_error` + 5 个常量(`DECISION_OUTBOX_APPROVE=approve` / `DECISION_OUTBOX_REJECT=reject` / `SUPPORTED_DECISIONS` / `_MAX_DECIDE_TARGET_ID_LEN=80`)+ `CONTRACT_VERSION` `v0.2.53.22 → v0.2.57`;`dashboard/handlers.py` 新增 `/api/approval-gate/decide` POST 路由 + OPTIONS 声明 POST 允许;`docs/ui/codex-style-dashboard.html` 新增 `.btn.decide-btn` CSS + 1-click 批准/拒绝按钮 + `submitApprovalDecide` / `bindApprovalDecideClick` 函数;`tests/dashboard/test_approval_gate_decide.py` 新增 33 测试(5 门 + 决策映射 + 严判 + audit 链)
+- **候选 B · Dashboard 真实写审计(🟡 中风险)** — `src/my_ai_employee/menu_bar/approval_gate_audit.py` `AuditRecord` 新增 `decision: str | None = None` 第 9 字段 + 校验仅 approve/reject/None;`src/my_ai_employee/dashboard/business_writer_impl.py` `_record_audit` 透传 `decision` 参数
+- **候选 C · 移动伴侣 API 契约(docs-only · 🟡 中风险)** — 新建 `src/my_ai_employee/api/__init__.py` + `src/my_ai_employee/api/mobile_companion.py`(CompanionMethod `StrEnum` + `CompanionRoute` frozen dataclass + `COMPANION_API_VERSION=v0.2.57-companion` + 8 端点 6 GET/2 POST + `list_companion_routes` + `build_companion_routes_table`);`tests/api/test_mobile_companion.py` 新增 29 测试(契约稳定性 + 边界不依赖 dashboard.server / db.outbox / db.notes / core.keychain / smtp)
+- **候选 D · Notes 加密增强(🟢 低风险)** — 新建 `src/my_ai_employee/core/notes_encryption.py`(`NotesFieldCipher` 字段配置 + `NotesCipher` Protocol + `NotesCipherStub` 默认明文透传 + `NotesCipherImpl` HMAC-SHA256 链 10000 次 + 随机 IV + XOR 流密码 + 密文前缀 `enc:v1:` + `ENABLE_NOTES_ENCRYPTION` opt-in + `build_notes_cipher` 工厂);`tests/core/test_notes_encryption.py` 新增 38 测试(Stub 7 + Impl 12 + opt-in 13 + 字段 4 + 稳定性 2)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #1 隐私铁律沿用** — Notes 加密 master_key 从 Keychain 派生 · 不打印明文 Key/授权码到 chat/docs/commit · `.env` 在 `.gitignore`
+- 🟢 **撞坑 #59 红线维持** — outlook/gmail 仍不配置 · 业务改动不碰 SMTP 多账户 · 仅 QQ SMTP 例外激活
+- 🟢 **撞坑 #18 5 门严判沿用** — ENABLE_PATH_4_WRITE 维持 UNSET · `evaluate_decide_request` 复用 5 门(write_enabled + confirm_text=CONFIRM_WRITE + BUSINESS_WRITER_ENABLED + writer_impl + ENABLE_PATH_4_WRITE)
+- 🟢 **撞坑 #71 解除 · 业务代码首次 + 改动** — Day 8 4 候选 ABCD 并发实施 · `src/` 首次出现 `+` 行数(v0.2.57)
+- 🟢 **撞坑 #50 漂移防御** — 9/9 质量门 baseline 推进触发 `make check-snapshot` → 6 文件同步 → 二次校验 OK
+- 🟢 **撞坑 #64 公共 API 一致性** — `AuditRecord` 9 字段顺序与 SQL 表对齐 + `audit_id` 字符串 `"audit:{id}"` 严判 + `is_runtime_impl` 严判 + frozen/slots dataclass
+- 🟢 **撞坑 #65 opt-in 4 阶段沿用** — NotesCipher 默认 Stub + `ENABLE_NOTES_ENCRYPTION=1` opt-in 启用 Impl + master_key 缺失/过短(<16 字节)降级 Stub
+- 🟢 **撞坑 #76/#78/#79 5 重门控沿用** — actor ≤ 80 / reason ≤ 240 严判 + `--count=1` 真实模式 + 完整 outbox 契约
+- 🟢 **撞坑 #82 撞坑 #83 沿用** — 微信实测 parsed=1 inserted=1 + Notes 真同步 parsed=5 inserted=4 skipped=1 failed=0
+
+### 3. 当前项目整体总结
+
+- 进度:**2720 passed / 1 skipped / 89.07%** / mypy --strict **0 / 245 files** / MD lint **243 files** / 9/9 质量门全绿 / 撞坑累计 **83 类(撞坑 #71 解除)** / 4 候选 ABCD 全部落地
+- **撞坑 #71 解除意义**:业务代码 6 周+7 天 0 改动首次解除 · Day 8 是 `src/` 首次出现 `+` 行数(v0.2.57)
+- **新增契约版本**:`CONTRACT_VERSION v0.2.53.22 → v0.2.57` + 新增 `COMPANION_API_VERSION = v0.2.57-companion`
+- 撞坑累计:**83 类**(撞坑 #71 解除 + 撞坑 #82/#83 已闭合 · 0 新增撞坑)
+- 决策待办:Day 9+ 移动伴侣真实接入 + Notes 加密链路真实启用 + 90 封 QQ SMTP spike 仍跳过
+- 下一棒:@检查员 9/9 复核 + 红线检查 + @教练员 沉淀 1 条技巧(Day 8 命名)+ @回顾员 写复盘(Day 9+ 预判)+ commit 4-5 笔 + push
