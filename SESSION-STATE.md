@@ -1,7 +1,7 @@
-# SESSION-STATE — `v0.2.1-rc1` tag 落地 + v0.2 launch plan 整体收官(2026-07-01)
+# SESSION-STATE — Phase A Path 4 L0+L1+L2 spike 收口 + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-06-30 状态入口 lint/mypy 计数同步 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **`v0.2.1-rc1` tag 已落地** + **v0.2 launch plan 整体收官** · annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7 月全链路收官(7/1 月度复盘 + Phase 1 weekly 4/4 + 阶段 3 A3 readiness 3/3 + 阶段 4 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 commit `a01c2a2` + **v0.2 launch plan 整体收口 docs** `docs/v0.2-launch-plan-closure-2026-07-01.md` 13 节)。**质量门**:2611 passed / 88.94% / lint **219**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate)。**下一棒**:用户授权触发 2 项剩余候选(Path 4 spike / outlook-gmail Keychain)· v0.2 launch plan 整体收口 docs 已落地。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile。
+> **最后更新**:2026-07-01 Phase A spike 收口 + lint/mypy 计数同步 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Phase A Path 4 L0+L1+L2 阶梯 spike 收口**(2026-07-01) + **`v0.2.1-rc1` tag 维持期** · spike 报告 [`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md`](reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md) 8 节(L0 2/2 撞坑 #71 回归 + L1 10/10 规模化 + L2 4/4 严判边界 = **12/12 全绿**)+ 业务代码 0 改动 + 沿用 checklist 8/8。**质量门**:2611 passed / 88.94% / lint **219** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)。**下一棒**:Phase B Outlook/Gmail Keychain + Phase C `v0.2.1` tag 评估(用户授权"都执行"已覆盖决策反转 6/29)。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 默认仍拒写(env unset 后 /api/status 五门关闭)。
 
 ---
 

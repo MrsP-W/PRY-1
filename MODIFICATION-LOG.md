@@ -185,6 +185,41 @@
 
 ---
 
+### 2026-07-01 [v0.2.55.2 Path 4 L0+L1+L2 阶梯 spike 收口 · 12/12 全绿] — 收口
+
+**1. 本次修改内容**
+
+- **docs(new)**: 新建 [`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md`](reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md)(8 节 docs-only spike 收口报告 · 沿 v0.2.55.1 范本):
+  - §1 任务目标:Path 4 实写深化(L0 验 #71 回归 + L1 ×10 验规模化 + L2 异常 4 子测试)
+  - §2 5 门 + 临时 DB 配置(沿 v0.2.55 范本)
+  - §3 三层 spike 结果:**L0 2/2** + **L1 10/10** + **L2 4/4** = **12/12 全绿**
+  - §4 沿用 checklist 4-8 缺口补齐:**8/8 沿用**(步骤 6 沿用现状)
+  - §5 沿用边界 7 项铁律全部维持
+  - §6 DoD 验收(沿 9 质量门全绿)
+  - §7 关键产出
+  - §8 下一棒(用户授权触发 4 候选)
+- **spike 脚本**: `/tmp/path4_spike_L0_L1_L2.py`(临时,不入 commit)+ `/tmp/path4_spike_L0L1L2_report.json`(详细报告 JSON)
+- **docs(state)**: SESSION-STATE.md 顶部状态同步(本次收口累计 37 → 38)。
+
+**2. 风险点**
+
+- 🟢 **业务代码 0 改动** · 临时 env + 临时 DB + 临时密码(测完自动清理)。
+- 🟢 沿用边界 7 项铁律全部维持:`v0.1.0` 不动 / `v0.2.1` tag 仍不打 / `v0.2.1-rc1` 不动 / `ENABLE_PATH_4_WRITE=1` 不写 shell profile / 不动 SMTP / docs-only 不前进 pytest/coverage。
+- 🟢 默认仍拒写(env unset 后 /api/status 五门关闭)。
+- 🟡 outlook/gmail 真实 SMTP 发送仍需用户授权触发(Phase B 处理)。
+- 🟡 `v0.2.1` 正式 tag 仍不打(沿撞坑 #60 preliminary 范本 · `v0.2.1-rc1 ≠ v0.2.1`)。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / MD lint **219** / `make ci` 全绿 / `make check-snapshot` OK(本次不动业务代码,沿用 c488beb 基线)。
+- Phase A 收口:**Path 4 实写 5 门 + 撞坑 #71 完全回归 + L2 严判边界稳定** = **已就绪**。
+- 撞坑累计:**#71/#76/#78/#79 沿用** · 连续 6 周 + 1 天 0 新增业务风险类撞坑。
+- 当前阶段:**Phase A Path 4 L0+L1+L2 阶梯 spike 收口** + **`v0.2.1-rc1` tag 已落地** + v0.2 launch plan 整体收口 docs(累计 37 → 38)。
+- tag 列表:`v0.1.0`(`2af775f` · anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` · release candidate · 沿撞坑 #60 preliminary 范本)。
+- 下一棒:**Phase B Outlook/Gmail Keychain + Phase C `v0.2.1` tag 评估**(用户授权"都执行"已覆盖)。
+
+---
+
 ### 2026-07-01 [v0.2 launch plan 整体收口 docs · 7 月全链路闭环] — 收口
 
 **1. 本次修改内容**
