@@ -59,7 +59,7 @@ class AuditRecord:
     """Audit 落档记录 — 一次写操作的真实落档.
 
     字段(对齐 SQL 表 approval_gate_audits):
-        action:          approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly
+        action:          approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly / decide
         target_id:       写操作的目标 ID(str 表示)
         actor:           操作者(限 80 字符,默认 'local_dashboard')
         reason:          操作原因(限 240 字符,默认 '')
@@ -67,6 +67,9 @@ class AuditRecord:
         affected_id:     成功时填(str 表示的 int 或 str 本身);失败时 None
         error:           失败时填 error code;成功时 None
         executed_at_ms:  Unix epoch ms 时间戳
+        decision:        v0.2.57 / Day 8 候选 B 新增:决策语义("approve" / "reject" / None);
+                        4 类 action 走 /api/approval-gate/actions 端点时为 None;
+                        走 /api/approval-gate/decide 端点时必填
     """
 
     action: str
@@ -77,6 +80,7 @@ class AuditRecord:
     affected_id: str | None
     error: str | None
     executed_at_ms: int
+    decision: str | None = None
 
     def __post_init__(self) -> None:
         # 严判 type(撞坑 #65 严判 type 严格)
@@ -98,6 +102,16 @@ class AuditRecord:
             raise ValueError(
                 f"executed_at_ms 必须为 int,实际 type={type(self.executed_at_ms).__name__}"
             )
+        # decision 字段严判(沿 v0.2.57 / Day 8 候选 B)
+        if self.decision is not None:
+            if not isinstance(self.decision, str):
+                raise ValueError(
+                    f"decision 必须为 str 或 None,实际 type={type(self.decision).__name__}"
+                )
+            if self.decision and self.decision not in {"approve", "reject"}:
+                raise ValueError(
+                    f"decision 必须为 'approve' / 'reject' 或 None,实际={self.decision!r}"
+                )
         # 严判长度(沿 AuditContext 范本)
         if len(self.actor) > MAX_ACTOR_LEN:
             raise ValueError(f"actor 超长({len(self.actor)}>{MAX_ACTOR_LEN}):{self.actor[:40]}...")
@@ -110,7 +124,8 @@ class AuditRecord:
         """AuditRecord → dict(API 层 / 测试 fixture 用).
 
         Returns:
-            8 字段 dict(键名与 SQL 列名一致,便于 JSON 序列化).
+            9 字段 dict(键名与 SQL 列名一致,便于 JSON 序列化)。
+            v0.2.57 / Day 8 候选 B 新增 `decision` 字段(可选)。
         """
         return {
             "action": self.action,
@@ -121,6 +136,7 @@ class AuditRecord:
             "affected_id": self.affected_id,
             "error": self.error,
             "executed_at_ms": self.executed_at_ms,
+            "decision": self.decision,
         }
 
 

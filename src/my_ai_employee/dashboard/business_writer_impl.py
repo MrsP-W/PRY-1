@@ -595,6 +595,7 @@ class BusinessWriterImpl:
         write_executed: bool,
         affected_id: str | None,
         error: str | None,
+        decision: str | None = None,
     ) -> str | None:
         """Audit 落档辅助 — 包装 store.record + 异常收容(沿撞坑 #18 「日志」语义).
 
@@ -603,6 +604,8 @@ class BusinessWriterImpl:
             - audit_id 字符串格式 "audit:{id}" 与 anomaly_dismissals "dismissal:{id}" 对齐
             - executed_at_ms 默认 = _now_ms()(沿 v0.2.53.11 actor 默认值时间戳)
             - write_executed=True 表示「写操作已尝试」(成功或失败都算)
+            - v0.2.57 / Day 8 候选 B 新增 decision 字段(可选):走 /api/approval-gate/decide
+              端点时填充 "approve" / "reject";走 /api/approval-gate/actions 端点时 None
 
         Args:
             action: 写操作类型(approve_outbox / cancel_outbox / confirm_note / dismiss_anomaly)
@@ -611,6 +614,7 @@ class BusinessWriterImpl:
             write_executed: True = 写操作已尝试
             affected_id: 成功时填,失败时 None
             error: 失败时填 error code,成功时 None
+            decision: v0.2.57 / Day 8 候选 B 新增,"approve" / "reject" / None
 
         Returns:
             audit_id 字符串(成功)或 None(失败)
@@ -625,6 +629,7 @@ class BusinessWriterImpl:
                 affected_id=affected_id,
                 error=error,
                 executed_at_ms=self._audit_timestamp(audit),
+                decision=decision,
             )
             result: AuditRecordResult = self._audit_store.record(record)
             return result.audit_id
