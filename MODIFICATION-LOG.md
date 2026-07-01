@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **236 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **236 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | Day 6 真实 CSV 1 行 / Notes 真同步 / 一键启动包(候选) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
@@ -4310,3 +4310,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2611 passed / 88.97% / 236 md / 9/9 质量门全绿 / working tree clean**
 - 下一棒:**Day 6 真实 CSV / Notes 真同步 / 一键启动包**(用户逐项 OK)
+
+---
+
+## 56. 2026-07-01 · Day 6 前 P0/P1 修复(月报口径 + 导入门控 + coverage 统一)(累计 55 → 56)
+
+### 1. 本次修改
+
+- **P0 月报**:`scripts/monthly_report.py` 按 `raw_row_json.type`(支出/收入)聚合,非 amount 正负;重生成 `reports/finance-monthly-2026-06.md`(支出 ¥15353.32 · 收入 ¥0.00 · Top5 分类)
+- **P1 导入门控**:`scripts/import_real_gate.py` 新写 · `import_wechat/alipay` 默认拒写,须 `*_REAL_IMPORT=1 + --confirm + --max-rows 1 + --count 1`
+- **P1 模板**:`templates/finance_monthly.md` 数据源改 SQLCipher 主库路径
+- **coverage 口径**:`Makefile coverage` 去掉重复 `--cov`(沿用 pyproject addopts)
+- **+9 tests** → 2620 passed / 88.95%
+
+### 2. 风险点
+
+- 🟡 **Day 4 faker 导入命令需加 4 重门控**(历史 ops 文档命令过时)
+- 🟢 **真实 CSV/Notes 真同步仍未触发**
+- 🟢 **Path 4 五门未误开**
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 236 md / 9/9 质量门全绿**
+- 下一棒:**Day 6 启动(用户逐项 OK)**

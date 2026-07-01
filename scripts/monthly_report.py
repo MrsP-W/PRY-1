@@ -26,6 +26,7 @@ D10.2 设计决策(2026-06-15 锁定):
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections import Counter
 from datetime import date as _date
@@ -108,6 +109,27 @@ def _prev_month(year: int, month: int) -> tuple[int, int]:
     return (year, month - 1)
 
 
+_INCOME_TYPES = frozenset({"收", "收入", "转入"})
+_EXPENSE_TYPES = frozenset({"付", "支", "支出", "转出"})
+
+
+def _direction_from_row(row: Transaction) -> str:
+    """从 raw_row_json.type 判定 income / expense / unknown.
+
+    沿 transaction_adapter: amount 存绝对值,方向在 raw_row_json.type(收/付/支)。
+    """
+    try:
+        payload = json.loads(row.raw_row_json or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    tx_type = str(payload.get("type", "")).strip()
+    if tx_type in _INCOME_TYPES:
+        return "income"
+    if tx_type in _EXPENSE_TYPES:
+        return "expense"
+    return "unknown"
+
+
 def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]:
     """聚合当月 + 上月统计,返回填充模板所需的全部字段."""
     first, last = _month_bounds(year, month)
@@ -121,17 +143,23 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
     )
     rows = list(session.execute(stmt).scalars())
 
-    # 收入 = 金额 > 0;支出 = 金额 < 0(沿 S6.1 范本)
-    total_income = sum((r.amount for r in rows if r.amount > 0), Decimal("0"))
-    total_expense = sum((-r.amount for r in rows if r.amount < 0), Decimal("0"))
+    # 收入/支出按 raw_row_json.type(收/付/支),非 amount 正负(沿 transaction_adapter 绝对值存储)
+    total_income = sum(
+        (abs(r.amount) for r in rows if _direction_from_row(r) == "income"),
+        Decimal("0"),
+    )
+    total_expense = sum(
+        (abs(r.amount) for r in rows if _direction_from_row(r) == "expense"),
+        Decimal("0"),
+    )
     net_balance = total_income - total_expense
 
     # 分类聚合(支出)
     expense_by_category: Counter[str] = Counter()
     for r in rows:
-        if r.amount < 0:
+        if _direction_from_row(r) == "expense":
             cat = r.category or "未分类"
-            expense_by_category[cat] += -r.amount
+            expense_by_category[cat] += abs(r.amount)
     top5 = expense_by_category.most_common(5)
     if top5:
         lines = ["| 分类 | 金额 | 占比 |", "|------|------|------|"]
@@ -222,8 +250,14 @@ def _compute_stats(session: Session, year: int, month: int) -> dict[str, object]
         Transaction.transaction_date <= prev_last,
     )
     prev_rows = list(session.execute(prev_stmt).scalars())
-    prev_income = sum((r.amount for r in prev_rows if r.amount > 0), Decimal("0"))
-    prev_expense = sum((-r.amount for r in prev_rows if r.amount < 0), Decimal("0"))
+    prev_income = sum(
+        (abs(r.amount) for r in prev_rows if _direction_from_row(r) == "income"),
+        Decimal("0"),
+    )
+    prev_expense = sum(
+        (abs(r.amount) for r in prev_rows if _direction_from_row(r) == "expense"),
+        Decimal("0"),
+    )
 
     def _delta(curr: Decimal, prev: Decimal) -> str:
         if prev == 0:

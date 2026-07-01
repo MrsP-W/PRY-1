@@ -249,3 +249,84 @@ def test_d2_month_bounds_december_year_boundary():
     first, last = monthly_report._month_bounds(2026, 12)
     assert first == date(2026, 12, 1)
     assert last == date(2026, 12, 31)
+
+
+# ===== E. _direction_from_row / 收支聚合 =====
+
+
+def test_e1_direction_from_row_wechat_types():
+    """E1. raw_row_json.type 收/付 → income/expense(非 amount 正负)."""
+    from decimal import Decimal
+
+    from scripts import monthly_report
+
+    class _Row:
+        def __init__(self, amount: str, tx_type: str) -> None:
+            self.amount = Decimal(amount)
+            self.raw_row_json = f'{{"type": "{tx_type}"}}'
+
+    assert monthly_report._direction_from_row(_Row("42.00", "付")) == "expense"
+    assert monthly_report._direction_from_row(_Row("3500.00", "收")) == "income"
+    assert monthly_report._direction_from_row(_Row("88.00", "支")) == "expense"
+    assert monthly_report._direction_from_row(_Row("42.00", "支出")) == "expense"
+    assert monthly_report._direction_from_row(_Row("3500.00", "收入")) == "income"
+
+
+def test_e2_compute_stats_uses_type_not_amount_sign(tmp_path, monkeypatch):
+    """E2. 两笔绝对值均为正,按 type 分出收入/支出."""
+    import json
+    from decimal import Decimal
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from my_ai_employee.core.models import Base
+    from my_ai_employee.db.transactions import Transaction
+    from scripts import monthly_report
+
+    db_path = tmp_path / "monthly.db"
+    _make_pretend_alembic_db(db_path)
+    import my_ai_employee.db.transactions  # noqa: F401
+
+    engine = create_engine(f"sqlite:///{db_path}", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    factory = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+
+    with factory() as session:
+        session.add(
+            Transaction(
+                source="wechat",
+                external_transaction_id="income-1",
+                transaction_date=date(2026, 6, 10),
+                amount=Decimal("3500.00"),
+                counterparty="兼职",
+                category="other_income",
+                payment_method="微信",
+                normalized_fingerprint="fp-income",
+                raw_row_json=json.dumps({"type": "收"}),
+                status="categorized",
+                imported_at_ms=1,
+            )
+        )
+        session.add(
+            Transaction(
+                source="wechat",
+                external_transaction_id="expense-1",
+                transaction_date=date(2026, 6, 11),
+                amount=Decimal("42.00"),
+                counterparty="麦当劳",
+                category="food",
+                payment_method="微信",
+                normalized_fingerprint="fp-expense",
+                raw_row_json=json.dumps({"type": "付"}),
+                status="categorized",
+                imported_at_ms=2,
+            )
+        )
+        session.commit()
+        stats = monthly_report._compute_stats(session, 2026, 6)
+
+    assert stats["total_income"] == "3500.00"
+    assert stats["total_expense"] == "42.00"
+    assert stats["net_balance"] == "3458.00"
+    assert "food" in str(stats["category_breakdown"])

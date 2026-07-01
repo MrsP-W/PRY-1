@@ -20,7 +20,6 @@ D6.6 P1 修复(检查员驳回 4 缺陷 — 1 P1 + 3 P2):
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
@@ -39,6 +38,7 @@ from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.models import Base  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
 from my_ai_employee.core.transaction_adapter import TransactionAdapter  # noqa: E402
+from scripts.import_real_gate import validate_real_import_gate  # noqa: E402
 
 # D6.6 锁定:微信账单所需最低 alembic revision(0007_transactions)
 _MIN_ALEMBIC_REVISION: str = "0007_transactions"
@@ -73,22 +73,15 @@ def _build_parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
 
-    # v0.2.1 #2 真账单 spike 4 重防误发参数校验(沿 D6.6 范本)
-    # 当 WECHAT_REAL_IMPORT=1 时,必须传 --confirm 确认文本 + --max-rows + --count
-    if os.environ.get("WECHAT_REAL_IMPORT") == "1":
-        required_confirm = "yes-i-understand-this-imports-real-bill"
-        if args.confirm != required_confirm:
-            print(
-                f"❌ WECHAT_REAL_IMPORT=1 时 --confirm 必须为 {required_confirm!r}",
-                file=sys.stderr,
-            )
-            return 1
-        if args.count != 1:
-            print(
-                f"❌ WECHAT_REAL_IMPORT=1 时 --count 必须为 1(防误触发),实际 {args.count}",
-                file=sys.stderr,
-            )
-            return 1
+    gate_err = validate_real_import_gate(
+        env_name="WECHAT_REAL_IMPORT",
+        confirm=args.confirm,
+        count=args.count,
+        max_rows=args.max_rows,
+    )
+    if gate_err:
+        print(gate_err, file=sys.stderr)
+        return 1
 
     if not args.csv_path.exists():
         print(f"CSV 文件不存在: {args.csv_path}", file=sys.stderr)

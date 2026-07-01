@@ -75,7 +75,14 @@ class _FakeDatabase:
         pass
 
 
-def _run_alipay_cli(csv_path: Path, db_path: Path, *, max_rows: int | None = None) -> int:
+def _run_alipay_cli(
+    csv_path: Path,
+    db_path: Path,
+    *,
+    max_rows: int | None = None,
+    confirm: str = "",
+    count: int = 1,
+) -> int:
     """跑 import_alipay.main,mock Database + make_sqlalchemy_engine。
 
     Args:
@@ -93,6 +100,9 @@ def _run_alipay_cli(csv_path: Path, db_path: Path, *, max_rows: int | None = Non
     args = ["--csv-path", str(csv_path), "--db-path", str(db_path)]
     if max_rows is not None:
         args += ["--max-rows", str(max_rows)]
+    if confirm:
+        args += ["--confirm", confirm]
+    args += ["--count", str(count)]
 
     with (
         patch.object(import_alipay, "Database") as mock_db_class,
@@ -159,22 +169,26 @@ def test_alipay_cli_exits_1_on_alembic_too_old(tmp_path: Path) -> None:
 
 
 def test_alipay_cli_exits_0_on_valid_csv(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """D7.5 P1 验证:正常 2024 样本 → exit 0."""
+    """4 重防误发:ALIPAY_REAL_IMPORT=1 + confirm + max-rows 1 → exit 0."""
+    from scripts.import_real_gate import REQUIRED_CONFIRM
+
+    monkeypatch.setenv("ALIPAY_REAL_IMPORT", "1")
     db = tmp_path / "valid.db"
     _make_pretend_alembic_db(db)
     valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
-    rc = _run_alipay_cli(valid_csv, db)
-    captured = capsys.readouterr()
-    assert rc == 0, (
-        f"D7.5 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
+    rc = _run_alipay_cli(
+        valid_csv,
+        db,
+        max_rows=1,
+        confirm=REQUIRED_CONFIRM,
+        count=1,
     )
-    from my_ai_employee.connectors.alipay_csv import AlipayCSVConnector
-
-    expected = len(AlipayCSVConnector().safe_parse(valid_csv))
-    assert f"parsed={expected}" in captured.out
-    assert f"inserted={expected}" in captured.out
+    captured = capsys.readouterr()
+    assert rc == 0, f"4 重门控全开应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
+    assert "parsed=1" in captured.out
+    assert "inserted=1" in captured.out
     assert "version=2024" in captured.out
 
 
@@ -182,24 +196,56 @@ def test_alipay_cli_exits_0_on_valid_csv(
 
 
 def test_alipay_cli_max_rows_1_limits_to_1_row(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """v0.2.1 #2 真账单 spike 4 重防误发:--max-rows 1 严格只导入 1 行。
+    """v0.2.1 #2:--max-rows 1 + 4 重门控 → parsed=1 inserted=1。"""
+    from scripts.import_real_gate import REQUIRED_CONFIRM
 
-    修复历史(检查员 6/22 检查报告 P0):
-        CLI 接收 --max-rows 但没有透传 adapter,真账单 spike 时仍全量导入。
-        本测试断言:--max-rows 1 → parsed=1 inserted=1。
-    """
+    monkeypatch.setenv("ALIPAY_REAL_IMPORT", "1")
     db = tmp_path / "maxrows.db"
     _make_pretend_alembic_db(db)
     valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
-    rc = _run_alipay_cli(valid_csv, db, max_rows=1)
+    rc = _run_alipay_cli(
+        valid_csv,
+        db,
+        max_rows=1,
+        confirm=REQUIRED_CONFIRM,
+        count=1,
+    )
     captured = capsys.readouterr()
     assert rc == 0, (
         f"--max-rows 1 应 exit 0(限制成功),实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
     )
     assert "parsed=1" in captured.out, f"--max-rows 1 应 parsed=1,实际输出:{captured.out}"
     assert "inserted=1" in captured.out, f"--max-rows 1 应 inserted=1,实际输出:{captured.out}"
+
+
+def test_alipay_cli_exits_1_without_real_import_env(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """默认未设 ALIPAY_REAL_IMPORT → exit 1,不写库。"""
+    monkeypatch.delenv("ALIPAY_REAL_IMPORT", raising=False)
+    db = tmp_path / "deny.db"
+    _make_pretend_alembic_db(db)
+    valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
+    rc = _run_alipay_cli(valid_csv, db, max_rows=1)
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "ALIPAY_REAL_IMPORT=1" in captured.err
+
+
+def test_alipay_cli_exits_1_with_env_missing_confirm(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """ALIPAY_REAL_IMPORT=1 但缺 --confirm → exit 1。"""
+    monkeypatch.setenv("ALIPAY_REAL_IMPORT", "1")
+    db = tmp_path / "nocfm.db"
+    _make_pretend_alembic_db(db)
+    valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
+    rc = _run_alipay_cli(valid_csv, db, max_rows=1, confirm="")
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "--confirm" in captured.err
 
 
 # ===== C6. import_all 默认 dry-run + 4 重防误发 =====

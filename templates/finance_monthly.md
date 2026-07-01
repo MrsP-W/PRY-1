@@ -1,7 +1,7 @@
 # 📊 数字生活月报 — {month}
 
 > **生成时间**:{generated_at}
-> **数据来源**:本地 SQLite (`data/v0.1.db` 表 `transactions`)
+> **数据来源**:本地 SQLCipher 主库 (`~/Library/Application Support/my-ai-employee/data.db` 表 `transactions`)
 > **审计员**:@审计员(D10 启动 — 每月 1 号 09:00 自动触发)
 
 ---
@@ -39,5 +39,5 @@
 
 - 报告由 `@审计员` 自动生成(D10 启动)
 - 通知频率:每月 ≤ 1 次(沿 week2-mvp.md L222 决策)
-- 数据本地化:本机 `data/` 目录,**绝不上传**
+- 数据本地化:本机 SQLCipher 主库,**绝不上传**
 - 下一棒:如需调整通知时间或分类规则,召唤 `@管家`

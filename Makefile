@@ -249,9 +249,9 @@ format-fix: ## ruff format 自动修复
 	@$(PYTHON) -m ruff format src tests
 
 .PHONY: coverage
-coverage: ## 9 质量门 — pytest + 覆盖率 fail_under=80%(沿 v0.1 范本)
+coverage: ## 9 质量门 — pytest + 覆盖率 fail_under=80%(沿 v0.1 范本;--cov 见 pyproject addopts)
 	@echo "$(BLUE)📊 pytest + 覆盖率检查(fail_under=80)$(RESET)"
-	@$(PYTHON) -m pytest --cov=my_ai_employee --cov-report=term-missing --cov-fail-under=80
+	@$(PYTHON) -m pytest --cov-fail-under=80
 
 .PHONY: alembic
 alembic: ## 9 质量门 — alembic upgrade head --sql 验证迁移可干净执行

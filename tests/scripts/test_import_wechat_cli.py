@@ -96,6 +96,8 @@ def _run_cli_with_mock_db(
     db_path: Path,
     *,
     max_rows: int | None = None,
+    confirm: str = "",
+    count: int = 1,
 ) -> int:
     """跑 import_wechat.main,Database.open + make_sqlalchemy_engine 都用 mock(走 plain sqlite)。
 
@@ -117,6 +119,9 @@ def _run_cli_with_mock_db(
     args = ["--csv-path", str(csv_path), "--db-path", str(db_path)]
     if max_rows is not None:
         args += ["--max-rows", str(max_rows)]
+    if confirm:
+        args += ["--confirm", confirm]
+    args += ["--count", str(count)]
 
     with (
         patch.object(import_wechat, "Database") as mock_db_class,
@@ -196,45 +201,87 @@ def test_cli_exits_1_on_alembic_revision_too_old(tmp_path: Path) -> None:
     assert rc == 1, f"D6.6 P2:alembic revision 过旧应 exit 1,实际 {rc}"
 
 
-# ===== C6. 正常 2024 样本(成功路径)=====
+# ===== C6. 正常 2024 样本(成功路径 · 4 重门控全开)=====
 
 
-def test_cli_exits_0_on_valid_csv(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """D6.6 P1 验证:正常 2024 样本 → exit 0(确保修复不破坏正向路径)。"""
+def test_cli_exits_0_on_valid_csv(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """4 重防误发:WECHAT_REAL_IMPORT=1 + confirm + max-rows 1 → exit 0."""
+    from scripts.import_real_gate import REQUIRED_CONFIRM
+
+    monkeypatch.setenv("WECHAT_REAL_IMPORT", "1")
     db = tmp_path / "valid.db"
     _make_pretend_alembic_db(db)
     valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
-    rc = _run_cli_with_mock_db(valid_csv, db)
-    captured = capsys.readouterr()
-    assert rc == 0, (
-        f"D6.6 P1:正常 2024 CSV 应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
+    rc = _run_cli_with_mock_db(
+        valid_csv,
+        db,
+        max_rows=1,
+        confirm=REQUIRED_CONFIRM,
+        count=1,
     )
-    # 输出含 parsed/inserted 当前 fixture 行数
-    from my_ai_employee.connectors.wechat_csv import WeChatCSVConnector
-
-    expected = len(WeChatCSVConnector().safe_parse(valid_csv))
-    assert f"parsed={expected}" in captured.out, f"输出缺 parsed={expected}:{captured.out}"
-    assert f"inserted={expected}" in captured.out, f"输出缺 inserted={expected}:{captured.out}"
-    assert "version=2024" in captured.out, f"输出缺 version=2024:{captured.out}"
+    captured = capsys.readouterr()
+    assert rc == 0, f"4 重门控全开应 exit 0,实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
+    assert "parsed=1" in captured.out
+    assert "inserted=1" in captured.out
+    assert "version=2024" in captured.out
 
 
-# ===== C7. --max-rows 1 真账单 spike 4 重防误发(2026-06-23 检查员 P0 修复)=====
+# ===== C7. --max-rows 1 真账单 spike 4 重防误发 =====
 
 
-def test_cli_max_rows_1_limits_to_1_row(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
-    """v0.2.1 #2 真账单 spike 4 重防误发:--max-rows 1 严格只导入 1 行。
+def test_cli_max_rows_1_limits_to_1_row(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """v0.2.1 #2:--max-rows 1 + 4 重门控 → parsed=1 inserted=1。"""
+    from scripts.import_real_gate import REQUIRED_CONFIRM
 
-    修复历史(检查员 6/22 检查报告 P0):
-        CLI 接收 --max-rows 但没有透传 adapter,真账单 spike 时仍全量导入。
-        本测试断言:--max-rows 1 → parsed=1 inserted=1(fixture 实际行数 >= 1)。
-    """
+    monkeypatch.setenv("WECHAT_REAL_IMPORT", "1")
     db = tmp_path / "maxrows.db"
     _make_pretend_alembic_db(db)
     valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
-    rc = _run_cli_with_mock_db(valid_csv, db, max_rows=1)
+    rc = _run_cli_with_mock_db(
+        valid_csv,
+        db,
+        max_rows=1,
+        confirm=REQUIRED_CONFIRM,
+        count=1,
+    )
     captured = capsys.readouterr()
     assert rc == 0, (
         f"--max-rows 1 应 exit 0(限制成功),实际 {rc}\nstdout={captured.out}\nstderr={captured.err}"
     )
     assert "parsed=1" in captured.out, f"--max-rows 1 应 parsed=1,实际输出:{captured.out}"
     assert "inserted=1" in captured.out, f"--max-rows 1 应 inserted=1,实际输出:{captured.out}"
+
+
+# ===== C8/C9. 默认拒绝写库 =====
+
+
+def test_cli_exits_1_without_real_import_env(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """默认未设 WECHAT_REAL_IMPORT → exit 1,不写库。"""
+    monkeypatch.delenv("WECHAT_REAL_IMPORT", raising=False)
+    db = tmp_path / "deny.db"
+    _make_pretend_alembic_db(db)
+    valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
+    rc = _run_cli_with_mock_db(valid_csv, db, max_rows=1)
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "WECHAT_REAL_IMPORT=1" in captured.err
+
+
+def test_cli_exits_1_with_env_missing_confirm(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """WECHAT_REAL_IMPORT=1 但缺 --confirm → exit 1。"""
+    monkeypatch.setenv("WECHAT_REAL_IMPORT", "1")
+    db = tmp_path / "nocfm.db"
+    _make_pretend_alembic_db(db)
+    valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
+    rc = _run_cli_with_mock_db(valid_csv, db, max_rows=1, confirm="")
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "--confirm" in captured.err
