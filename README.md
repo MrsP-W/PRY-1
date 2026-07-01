@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **`v0.2.1-rc1` tag 落地 + 7 月全链路收官(2026-08-01)** — `v0.2.1-rc1` annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 全收官 · 阶段 3 A3 readiness 3/3 全收官 · 阶段 4 8/1 tag 评估 docs-only 收官 + 跨项目沉淀 commit `a01c2a2` + `v0.2.1-rc1` tag 落地 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(release candidate)**。2610 passed / 88.94% / MD lint 218 · 撞坑 #71/#76/#78/#79 沿用(连续 6 周 0 新增)· 9/9 项 readiness 实质满足(QQ-only 口径)· **不启用 `ENABLE_PATH_4_WRITE=1` · 不配置 Outlook/Gmail SMTP**。复盘详情:`reports/2026-07-01-monthly-review-decision.md` · 周检笔记 v0.2.57(.2/.3/.4)+ A3 readiness v0.2.58(.2/.3)+ 8/1 评估 `v0.2.59` + 决策/收口 `v0.2.60`/`v0.2.61`。
+> **状态**:🟢 **`v0.2.1-rc1` tag 落地 + 7 月全链路收官(2026-08-01)** — `v0.2.1-rc1` annotated tag 绑 `b0e7f94`(8/1 baseline sync)· 沿撞坑 #60 preliminary 范本 + 8/1 用户授权 · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 全收官 · 阶段 3 A3 readiness 3/3 全收官 · 阶段 4 8/1 tag 评估 docs-only 收官 + 跨项目沉淀 commit `a01c2a2` + `v0.2.1-rc1` tag 落地 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(release candidate)**。2611 passed / 88.94% / MD lint 219 · 撞坑 #71/#76/#78/#79 沿用(连续 6 周 0 新增)· 9/9 项 readiness 实质满足(QQ-only 口径)· **不启用 `ENABLE_PATH_4_WRITE=1` · 不配置 Outlook/Gmail SMTP**。复盘详情:`reports/2026-07-01-monthly-review-decision.md` · 周检笔记 v0.2.57(.2/.3/.4)+ A3 readiness v0.2.58(.2/.3)+ 8/1 评估 `v0.2.59` + 决策/收口 `v0.2.60`/`v0.2.61`。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2610 passed / 1 skipped / 88.94% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2611 passed / 1 skipped / 88.94% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2610 passed / 1 skipped / 88.94% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2611 passed / 1 skipped / 88.94% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint

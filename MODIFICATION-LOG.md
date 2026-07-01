@@ -113,9 +113,9 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2610 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **237 files** / MD lint **218 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | 用户授权触发(3 项候选:Path 4 spike / outlook-gmail Keychain / v0.2 launch plan 整体收口)· 9/1+ v0.2 launch plan 整体收口候选 · tag 暂无需再动 |
-| **后续锚点** | 9/1+ v0.2 launch plan 整体收口(用户授权后) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **238 files** / MD lint **219 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 用户授权触发(2 项剩余候选:Path 4 spike / outlook-gmail Keychain)· tag 暂无需再动 |
+| **后续锚点** | v0.2 launch plan 整体收口 docs 已落地(2026-07-01) |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -143,6 +143,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [状态入口 lint/mypy 漂移修复 + check-state-entries] — 收口
+
+**1. 本次修改内容**
+
+- **docs(state)**: README / SESSION-STATE / MODIFICATION-LOG 当前态 / `docs/v0.2-launch-plan.md` 基线行 — MD lint **218→219** · mypy **237→238 files**。
+- **chore(snapshot)**: `quality_snapshot.py` — 新增 `mypy_files: 238 files` 字段。
+- **chore(check)**: 新建 `scripts/check_state_entries.py` · `make check-snapshot` 串联入口块校验(不扫历史流水账)。
+
+**2. 风险点**
+
+- 🟢 docs-only + 防漂移增强 · 0 业务逻辑 · tag 不动。
+- ⚠️ 入口行号变更时需同步 `check_state_entries.py` 的 `EntryLineCheck.line_no`。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **238 files** / MD lint **219** / `make check-snapshot` 三重校验(snapshot + pytest collect + state entries)。
+- 下一棒:用户授权(Path 4 spike / outlook-gmail Keychain)。
+
+---
 
 ### 2026-06-30 [项目检查 + 基线漂移修复 + check-snapshot 增强] — 收口
 

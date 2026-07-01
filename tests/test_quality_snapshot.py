@@ -64,3 +64,16 @@ def test_check_quality_snapshot_script_exits_zero() -> None:
         check=False,
     )
     assert result.returncode == 0, result.stderr or result.stdout
+    assert "state entry docs match quality_snapshot" in result.stdout
+
+
+def test_check_state_entries_script_exits_zero() -> None:
+    """scripts/check_state_entries.py CLI 与入口文档一致."""
+    result = subprocess.run(
+        ["uv", "run", "python", "scripts/check_state_entries.py"],
+        cwd=PROJECT_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr or result.stdout

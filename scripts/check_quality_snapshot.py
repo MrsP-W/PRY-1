@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(ROOT))
 
 from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES  # noqa: E402
 
@@ -57,7 +58,7 @@ def count_collected_tests(root: Path = ROOT) -> int:
 
 
 def parse_lint_file_count(lint: str) -> int:
-    """从 '218 files 0 errors' 解析文件数."""
+    """从 '219 files 0 errors' 解析文件数."""
     match = _LINT_RE.match(lint.strip())
     if not match:
         msg = f"无法解析 quality_snapshot.lint 格式: {lint!r}"
@@ -66,7 +67,7 @@ def parse_lint_file_count(lint: str) -> int:
 
 
 def parse_pytest_counts(pytest: str) -> tuple[int, int]:
-    """从 '2610 passed / 1 skipped' 解析 passed 与 skipped."""
+    """从 '2611 passed / 1 skipped' 解析 passed 与 skipped."""
     match = _PYTEST_RE.match(pytest.strip())
     if not match:
         msg = f"无法解析 quality_snapshot.pytest 格式: {pytest!r}"
@@ -118,6 +119,19 @@ def main() -> int:
         "OK: quality_snapshot matches live baseline "
         f"({passed} passed / {skipped} skipped · {tracked} md files)"
     )
+
+    from scripts.check_state_entries import check_state_entries  # noqa: PLC0415
+
+    entry_errors = check_state_entries()
+    if entry_errors:
+        for err in entry_errors:
+            print(f"ERROR: {err}", file=sys.stderr)
+        print(
+            "Fix: sync current-entry docs with quality_snapshot.py.",
+            file=sys.stderr,
+        )
+        return 1
+    print("OK: state entry docs match quality_snapshot")
     return 0
 
 
