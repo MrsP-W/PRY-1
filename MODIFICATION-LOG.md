@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **240 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 6 真实 CSV 1 行 / Notes 真同步 / 一键启动包(候选) |
+| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **242 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)|
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4408,3 +4408,32 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2620 passed / 88.95% / 240 md · 主库 wechat 真实 1 行(id=90)**
 - 下一棒:**用户提供支付宝 zip 解压密码 → 真导 1 行 · 或 Day 7 B Notes TCC 授权**
+
+---
+
+## 59. 2026-07-01 · Day 7 B Apple Notes 真同步 5 条(撞坑 #83 真链路验证通过)
+
+> **触发**:用户授权「OK 真同步 5 条」+ TCC 已就绪(撞坑 #81 沿用)· 撞坑 #83 从 docs-only 翻牌为真链路验证通过
+
+### 1. 本次修改
+
+- **NOTES_REAL_NETWORK=1 真链路**:`NOTES_REAL_NETWORK=1 uv run python scripts/sync_notes.py sync --max-rows 5` · 输出 `parsed=5 inserted=4 skipped=1 failed=0`
+- **主库验证**:id=32-35 共 4 笔 `sync_status=NEW`(PAPM 网址账号 / 财务系统 NC 用友 / SAP P 系统账号 / Deepseek Key — 撞坑 #1 铁律不打印 body 内容)
+- **撞坑 #83 翻牌**:从 docs-only 登记 → 真链路验证通过(Apple Notes 真同步 + TCC + Keychain SQLCipher 全链路)
+- **收口文档**:`ops/day7-b-notes-real-closure.md`(7 节模板 · §1 用户决策 · §2 命令范本 · §3 实测输出 · §4 主库验证 · §5 撞坑累计 · §6 9/9 质量门 baseline 维持 · §7 与 Day 6 B docs-only 启动准备对应)
+- **MD count 240 → 242**(撞坑 #50 漂移防御自动触发 · 6 文件同步:CLAUDE.md L7/L16 + README.md L7 + SESSION-STATE.md L33 + MODIFICATION-LOG.md L116 + docs/v0.2-launch-plan.md L264 + `src/my_ai_employee/quality_snapshot.py` L21)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #1 铁律严格维持** — body 完整内容(SAP P 账号 / Deepseek Key / PAPM 密码)**不写入 chat / commit / docs**,仅显示类型摘要让用户确认链路通
+- 🟢 **撞坑 #59 红线维持** — 本次是 Notes 真同步,**不是 SMTP 发送**,不算撞坑 #59 反转;outlook/gmail 仍不配置
+- 🟢 **撞坑 #81 沿用** — ⌥⌘N TCC 已修复(Day 2 3/3 通过),Apple ID + iCloud Notes 同步开,真链路可读
+- 🟢 **撞坑 #71 沿用** — `src/` 业务代码 0 改动,本棒是 docs-only + 跑命令
+- 🟢 **撞坑 #64 沿用** — `normalized_fingerprint SHA-256` 去重生效(`skipped=1`,1 笔已存在跳过)
+- 🟢 **撞坑 #50 漂移防御闭环** — `make check-snapshot` 检测到 MD 漂移 → 同步 6 文件 → 二次校验 OK
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 242 md / mypy 238 files / `v0.2.1` tag 已落地 / 主库 wechat 真实 1 行(id=90) + notes 真实 4 笔(id=32-35)**
+- 撞坑累计:**83 类**(撞坑 #83 从 docs-only 翻牌为真链路验证通过 · Day 7 A 撞坑 #82 实测通过(微信 1 行)· Day 7 B 撞坑 #83 实测通过(Notes 5 条))
+- 下一棒:**Day 7 A 支付宝 zip 解压密码(用户提供后真导 1 行)· Day 7 C/D/E 候选(mypy 14 errors 已清零 / outlook-gmail 反转待用户明确 / 留 Day 8+)**

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-01(**Day 6 ABCD 全部收口** — A 真实 CSV docs-only 启动准备 + B Notes 真同步 docs-only 启动准备 + C 一键启动包 ops/start-digital-employee.sh + D 状态收口 · 撞坑累计 81 → **83**(#82 账单门控 + #83 Notes 真同步)· 9 质量门基线 **2620 passed / 88.95%** / **240 MD** / mypy 238 files · 等 Day 7 启动授权)
+> 最后更新:2026-07-01(**Day 7 A 真导 1 行(微信 ✅ · 支付宝 zip 待密码)+ B Notes 真同步 5 条 ✅** — A 撞坑 #82 微信实测 parsed=1 inserted=1 + B 撞坑 #83 NOTES_REAL_NETWORK + TCC 真同步 parsed=5 inserted=4 skipped=1 failed=0 · 主库 4 笔 NEW · 撞坑累计 83 类 · 9 质量门基线 **2620 passed / 88.95%** / **242 MD** / mypy 238 files · Day 7 A 支付宝 zip 密码待补 / Day 7 候选 C/D/E 待启动)
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 6 ABCD 全部收口**(2026-07-01 · A/B docs-only 启动准备 + C 一键启动包脚本 + D 状态收口 · 撞坑累计 83 类 · 9/9 质量门 **2620 passed / 88.95%** / **240 MD** · 等 Day 7 启动授权)。
+**当前阶段**：**Day 7 A 真导 1 行(微信 ✅ · 支付宝 zip 待密码)+ B Notes 真同步 5 条 ✅**(2026-07-01 · 撞坑累计 83 类 · 9/9 质量门 **2620 passed / 88.95%** / **242 MD** · Day 7 A 支付宝 zip 密码待补 / Day 7 候选 C/D/E 待启动)。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 
