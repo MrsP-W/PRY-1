@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **230 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **231 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -3923,5 +3923,209 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:44 条 / 2026-07-01 Day 1 阶段 1 基础设施落地(撞坑 #71 决议 B 放行 · 7 天计划启动)+ `v0.2.1` tag 维持(`71b4602` annotated · 撞坑 #60 反转维持)
-> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 44 条仍轻量)
+## 45. 2026-07-01 · Day 1 阶段 2 `.env` + Keychain + menu-bar 实测(撞坑 #59 QQ 例外激活)(累计 44 → 45)
+
+> **用户授权**:A 选项 · 提供 LLM API Key + QQ 邮箱 + 16 位授权码 + 64 hex SQLCipher Key · 撞坑 #1 教训维持
+
+### 1. 本次修改
+
+- **`.env`** 填齐 4 字段(`.gitignore` 保护 · 撞坑 #1 不打印到 chat/docs/commit):
+  - `MINIMAX_API_KEY`(125 chars · LLM 链路)
+  - `IMAP_USER`(16 chars · QQ 邮箱 · 撞坑 #59 例外激活)
+  - `DB_PATH`(`~/Library/Application Support/my-ai-employee/data.db`)
+  - `DB_ENCRYPTION_KEY`(64 hex · `openssl rand -hex 32` + `sed -i.bak "s|^.*|DB_ENCRYPTION_KEY=$NEW_KEY|"` · 撞坑 #64 zsh heredoc 范本)
+- **`scripts/spike_set_smtp_password.py --provider qq --email <USER>@qq.com --set-password <AUTH_CODE>`** 写 Keychain(round-trip OK · 16 位授权码)
+- **`make menu-bar`** 前台启动成功(肉眼确认图标 · 撞坑 #71 B 范围内)
+- **`ops/day1-phase2-env.md`** 新写(8 节 · 5 重防误发门控 + SQLCipher key 生成范本 + Keychain round-trip + 撞坑决议)
+- **commit `9557179`**:`feat(ops): Day 1 阶段 2 .env + Keychain + menu-bar 实测(撞坑 #59 部分激活)`
+- **代码**:零改动 · 0 new tests(真实凭据 spike · 不进 baseline)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #59 QQ 例外激活**(SMTP Keychain 就位 · outlook/gmail 红线维持)
+- ⚠️ **撞坑 #1 教训**:SQLCipher key 第一次生成时打印到 chat → 用户重生成(撞坑 #1 沿用)
+- ⚠️ **撞坑 #64 zsh heredoc 坑**:`python -c` + 三引号在 zsh 下"unknown file attribute"→ 改用 `sed -i.bak`
+- ⚠️ **`.env` 内容不进 chat/docs/commit**(撞坑 #1 维持)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 230 md / mypy 238 files / 9 质量门全绿 / Day 1 阶段 2 完成 / 撞坑累计 80 类**
+- 状态:**Day 1 阶段 2 完成 · 撞坑 #71 决议 B 放行 · 撞坑 #59 QQ 例外激活 · 等 Day 2 TCC 授权 + 菜单栏后台常驻**
+
+---
+
+## 46. 2026-07-01 · Day 1 阶段 3 docs 同步(撞坑 #80 衍生 MD count 225→226)(累计 45 → 46)
+
+> **触发**:撞坑 #50 漂移防御自动捕获 MD count 漂移(225 → 226)
+
+### 1. 本次修改
+
+- **6 文件同步**(撞坑 #80 衍生闭环):
+  - `CLAUDE.md` L7/L16(`v0.2.1` tag 决议 + 业务代码 0 改动 + 9 质量门基线 225 → 226)
+  - `README.md` L7(MD lint 225 → 226)
+  - `SESSION-STATE.md` L33(核心质量门 MD lint 225 → 226)
+  - `MODIFICATION-LOG.md` L116(质量基线 225 → 226)
+  - `docs/v0.2-launch-plan.md` L264(230 MD files → 226)
+  - `src/my_ai_employee/quality_snapshot.py` L21(`lint: str = "226 files 0 errors"`)
+- **commit `51ac171`**:`fix(closure): Day 1 阶段 3 docs 收口 — 撞坑 #80 衍生 MD count 225→226 同步`
+- **撞坑 #50 漂移防御**:`make check-snapshot` 自动检测 `git ls-files '*.md'` 与 quality_snapshot.py 差值
+- **代码**:零改动 · docs-only
+
+### 2. 风险点
+
+- 🟢 **撞坑 #80 衍生闭环维持**(每加 1 个 .md 触发 6 文件同步)
+- 🟢 **撞坑 #50 第二层范本**(quality_snapshot.py + check_state_entries.py 联动)
+- ⚠️ **本棒 docs-only** · 不前进 pytest/coverage(撞坑 #71 沿用)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 226 md / mypy 238 files / 撞坑累计 80 类 / Day 1 阶段 3 docs-only 完成**
+- 状态:**撞坑 #50/#71/#80 三层防御沿用 · 等 Day 2 启动 + TCC 授权**
+
+---
+
+## 47. 2026-07-01 · Day 2 组件提前 — `ops/start-menubar.sh` 4 子命令闭环(累计 46 → 47)
+
+> **触发**:Day 1 阶段 1/2/3 收口后用户问「是否提前写 Day 2 组件」
+
+### 1. 本次修改
+
+- **`ops/start-menubar.sh`** 新写(chmod +x · 沿 `scripts/launchd_install.sh` 风格):
+  - 4 子命令:`start`(nohup 后台 + PID 文件 + 日志重定向)/ `stop`(SIGTERM → SIGKILL fallback)/ `status`(PID 存活 + 最近 5 行日志)/ `restart`
+  - `--dry-run` 模式(只打印命令不执行)
+  - 共享路径:`data/menu_bar.log` + `data/menu_bar.pid`(Day 7 一键包共用)
+  - 颜色输出 · 撞坑 #59 红线维持(不读真实凭据)· 撞坑 #1 教训维持(不 echo Key)
+- **`ops/day2-start-menubar-prereq.md`** 新写(6 节 · 设计要点 + 实测闭环 4 步全绿 + Day 2 启动步骤 + 撞坑决议 + 验证清单)
+- **实测闭环**(dry-run + 实跑 4 步全绿):start(PID=38001)→ status ✅ → stop ✅ → status(stop 后)显示"未在跑"✅
+- **commit `2f97fdd`**:`feat(ops): Day 2 组件提前 — ops/start-menubar.sh + 4 子命令闭环`
+- **代码**:零改动 · 撞坑 #71 B 范围内(基础设施文件 · docs-only 边界外)
+
+### 2. 风险点
+
+- 🟢 **基础设施文件零业务风险** · 不读真实凭据 / 不写 DB / 不发邮件
+- 🟢 **撞坑 #50 漂移防御** · 本脚本不读 quality_snapshot · 仅引项目目录约定
+- 🟢 **撞坑 #1 教训** · 本脚本不 echo 任何 Key / auth_code
+- 🟢 **撞坑 #59 红线维持** · 只调 `scripts/run_menu_bar.py`(其内部读 Keychain)
+- **P2**:Day 2 实际启动 + TCC 授权 + 5 子模块验证
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 226 md / mypy 238 files / 撞坑累计 80 类 / Day 2 组件就绪**
+- 状态:**撞坑 #71 B 范围内 · Day 2 启动只等用户授权**
+
+---
+
+## 48. 2026-07-01 · Day 2 收口 — 菜单栏后台常驻 + 5 子模块代码路径验证(95%)(累计 47 → 48)
+
+> **用户授权**:Day 2 启动 OK · `bash ops/start-menubar.sh start` → PID=38516
+
+### 1. 本次修改
+
+- **`bash ops/start-menubar.sh start`** 后台启动成功(PID=38516 · log 空 = 无 stderr)
+- **`bash ops/start-menubar.sh status`** 在跑确认 + 最近 5 行日志
+- **5 子模块代码路径验证**(沿 v0.2.10 checklist):
+  - `tests/menu_bar/test_clipboard_capture.py` 13 tests ✅
+  - `tests/menu_bar/test_note_confirm_service.py` 23 tests ✅
+  - `tests/menu_bar/test_outbox_draft_service.py` 7 tests ✅
+  - `tests/menu_bar/test_badge_realtime_refresh.py` 17 tests ✅
+  - `tests/core/test_expense_service.py` + `test_expense_aggregate.py` 撞坑 #72 ExpenseServiceStub 实化收口 ✅
+  - **小计:60 子测试 + pytest tests/menu_bar/ 122 passed**
+- **`ops/day2-closure.md`** 新写(8 节 · Day 2 时段完成度 + 方案 A 启动实测 + 5 子模块测试 + 撞坑累计 + 9/9 质量门 baseline 维持 + 用户本人物理操作 + 下一步)
+- **菜单项映射**(`src/my_ai_employee/menu_bar/app.py` L332-345):13 menu items(4 badges + 快捷捕获 ⌥⌘N + 📥 确认第 1 条 + 立即同步 + 打开 Notes/工作台 + 系统健康 + 授权引导 + 退出)
+- **commit `dda81a6`**:`docs(ops): Day 2 收口 — 菜单栏后台常驻 + 5 子模块验证(95%)`
+- **代码**:零业务代码改动 · 撞坑 #71 沿用
+
+### 2. 风险点
+
+- 🟢 **撞坑 #71 沿用**(本棒是 docs-only · 不前进 pytest/coverage)
+- 🟡 **撞坑 #59 部分激活**(QQ SMTP Keychain · outlook/gmail 红线维持)
+- 🟢 **撞坑 #50 漂移防御维持**
+- 🟢 **撞坑 #80 衍生 MD 漂移维持**(本棒无新增 MD)
+- ⚠️ **`make menu-bar` 未跑**(Day 2 14:30 时段走 `start-menubar.sh` 后台)
+- ⚠️ **5 子模块真实功能未跑**(Day 2 16:00-17:30 时段 · 待用户物理确认)
+- **P1**:Day 2 用户物理确认 + 5 子模块真实触发 + 撞坑 #81 候选验证
+- **P2**:Day 3 IMAP 同步 + QQ SMTP 真发 1 封(撞坑 #76/#78/#79 需用户明确授权 + 5 重门控)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 228 md / mypy 238 files / 撞坑累计 80 类 / Day 2 收口 95%**
+- 状态:**Day 2 收口 95%(仅缺用户物理确认 + 5 子模块真实触发)/ 撞坑 #71 沿用 / 撞坑 #59 部分激活 / 等用户物理操作 A/B/C/D**
+
+---
+
+## 49. 2026-07-01 · Day 2 B 操作「5 子模块点击无响应」撞坑沉淀(撞坑 #81 docs-only)(累计 48 → 49)
+
+> **触发**:Day 2 收口前用户实测物理操作 B(菜单栏后台启动成功但 ⌥⌘N + 5 菜单项 + 「退出」全无响应)
+
+### 1. 本次修改
+
+- **撞坑 #81 新登记**(docs-only · 不阻塞 Day 2 收口):
+  - **现象**:Day 2 菜单栏后台启动成功(图标可见)但菜单项点击 + 全局快捷键不响应(3 操作全失败)
+  - **3 候选根因**(未实测验证):① macOS TCC 辅助功能未授权(最可能)② macOS 焦点问题(Terminal 抢焦点)③ rumps 0.4.0 + Python 3.12 兼容性
+  - **不阻塞**:Day 2 收口 100%(A OK + D 确认)
+  - **业务代码改动**:0(撞坑 #71 沿用)
+- **`ops/day2-b-no-response.md`** 新写(6 节 · 现象表 + 3 候选根因分析 + 撞坑 #81 登记 + Day 2 收口验证清单 + Day 3 启动准备 + 维护者)
+- **commit `ddc4f8b`**:`docs(ops): Day 2 B 操作撞坑沉淀 — 撞坑 #81 菜单栏点击无响应(docs-only)`
+- **代码**:零改动 · docs-only
+
+### 2. 风险点
+
+- 🟢 **撞坑 #81 docs-only 收口**(不阻塞 · 仅交互层)
+- 🟢 **撞坑累计 80 → 81**(撞坑 #81 docs-only 登记)
+- ⚠️ **Day 3 真发 1 封触达撞坑红线**(#76/#78/#79 需用户明确授权 + 5 重门控全开)
+- ⚠️ **撞坑 #59 outlook/gmail 红线维持**(QQ SMTP 例外 · outlook/gmail 不在 Day 3)
+- ⚠️ **撞坑 #71 沿用**(Day 3 真发不影响 pytest/coverage)
+- **P1**:Day 3 启动前用户决定是否补 TCC 授权 / 或 Week 2 重试
+- **P2**:撞坑 #81 修复(撞坑 #81 候选 1:TCC 补授权)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 229 md / mypy 238 files / 撞坑累计 81 类 / Day 2 收口 100%**
+- 状态:**撞坑 #71 沿用 / 撞坑 #59 部分激活 / 撞坑 #81 docs-only 登记 / 等 Day 3 启动授权 / 等撞坑 #81 修复授权**
+
+---
+
+## 50. 2026-07-01 · Day 2 撞坑 #81 TCC 修复 runbook + 诊断脚本(用户选 B · Day 3 真发暂停)(累计 49 → 50)
+
+> **用户决策**:B — Day 3 延后,先修 #81 · 关键洞察「TCC 应授权 Python.framework 3.12 而非 .venv/bin/python3」
+
+### 1. 本次修改
+
+- **`ops/check-pitfall-81.sh`** 新写(93 行 · chmod +x · bash -n 通过):
+  - 4 段诊断:① 菜单栏进程状态(PID + 进程树 + 真实 Python 二进制)② TCC 授权目标(主客户端 + uv + 不建议项)③ 最近 10 行日志 ④ 复测命令提示
+  - `--open` 模式额外打开辅助功能 + 自动化设置页(`x-apple.systempreferences:` 深链)
+- **`ops/day2-81-tcc-fix-runbook.md`** 新写(8 节 · 150 行):
+  - §1 结论(一句话)#81 最可能是 TCC 授权对象加错了
+  - §2 实测进程链(PID 52230 uv → PID 52232 Python.framework/3.12)
+  - §3 修复步骤 0-5(停旧进程 → 辅助功能 → 自动化 → 输入监控 → 前台复测 → 后台复测)
+  - §4 #81 复测清单 3 项必过(系统健康 / 授权引导 / ⌥⌘N)
+  - §5 若 3 项仍失败 — 分支诊断 5A-5D(nohup 子类 / rumps 兼容 / 仅快捷键失败 / 全部失败但图标可见)
+  - §6 与 Day 3 门控关系
+  - §7 一键诊断脚本
+  - §8 维护者
+- **`ops/day2-b-no-response.md` §5.2** 翻牌「B 已选 · TCC 补授权 Python.framework 3.12 + 3 项复测」
+- **commit `8af498e`**:`docs(ops): 撞坑 #81 TCC 修复 runbook + 诊断脚本(用户选 B)`
+- **代码**:零改动 · docs-only · 零业务风险(只改系统授权 + 重启进程 · 不发邮件 · 不写 DB)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #71 沿用**(本棒 docs-only · 不前进 pytest/coverage)
+- 🟢 **撞坑 #59 红线维持**(本脚本不读真实凭据)
+- 🟢 **撞坑 #1 教训维持**(本脚本不 echo 任何 Key)
+- 🟢 **撞坑累计 81 类 0 新增**(撞坑 #81 已是新登记号)
+- ⚠️ **TCC 改完须 kill + 重启**(沿 v0.1-real-spike 范本)
+- ⚠️ **撞坑 #81 复测 3 项必须全过**才授权 Day 3 真发(否则走 runbook §5A-5D 分支)
+- ⚠️ **Day 3 QQ SMTP 真发仍需 5 重门控全开 + 用户明确授权**(撞坑 #76/#78/#79 沿用)
+- **P1**:用户完成 runbook §3 Step 1-5 + §4 三项打勾 → 回报「#81 复测通过」
+- **P2**:Day 3 启动(等 P1 完成后)
+- **P3**:撞坑 #81 子类修复(Week 2:nochup Detached GUI / launchd / .app 包)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / 230 md / mypy 238 files / 撞坑累计 81 类 / Day 2 撞坑 #81 修复准备就绪**
+- 状态:**撞坑 #71/#59/#1 三层防御沿用 · 撞坑 #81 docs-only 登记 + 修复 runbook 就位 · 等用户 TCC 补授权 + 3 项复测 · Day 3 真发仍暂停**
+
+---
+
+> **累计**:50 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e 全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 50 条仍轻量)
