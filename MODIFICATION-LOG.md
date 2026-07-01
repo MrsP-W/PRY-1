@@ -113,9 +113,9 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **238 files** / MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | 用户授权触发(2 项剩余候选:Path 4 spike / outlook-gmail Keychain)· tag 暂无需再动 |
-| **后续锚点** | v0.2 launch plan 整体收口 docs 已落地(2026-07-01) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
+| **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -143,6 +143,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-06-30 [项目检查 · coverage 同步 + 下一棒 stale 修正] — 收口
+
+**1. 本次修改内容**
+
+- **chore(snapshot)**: `quality_snapshot.py` — coverage 88.94%→**88.97%**(以 `make coverage` 实测为准)。
+- **docs(state)**: README / SESSION-STATE / MODIFICATION-LOG 当前态 / `docs/v0.2-launch-plan.md` 基线行同步。
+- **fix(state)**: SESSION L18 + MODIFICATION-LOG 下一棒 — 移除已过期的「Path 4 / outlook-gmail 剩余候选」,对齐 Phase A+B+C 收口后维持期口径。
+
+**2. 风险点**
+
+- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 223 / pytest 2611 不变。
+- ⚠️ coverage 门口径沿用 `make coverage`(88.97%),与 `make test` 88.95% 存在四舍五入差。
+
+**3. 当前项目整体总结**
+
+- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **223** / `make check-snapshot` 全绿。
+- 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据激活 / 9→11 e2e spike(均须用户授权)。
+
+---
 
 ### 2026-06-30 [状态入口 lint/mypy 漂移修复 + check-state-entries] — 收口
 

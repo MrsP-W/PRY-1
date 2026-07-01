@@ -1,7 +1,7 @@
 # SESSION-STATE — Phase C `v0.2.1` tag readiness 复盘收口 + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-01 Phase C tag readiness 复盘收口 + lint 计数同步 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Phase A+B+C 三棒全部收口**(2026-07-01) + **`v0.2.1-rc1` tag 维持期** · **决议:❌ 不打 `v0.2.1` 正式 tag**(沿撞坑 #60 preliminary 范本)+ Phase A Path 4 L0+L1+L2 12/12 全绿 + Phase B Outlook/Gmail Keychain 沙箱 B1 18/18 + B2 49/49 + B3 5/5 + Phase C 8/8 readiness 实质满足。**质量门**:2611 passed / 88.94% / lint **223** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)+ `v0.2.1`(❌ 不打 · 沿撞坑 #60)。**下一棒**:9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选(用户单独决策)/ 9 → 11 端到端场景 spike 候选。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)。
+> **最后更新**:2026-06-30 项目检查 · coverage 同步 + SESSION 下一棒 stale 修正 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Phase A+B+C 三棒全部收口**(2026-07-01) + **`v0.2.1-rc1` tag 维持期** · **决议:❌ 不打 `v0.2.1` 正式 tag**(沿撞坑 #60 preliminary 范本)+ Phase A Path 4 L0+L1+L2 12/12 全绿 + Phase B Outlook/Gmail Keychain 沙箱 B1 18/18 + B2 49/49 + B3 5/5 + Phase C 8/8 readiness 实质满足。**质量门**:2611 passed / 88.97% / lint **223** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)+ `v0.2.1`(❌ 不打 · 沿撞坑 #60)。**下一棒**:9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选(用户单独决策)/ 9 → 11 端到端场景 spike 候选。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1-rc1` tag 已落地(2026-08-01)** + **v0.2 launch plan 整体收口 docs(2026-07-01)** — `git tag -a v0.2.1-rc1 b0e7f94`(annotated,本项目无 remote 无 push)· 2611 passed / 88.94% / MD lint **223**。**7 月全链路收官**(7/1 复盘 + Phase 1 weekly 4/4 + A3 readiness 3/3 + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 + **v0.2 launch plan 整体收口 docs** 13 节)。**下一棒**:用户授权触发(**2 项剩余候选**:Path 4 spike / outlook-gmail Keychain)· 90 封 QQ SMTP spike 仍跳过 · tag 暂无需再动。
+**当前启动候选**:**`v0.2.1-rc1` tag 维持期** + **Phase A+B+C 已收口(2026-07-01)** — 2611 passed / 88.97% / MD lint **223**。**下一棒**:9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选(用户单独决策) / 9→11 e2e spike 候选 · 90 封 QQ SMTP spike 仍跳过 · `v0.2.1` 正式 tag 仍不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(锚定不动,沿 D5.7.2 范本) |
-| 核心质量门 | **2611 passed / 1 skipped** · **88.94%** coverage · mypy --strict 0 errors(**238 files**) · MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2611 passed / 1 skipped** · **88.97%** coverage · mypy --strict 0 errors(**238 files**) · MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ❌ 不打(沿 [[v0.2-launch-plan]] §1) |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |

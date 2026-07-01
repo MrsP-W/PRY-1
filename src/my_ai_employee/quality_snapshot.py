@@ -15,7 +15,7 @@ class QualityGateSnapshot:
     """质量门只读快照(不跑 CI,沿菜单栏系统健康范本)."""
 
     pytest: str = "2611 passed / 1 skipped"
-    coverage: str = "88.94%"
+    coverage: str = "88.97%"
     mypy: str = "0 errors"
     mypy_files: str = "238 files"
     lint: str = "223 files 0 errors"
