@@ -18,7 +18,7 @@ class QualityGateSnapshot:
     coverage: str = "88.97%"
     mypy: str = "0 errors"
     mypy_files: str = "238 files"
-    lint: str = "233 files 0 errors"
+    lint: str = "234 files 0 errors"
 
 
 DEFAULT_QUALITY_GATES = QualityGateSnapshot()
@@ -34,7 +34,7 @@ def format_system_health_body(*, git_head: str) -> str:
         f"MD lint: {qg.lint}\n"
         "ruff + format: 全绿\n"
         f"HEAD: {git_head}\n"
-        "SMTP 真实发送: 未解锁(需 Keychain + SMTP_REAL_NETWORK)"
+        "SMTP 真实发送: 默认未解锁; Day3 QQ SMTP 1 封已授权验证(需 SMTP_REAL_NETWORK=1 + 5 重门控)"
     )
 
 

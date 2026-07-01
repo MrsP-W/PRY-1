@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。2611 passed / 88.97% / MD lint 233 · **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
+> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。2611 passed / 88.97% / MD lint 234 · Day 4 财务+Notes faker 导入已验证 · **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
 
 ---
 

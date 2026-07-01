@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **233 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 4 启动候选(财务+Notes / Dashboard 只读 / Path 4 实写 / 一键启动包) / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **234 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 5 Dashboard 只读驾驶舱 / 真实 CSV 1 行导入(4 重门控) / Notes 真同步(候选) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4187,11 +4187,11 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   - **OutboxDispatcher 调度证据**:`total_picked=1 sent=1 business_blocked=0 technical_failed=0 skipped=0 skip_breach=0 duration=4.639s liveness=stalled`
   - **Keychain 真读**:`✅ Keychain 命中: provider=qq email=477753009@qq.com (auth_code 16 chars)`(撞坑 #1 教训维持 · 不打印内容)
   - **6 项通过 + 1 项 REAL 模式不适用**:状态机全最终态 + Heartbeat HEALTHY + SLA skip_breach=0 + 退避回路 OK(InMemory sent_log 项 N/A)
-  - **报告归档**:`output/spike/spike_send_100_20260701_140144.md`(2.6KB · 7 验证项 + 7 字段 DispatcherResult 累加)
+  - **报告归档**:`output/spike/spike_send_100_20260701_140144.md`(2.6KB · 6 项通过 + 1 项 REAL N/A + 7 字段 DispatcherResult 累加)
 - **`ops/day3-c-real-send-1-closure.md`** 新写(9 节 · 200+ 行):
   - §1 用户决策(C 路径 + 发到自己 + 5 重门控全 OK)
   - §2 实际执行命令(可见性)
-  - §3 实测结果(SMTP 成功证据 + 调度证据 + 7 验证项 + Keychain 状态 + 调度延迟 < 5000ms 撞坑 #18 红线)
+  - §3 实测结果(SMTP 成功证据 + 调度证据 + 6 项通过 + 1 项 REAL N/A + Keychain 状态 + 调度延迟 < 5000ms 撞坑 #18 红线)
   - §4 撞坑累计更新(撞坑 #71/#59/#1/#18/#76/#78/#79/#81 全部就位)
   - §5 撞坑 #59 outlook/gmail 红线维持(本次不构成真实凭据激活)
   - §6 报告归档
@@ -4233,3 +4233,29 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:52 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e + 撞坑 #81 修复收口 + Day 3 C 路径真发 1 封全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持 · 撞坑 #81 已修复 · 撞坑 #76/#78/#79 5 重门控全开通过 · 撞坑 #59 QQ 例外激活)
 > **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 52 条仍轻量)
+
+---
+
+## 53. 2026-07-01 · Day 4 A 路径财务+Notes 收口(累计 52 → 53)
+
+> **路径**:7 天计划 D4 选项 A · faker 2024/2025 导入(非真实 CSV)
+
+### 1. 本次修改
+
+- **账单导入实测**:wechat/alipay 2025+2024 · parsed=40 · inserted=38 · 去重 duplicates=10
+- **Notes spike**:`notes spike: parsed=30 skipped=30 failed=0`
+- **D8 异常**:`kinds=amount_3sigma,amount_drift,frequency_5tx_per_hour count=3`
+- **月报**:`reports/finance-monthly-2026-06.md`(37 transactions)
+- **`ops/day4-a-finance-notes-closure.md`** 新写(9 节)
+- **MD count 233 → 234** + quality_snapshot SMTP 文案(Day3 最终收口)
+
+### 2. 风险点
+
+- 🟡 **2026 版 CSV 解析器占位**(NotImplementedError · 等真实样本)
+- 🟢 **真实 CSV/Notes 真同步未触发**(4 重门控 / NOTES_REAL_NETWORK 维持)
+- 🟢 **撞坑 #71 沿用** · 业务代码 0 改动
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / 234 md / Day 4 验收 5/7 通过 + 2 N/A**
+- 下一棒:**Day 5 Dashboard 只读驾驶舱**
