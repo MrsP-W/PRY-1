@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **232 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **233 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -4175,5 +4175,61 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:51 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e + 撞坑 #81 修复收口全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持 · 撞坑 #81 已修复)
-> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 51 条仍轻量)
+## 52. 2026-07-01 · Day 3 C 路径真发 1 封(撞坑 #76/#78/#79 5 重门控全开)(累计 51 → 52)
+
+> **用户决策**:C 路径(撞坑 #59 QQ 例外激活)· 收件人=自己 477753009@qq.com · 5 重门控全 OK
+
+### 1. 本次修改
+
+- **`SMTP_REAL_NETWORK=1 uv run python scripts/spike_send_100.py --real ...`一次跑通**:
+  - 命令参数:`--recipient 477753009@qq.com --max-recipients 1 --count 1 --confirm yes-i-understand-this-sends-real-email --smtp-host smtp.qq.com --smtp-port 465 --smtp-username 477753009@qq.com --smtp-provider qq --batch-size 10`
+  - **1 封 SENT 成功**:`SMTP 发送成功: from=477753009@qq.com to=['477753009@qq.com'] host=smtp.qq.com:465`
+  - **OutboxDispatcher 调度证据**:`total_picked=1 sent=1 business_blocked=0 technical_failed=0 skipped=0 skip_breach=0 duration=4.639s liveness=stalled`
+  - **Keychain 真读**:`✅ Keychain 命中: provider=qq email=477753009@qq.com (auth_code 16 chars)`(撞坑 #1 教训维持 · 不打印内容)
+  - **7 验证项全绿**:状态机全最终态 + Heartbeat HEALTHY + SLA skip_breach=0 + 退避回路 OK
+  - **报告归档**:`output/spike/spike_send_100_20260701_140144.md`(2.6KB · 7 验证项 + 7 字段 DispatcherResult 累加)
+- **`ops/day3-c-real-send-1-closure.md`** 新写(9 节 · 200+ 行):
+  - §1 用户决策(C 路径 + 发到自己 + 5 重门控全 OK)
+  - §2 实际执行命令(可见性)
+  - §3 实测结果(SMTP 成功证据 + 调度证据 + 7 验证项 + Keychain 状态 + 调度延迟 < 5000ms 撞坑 #18 红线)
+  - §4 撞坑累计更新(撞坑 #71/#59/#1/#18/#76/#78/#79/#81 全部就位)
+  - §5 撞坑 #59 outlook/gmail 红线维持(本次不构成真实凭据激活)
+  - §6 报告归档
+  - §7 9/9 质量门 baseline 维持
+  - §8 Day 4 候选(用户决策点 A/B/C/D/E)
+  - §9 维护者
+- **6 文件 MD count 同步 232 → 233**(撞坑 #50 漂移防御):
+  - `CLAUDE.md`(L7/L16):9 质量门基线 MD 计数
+  - `README.md`(L7):状态行
+  - `SESSION-STATE.md`(L4/L18/L33 + 新增 1 行 Day 3 C 路径行)
+  - `MODIFICATION-LOG.md`(L116 + 新增累计记录 #52)
+  - `docs/v0.2-launch-plan.md`(L264):实测基线
+  - `src/my_ai_employee/quality_snapshot.py`(L21):`lint: str = "233 files 0 errors"`
+- **`make check-snapshot`** 四重防御 OK + **`make lint`** 233 files 0 errors
+- **代码**:零改动 · spike 模式临时 DB(`/var/folders/.../spike_send.db`)不污染真实 `~/Library/.../data.db`
+
+### 2. 风险点
+
+- 🟡 **撞坑 #76/#78/#79 5 重门控全开 · 撞坑 #59 QQ 例外激活**(真发 1 封成功)
+- 🟢 **撞坑 #18 守住红线**:SMTP 调度延迟 4.6s < 5000ms
+- 🟢 **撞坑 #1 教训维持**:授权码不打印到 chat/docs/commit(Keychain 真读不 echo)
+- 🟢 **撞坑 #81 已修复**:菜单栏 1-click 审批链路就位(本次 spike 未用)
+- 🟢 **撞坑 #59 outlook/gmail 红线维持**:本次只走 `--smtp-provider qq` · 不构成 outlook/gmail 真实凭据激活
+- 🟢 **撞坑 #71 沿用**:业务代码 0 改动 · spike 模式不影响 pytest/coverage
+- 🟢 **撞坑累计 81 类 0 新增**
+- ⚠️ **Day 4+ 业务推进待用户逐项 OK**(财务 / Dashboard / Path 4 / 一键启动包)
+- **P1**:Day 4 启动 — 用户逐项 OK 4 候选
+- **P2**:撞坑 #59 outlook/gmail 真实凭据激活(用户单独决策反转 · 不在 Day 3-4 计划)
+- **P3**:9→11 e2e spike(撞坑 #71 业务推进)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / 233 md / mypy 238 files / 撞坑累计 81 类(撞坑 #81 已修复 + 撞坑 #76/#78/#79 5 重门控全开通过 + 撞坑 #59 QQ 例外激活)/ Day 3 C 路径真发 1 封成功**
+- 状态:**撞坑 #71/#59/#1/#18/#81 五层防御沿用 · SMTP 真发链路已验证 · Keychain 真实授权码读取链路已验证 · OutboxDispatcher REAL 模式已验证 · 状态机全流程已验证**
+- 下一步:用户(逐项 OK Day 4 4 候选)/ 主 Agent(Day 4 启动准备 docs 收口 + 撞坑 #81/#76/#78/#79/#59 收口已 commit)
+- 下一棒:Day 4(财务 + Apple Notes / Dashboard 只读 / Path 4 实写 / 一键启动包 · 用户逐项 OK)
+
+---
+
+> **累计**:52 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e + 撞坑 #81 修复收口 + Day 3 C 路径真发 1 封全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持 · 撞坑 #81 已修复 · 撞坑 #76/#78/#79 5 重门控全开通过 · 撞坑 #59 QQ 例外激活)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 52 条仍轻量)
