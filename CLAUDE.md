@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新：2026-06-14（**D5.7.2 docs 收口最后一致性修正 真正锁定** — D5.7.1 修复 + **D5.7.2 检查员驳回 5 缺陷(docs 最后一次一致性修正)全部修复**:P1 D5 验收报告覆盖率表实测重生成(总覆盖 90.4%→90.2% / send_adapter 92.3%→84.8% / smtp 88.1%→69.6% / keychain 86.5%→45.7%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径修复 + P2-5 DoD 证据补全 + L4 Agent 层软链 5 角色 + 2 专属 + D-step 收官标准动作）
+> 最后更新:2026-07-01(**`v0.2.1-rc1` 维持期 + Phase A+B+C docs 三棒收口** — Phase A Path 4 L0+L1+L2 阶梯 spike 12/12 全绿 · Phase B Outlook/Gmail Keychain 沙箱 B1 18/18 + B2 49/49 + B3 5/5 · Phase C `v0.2.1` 正式 tag readiness 8/8 实质满足但**决议不打**(沿撞坑 #60 preliminary 范本 `v0.2.1-rc1 ≠ v0.2.1`)+ 业务代码 0 改动(连续 6 周 + 1 天 · docs-only 不前进 pytest/coverage · 撞坑 #71 沿用)+ 9 质量门基线 2611 passed / 88.97% / 223 MD / mypy 238 files · `v0.2.1-rc1` tag 维持(annotated `b0e7f94`)+ `v0.1.0`(`2af775f`)永不动 · 等待用户授权触发 3 候选(月度复盘 docs-only / outlook-gmail 真实凭据激活 / 9→11 e2e spike · B/C 撞坑 #59 + 撞坑 #71 红线维持))
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**D5.7.2 docs 收口最后一致性修正 真正锁定**（D5.1-D5.7.2 ✅ 全部完成,B3 真正解封,真实 1 封 SMTP 端到端实测通过,sent=1/1.27s；D5.7.1 + **D5.7.2** 检查员驳回 5 缺陷(docs 最后一次一致性修正)全部修复:P1 D5 验收报告覆盖率表实测重生成(90.4%→90.2%) + P2-1 README SpikeResult 16 字段统一 + P2-2 阶段编号翻 D5.7.2 + P2-3 真实发送报告下一棒翻 v0.1 + P2-4 映射链接路径 + P2-5 DoD 证据补全；**D5 业务调度器完全锁定,不再开 D5.7.3,直接进入 v0.1 发布规划**）。
+**当前阶段**：**`v0.2.1-rc1` 维持期**(2026-07-01 Phase A+B+C 三棒全部收口 · docs-only 锁定 · 业务代码 0 改动 · 撞坑累计 #71 docs-only 沿用 + #60 `v0.2.1` tag 决议不打(永不动 `v0.1.0`=`2af775f`)+ 9/9 质量门基线 2611 passed / 88.97% / 223 MD / mypy 238 files · `make ci` + `make check-snapshot` 三重防御全绿 · 等用户单独决策触发下一棒)。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 
