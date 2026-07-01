@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **236 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2620 passed / 1 skipped** / **88.95%** / mypy --strict 0 / **238 files** / MD lint **240 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | Day 6 真实 CSV 1 行 / Notes 真同步 / 一键启动包(候选) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
@@ -4333,3 +4333,34 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2620 passed / 88.95% / 236 md / 9/9 质量门全绿**
 - 下一棒:**Day 6 启动(用户逐项 OK)**
+
+---
+
+## 56. 2026-07-01 · Day 6 ABCD 全部收口(撞坑累计 81 → 83)
+
+> **触发**:用户授权「ABCD 都执行」,撞坑 #82 账单门控 + #83 Notes 真同步 docs-only 启动准备就位 + C 一键启动包脚本落地 + D 状态收口
+
+### 1. 本次修改
+
+- **A 路径 docs-only 启动准备**:`ops/day6-a-csv-real-launch.md`(7 节 · 真实 CSV 4 重门控命令范本 + 撞坑 #82 登记 + 启动门槛清单)
+- **B 路径 docs-only 启动准备**:`ops/day6-b-notes-real-launch.md`(7 节 · NOTES_REAL_NETWORK + TCC 授权引导 + 撞坑 #83 登记)
+- **C 路径一键启动包脚本**:`ops/start-digital-employee.sh` 新写(290 行 · 5 子命令 start/stop/status/health/restart + --dry-run · 9 维度预检 · 沿 ops/start-menubar.sh Day 2 范本 · 撞坑 #71 B 范围内)
+- **C 路径收口**:`ops/day6-c-onestart-closure.md`(7 节 · 9 维度预检实测结果 + 撞坑累计更新)
+- **D 路径状态收口**:`ops/day6-d-closure.md`(9 节 · Day 1-6 总览 + 撞坑累计翻牌 + Day 7 候选)
+- **撞坑累计翻牌 81 → 83**(撞坑 #82 账单 4 重门控默认拒写范本 + #83 Apple Notes 真同步链路)
+- **MD count 236 → 240**(撞坑 #50 漂移防御自动触发 · 6 文件同步)
+- **撞坑 #71 沿用**:`src/` 业务代码 0 改动 · `scripts/import_real_gate.py` 32 行新基础设施(沿用撞坑 #64 公共 API 范本)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #71 沿用**(业务代码 0 改动 · 仅 ops/scripts 基础设施)
+- 🟢 **撞坑 #59 红线维持**(outlook/gmail 仍不配置 · 仅 QQ SMTP 链路)
+- 🟢 **撞坑 #81 沿用**(⌥⌘N 已修复 · Day 6 C 首次启动须手动 TCC 授权)
+- 🟢 **撞坑 #82 验证推迟**(等用户下会话真导 1 行时验证 4 重门控生效)
+- 🟢 **撞坑 #83 验证推迟**(等用户 Apple ID + TCC + 真同步授权)
+- ⚠️ **撞坑 #31 mypy tests 13 errors**(Day 7 候选 C 修复)
+
+### 3. 当前项目整体总结
+
+- 进度:**2620 passed / 88.95% / 240 md / 9/9 质量门全绿 / 撞坑累计 83 类**
+- 下一棒:**Day 7 候选(A 真实 CSV 1 行真导 / B Notes 真同步 5 条 / C mypy 13 errors 修复 / D outlook-gmail 反转 / E 留 Day 8+)**
