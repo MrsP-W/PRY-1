@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **225 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **226 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -154,12 +154,12 @@
 
 **2. 风险点**
 
-- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 225 / pytest 2611 不变。
+- 🟢 docs-only · 0 业务逻辑 · tag 不动 · MD lint 226 / pytest 2611 不变。
 - ⚠️ coverage 门口径沿用 `make coverage`(88.97%),与 `make test` 88.95% 存在四舍五入差。
 
 **3. 当前项目整体总结**
 
-- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **225** / `make check-snapshot` 全绿。
+- 质量门:**2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **226** / `make check-snapshot` 全绿。
 - 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据激活 / 9→11 e2e spike(均须用户授权)。
 
 ---
@@ -3869,7 +3869,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2611 passed / 88.97% / **225 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增**
+- 进度:**2611 passed / 88.97% / **226 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增**
 - 状态:**`v0.2.1` 正式 tag 落地(`71b4602` annotated)+ 撞坑 #60 反转决议明确 + `v0.2.1-rc1` 仍作历史快照**
 - 下一步:#3 / #4 / 候选 A 等待用户逐项授权触发
 - 下一棒:用户(#3 outlook-gmail 真实凭据激活 / #4 9→11 e2e spike / 候选 A 月度复盘)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
@@ -3878,3 +3878,50 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:43 条 / 2026-07-01 `v0.2.1` tag 落地(撞坑 #60 反转 · `#2 OK 打 tag`)+ 周三例行周检 baseline 确认(撞坑 #80 衍生闭环维持)
 > **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 43 条仍轻量)
+
+## 44. 2026-07-01 · Day 1 阶段 1 基础设施落地(7 天计划启动 · 撞坑 #71 决议 B 放行)(累计 43 → 44)
+
+> **用户授权**:"按照这个计划执行" · 撞坑 #71 决议 B(部分反转 · 基础设施放行)+ 撞坑 #59 红线维持 · **docs-only 收口** · 撞坑累计 80 类 0 新增
+
+### 1. 本次修改
+
+- **`scripts/run_menu_bar.py`** 新写(52 行 · 菜单栏常驻入口):
+  - sys.path 注入 `src/` · 沿 `scripts/check_state_entries.py` noqa: E402 范本
+  - 所有服务用 None 默认值(Stub 默认单例 · 不连真实 DB / 不读真实剪贴板)
+  - `MYAIEMP_BADGE_POLL_SECONDS` envvar 覆盖默认 30s(沿 v0.2.2 启动候选 #6 范本)
+  - 范围 [0, 3600] 严判
+  - 撞坑 #71 决议 B 明确:基础设施文件,撞坑 #71 docs-only 边界外
+  - 撞坑 #59 红线维持:本脚本不读真实凭据 / 不写 Keychain / 不发邮件
+- **`Makefile`** 修改(+5 行):
+  - 新增 `menu-bar` target(前台启动 · 后台用 nohup 或 `ops/start-menubar.sh`)
+  - help 文案同步追加 `make menu-bar`
+- **`ops/` 目录新建 + `ops/day1-baseline.md`** 新写(9 节):
+  - §1 交付物清单 · §2 9/9 质量门 baseline · §3 `scripts/run_menu_bar.py` 设计要点 · §4 Makefile target · §5 DB 初始化状态(head 16)· §6 撞坑决议 · §7 验证清单 · §8 下一步 · §9 维护者
+- **撞坑 #71 决议 B 明确**(用户授权 B+B+B 推荐组合):
+  - **Day 1-2 基础设施文件放行**:脚本 / Makefile / `ops/` 不属于"业务代码",可新增
+  - **Day 3+ 业务功能 docs-only 待评审**:spike 真发 / Path 4 实写 / 月报触发等下次评审
+  - **撞坑 #59 红线维持**:QQ SMTP / Outlook / Gmail 真实凭据激活需用户逐项 OK
+- **commit `b9e086a`**:`feat(ops): Day 1 阶段 1 基础设施落地 — 撞坑 #71 决议 B 放行`
+
+### 2. 风险点
+
+- 🟢 **基础设施文件零业务风险**:不读真实凭据 / 不连真实 DB / 不发邮件 / 不影响 pytest/coverage baseline
+- ⚠️ **撞坑 #71 部分反转**:6 周 + 1 天"业务风险类 0 新增"基线首次松动(基础设施文件边界外)
+- ⚠️ **撞坑 #59 红线维持**:Day 1 阶段 2(用户提供凭据后)Keychain 写入需用户逐项 OK
+- ⚠️ **`make menu-bar` 未实际跑过**:Day 1 阶段 1 不验证 TCC 授权,Day 2 启动后才验
+- ⚠️ **`scripts/run_menu_bar.py` mypy 不计入 baseline**:scripts/ 不在 `mypy src tests` 范围,但 ruff check/mypy 单独跑通过
+- **P1**:Day 1 阶段 2(等用户提供 LLM API Key + QQ 授权码)
+- **P2**:Day 2 TCC 授权 + 菜单栏后台常驻 + `ops/start-menubar.sh`
+- **P3**:Day 3+ 业务功能 docs-only 评审
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.95% / **226 md** / mypy 238 files / 9 质量门全绿 / `v0.2.1` tag 落地(`71b4602` annotated · 撞坑 #60 反转)/ 撞坑累计 80 类 / 业务风险类 0 新增 / Day 1 阶段 1 完成**
+- 状态:**Day 1 阶段 1 基础设施落地完成 · 撞坑 #71 决议 B 范围内放行 · 撞坑 #59 红线维持 · 等用户输入触发 Day 1 阶段 2**
+- 下一步:用户(提供 LLM API Key + QQ 授权码 / 不提供延后)/ 主 Agent(Day 2 启动 TCC 授权 + 菜单栏后台常驻)
+- 下一棒:#3 outlook-gmail 真实凭据激活(撞坑 #59 红线)/ #4 9→11 e2e spike(撞坑 #71 业务推进)/ 候选 A(8/1+ 月度复盘 docs-only)/ Day 1 阶段 2 / Day 2 TCC 授权
+
+---
+
+> **累计**:44 条 / 2026-07-01 Day 1 阶段 1 基础设施落地(撞坑 #71 决议 B 放行 · 7 天计划启动)+ `v0.2.1` tag 维持(`71b4602` annotated · 撞坑 #60 反转维持)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 44 条仍轻量)

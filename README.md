@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **Phase A+B+C 三棒收口 + `v0.2.1-rc1` 维持期** — `v0.2.1-rc1` annotated tag 绑 `b0e7f94` · **决议:❌ 不打 `v0.2.1` 正式 tag**(沿撞坑 #60) · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 · A3 readiness 3/3 · 8/1 tag 评估 + launch plan 整体收口 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(release candidate)**。2611 passed / 88.97% / MD lint 225 · **不启用 `ENABLE_PATH_4_WRITE=1` · 不配置 Outlook/Gmail 真实凭据**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
+> **状态**:🟢 **Phase A+B+C 三棒收口 + `v0.2.1-rc1` 维持期** — `v0.2.1-rc1` annotated tag 绑 `b0e7f94` · **决议:❌ 不打 `v0.2.1` 正式 tag**(沿撞坑 #60) · 7/1 月度复盘已收官 · Phase 1 weekly 4/4 · A3 readiness 3/3 · 8/1 tag 评估 + launch plan 整体收口 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(release candidate)**。2611 passed / 88.97% / MD lint 226 · **不启用 `ENABLE_PATH_4_WRITE=1` · 不配置 Outlook/Gmail 真实凭据**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
 
 ---
 

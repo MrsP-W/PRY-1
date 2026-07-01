@@ -28,7 +28,7 @@
 | 5 | mypy src+tests | ✅ | 0 errors |
 | 6 | alembic --sql | ✅ | head 16 (0016_approval_gate_audits) |
 | 7 | uv build | ✅ | wheel + sdist OK |
-| 8 | MD lint | ✅ | 225 files 0 errors(未变) |
+| 8 | MD lint | ✅ | 226 files 0 errors |
 | 9 | coverage | ✅ | 88.95% ≥ 80% |
 
 `make check-snapshot` 四重防御 OK(quality_snapshot + state entries + pytest collect + CLAUDE 入口)。
@@ -68,8 +68,8 @@
 ```makefile
 .PHONY: menu-bar
 menu-bar: ## Day 1 — 启动菜单栏常驻(前台,Ctrl+C 退出;后台用 nohup 或 ops/start-menubar.sh)
-	@echo "$(BLUE)🍎 启动菜单栏常驻(Day 1 基础设施)$(RESET)"
-	@$(PYTHON) scripts/run_menu_bar.py
+    @echo "$(BLUE)🍎 启动菜单栏常驻(Day 1 基础设施)$(RESET)"
+    @$(PYTHON) scripts/run_menu_bar.py
 ```
 
 help 文案同步追加:`make menu-bar` 显示在 `make help` 输出中。
@@ -120,7 +120,7 @@ INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
 - [x] `make install` ✅(uv sync OK,99 packages resolved)
 - [x] `make hello` ✅(菜单栏 ASCII banner 输出)
 - [x] `alembic upgrade head` ✅(head 16)
-- [x] `make ci` 9 质量门 ✅(2611 passed / 88.95% / 238 files / 225 md)
+- [x] `make ci` 9 质量门 ✅(2611 passed / 88.95% / 238 files / 226 md)
 - [x] `scripts/run_menu_bar.py` 新写 + ruff/mypy ✅
 - [x] Makefile `menu-bar` target + help 文案 ✅
 - [x] `ops/` 目录创建 + `ops/day1-baseline.md` ✅
