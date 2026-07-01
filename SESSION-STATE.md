@@ -1,6 +1,6 @@
 # SESSION-STATE — v0.2.63 7/1 月度复盘正式 docs-only 收口 + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-06-30 项目检查 · coverage 同步 + SESSION 下一棒 stale 修正 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **最后更新**:2026-07-01 项目检查 · `make ci` 9/9 全绿 + CLAUDE.md 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
 > **状态**:🟢 **v0.2.63 7/1 月度复盘正式 docs-only 收口**(2026-07-01 · 2 docs-only commits)+ Phase A+B+C 三棒全部收口(沿用)+ **`v0.2.1-rc1` tag 维持期** · **决议:❌ 不打 `v0.2.1` 正式 tag**(沿撞坑 #60 preliminary 范本)+ Phase A Path 4 L0+L1+L2 12/12 全绿 + Phase B Outlook/Gmail Keychain 沙箱 B1 18/18 + B2 49/49 + B3 5/5 + Phase C 8/8 readiness 实质满足。**质量门**:2611 passed / 88.97% / lint **224** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移三重防御)。**tag 列表**:`v0.1.0`(anchor 永不动)+ `v0.2.1-rc1`(release candidate 维持)+ `v0.2.1`(❌ 不打 · 沿撞坑 #60)。**下一棒**:9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选(用户单独决策)/ 9 → 11 端到端场景 spike 候选。**边界**:`v0.2.1` 仍不打(撞坑 #60)· `v0.1.0` 永不动 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。

@@ -1,6 +1,6 @@
 """校验状态入口文档与 quality_snapshot 对齐(撞坑 #50 第四层防御).
 
-只检查当前入口块(README / SESSION-STATE / MODIFICATION-LOG / launch-plan 基线行),
+只检查当前入口块(README / CLAUDE / SESSION-STATE / MODIFICATION-LOG / launch-plan 基线行),
 不扫描历史流水账。
 
 用法:
@@ -84,6 +84,26 @@ def build_entry_checks(*, gates: QualityGateSnapshot = DEFAULT_QUALITY_GATES) ->
                 f"MD lint {md_count}",
             ),
             forbidden=(f"MD lint {stale_md}",),
+        ),
+        EntryLineCheck(
+            "CLAUDE.md",
+            7,
+            required=(
+                f"{passed} passed",
+                gates.coverage,
+                f"{md_count} MD",
+            ),
+            forbidden=(f"{stale_md} MD",),
+        ),
+        EntryLineCheck(
+            "CLAUDE.md",
+            16,
+            required=(
+                f"{passed} passed",
+                gates.coverage,
+                f"{md_count} MD",
+            ),
+            forbidden=(f"{stale_md} MD",),
         ),
         EntryLineCheck(
             "SESSION-STATE.md",
@@ -179,7 +199,7 @@ def main() -> int:
             print(f"ERROR: {err}", file=sys.stderr)
         print(
             "Fix: sync current-entry docs with quality_snapshot.py "
-            "(README / SESSION-STATE / MODIFICATION-LOG / launch-plan baseline).",
+            "(README / CLAUDE / SESSION-STATE / MODIFICATION-LOG / launch-plan baseline).",
             file=sys.stderr,
         )
         return 1

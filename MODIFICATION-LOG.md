@@ -3804,5 +3804,31 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:41 条 / 2026-07-01 v0.2.63 docs-only 收口(撞坑 #80 修复 + 月度复盘正式入库 + `CLAUDE.md` 阶段号翻牌)
-> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 41 条仍轻量)
+## 42. 2026-07-01 · 项目检查 · CLAUDE.md 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口(累计 41 → 42)
+
+> **触发**:用户「项目检查和优化」· **`make ci` 9/9 全绿** · 发现 `CLAUDE.md` L7/L16 仍写 223 MD(撞坑 #80 衍生) · docs-only 不前进 pytest/coverage
+
+### 1. 本次修改
+
+- **修复**:`CLAUDE.md` L7/L16 — `223 MD` → `224 MD`(与 `quality_snapshot.lint` / 四入口对齐)
+- **优化**:`scripts/check_state_entries.py` — 新增 `CLAUDE.md` L7/L16 入口校验(撞坑 #80 第四层防御补完)
+- **同步**:`SESSION-STATE.md` L3 `最后更新` 翻牌(2026-06-30 → 2026-07-01 项目检查)
+- **代码**:零业务改动 · 1 script 增强 · docs-only
+
+### 2. 风险点
+
+- 🟢 **漂移已封**:后续 `make check-snapshot` 会拦截 CLAUDE.md MD 计数 stale
+- ⚠️ **历史 entry 不动**:MODIFICATION-LOG entry 40/41 内 `223 MD` 为当时快照,沿撞坑 #50 第三层范本
+- ⚠️ **`v0.2.1` tag 仍不打**(撞坑 #60)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / MD lint 224 / 9/9 质量门全绿 / v0.2.63 收口沿用 / 撞坑累计 80 类**
+- 状态:**`v0.2.1-rc1` 维持期 · check-snapshot 四重防御(quality_snapshot + pytest collect + 四入口 + CLAUDE 入口)**
+- 下一步:候选 A/B/C 等用户授权
+- 下一棒:9/1+ 月度复盘 / outlook-gmail 真实凭据 / 9→11 e2e spike
+
+---
+
+> **累计**:42 条 / 2026-07-01 项目检查(CLAUDE 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 42 条仍轻量)

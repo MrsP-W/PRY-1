@@ -109,7 +109,7 @@ def main() -> int:
             print(f"ERROR: {err}", file=sys.stderr)
         print(
             "Fix: update src/my_ai_employee/quality_snapshot.py "
-            "and current-entry docs (README / SESSION-STATE / MODIFICATION-LOG).",
+            "and current-entry docs (README / CLAUDE / SESSION-STATE / MODIFICATION-LOG).",
             file=sys.stderr,
         )
         return 1
