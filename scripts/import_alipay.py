@@ -25,6 +25,7 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))  # 让直接运行脚本时可 import scripts.* 包
 
 from sqlalchemy.exc import OperationalError  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
