@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **238 files** / MD lint **219 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.94%** / mypy --strict 0 / **238 files** / MD lint **223 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 用户授权触发(2 项剩余候选:Path 4 spike / outlook-gmail Keychain)· tag 暂无需再动 |
 | **后续锚点** | v0.2 launch plan 整体收口 docs 已落地(2026-07-01) |
 
@@ -3667,7 +3667,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **新文件**:`docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`(9 节 · Phase C tag readiness 复盘)
 - **8 项前置条件复盘**(沿 v0.2.50 preliminary):
-  - #1 9/9 质量门全绿 ✅(2611/88.94/219/238 维持)
+  - #1 9/9 质量门全绿 ✅(2611/88.94/223/238 维持)
   - #2 `v0.2.1-rc1` tag 已打 ✅(b0e7f94)
   - #3 7 月全链路收官 ✅
   - #4 launch plan 收口 ✅
@@ -3698,7 +3698,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2611 passed / 88.94% / MD lint 219 / 9/9 质量门全绿 / Phase A+B+C 收官 / `v0.2.1-rc1` 维持期**
+- 进度:**2611 passed / 88.94% / MD lint 223 / 9/9 质量门全绿 / Phase A+B+C 收官 / `v0.2.1-rc1` 维持期**
 - 状态:**Phase C tag readiness 复盘完成 · 8/8 实质满足 · 决议不打 `v0.2.1` tag · 沿撞坑 #60 范本 · 业务代码 0 改动**
 - 下一步:9/1+ 月度复盘候选 · 9 → 11 端到端场景 spike 候选
 - 下一棒:用户(业务触发:明确打 tag / outlook-gmail 真实激活)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)

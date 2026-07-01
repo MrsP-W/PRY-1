@@ -93,13 +93,13 @@ def build_entry_checks(*, gates: QualityGateSnapshot = DEFAULT_QUALITY_GATES) ->
         ),
         EntryLineCheck(
             "SESSION-STATE.md",
-            12,
+            18,
             required=(f"MD lint **{md_count}**",),
             forbidden=(f"MD lint **{stale_md}**",),
         ),
         EntryLineCheck(
             "SESSION-STATE.md",
-            27,
+            33,
             required=(
                 gates.pytest,
                 gates.coverage,
