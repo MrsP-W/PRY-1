@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
 > **最后更新**:2026-07-01 项目检查 · `make ci` 9/9 全绿 + CLAUDE.md 224 MD 漂移修复 + check-snapshot 扩 CLAUDE 入口 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **v0.2.64 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转决议 · 用户明确授权「#2 OK 打 tag」)+ v0.2.63 7/1 月度复盘正式 docs-only 收口(沿用)+ Phase A+B+C 三棒全部收口(沿用)+ **`v0.2.1-rc1` tag 维持期**(**语义上被 `v0.2.1` 取代 · 仍维持作为历史快照**)+ **`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)**。**质量门**:2611 passed / 88.97% / lint **231** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移四重防御)。**tag 列表**:`v0.1.0`(`2af775f` anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` release candidate 维持期 · 历史快照)+ `v0.2.1`(`71b4602` **✅ 已落地** · 撞坑 #60 反转决议 · 2026-07-01)。**下一棒**:#3 outlook-gmail 真实凭据激活(候选 B · 待用户明确授权 / 用户逐项执行中)/ #4 9→11 e2e spike(候选 C · 待用户明确授权)/ 候选 A 8/1+ 月度复盘 docs-only。**边界**:`v0.1.0` 永不动 · `v0.2.1-rc1` 历史快照沿用 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)
+> **状态**:🟢 **v0.2.64 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转决议 · 用户明确授权「#2 OK 打 tag」)+ v0.2.63 7/1 月度复盘正式 docs-only 收口(沿用)+ Phase A+B+C 三棒全部收口(沿用)+ **`v0.2.1-rc1` tag 维持期**(**语义上被 `v0.2.1` 取代 · 仍维持作为历史快照**)+ **`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)**。**质量门**:2611 passed / 88.97% / lint **232** / mypy **238 files**(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移四重防御)。**tag 列表**:`v0.1.0`(`2af775f` anchor 永不动)+ `v0.2.1-rc1`(`b0e7f94` release candidate 维持期 · 历史快照)+ `v0.2.1`(`71b4602` **✅ 已落地** · 撞坑 #60 反转决议 · 2026-07-01)。**下一棒**:#3 outlook-gmail 真实凭据激活(候选 B · 待用户明确授权 / 用户逐项执行中)/ #4 9→11 e2e spike(候选 C · 待用户明确授权)/ 候选 A 8/1+ 月度复盘 docs-only。**边界**:`v0.1.0` 永不动 · `v0.2.1-rc1` 历史快照沿用 · finance dismiss 仍拒写 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · 真实 SMTP 仍不真发(`SMTP_REAL_NETWORK` UNSET + `XOAUTH2_REAL_NETWORK` UNSET)
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)** + **`v0.2.1-rc1` tag 维持期作为历史快照沿用** + **Phase A+B+C 已收口(2026-07-01)** — 2611 passed / 88.97% / MD lint **231**。**下一棒**:#3 outlook-gmail 真实凭据激活候选(用户单独决策反转)/ #4 9→11 e2e spike 候选 / 8/1+ 月度复盘候选 · 90 封 QQ SMTP spike 仍跳过。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602` annotated · 撞坑 #60 反转)** + **`v0.2.1-rc1` tag 维持期作为历史快照沿用** + **Phase A+B+C 已收口(2026-07-01)** — 2611 passed / 88.97% / MD lint **232**。**下一棒**:#3 outlook-gmail 真实凭据激活候选(用户单独决策反转)/ #4 9→11 e2e spike 候选 / 8/1+ 月度复盘候选 · 90 封 QQ SMTP spike 仍跳过。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2611 passed / 1 skipped** · **88.97%** coverage · mypy --strict 0 errors(**238 files**) · MD lint **231 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2611 passed / 1 skipped** · **88.97%** coverage · mypy --strict 0 errors(**238 files**) · MD lint **232 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
@@ -167,6 +167,7 @@
 | 7/1(本日-Day 2 启动)| 周三 | **Day 2 收口 — 菜单栏后台常驻 + 5 子模块代码路径验证(95%)**(用户确认「Day 2 启动 OK」+ `bash ops/start-menubar.sh start` → PID=38516 · status/stop 闭环 4 步全绿)· `ops/day2-closure.md` 新写(8 节 · Day 2 时段完成度 + 方案 A 启动实测 + 5 子模块测试 122 passed / 60 子测试 + 撞坑累计 + 9/9 质量门 baseline 维持)+ commit `dda81a6` · 撞坑 #59 红线部分激活(QQ SMTP Keychain 已就位 · outlook/gmail 仍维持)· 撞坑 #71 沿用 · 撞坑 #50 漂移防御 · 撞坑 #80 衍生 MD 漂移维持 · **业务风险类 0 新增** · 撞坑累计 80 类 0 新增 | ✅ |
 | 7/1(本日-Day 2 撞坑 #81)| 周三 | **Day 2 B 操作「5 子模块点击无响应」撞坑沉淀(撞坑 #81 docs-only 新登记)**(用户实测:菜单栏后台启动成功(图标可见)但 ⌥⌘N + 5 菜单项点击 + 「退出」全无响应)· `ops/day2-b-no-response.md` 新写(6 节 · 现象表 + 3 候选根因分析 + 撞坑 #81 登记 + Day 2 收口验证清单 + Day 3 启动准备 + 维护者)+ commit `ddc4f8b` · 3 候选根因(未实测验证):① macOS TCC 辅助功能未授权(最可能)② macOS 焦点问题(Terminal 抢焦点)③ rumps 0.4.0 + Python 3.12 兼容性 · 不阻塞 Day 2 收口 100%(A OK + D 确认)· 业务代码 0 改动(撞坑 #71 沿用)· 撞坑累计 80 → **81**(撞坑 #81 docs-only 收口)· 9/9 质量门 baseline 不变(2611 / 88.95% / 229 md / 238 mypy) | ✅ |
 | 7/1(本日-Day 2 撞坑 #81 修复准备)| 周三 | **Day 2 撞坑 #81 TCC 修复 runbook + 诊断脚本(用户选 B · Day 3 真发暂停等 #81 复测)**(用户决策点 B · 用户实测发现「TCC 应授权 Python.framework 3.12 而非 .venv/bin/python3」· 关键洞察 · 沿 v0.1-real-spike 范本)· `ops/check-pitfall-81.sh` 新写(93 行 · chmod +x · bash -n 通过 · 4 段诊断:菜单栏进程状态 + TCC 授权目标 + 最近日志 + 复测命令 + `--open` 深链)+ `ops/day2-81-tcc-fix-runbook.md` 新写(8 节 · 结论 + 实测进程链 + 修复步骤 0-5 + 复测清单 3 项 + 分支诊断 5A-5D + Day 3 门控关系 + 一键诊断脚本)+ `ops/day2-b-no-response.md` §5.2 翻牌「B 已选」+ commit `8af498e` · docs-only · 零业务风险(只改系统授权 + 重启进程 · 不发邮件 · 不写 DB)· 撞坑 #71 沿用 · 撞坑 #59 红线维持 · 撞坑累计 81 类 0 新增 · 9/9 质量门 baseline 不变 · 等用户完成 Step 1-5 + §4 三项打勾 → 回报「#81 复测通过」→ 再授权 Day 3 真发 | ✅ |
+| 7/1(本日-Day 2 撞坑 #81 修复收口)| 周三 | **Day 2 撞坑 #81 TCC 修复收口(用户实测「3/3 通过」+ docs-only)**(用户完成 Step 1-3:TCC 补授权 Python.framework 3.12 → `make menu-bar` 前台启动 → 点击桌面失焦 → 测 3 项:①「系统健康」弹窗 ✅ · ②「授权引导」跳转系统设置 ✅ · ③ ⌥⌘N 有反馈 ✅)· `ops/day2-81-fix-closure.md` 新写(6 节 · 用户实测复测结果 + 修复路径 + 撞坑 #81 类别升级 + 撞坑累计更新 + Day 3 启动准备 + 9/9 质量门 baseline 维持)+ 6 文件 MD count 同步(231 → 232 · 撞坑 #50 漂移防御)+ `make check-snapshot` + `make lint` 四重防御全绿+ commit(预计)· docs-only · 零业务风险(只改系统授权 + 重启进程 · 不发邮件 · 不写 DB)· 撞坑 #71 沿用 · 撞坑 #59 红线维持 · 撞坑累计 81 类(撞坑 #81 收口不新增撞坑号)· 9/9 质量门 baseline 不变(2611 / 88.97% / 232 md / 238 mypy)· **Day 3 启动准备就位**:撞坑 #81 已修复 + 5 重门控待用户逐项 OK + IMAP/SMTP 真实凭据就位(Keychain 16 位授权码) | ✅ |
 
 ## 📋 6/24 下一棒(用户手动触发)
 

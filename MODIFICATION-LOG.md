@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **231 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2611 passed / 1 skipped** / **88.97%** / mypy --strict 0 / **238 files** / MD lint **232 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 9/1+ 月度复盘候选 / outlook-gmail 真实凭据激活候选 / 9→11 e2e spike 候选 · `v0.2.1` 仍不打 · tag 暂无需再动 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · `v0.2.1-rc1` 维持期 |
 
@@ -4127,5 +4127,53 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
-> **累计**:50 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e 全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持)
-> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 50 条仍轻量)
+## 51. 2026-07-01 · Day 2 撞坑 #81 TCC 修复收口(用户实测 3/3 通过)(累计 50 → 51)
+
+> **用户回报**:"授权"(撞坑 #81 复测 3/3 通过)· 撞坑 #81 类别升级 docs-only 登记 → 已修复
+
+### 1. 本次修改
+
+- **用户实测 3/3 通过**(沿 `ops/day2-81-tcc-fix-runbook.md` §4 清单):
+  - ①「系统健康」:macOS 通知弹出(含 pytest/coverage 基线)✅
+  - ②「授权引导」:系统设置 → 自动化页打开 ✅
+  - ③ ⌥⌘N(先复制一段文字):通知或 badge 有反馈 ✅
+- **`ops/day2-81-fix-closure.md`** 新写(6 节 · 150 行):
+  - §1 用户实测复测结果(3/3 通过表)
+  - §2 修复路径(Step 1-3 完整执行)· **关键洞察**:TCC 应授权 `Python.framework 3.12` 而非 `.venv/bin/python3`
+  - §3 撞坑 #81 类别升级(docs-only 登记 → 已修复)· 撞坑累计 81 类 0 新增
+  - §4 Day 3 启动准备(撞坑 #81 修复 → 5 重门控待用户逐项 OK)
+  - §5 9/9 质量门 baseline 维持
+  - §6 维护者
+- **6 文件 MD count 同步 231 → 232**(撞坑 #50 漂移防御):
+  - `CLAUDE.md`(L7/L16):9 质量门基线 MD 计数
+  - `README.md`(L7):状态行
+  - `SESSION-STATE.md`(L4/L18/L33 + 新增 1 行):核心质量门 + Day 2 #81 修复收口行
+  - `MODIFICATION-LOG.md`(L116 + 新增累计记录 #51)
+  - `docs/v0.2-launch-plan.md`(L264):实测基线
+  - `src/my_ai_employee/quality_snapshot.py`(L21):`lint: str = "232 files 0 errors"`
+- **`make check-snapshot`** 四重防御 OK + **`make lint`** 232 files 0 errors
+- **代码**:零改动 · docs-only · 零业务风险(只改系统授权 + 重启进程)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #81 已修复**(用户实测 3/3 通过 · docs-only 收口)
+- 🟢 **撞坑累计 81 类 0 新增**(撞坑 #81 收口不新增撞坑号)
+- 🟢 **撞坑 #71 沿用**(本棒 docs-only · 不前进 pytest/coverage)
+- 🟢 **撞坑 #59 红线维持**(outlook/gmail 仍红线 · QQ SMTP 例外激活)
+- 🟢 **撞坑 #1 教训维持**(不打印 Key/auth_code)
+- ⚠️ **Day 3 QQ SMTP 真发仍需 5 重门控全开 + 用户明确授权**(撞坑 #76/#78/#79 沿用)
+- **P1**:Day 3 启动 — 用户逐项 OK 5 重门控
+- **P2**:Day 3 IMAP 同步 + 草稿生成 + 1-click 审批 → 发送闭环
+- **P3**:Day 4+ 业务推进(撞坑 #71 业务功能 docs-only 待评审)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.97% / 232 md / mypy 238 files / 撞坑累计 81 类(撞坑 #81 已修复)/ Day 2 全收口 / Day 3 启动准备就位**
+- 状态:**撞坑 #71/#59/#1 三层防御沿用 · 撞坑 #81 已修复(用户实测 3/3 通过)· 5 重门控待用户逐项 OK · IMAP/SMTP 真实凭据就位(Keychain 16 位授权码)**
+- 下一步:用户(逐项 OK 5 重门控)/ 主 Agent(Day 3 启动准备 docs 收口 + 撞坑 #81 修复收口已 commit)
+- 下一棒:Day 3 IMAP 同步 + QQ SMTP 真发 1 封(撞坑 #76/#78/#79 5 重门控 + 用户明确授权)
+
+---
+
+> **累计**:51 条 / 2026-07-01 Day 1 阶段 2-3 + Day 2 a-e + 撞坑 #81 修复收口全收口(`v0.2.1` tag `71b4602` annotated 维持 · 撞坑 #60 反转维持 · 撞坑 #81 已修复)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 51 条仍轻量)
