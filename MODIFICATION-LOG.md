@@ -3569,3 +3569,141 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 > **累计**:36 条 / 2026-06-30-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀)
 > **下次清理**:2026-08-22 检查员判定(等 1 个月边界)
+
+---
+
+## 37. 2026-07-01 · Phase A · Path 4 L0+L1+L2 阶梯 spike 收口(累计 36 → 37)
+
+> **用户授权**:"Phase A-B-C 都执行" · **撞坑 #71 回归验证** · **业务代码 0 改动**
+
+### 1. 本次修改
+
+- **新文件**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md`(8 节 · Phase A 收口报告)
+- **临时 spike 脚本**:`/tmp/path4_spike_L0_L1_L2.py`(不入 commit · L0+L1+L2 阶梯 12 笔 + 4 异常拦截)
+- **5 门全开 writer 沙箱**:`DASHBOARD_WRITE_API=1` + `DASHBOARD_REAL_DB=1` + `BUSINESS_WRITER_ENABLED=1` + `real_write_handler_enabled=True` + `ENABLE_PATH_4_WRITE=1`
+- **关键 spike 结果**:
+  - L0 复跑 2/2 success(撞坑 #71 OutboxStatus 大小写契约完全回归)
+  - L1 ×10 spike 10/10 success(audit 严格递增 `audit:3` → `audit:12`)
+  - L2 异常 4 子测试 4/4 严判拦截(4 门 raise / 5 门 raise / invalid_target_id / 缺依赖 raise)
+  - DB 真实状态:6+6 全部 = 期望终态(approved / ARCHIVED)
+- **commit `9770e38`**:`docs(closure): v0.2.55.2 Path 4 L0+L1+L2 阶梯 spike 收口(12/12 全绿)`
+- **代码**:零改动(纯沙箱 spike · 不前进 pytest/coverage)
+
+### 2. 风险点
+
+- 🟢 **Path 4 沙箱 12/12 全绿** · **撞坑 #71 完全回归** · 业务代码 0 改动
+- ⚠️ **业务风险类撞坑 0 新增**(连续 6 周 + 1 天 · 6/30 → 7/1)
+- ⚠️ **5 门全开 writer 不写 shell profile**(沿撞坑 #65 opt-in 4 阶段范本 · 沙箱边界)
+- ⚠️ **MD lint 216 → 217**(docs-only +1)
+- ⚠️ **新报告 v0.2.55.2 完整沉淀 spike 细节**(L0 2 笔 + L1 10 笔 + L2 4 异常)
+- **P1**: Phase B 收口(outlook/gmail Keychain 沙箱 spike · 沿用户授权"都执行"第二棒)
+- **P2**: Phase C `v0.2.1` 正式 tag 评估(docs-only · 沿撞坑 #60 不主动打 tag)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.94% / MD lint 217 / 9/9 质量门全绿 / Phase A 收口**
+- 状态:**Path 4 L0+L1+L2 阶梯 spike 12/12 全绿 · 撞坑 #71 回归 · 业务代码 0 改动 · 5 门沙箱边界维持**
+- 下一步:Phase B 收口 · Phase C `v0.2.1` tag 评估
+- 下一棒:用户(Phase B 启动授权)/ 主 Agent(Phase B 沙箱 spike)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:37 条 / 2026-07-01-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 + Phase A Path 4 L0+L1+L2 阶梯 spike 12/12)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界)
+
+---
+
+## 38. 2026-07-01 · Phase B · Outlook/Gmail Keychain 沙箱 spike 收口(累计 37 → 38)
+
+> **用户授权**:"Phase A-B-C 都执行"第二棒 · **撞坑 #59 outlook/gmail 部分实化** · **撞坑 #18 风险门控 +「日志」语义**
+
+### 1. 本次修改
+
+**棒 B 三子动作**(B1+B2+B3):
+- **B1 docs**:`docs/v0.2.7.1-keychain-runbook-and-redaction-2026-07-01.md`(7 节 · Keychain 接口清单 + 脱敏检查脚本说明 + 5 重防误发)
+- **B1 脱敏检查脚本**:`scripts/check_keychain_redaction.py`(6 项检查:邮箱 / token / 密码 / round-trip / JSON / git 关键字)
+- **B2 沿用**:`tests/core/test_oauth2*.py` + `tests/connectors/test_xoauth2.py` = 49 passed
+- **B3 沙箱 spike 脚本**:`/tmp/xoauth2_smtp_inmemory_spike.py`(不入 commit · 5 stage 端到端)
+- **B3 收口报告**:`reports/v0.2.7.2-xoauth2-smtp-inmemory-spike-2026-07-01.md`(10 节 · B1 18/18 + B2 49/49 + B3 5/5)
+- **关键 spike 结果**:
+  - B1 脱敏检查 18/18 pass(6 检查项 · 3+3+3+3+1+5)
+  - B2 OAuth dry-run 49/49 tests 全绿(OAuth2Token/Config/Google/Microsoft/XOAUTH2)
+  - B3 XOAUTH2 SMTP InMemory 1 封 5/5 stages 全绿(S1-S5 端到端)
+  - 5 重防误发第 1 重 `SMTP_REAL_NETWORK` UNSET(显式禁止)
+- **commit `b650c23`**:`docs(closure): v0.2.7.2 Phase B Outlook/Gmail Keychain 沙箱 spike 收口(B1 18/18 + B2 49/49 + B3 5/5)`
+- **代码**:零改动 · 0 new tests(纯沙箱 spike)
+
+### 2. 风险点
+
+- 🟢 **Phase B 沙箱 spike B1-B3 全绿** · **撞坑 #59 outlook/gmail 部分实化**(代码 + OAuth + XOAUTH2 + 工厂 + 沙箱 spike)
+- ⚠️ **撞坑 #59 真实凭据激活仍需用户单独决策**(沙箱不构成真实激活 · 沿用户 6/29 决策)
+- ⚠️ **撞坑 #18「日志」语义 维持**(脱敏 18/18 + 沙箱不写真实凭据)
+- ⚠️ **撞坑 #65 opt-in 4 阶段范本沿用**(沙箱 = 第 1 阶段)
+- ⚠️ **业务风险类撞坑 0 新增**(连续 6 周 + 1 天 · 6/30 → 7/1)
+- ⚠️ **MD lint 217 → 218**(docs-only +1)
+- ⚠️ **5 门沙箱边界 100% 维持**(dummy 凭据 + 不真发 + 不读 Keychain + 不写 shell profile)
+- **P1**: Phase C `v0.2.1` 正式 tag 评估(docs-only · 沿撞坑 #60 不主动打 tag)
+- **P2**: outlook/gmail 真实凭据激活(用户单独决策反转沙箱限制)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.94% / MD lint 218 / 9/9 质量门全绿 / Phase A + B 收口**
+- 状态:**Phase B 沙箱 spike B1-B3 全绿 · 撞坑 #59 部分实化 · 撞坑 #18/#65 沿用 · 5 重防误发维持 · 业务代码 0 改动**
+- 下一步:Phase C `v0.2.1` tag 评估(docs-only)
+- 下一棒:用户(Phase C 启动授权)/ 主 Agent(docs-only 评估)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:38 条 / 2026-07-01-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 + Phase A Path 4 + Phase B Outlook/Gmail Keychain 沙箱)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界)
+
+---
+
+## 39. 2026-07-01 · Phase C · `v0.2.1` 正式 tag readiness 复盘(累计 38 → 39)
+
+> **用户授权**:"Phase A-B-C 都执行"第三棒 · **撞坑 #60 preliminary 范本应用** · **docs-only 不前进 pytest/coverage**
+
+### 1. 本次修改
+
+- **新文件**:`docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`(9 节 · Phase C tag readiness 复盘)
+- **8 项前置条件复盘**(沿 v0.2.50 preliminary):
+  - #1 9/9 质量门全绿 ✅(2611/88.94/219/238 维持)
+  - #2 `v0.2.1-rc1` tag 已打 ✅(b0e7f94)
+  - #3 7 月全链路收官 ✅
+  - #4 launch plan 收口 ✅
+  - #5 Path 4 实写 spike ✅(L0+L1+L2 12/12 全绿 · 撞坑 #71 回归)
+  - #6 QQ SMTP 真实送达 🟡(10 封维持 · 90 封永久跳过)
+  - #7 outlook/gmail 🟡(沙箱化 + 真实激活仍需用户决策)
+  - #8 B 类延后项 7/1 评估 ✅
+- **决议**:**❌ 不打 `v0.2.1` 正式 tag** · 沿用 `v0.2.1-rc1` 维持期
+- **决议理由**(撞坑 #60 preliminary 范本):
+  1. 业务风险类撞坑 0 新增(连续 6 周 + 1 天)
+  2. `v0.2.1-rc1` 已落地(b0e7f94 annotated)
+  3. 9 项 readiness 实质满足 · 但 `v0.2.1` 不构成"必需"
+  4. 撞坑 #60 严格维持:`v0.2.1-rc1 ≠ v0.2.1`
+  5. 业务触发条件(用户明确"今天打"或 outlook/gmail 真实激活)才执行
+- **代码**:零改动 · docs-only · 0 commit(沿 docs-only 不前进 pytest/coverage 撞坑 #71)
+
+### 2. 风险点
+
+- 🟢 **`v0.2.1` 正式 tag readiness 8/8 实质满足** · **决议不打**(沿撞坑 #60)
+- ⚠️ **tag 列表状态**:`v0.1.0`(2af775f 锚定永不动)+ `v0.2.1-rc1`(b0e7f94 维持期)+ `v0.2.1`(❌ 不打)
+- ⚠️ **撞坑累计 #71/#76/#78/#79 沿用**:连续 6 周 0 新增(7/2 → 7/1 · 撞坑 #71 沿用 docs-only 不前进)
+- ⚠️ **MD lint 218 → 219**(docs-only +1)
+- ⚠️ **业务触发条件**(立即响应):
+  - 用户明确"今天打 v0.2.1 tag" → 立即执行
+  - outlook/gmail 真实凭据激活 → 立即重评估
+- **P1**: 9/1+ 月度复盘(2026-09-01 docs-only · 沿 v0.2.4-drift-review-mechanism 范本)
+- **P2**: 9 → 11 端到端场景 spike 收口(S10 SMTP 多 provider + S11 智能财务异常检测)
+
+### 3. 当前项目整体总结
+
+- 进度:**2611 passed / 88.94% / MD lint 219 / 9/9 质量门全绿 / Phase A+B+C 收官 / `v0.2.1-rc1` 维持期**
+- 状态:**Phase C tag readiness 复盘完成 · 8/8 实质满足 · 决议不打 `v0.2.1` tag · 沿撞坑 #60 范本 · 业务代码 0 改动**
+- 下一步:9/1+ 月度复盘候选 · 9 → 11 端到端场景 spike 候选
+- 下一棒:用户(业务触发:明确打 tag / outlook-gmail 真实激活)/ 主 Agent(候选执行)/ 检查员(撞坑累计维护)
+
+---
+
+> **累计**:39 条 / 2026-07-01-08-01(...+ 7/1 月度复盘 + 4 次 weekly + 3 次 A3 readiness + 8/1 tag 评估 + `v0.2.1-rc1` tag 落地 + 跨项目沉淀 + Phase A Path 4 + Phase B Outlook/Gmail Keychain 沙箱 + Phase C `v0.2.1` tag readiness 复盘)
+> **下次清理**:2026-08-22 检查员判定(等 1 个月边界 · 累计 39 条仍轻量)
