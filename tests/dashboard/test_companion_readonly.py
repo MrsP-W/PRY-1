@@ -1,9 +1,9 @@
-"""v0.2.66 / Day 9 — 移动伴侣只读真实接入测试.
+"""v0.2.66 / Day 9 — 移动伴侣只读真实接入 + 写端点 POST dry-run 映射测试.
 
 边界(沿撞坑 #18 5 门严判 + #64 公共 API 一致性 + #71 已解除):
     - 6 只读端点 HTTP 200 + read_only=true
     - 6 只读端点响应与对应 /api/* 完全一致(契约稳定)
-    - 写路径 /api/companion/approval-gate/{decide,actions} 不被改写,继续走 do_POST 5 门
+    - 写路径 POST /api/companion/approval-gate/{decide,actions} 精确映射到原生端点(5 门 dry-run)
     - 路径混淆攻击:非白名单路径(如 /api/companion-X)不被识别为白名单
     - 离线兜底契约:read_only=true 字段始终为 True
 """
@@ -19,6 +19,7 @@ from typing import Any
 
 import pytest
 
+from my_ai_employee.dashboard.approval_gate import CONFIRM_TEXT
 from my_ai_employee.dashboard.context import DashboardContext, QualityGateSnapshot
 from my_ai_employee.dashboard.server import create_server
 
@@ -117,6 +118,20 @@ def _fetch_json(url: str) -> tuple[int, dict[str, Any]]:
         return resp.status, json.loads(resp.read().decode("utf-8"))
 
 
+def _post_json(url: str, payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+    req = urllib.request.Request(  # noqa: S310
+        url,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=2) as resp:
+            return resp.status, json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read().decode("utf-8"))
+
+
 # ====== 白名单 6 只读端点映射对照表 ======
 
 
@@ -182,49 +197,71 @@ class TestCompanionMatchesLegacyApi:
         assert companion_body == legacy_body
 
 
-# ====== 3) 写路径不被改写 — 仍走 do_POST 5 门 ======
+# ====== 3) 写路径 POST 精确映射 — 仍走 do_POST 5 门 dry-run ======
 
 
-class TestCompanionWritePathsNotAliased:
-    """写路径 /api/companion/approval-gate/{decide,actions} 不在白名单,do_POST 5 门保护继续生效.
+class TestCompanionWritePostAliases:
+    """写路径 POST 映射到原生 /api/approval-gate/*,响应与原生端点一致(5 门 dry-run)."""
 
-    沿撞坑 #18 严判:写路径必须走 5 门,不能被 GET 提前改写为 /api/*。
-    """
+    _DRY_RUN_DECIDE_PAYLOAD: dict[str, Any] = {
+        "audit_id": "outbox-1",
+        "decision": "approve",
+        "confirm_text": CONFIRM_TEXT,
+        "dry_run": True,
+        "actor": "mobile_companion",
+        "reason": "companion dry-run",
+    }
 
-    def test_companion_decide_get_returns_405(self, running_server: str) -> None:
-        """GET /api/companion/approval-gate/decide → 405(只读 handler 拒写).
-
-        不在白名单 → path 不改写 → 落入 do_GET 末尾 404,再被 do_GET 拒写?实际是 do_GET 没有这个
-        路径所以会 404。验证:写入时 POST 必须走 5 门,不应当通过 GET 暴露。
-        """
+    def test_companion_decide_get_returns_404(self, running_server: str) -> None:
+        """GET /api/companion/approval-gate/decide → 404(写端点仅 POST)."""
         with pytest.raises(urllib.error.HTTPError) as exc:
             _fetch_json(f"{running_server}/api/companion/approval-gate/decide")
-        # GET 命中 → 落入 not_found 分支(404)
         assert exc.value.code == 404
 
     def test_companion_actions_get_returns_404(self, running_server: str) -> None:
-        """GET /api/companion/approval-gate/actions → 404(同 decide)."""
+        """GET /api/companion/approval-gate/actions → 404."""
         with pytest.raises(urllib.error.HTTPError) as exc:
             _fetch_json(f"{running_server}/api/companion/approval-gate/actions")
         assert exc.value.code == 404
 
-    def test_companion_decide_post_still_requires_5_gates(self, running_server: str) -> None:
-        """POST /api/companion/approval-gate/decide → 405(do_POST 只接受 actions/decide 原路径).
-
-        验证写路径不被改写:companion 写路径不映射为 /api/approval-gate/decide。
-        实际 do_POST 只识别 /api/approval-gate/{actions,decide},companion 写路径不在白名单 →
-        405 method_not_allowed。这保证 5 门严判不会被绕开。
-        """
-        req = urllib.request.Request(  # noqa: S310
+    def test_companion_decide_post_matches_native_dry_run(self, running_server: str) -> None:
+        """POST companion decide 与原生 decide 响应一致(dry_run, write_executed=False)."""
+        companion_status, companion_body = _post_json(
             f"{running_server}/api/companion/approval-gate/decide",
-            data=b'{"audit_id":"x","decision":"approve","confirm_text":"CONFIRM_WRITE"}',
-            headers={"Content-Type": "application/json"},
-            method="POST",
+            self._DRY_RUN_DECIDE_PAYLOAD,
         )
-        with pytest.raises(urllib.error.HTTPError) as exc:
-            urllib.request.urlopen(req, timeout=2)
-        # 写路径不被改写,companion 路径未在 do_POST 白名单 → 405
-        assert exc.value.code == 405
+        native_status, native_body = _post_json(
+            f"{running_server}/api/approval-gate/decide",
+            self._DRY_RUN_DECIDE_PAYLOAD,
+        )
+        assert companion_status == native_status
+        assert companion_body == native_body
+        if companion_status == 200:
+            assert companion_body.get("write_executed") is False
+            assert companion_body.get("dry_run") is True
+
+    def test_companion_actions_post_matches_native_dry_run(self, running_server: str) -> None:
+        """POST companion actions 与原生 actions 响应一致(dry_run)."""
+        payload = {
+            "action": "notes.confirm",
+            "target_id": "note-1",
+            "confirm_text": CONFIRM_TEXT,
+            "dry_run": True,
+            "actor": "mobile_companion",
+            "reason": "companion dry-run",
+        }
+        companion_status, companion_body = _post_json(
+            f"{running_server}/api/companion/approval-gate/actions",
+            payload,
+        )
+        native_status, native_body = _post_json(
+            f"{running_server}/api/approval-gate/actions",
+            payload,
+        )
+        assert companion_status == native_status
+        assert companion_body == native_body
+        if companion_status == 200:
+            assert companion_body.get("write_executed") is False
 
 
 # ====== 4) 路径混淆攻击 — 非白名单前缀不识别 ======

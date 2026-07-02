@@ -56,6 +56,12 @@ _COMPANION_READ_ONLY_ALIASES: Final[dict[str, str]] = {
     "/api/companion/approval-gate/audits": "/api/approval-gate/audits",
 }
 
+# v0.2.66 / Day 9+ — 移动伴侣写端点 POST 精确映射(仅 dry-run/5 门,不绕过 ApprovalGate)
+_COMPANION_WRITE_ALIASES: Final[dict[str, str]] = {
+    "/api/companion/approval-gate/decide": "/api/approval-gate/decide",
+    "/api/companion/approval-gate/actions": "/api/approval-gate/actions",
+}
+
 
 class DashboardHandler(BaseHTTPRequestHandler):
     """只读 Dashboard API handler."""
@@ -143,6 +149,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+        if path in _COMPANION_WRITE_ALIASES:
+            path = _COMPANION_WRITE_ALIASES[path]
         if path == "/api/approval-gate/actions":
             error_status, payload = self._read_json_object()
             if error_status is not None:

@@ -4,7 +4,7 @@
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。**2750 passed / 89.09%** / MD lint 244 / mypy 246 files · Day 4-7 收口(月报 + Dashboard 只读 + 微信真导 1 行 + Notes 真同步 5 条)+ **Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(`/api/approval-gate/decide` 端点 + 1-click UI + `AuditRecord.decision` + `api/mobile_companion.py` 契约 + `core/notes_encryption.py` 字段级加密)+ **Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(`handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + `tests/dashboard/test_companion_readonly.py` 30 tests)· 月报收支口径已修复 · 账单导入默认拒写 · **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
+> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。**2754 passed / 89.09%** / MD lint 244 / mypy 247 files · Day 4-7 收口(月报 + Dashboard 只读 + 微信真导 1 行 + Notes 真同步 5 条)+ **Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(`/api/approval-gate/decide` 端点 + 1-click UI + `AuditRecord.decision` + `api/mobile_companion.py` 契约 + `core/notes_encryption.py` 字段级加密)+ **Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(`handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + `tests/dashboard/test_companion_readonly.py` 30 tests)· 月报收支口径已修复 · 账单导入默认拒写 · **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
 
 ---
 
@@ -68,7 +68,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2750 passed / 1 skipped / 89.09% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 2754 passed / 1 skipped / 89.09% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -111,7 +111,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2750 passed / 1 skipped / 89.09% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 2754 passed / 1 skipped / 89.09% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -276,7 +276,7 @@ make help
 | 邮件 | imapclient + OAuth 2.0 + smtplib(SSL 465) | Keychain 凭证(IMAP / SMTP 分别存) |
 | CalDAV | iCloud 优先 | **D6+ 顺延**(原 D5,2026-06-11 重新定义) |
 | GUI | rumps（Mac 菜单栏）| **D6+ 顺延**,Phase 2 加 Web Dashboard |
-| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%** → v0.2.1 #2 **2077 passed / 1 skipped / 89.21%** → v0.2.1 #6 + NoteStore L2 跨源写入 **2100 passed / 1 skipped / 89.07%** → v0.2.2 #1/#2 **2135 passed / 1 skipped / 89.03%** → v0.2.2 #3 **2159 passed / 1 skipped / 89.08%** → v0.2.2 #6/#7 **2176 passed / 1 skipped / 89.28%** → v0.2.2 #5 commit 2/3/4 **2211 passed / 1 skipped / 88.86%** → v0.2.2 #5 commit 5 + #8 + v0.2 launch plan 整体收口 + v0.2.4 + v0.2.5 **2220 passed / 1 skipped / 88.85%** → **v0.2.6 D4.7.4 v1.0.3 改进项延后 2225 passed / 1 skipped / 88.85%** → **v0.2.25 P0 二修 2240 passed / 1 skipped**(2026-06-23) → **v0.2.28 L2 sign-lock 2240 passed / 1 skipped**(2026-06-23,沿用) → **v0.2.31 候选 review 汇总闭环 2261 passed / 1 skipped**(2026-06-24,撞坑 #46/#47/#48) → **v0.2.32 W3 真账单 spike 2265 passed / 1 skipped**(2026-06-24,撞坑 #49 新增 2027 real parser + 4 tests) → **v0.2.33-v0.2.35 docs-only 2265 passed / 1 skipped / 88.77%**(2026-06-24,撞坑 #50/#52/#53 + 阶梯 1→5→10→25 范本 + 跨 spike 累计公式 v1.0) → **v0.2.36 W3 真账单 spike-49 全量入库 2265 passed / 1 skipped / 88.77%**(2026-06-24,撞坑 #53 v2.0 累计公式 + #54 选项 B 优于 A 范本 + 阶梯 5 阶段 1→5→10→25→49 全量入库收口) |
+| 测试 | pytest + 覆盖率 | D1.1 覆盖率 0% → 62% → D4.8 90.2% → D5.1-fix 91.1%(1385 passed)→ D5.5.3 1522 passed / 90.2% → D5.5.4 1532 passed / 90.1% → D5.5.5 1534 passed / 90.3% → D5.6.4 1561 passed / 90.4% → D5.6.5 1563 passed / 90.4%(真实 SMTP 1 封新增 2 集成测试)→ S6 e2e 1738 passed / 90.1% → D9.5+S7 e2e 1839 passed / 89.6% → **D9.6 5 修复 1858 passed / 89.5%(fail_under=80 硬门槛)** → D10.1-D10.4 **1955 passed / 1 skipped / 89.48%**(D10.5 收口)→ post-tag 修复 **1958 passed / 1 skipped / 89.48%** → v0.2 B1/B2 docs 收口 **1964 passed / 1 skipped / 89.5%** → v0.2 B4.1 **1980 passed / 1 skipped / 89.45%** → v0.2 B4.2 **1988 passed / 1 skipped / 89.46%** → v0.2 B4.2 closure **1991 passed / 1 skipped / 89.47%** → v0.2 B4.3 + B-5 Quartz + D8.1-D8.4 **2024 passed / 1 skipped / 89.23%** → D8.5 半真实账单误报修复 **2028 passed / 1 skipped / 89.25%** → v0.2.1 #4 NoteStore 状态机化 **2041 passed / 1 skipped / 89.33%** → v0.2.1 #5+#3 **2064 passed / 1 skipped / 89.21%** → v0.2.1 #2 **2077 passed / 1 skipped / 89.21%** → v0.2.1 #6 + NoteStore L2 跨源写入 **2100 passed / 1 skipped / 89.09%** → v0.2.2 #1/#2 **2135 passed / 1 skipped / 89.03%** → v0.2.2 #3 **2159 passed / 1 skipped / 89.08%** → v0.2.2 #6/#7 **2176 passed / 1 skipped / 89.28%** → v0.2.2 #5 commit 2/3/4 **2211 passed / 1 skipped / 88.86%** → v0.2.2 #5 commit 5 + #8 + v0.2 launch plan 整体收口 + v0.2.4 + v0.2.5 **2220 passed / 1 skipped / 88.85%** → **v0.2.6 D4.7.4 v1.0.3 改进项延后 2225 passed / 1 skipped / 88.85%** → **v0.2.25 P0 二修 2240 passed / 1 skipped**(2026-06-23) → **v0.2.28 L2 sign-lock 2240 passed / 1 skipped**(2026-06-23,沿用) → **v0.2.31 候选 review 汇总闭环 2261 passed / 1 skipped**(2026-06-24,撞坑 #46/#47/#48) → **v0.2.32 W3 真账单 spike 2265 passed / 1 skipped**(2026-06-24,撞坑 #49 新增 2027 real parser + 4 tests) → **v0.2.33-v0.2.35 docs-only 2265 passed / 1 skipped / 88.77%**(2026-06-24,撞坑 #50/#52/#53 + 阶梯 1→5→10→25 范本 + 跨 spike 累计公式 v1.0) → **v0.2.36 W3 真账单 spike-49 全量入库 2265 passed / 1 skipped / 88.77%**(2026-06-24,撞坑 #53 v2.0 累计公式 + #54 选项 B 优于 A 范本 + 阶梯 5 阶段 1→5→10→25→49 全量入库收口) |
 | 调度 | APScheduler + launchd | D5 自研 OutboxDispatcher(D4.8 IMAPSync 范本)→ D10.3 launchd_install.sh 部署(5 源判定 + ~/bin/)+ 每月 1 号 09:00 月报触发 |
 
 ---

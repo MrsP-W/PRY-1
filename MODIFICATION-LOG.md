@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2750 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **246 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2754 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **247 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线(2026-07-02 · `handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单 + `tests/dashboard/test_companion_readonly.py` 30 tests)→ commit 1 笔 + check-snapshot + push |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
@@ -4540,7 +4540,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **业务代码改动** — `src/my_ai_employee/dashboard/handlers.py`:`do_GET` 开头加 `_COMPANION_READ_ONLY_ALIASES` 白名单 dict 映射(6 路径)+ `Final[dict[str, str]]` 类型严判 + `path in aliases` 精确匹配(`!= startswith`);`from typing import Any` 升级为 `from typing import Any, Final`
 - **测试新增** — `tests/dashboard/test_companion_readonly.py` 30 测试(6 端点 200 + read_only=True + 与 `/api/*` 响应一致 + 写路径不被改写 + 路径混淆攻击 + 白名单与契约对齐 + 离线兜底契约)
 - **契约同步** — `src/my_ai_employee/api/mobile_companion.py` docstring 更新(Day 8 docs-only → Day 9 6 只读已接入,2 POST 继续 dry-run,白名单严判解释,版本维持 v0.2.57-companion)
-- **基线同步** — `quality_snapshot.py` 2721 → 2751 / 89.08% → 89.09% / 245 → 246 files + 5 状态文件(CLAUDE / README / SESSION-STATE / MODIFICATION-LOG / launch-plan)同步
+- **基线同步** — `quality_snapshot.py` 2721 → 2751 / 89.08% → 89.07% / 245 → 246 files + 5 状态文件(CLAUDE / README / SESSION-STATE / MODIFICATION-LOG / launch-plan)同步
 
 ### 2. 风险点
 
@@ -4554,7 +4554,30 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2750 passed / 1 skipped / 89.09%** / mypy --strict **0 / 246 files** / MD lint **244 files** / 9/9 质量门全绿 / 撞坑累计 **83 类(撞坑 #71 解除 · 0 新增)** / Day 9 移动伴侣只读真实接入 6 端点上线
+- 进度:**2750 passed / 1 skipped / 89.07%** / mypy --strict **0 / 246 files** / MD lint **244 files** / 9/9 质量门全绿 / 撞坑累计 **83 类(撞坑 #71 解除 · 0 新增)** / Day 9 移动伴侣只读真实接入 6 端点上线
 - **撞坑累计**:**83 类**(**0 新增**撞坑 · 撞坑 #1/#18/#50/#59/#64/#65/#71/#76/#78/#79/#82/#83 沿用)
 - **新增契约版本**:无新版本号(`COMPANION_API_VERSION` 维持 `v0.2.57-companion`)
-- **Day 9+ 下一棒**:Notes 加密链路真实启用(候选 D 真实接入)+ 移动伴侣写端点 dry-run 准备 + 90 封 QQ SMTP spike 仍跳过
+- 下一棒:**Day 9+ 下一棒**:Notes 加密链路真实启用(候选 D 真实接入)+ 移动伴侣写端点 dry-run 准备 + 90 封 QQ SMTP spike 仍跳过
+
+---
+
+## 59. 2026-07-02 · Day 9+ companion POST 映射 + NoteStore 加密读写 + 基线校准
+
+> **触发**:用户授权 P0/P1 三项(覆盖率校准 · companion POST dry-run · Notes 加密读写链路)
+
+### 1. 本次修改内容
+
+- **P0 基线校准** — `quality_snapshot.py` 2754 passed / 89.09% / mypy 247 files;同步 README / CLAUDE / SESSION-STATE / launch-plan / MODIFICATION-LOG
+- **P1 companion POST** — `handlers.py` 加 `_COMPANION_WRITE_ALIASES` 映射 `/api/companion/approval-gate/{decide,actions}` → 原生端点;`test_companion_readonly.py` +4 测试(与原生响应一致,默认 403 write_disabled)
+- **P1 Notes 加密读写** — `NoteStore` 注入 `NotesCipher`;insert 前明文算指纹、落库加密 title/body;读出路径 `_decrypt_note(s)`;`tests/db/test_notes_encryption_store.py` +3 测试
+
+### 2. 风险点
+
+- 🟡 **ENABLE_NOTES_ENCRYPTION 仍默认关闭**(Stub 明文;Impl 需 env + master key,本周再补 Keychain)
+- 🟢 **companion 写端点仍 5 门 dry-run** — 未开 `ENABLE_PATH_4_WRITE=1`
+- 🟢 **撞坑 #59/#18 红线维持**
+
+### 3. 当前项目整体总结
+
+- 进度:**2754 passed / 1 skipped / 89.09%** / mypy **247 files** / MD lint **244 files**
+- 下一棒:**Keychain notes master key + count_by_needs_confirm + 不启 ENABLE_NOTES_ENCRYPTION 生产**

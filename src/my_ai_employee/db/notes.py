@@ -58,6 +58,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
 from my_ai_employee.core.models import Base
+from my_ai_employee.core.notes_encryption import (
+    DEFAULT_NOTES_FIELDS,
+    NotesCipher,
+    NotesFieldCipher,
+    build_notes_cipher,
+)
 
 # ===== 自定义异常(D9.1 契约 — L1 UNIQUE 冲突 → 业务阻断入口)=====
 
@@ -246,11 +252,17 @@ class NoteStore:
         - OperationalError / DataError / InterfaceError **不**捕获,透传给 Adapter
     """
 
-    def __init__(self, session_factory: sessionmaker[Session]) -> None:
+    def __init__(
+        self,
+        session_factory: sessionmaker[Session],
+        *,
+        cipher: NotesCipher | None = None,
+    ) -> None:
         """初始化。
 
         Args:
             session_factory: SQLAlchemy sessionmaker(Session 范本)
+            cipher: Notes 字段级加密(默认 build_notes_cipher();ENABLE_NOTES_ENCRYPTION=0 时为 Stub)
         """
         if session_factory is None or not callable(session_factory):
             raise TypeError(
@@ -258,6 +270,31 @@ class NoteStore:
                 f"实际 type={type(session_factory).__name__}"
             )
         self._sf = session_factory
+        self._cipher = cipher if cipher is not None else build_notes_cipher()
+        self._field_by_name: dict[str, NotesFieldCipher] = {
+            field.field_name: field for field in DEFAULT_NOTES_FIELDS
+        }
+
+    def _field_cipher(self, field_name: str) -> NotesFieldCipher:
+        try:
+            return self._field_by_name[field_name]
+        except KeyError as e:
+            raise ValueError(f"未知 notes 字段: {field_name!r}") from e
+
+    def _encrypt_field(self, plaintext: str, field_name: str) -> str:
+        return self._cipher.encrypt(plaintext, self._field_cipher(field_name))
+
+    def _decrypt_note(self, note: Note) -> Note:
+        """读出后解密 title/body 供 UI/业务层使用(库内仍可为 enc:v1:)."""
+        for field_name in ("title", "body"):
+            raw = getattr(note, field_name)
+            decrypted = self._cipher.decrypt(raw, self._field_cipher(field_name))
+            if decrypted is not None:
+                setattr(note, field_name, decrypted)
+        return note
+
+    def _decrypt_notes(self, notes: list[Note]) -> list[Note]:
+        return [self._decrypt_note(note) for note in notes]
 
     # ===== 严判 helper(双层防御:工厂层 + 数据类 `__post_init__`)=====
 
@@ -467,13 +504,15 @@ class NoteStore:
                     candidate_match_id = fuzzy_candidates[0]
 
         # 3. 落库(D3.3.3 教训: except 范围窄化,只接 IntegrityError)
+        stored_title = self._encrypt_field(title, "title")
+        stored_body = self._encrypt_field(body, "body")
         try:
             with self._sf() as session:
                 note = Note(
                     apple_note_id=apple_note_id,
                     folder=folder,
-                    title=title,
-                    body=body,
+                    title=stored_title,
+                    body=stored_body,
                     attachments_json=attachments_json,
                     is_private=is_private_int,
                     tags=tags,
@@ -486,7 +525,7 @@ class NoteStore:
                 session.add(note)
                 session.commit()
                 session.refresh(note)
-                return note
+                return self._decrypt_note(note)
         except IntegrityError as e:
             # 业务阻断入口(UNIQUE 冲突)
             raise NoteDuplicateError(
@@ -517,7 +556,8 @@ class NoteStore:
                 f"实际 type={type(note_id).__name__}, value={note_id!r}"
             )
         with self._sf() as session:
-            return session.get(Note, note_id)
+            note = session.get(Note, note_id)
+            return self._decrypt_note(note) if note is not None else None
 
     def find_by_apple_id(self, apple_note_id: str) -> Note | None:
         """按 apple_note_id 查询(L1 幂等检查).
@@ -531,7 +571,8 @@ class NoteStore:
         apple_note_id = self._validate_apple_note_id(apple_note_id)
         with self._sf() as session:
             stmt = select(Note).where(Note.apple_note_id == apple_note_id)
-            return session.execute(stmt).scalar_one_or_none()
+            note = session.execute(stmt).scalar_one_or_none()
+            return self._decrypt_note(note) if note is not None else None
 
     def list_all(self, limit: int = 1000) -> list[Note]:
         """列出所有 notes(按 synced_at_ms DESC 倒序).
@@ -548,7 +589,7 @@ class NoteStore:
             )
         with self._sf() as session:
             stmt = select(Note).order_by(text("synced_at_ms DESC")).limit(limit)
-            return list(session.execute(stmt).scalars().all())
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
 
     def list_by_folder(self, folder: str, limit: int = 1000) -> list[Note]:
         """按 folder 查询.
@@ -572,7 +613,7 @@ class NoteStore:
                 .order_by(text("synced_at_ms DESC"))
                 .limit(limit)
             )
-            return list(session.execute(stmt).scalars().all())
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
 
     def mark_structured(
         self,
@@ -646,7 +687,7 @@ class NoteStore:
             db_note.sync_status = SYNC_STATUS_STRUCTURED
             session.commit()
             session.refresh(db_note)
-            return db_note
+            return self._decrypt_note(db_note)
 
     # ===== v0.2.1 #4 状态机守卫 + 4 新方法 =====
 
@@ -682,7 +723,7 @@ class NoteStore:
             db_note.sync_status = SYNC_STATUS_PRIVATE_SKIP
             session.commit()
             session.refresh(db_note)
-            return db_note
+            return self._decrypt_note(db_note)
 
     def mark_failed(self, apple_note_id: str, *, error_class: str) -> Note:
         """v0.2.1 #4 状态机推进 — sync_status='FAILED'(LLM/DB 失败,可重试)。"""
@@ -706,7 +747,7 @@ class NoteStore:
             db_note.sync_status = SYNC_STATUS_FAILED
             session.commit()
             session.refresh(db_note)
-            return db_note
+            return self._decrypt_note(db_note)
 
     def mark_archived(self, apple_note_id: str) -> Note:
         """v0.2.1 #4 状态机推进 — sync_status='ARCHIVED'(用户归档,终态)。"""
@@ -722,7 +763,7 @@ class NoteStore:
             db_note.sync_status = SYNC_STATUS_ARCHIVED
             session.commit()
             session.refresh(db_note)
-            return db_note
+            return self._decrypt_note(db_note)
 
     def list_by_sync_status(self, sync_status: str, *, limit: int = 100) -> list[Note]:
         """v0.2.1 #4 状态机过滤查询 — 按 sync_status 列过滤 Note 列表(按 synced_at_ms DESC)。"""
@@ -742,7 +783,7 @@ class NoteStore:
                 .order_by(Note.synced_at_ms.desc())
                 .limit(limit)
             )
-            return list(session.execute(stmt).scalars().all())
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
 
     def list_by_needs_confirm(self, *, limit: int = 100) -> list[Note]:
         """v0.2.1+ L2 跨源待确认列表 — 按 needs_confirm=1 过滤 Note 列表(按 synced_at_ms DESC).
@@ -765,7 +806,7 @@ class NoteStore:
                 .order_by(Note.synced_at_ms.desc())
                 .limit(limit)
             )
-            return list(session.execute(stmt).scalars().all())
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
 
     def find_candidates_by_fingerprint(
         self,
@@ -804,7 +845,7 @@ class NoteStore:
             if exclude_note_id is not None:
                 stmt = stmt.where(Note.id != exclude_note_id)
             stmt = stmt.order_by(Note.id.asc()).limit(limit)
-            return list(session.execute(stmt).scalars().all())
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
 
     def _find_l3_fuzzy_in_session(
         self,

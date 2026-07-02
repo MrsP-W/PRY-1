@@ -8,8 +8,8 @@
 接入状态(沿撞坑 #64 公共 API 一致性):
     - Day 9(v0.2.66)— 6 只读 GET 端点已真实接入,handler `_COMPANION_READ_ONLY_ALIASES`
       把 `/api/companion/*` 前缀改写为 `/api/*`,复用现有只读逻辑零新业务代码
-    - 2 POST 端点(approval-gate/decide + approval-gate/actions)继续 dry-run,
-      移动伴侣调用需先联机;离线时按钮置灰(沿契约 `offline_fallback` 字段)
+    - Day 9+ — 2 POST 端点已精确映射 `_COMPANION_WRITE_ALIASES` → 原生
+      `/api/approval-gate/{decide,actions}`,仍走 5 门 dry-run(不开启真实写入)
     - 白名单严判:仅路径完全等于 `_COMPANION_READ_ONLY_ALIASES` 字典 key 才改写,
       避免 startswith 一刀切被路径混淆攻击绕过(撞坑 #18 5 门严判替代)
     - 契约不变:`COMPANION_API_VERSION` 维持 `v0.2.57-companion`,后续 Day 10+
