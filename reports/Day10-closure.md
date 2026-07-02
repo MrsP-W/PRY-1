@@ -31,7 +31,7 @@
 | **pytest** | **2790 passed / 2 skipped**(= 2792 collected,2 是 snapshot guardian 自身 fail;`make test` 独立测 2791 passed / 1 skipped) |
 | **coverage** | **89.09%**(fail_under=80 通过) |
 | **mypy** | **0 errors / 248 files** |
-| **MD lint** | **248 files 0 errors** |
+| **MD lint** | **249 files 0 errors** |
 | **ruff check** | All checks passed |
 | **ruff format** | 264 files already formatted |
 | **alembic --sql** | 成功(0016 migration) |
@@ -40,7 +40,7 @@
 
 **校准基线说明**:
 - `2788 → 2790`(Phase 4 收口 `@检查员` 复核 9 门实测 2790 / 2 skipped,本次校准 2790;`make test` 独立测 2791 / 1 skipped · check-snapshot guardian 自身计入 2 skipped)
-- `247 → 248 MD`(Phase 4 收口 closure 文档新增 1 MD `Day10-closure.md` + Phase 2.1 Day 11 runbook 新增 1 MD `day11-notes-encryption-production-runbook.md`)
+- `247 → 249 MD`(Phase 4 收口 closure 文档新增 1 MD `Day10-closure.md` + Phase 2.1 Day 11 runbook 新增 1 MD `day11-notes-encryption-production-runbook.md` + Phase 2.2 Day 11 companion 8/1 readiness 新增 1 MD `day11-companion-write-8-1-readiness.md`)
 - `89.09%` 不变(coverage 守门 fail_under=80 通过)
 
 ---
@@ -195,7 +195,7 @@
 - 🔄 Phase 5 push Phase 3 + 3.5 + Phase 4 commits(用户明确 push 后再推)
 
 **撞坑累计**:84 类(Day 10 新增 6 类 · 沿用 #1/#18/#50/#59/#64/#65/#71 解除/#76/#78/#79)
-**质量门**:9/9 全绿(2790 passed / 2 skipped · 89.09% · 0 mypy errors / 248 files · 248 MD files)
+**质量门**:9/9 全绿(2790 passed / 2 skipped · 89.09% · 0 mypy errors / 248 files · 249 MD files)
 **业务代码**:Day 10 累计 0 业务改动(Phase 1.2/3.5 spike/3 docs 均为验证 + 文档化)
 **红线全维持**:ENABLE_PATH_4_WRITE=1 不开 · ENABLE_NOTES_ENCRYPTION=1 不写 shell profile · 生产主库未触碰 · tag 未动
 **远程同步**:Phase 0 push 4 commits(`cdc5e46..72b6953 main -> main`)· Phase 3 + 3.5 + 4 本地 ahead 2 待用户 push
