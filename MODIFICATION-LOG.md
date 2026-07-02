@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2754 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **247 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线(2026-07-02 · `handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单 + `tests/dashboard/test_companion_readonly.py` 30 tests)→ commit 1 笔 + check-snapshot + push |
+| **质量基线** | **2781 passed / 1 skipped** / **89.11%** / mypy --strict 0 / **248 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 10 Phase 1.1 Keychain notes master key 接线(2026-07-02 · `core/keychain.py` `get/set/delete_notes_master_key` + `notes_encryption.load_notes_master_key()` + `tests/core/test_keychain_notes.py` 27 tests)→ commit 1 笔 + check-snapshot + push |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4581,3 +4581,32 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2754 passed / 1 skipped / 89.09%** / mypy **247 files** / MD lint **244 files**
 - 下一棒:**Keychain notes master key + count_by_needs_confirm + 不启 ENABLE_NOTES_ENCRYPTION 生产**
+
+---
+
+## 60. 2026-07-02 · Day 10 Phase 1.1 Keychain notes master key 接线(撞坑 #1/#18/#64/#65 沿用)
+
+> **触发**:用户授权「走推荐路径」= Phase 0 push + Phase 1.1 Keychain 接线(用户原话)
+
+### 1. 本次修改内容
+
+- **P0 push** — `cdc5e46` 同步 origin/main(`16d2143..cdc5e46`)
+- **P0 core/keychain.py** — 新增 `set/get/delete_notes_master_key()` 3 函数 + `KEYCHAIN_SERVICE_NOTES` 复用契约(撞坑 #64 公共 API 一致性)+ 严判 hex + 长度下限 32 hex chars(撞坑 #18 5 门替代)+ 不打 value(撞坑 #1 隐私铁律)+ account="master"
+- **P0 notes_encryption.py** — 新增 `load_notes_master_key()` 工厂 + `_hex_to_bytes` 内部 helper;env UNSET 短路返回 None(撞坑 #65 opt-in 4 阶段);Keychain 任何失败 → None(绝不抛异常,降级 Stub)
+- **P0 tests/core/test_keychain_notes.py** — **27 tests**(撞坑 #1 mock Keychain 不读真明文):set 严判 7 / get 2 / delete 1 / _hex_to_bytes 8 / load_notes_master_key 6 / end-to-end 3
+- **P0 业务代码 0 改动** — `db/notes.py` NoteStore 默认构造已接 `build_notes_cipher()`(撞坑 #65 opt-in 4 阶段范本已沿用)
+- **P0 5 状态文件基线同步** — `quality_snapshot.py` + CLAUDE.md L7/L16 + README.md L7/L71/L114 + SESSION-STATE.md L4/L18/L33 + launch-plan.md L264
+
+### 2. 风险点
+
+- 🟢 **`ENABLE_NOTES_ENCRYPTION=1` 仍默认关闭**(Stub 范本;Keychain 接线仅完成,生产不启用)
+- 🟢 **撞坑 #1 隐私铁律维持** — 真实密钥不打印 / 不写入 chat / 不写入 commit / 不写入 docs
+- 🟢 **撞坑 #18/#64/#65 严判沿用** — hex 字符 + 长度下限 / 服务名复用 / opt-in 4 阶段降级
+- 🟢 **撞坑 #59 outlook/gmail 红线维持**
+- 🟢 **撞坑 #71 业务代码改动日 ✅ Day 8 解除**(本棒仅接 Keychain,不启 env 不动业务逻辑)
+
+### 3. 当前项目整体总结
+
+- 进度:**2781 passed / 1 skipped / 89.11%** / mypy **248 files** / MD lint **244 files**
+- 下一棒:**Day 10 Phase 2 `count_by_needs_confirm` SQL `COUNT(*)` 优化**(替代 `list_by_needs_confirm(limit=10000) + len()`)→ Phase 3 companion 写端点契约文档化 → Phase 4 9 门全绿 + auto-commit(默认不 push)
+- 后续(本会话外):Day 11+ Notes 真加密生产启用 / Day 9+ 移动伴侣写端点 dry-run 准备 / 90 封 QQ SMTP spike 仍跳过

@@ -26,6 +26,10 @@ from typing import Final
 
 from loguru import logger
 
+# Day 10 / Phase 1.1 — Notes master key 服务名复用 `notes_encryption.KEYCHAIN_SERVICE_NOTES`
+# (撞坑 #64 公共 API 一致性:契约值不在本模块重复声明,直接 import 复用,避免双源漂移)
+from my_ai_employee.core.notes_encryption import KEYCHAIN_SERVICE_NOTES
+
 # Keychain 中的 service 名（统一前缀）
 SERVICE_PREFIX: Final[str] = "my-ai-employee"
 SERVICE_DB: Final[str] = f"{SERVICE_PREFIX}.db"
@@ -353,6 +357,73 @@ def delete_oauth_token(provider: str, email: str) -> KeychainResult:
     return delete_password(_resolve_oauth_service(provider), email)
 
 
+# Day 10 / Phase 1.1 — Notes master key 高层封装
+# 沿 `set_smtp_password_for_provider` 范本,严格使用 `notes_encryption.KEYCHAIN_SERVICE_NOTES`
+# 作为 service(撞坑 #64 公共 API 一致性 — service 名不二次声明,import 复用)
+# account 固定为 "master"(单实例单密钥,撞坑 #1 隐私铁律)
+_NOTES_MASTER_KEY_ACCOUNT: Final[str] = "master"
+# 主密钥最小长度(字节) — 与 `notes_encryption.build_notes_cipher` 严判对齐
+_NOTES_MASTER_KEY_MIN_LEN: Final[int] = 16
+
+
+def set_notes_master_key(master_key_hex: str) -> KeychainResult:
+    """写入 Notes 主密钥到 Keychain(撞坑 #1 隐私铁律 — 调用方须负责 hex 来源).
+
+    Args:
+        master_key_hex: 主密钥的 hex 字符串(>= 32 hex chars = >= 16 bytes,沿
+            `notes_encryption._DERIVED_KEY_LENGTH` 32 字节范本)
+
+    Returns:
+        KeychainResult(ok=True) 成功 / KeychainResult(ok=False, error=...) 失败
+
+    Raises:
+        ValueError: 非 str / 非 hex / 长度 < 16 bytes(32 hex chars)
+
+    设计原则:
+        - 撞坑 #1 隐私铁律:本函数不打印 value / 不 log 密钥原文
+        - 撞坑 #64 公共 API 一致性:复用 `notes_encryption.KEYCHAIN_SERVICE_NOTES`
+        - 撞坑 #18 5 门严判替代:严判白名单(snake_case hex + 长度下限)
+    """
+    if not isinstance(master_key_hex, str):
+        raise ValueError(f"master_key_hex 必须是 str,实际 type={type(master_key_hex).__name__}")
+    stripped = master_key_hex.strip()
+    if not stripped:
+        raise ValueError("master_key_hex 必填且必须非空字符串")
+    if not all(c in "0123456789abcdefABCDEF" for c in stripped):
+        raise ValueError("master_key_hex 必须只含 [0-9a-fA-F] hex 字符")
+    if len(stripped) < _NOTES_MASTER_KEY_MIN_LEN * 2:
+        raise ValueError(
+            f"master_key_hex 至少需 {_NOTES_MASTER_KEY_MIN_LEN * 2} hex chars "
+            f"(={_NOTES_MASTER_KEY_MIN_LEN} bytes),实际 {len(stripped)} chars"
+        )
+    return set_password(KEYCHAIN_SERVICE_NOTES, _NOTES_MASTER_KEY_ACCOUNT, stripped)
+
+
+def get_notes_master_key() -> KeychainResult:
+    """读取 Notes 主密钥(hex 字符串)。
+
+    Returns:
+        KeychainResult(ok=True, value=hex_string) 找到
+        KeychainResult(ok=False, error="not found") 不存在
+        KeychainResult(ok=False, error=...) 其他错误
+
+    撞坑 #1 隐私铁律:调用方需自行避免打印 value;logger 只记长度不记内容。
+    """
+    result = get_password(KEYCHAIN_SERVICE_NOTES, _NOTES_MASTER_KEY_ACCOUNT)
+    if result.ok and result.value is not None:
+        # 不打 value,只打长度
+        logger.info(
+            f"Keychain 命中: service={KEYCHAIN_SERVICE_NOTES} "
+            f"account={_NOTES_MASTER_KEY_ACCOUNT} (master_key {len(result.value)} hex chars)"
+        )
+    return result
+
+
+def delete_notes_master_key() -> KeychainResult:
+    """删除 Notes 主密钥(Keychain 不存在也算成功,沿 `delete_password` 范本)."""
+    return delete_password(KEYCHAIN_SERVICE_NOTES, _NOTES_MASTER_KEY_ACCOUNT)
+
+
 __all__ = [
     "KeychainResult",
     "is_available",
@@ -382,4 +453,8 @@ __all__ = [
     "set_oauth_token",
     "get_oauth_token",
     "delete_oauth_token",
+    # Day 10 / Phase 1.1 — Notes master key(撞坑 #1/#18/#64 严判)
+    "set_notes_master_key",
+    "get_notes_master_key",
+    "delete_notes_master_key",
 ]

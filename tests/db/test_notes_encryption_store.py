@@ -78,8 +78,8 @@ def test_insert_impl_cipher_encrypts_at_rest_and_decrypts_on_read(
     session_factory: Any,
 ) -> None:
     """Impl:指纹用明文计算,库内 title/body 加密,读出解密."""
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
     from my_ai_employee.db.notes import Note
 
     title = "加密标题"

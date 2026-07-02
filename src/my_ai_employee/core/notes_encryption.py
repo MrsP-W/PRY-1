@@ -299,6 +299,75 @@ def build_notes_cipher(master_key: bytes | None = None) -> NotesCipher:
     return NotesCipherImpl(master_key=master_key)
 
 
+# Day 10 / Phase 1.1 — Keychain 主密钥加载工厂(降级不抛异常)
+# 撞坑 #65 opt-in 4 阶段范本:任何失败 → 返回 None,绝不抛异常,绝不阻塞业务
+# 撞坑 #1 隐私铁律:不打印 value,只记长度 + service 名
+# 撞坑 #18 5 门严判替代:严判 hex + 长度,过短/非 hex → 视作缺密钥降级
+
+
+def _hex_to_bytes(value: str) -> bytes | None:
+    """hex 字符串 → bytes;失败返回 None(撞坑 #65 降级,不抛异常).
+
+    严判:
+        - 必须 hex 字符 [0-9a-fA-F]
+        - 偶数长度
+        - 长度 >= 16 bytes(32 hex chars,沿 `_DERIVED_KEY_LENGTH` 32 字节范本,
+          这里只取下限保证密钥可用,实际 Impl 仍用完整长度)
+    """
+    if not isinstance(value, str):
+        return None
+    stripped = value.strip()
+    if not stripped:
+        return None
+    if len(stripped) % 2 != 0:
+        return None
+    if not all(c in "0123456789abcdefABCDEF" for c in stripped):
+        return None
+    try:
+        raw = bytes.fromhex(stripped)
+    except ValueError:
+        return None
+    if len(raw) < 16:
+        return None
+    return raw
+
+
+def load_notes_master_key() -> bytes | None:
+    """从 Keychain 加载 Notes 主密钥,失败时返回 None(沿撞坑 #65 降级范本).
+
+    **绝不抛异常** — 任何失败(Keychain 不可用 / 密钥不存在 / 格式错 / 长度不够)
+    都返回 None,让上层 `build_notes_cipher(None)` 自然降级到 Stub。
+
+    撞坑 #1 隐私铁律:不打印 value,不 log 密钥原文。
+
+    撞坑设计:
+        - 默认 UNSET `ENABLE_NOTES_ENCRYPTION=1` 时,即使 Keychain 有密钥也返回 None
+          (沿 `build_notes_cipher` opt-in 范本 — env 是开关,缺它就 Stub)
+        - 当 env 开启时,才尝试从 Keychain 取
+        - 此函数是 `build_notes_cipher(load_notes_master_key())` 的核心接线
+
+    Returns:
+        主密钥 bytes(>= 16 bytes)或 None(失败/未启用)
+    """
+    # 撞坑 #65 opt-in 4 阶段:env UNSET 时短路返回 None,不发请求
+    if not is_notes_encryption_enabled():
+        return None
+    # Keychain 导入放在函数内 — 撞坑 #64 公共 API + 避免顶层硬绑 macOS-only
+    try:
+        from my_ai_employee.core.keychain import get_notes_master_key
+    except ImportError:
+        # Keychain 模块不可用(非 macOS 等场景)→ 降级
+        return None
+    try:
+        result = get_notes_master_key()
+    except Exception:
+        # 任何底层异常 → 降级(撞坑 #65 4 阶段)
+        return None
+    if not result.ok or not isinstance(result.value, str):
+        return None
+    return _hex_to_bytes(result.value)
+
+
 __all__ = [
     "DEFAULT_NOTES_FIELDS",
     "ENABLE_NOTES_ENCRYPTION_ENV",
@@ -310,4 +379,6 @@ __all__ = [
     "build_notes_cipher",
     "get_default_stub",
     "is_notes_encryption_enabled",
+    # Day 10 / Phase 1.1 — Keychain 接线工厂
+    "load_notes_master_key",
 ]
