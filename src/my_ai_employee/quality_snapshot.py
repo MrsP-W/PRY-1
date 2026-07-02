@@ -14,10 +14,10 @@ from dataclasses import dataclass
 class QualityGateSnapshot:
     """质量门只读快照(不跑 CI,沿菜单栏系统健康范本)."""
 
-    pytest: str = "2721 passed / 1 skipped"
-    coverage: str = "89.08%"
+    pytest: str = "2750 passed / 1 skipped"
+    coverage: str = "89.09%"
     mypy: str = "0 errors"
-    mypy_files: str = "245 files"
+    mypy_files: str = "246 files"
     lint: str = "244 files 0 errors"
 
 

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-02(**Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(2026-07-01 docs-only 决策 + 2026-07-02 ABCD 并发实施 · 撞坑累计 83 类 · 9 质量门基线 **2721 passed / 89.08%** / **244 MD** / mypy **245 files** · 候选 A `/api/approval-gate/decide` 端点 + 1-click UI + 候选 B `AuditRecord.decision` 字段 + 候选 C `src/my_ai_employee/api/mobile_companion.py` 契约 + 候选 D `core/notes_encryption.py` 字段级加密 · 撞坑 #59/#18/#71 红线维持))
+> 最后更新:2026-07-02(**Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(2026-07-02 · handlers.py 加 `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + tests/dashboard/test_companion_readonly.py 30 tests + `mobile_companion.py` docstring 标注 Day 9 已接入 · 撞坑累计 83 类 · 9 质量门基线 **2750 passed / 89.09%** / **244 MD** / mypy **246 files** · 候选 C 契约沿用 + 写路径仍 dry-run · 撞坑 #59/#18/#71 红线维持))
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(2026-07-02 · 撞坑 #71 解除 · 业务代码首次 + 改动 · 撞坑累计 83 类 · 9/9 质量门 **2721 passed / 89.08%** / **244 MD** / mypy **245 files** · 候选 A `/api/approval-gate/decide` 端点 + 1-click UI + 候选 B `AuditRecord.decision` 字段 + 候选 C `src/my_ai_employee/api/mobile_companion.py` 契约 + 候选 D `core/notes_encryption.py` 字段级加密 · 撞坑 #59/#18/#71 红线维持)。
+**当前阶段**：**Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(2026-07-02 · handlers.py 加 `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + tests/dashboard/test_companion_readonly.py 30 tests + `mobile_companion.py` docstring 标注 Day 9 已接入 · 撞坑累计 83 类 · 9/9 质量门 **2750 passed / 89.09%** / **244 MD** / mypy **246 files** · 候选 C 契约沿用 · 写路径(/decide /actions)继续 dry-run · 撞坑 #18 5 门严判替代 · 撞坑 #59/#71 红线维持)。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 

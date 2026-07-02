@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2721 passed / 1 skipped** / **89.08%** / mypy --strict 0 / **245 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地(2026-07-02 · 用户明确授权「ABCD都执行」)→ commit 4-5 笔 + @检查员复核 + @教练员沉淀 + @回顾员复盘 + push |
+| **质量基线** | **2750 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **246 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线(2026-07-02 · `handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单 + `tests/dashboard/test_companion_readonly.py` 30 tests)→ commit 1 笔 + check-snapshot + push |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
@@ -4528,3 +4528,33 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 撞坑累计:**83 类**(撞坑 #71 解除 + 撞坑 #82/#83 已闭合 · 0 新增撞坑)
 - 决策待办:Day 9+ 移动伴侣真实接入 + Notes 加密链路真实启用 + 90 封 QQ SMTP spike 仍跳过
 - 下一棒:@检查员 9/9 复核 + 红线检查 + @教练员 沉淀 1 条技巧(Day 8 命名)+ @回顾员 写复盘(Day 9+ 预判)+ commit 4-5 笔 + push
+
+---
+
+## 63. 2026-07-02 · Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线
+
+> **触发**:Day 8 候选 C 落地后,Day 9 沿契约 `mobile_companion.py` 复用现有只读 handler · 用户明确「开始」授权
+
+### 1. 本次修改内容
+
+- **业务代码改动** — `src/my_ai_employee/dashboard/handlers.py`:`do_GET` 开头加 `_COMPANION_READ_ONLY_ALIASES` 白名单 dict 映射(6 路径)+ `Final[dict[str, str]]` 类型严判 + `path in aliases` 精确匹配(`!= startswith`);`from typing import Any` 升级为 `from typing import Any, Final`
+- **测试新增** — `tests/dashboard/test_companion_readonly.py` 30 测试(6 端点 200 + read_only=True + 与 `/api/*` 响应一致 + 写路径不被改写 + 路径混淆攻击 + 白名单与契约对齐 + 离线兜底契约)
+- **契约同步** — `src/my_ai_employee/api/mobile_companion.py` docstring 更新(Day 8 docs-only → Day 9 6 只读已接入,2 POST 继续 dry-run,白名单严判解释,版本维持 v0.2.57-companion)
+- **基线同步** — `quality_snapshot.py` 2721 → 2751 / 89.08% → 89.09% / 245 → 246 files + 5 状态文件(CLAUDE / README / SESSION-STATE / MODIFICATION-LOG / launch-plan)同步
+
+### 2. 风险点
+
+- 🟢 **撞坑 #18 5 门严判沿用** — `_COMPANION_READ_ONLY_ALIASES` 仅 6 只读白名单;写路径(`/api/companion/approval-gate/decide` `/actions`)不被改写 → 走 `do_POST` 5 门严判
+- 🟢 **撞坑 #64 公共 API 一致性** — `companion` 端点响应与 `/api/*` 完全相等(测试 `TestCompanionMatchesLegacyApi` parametrize 验证);白名单键集合与契约 `COMPANION_ROUTES` 中 `requires_write_gate=False` GET 端点集合对齐(`TestCompanionWhitelistExported`)
+- 🟢 **撞坑 #71 已解除** — 业务代码首次 + 改动沿用 Day 8 范本,本轮改动仅 `handlers.py` `do_GET` 开头 + 新建测试
+- 🟢 **撞坑 #50 漂移防御** — 9 质量门 baseline 推进触发 `make check-snapshot` 6 文件同步,二次校验 OK
+- 🟢 **路径混淆攻击防护** — `path in dict` 精确匹配,不用 `startswith` 一刀切;6 个 `bogus_path` 测试(`/api/companion-status` / `companionX/status` / `companionstatus` 等)全 404
+- 🟢 **撞坑 #59 红线维持** — 不动 SMTP 多账户;outlook/gmail 仍不配置
+- 🟢 **撞坑 #1 隐私铁律沿用** — 移动伴侣绑定 `127.0.0.1` 无 HTTP 鉴权(沿 `dashboard/server.py` 范本);真实凭据不打印
+
+### 3. 当前项目整体总结
+
+- 进度:**2750 passed / 1 skipped / 89.09%** / mypy --strict **0 / 246 files** / MD lint **244 files** / 9/9 质量门全绿 / 撞坑累计 **83 类(撞坑 #71 解除 · 0 新增)** / Day 9 移动伴侣只读真实接入 6 端点上线
+- **撞坑累计**:**83 类**(**0 新增**撞坑 · 撞坑 #1/#18/#50/#59/#64/#65/#71/#76/#78/#79/#82/#83 沿用)
+- **新增契约版本**:无新版本号(`COMPANION_API_VERSION` 维持 `v0.2.57-companion`)
+- **Day 9+ 下一棒**:Notes 加密链路真实启用(候选 D 真实接入)+ 移动伴侣写端点 dry-run 准备 + 90 封 QQ SMTP spike 仍跳过

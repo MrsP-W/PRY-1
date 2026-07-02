@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
-from typing import Any
+from typing import Any, Final
 from urllib.parse import parse_qs, urlparse
 
 from my_ai_employee.dashboard.action_contracts import (
@@ -43,6 +43,19 @@ _MAX_POST_BODY_BYTES = 16 * 1024
 _READ_ONLY_METHODS = "GET, OPTIONS"
 _APPROVAL_GATE_METHODS = "POST, OPTIONS"
 
+# v0.2.66 / Day 9 — 移动伴侣只读真实接入白名单
+# 原则:仅 6 只读路径前缀改写为对应 /api/*,写路径(/decide //actions)绝不允许改写
+# 严判:path 必须完全等于白名单前缀(避免 /api/companion-decide 误匹配)
+# 撞坑:沿 #18 5 门严判 + #64 公共 API 一致性 + #71 已解除
+_COMPANION_READ_ONLY_ALIASES: Final[dict[str, str]] = {
+    "/api/companion/status": "/api/status",
+    "/api/companion/tasks/today": "/api/tasks/today",
+    "/api/companion/outbox": "/api/outbox",
+    "/api/companion/notes/pending": "/api/notes/pending",
+    "/api/companion/finance/anomalies": "/api/finance/anomalies",
+    "/api/companion/approval-gate/audits": "/api/approval-gate/audits",
+}
+
 
 class DashboardHandler(BaseHTTPRequestHandler):
     """只读 Dashboard API handler."""
@@ -52,6 +65,11 @@ class DashboardHandler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
+        # v0.2.66 / Day 9 — 移动伴侣只读接入:仅白名单 6 路径前缀改写为 /api/*
+        # 写路径(/api/companion/approval-gate/decide //actions)不在白名单,继续走 do_POST 5 门严判
+        # 移动伴侣必须用专用白名单路径,严禁被路径混淆攻击绕过(如 /api/companion-/decide)
+        if path in _COMPANION_READ_ONLY_ALIASES:
+            path = _COMPANION_READ_ONLY_ALIASES[path]
         query = parse_qs(parsed.query)
         limit_raw = query.get("limit", [None])[0]
         limit = parse_limit(limit_raw)

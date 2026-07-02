@@ -1,9 +1,19 @@
 """v0.2.57 / Day 8 候选 C — 移动伴侣 API 路由表契约.
 
 本模块定义"移动伴侣 App"(iOS / macOS 伴侣)与本地 Dashboard 之间
-的 API 契约。**仅契约定义,不在 Day 8 实施真实路由**(纯 docs 先行)。
+的 API 契约。**Day 8 仅契约定义**(纯 docs 先行)。
 真实接入由 `dashboard/server.py` 在 Day 9+ 复用现有 handlers,只需
 追加 mobile 专用端点即可(沿 v0.2.53.11 ApprovalGate 范本)。
+
+接入状态(沿撞坑 #64 公共 API 一致性):
+    - Day 9(v0.2.66)— 6 只读 GET 端点已真实接入,handler `_COMPANION_READ_ONLY_ALIASES`
+      把 `/api/companion/*` 前缀改写为 `/api/*`,复用现有只读逻辑零新业务代码
+    - 2 POST 端点(approval-gate/decide + approval-gate/actions)继续 dry-run,
+      移动伴侣调用需先联机;离线时按钮置灰(沿契约 `offline_fallback` 字段)
+    - 白名单严判:仅路径完全等于 `_COMPANION_READ_ONLY_ALIASES` 字典 key 才改写,
+      避免 startswith 一刀切被路径混淆攻击绕过(撞坑 #18 5 门严判替代)
+    - 契约不变:`COMPANION_API_VERSION` 维持 `v0.2.57-companion`,后续 Day 10+
+      真接入 POST 端点时升级为 `v0.2.66-companion-write`
 
 设计原则:
     - 复用现有 Dashboard 5 门:所有写操作走 ApprovalGate 严判
