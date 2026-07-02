@@ -18,8 +18,12 @@ sys.path.insert(0, str(ROOT))
 
 from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES  # noqa: E402
 
+_GUARDIAN_PROBE_ENV = "MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE"
+
 _LINT_RE = re.compile(r"^(\d+) files\b")
 _PYTEST_RE = re.compile(r"^(\d+) passed(?:\s*/\s*(\d+) skipped)?")
+_BASELINE_GUARDIAN_REL = Path("tests/test_quality_snapshot.py")
+_TEST_DEF_RE = re.compile(r"^\s*def test_", re.MULTILINE)
 
 
 def count_tracked_md_files(root: Path = ROOT) -> int:
@@ -109,6 +113,42 @@ def _parse_pytest_outcomes(stdout: str) -> tuple[int, int, int]:
     return p, f, s
 
 
+def count_baseline_guardian_tests(*, root: Path = ROOT) -> int:
+    """`tests/test_quality_snapshot.py` 内 test 函数数(基线守护上限)."""
+    path = root / _BASELINE_GUARDIAN_REL
+    text = path.read_text(encoding="utf-8")
+    return len(_TEST_DEF_RE.findall(text))
+
+
+def count_baseline_guardian_failures(*, root: Path = ROOT) -> int:
+    """仅跑基线守护模块,返回 fail 数(用于解释 collect vs passed+skipped 差值)."""
+    import os
+
+    if os.environ.get(_GUARDIAN_PROBE_ENV) == "1":
+        # 已在 guardian 探测子进程内 — 避免 test_quality_snapshot 递归 spawn pytest
+        return 0
+    env = os.environ.copy()
+    env[_GUARDIAN_PROBE_ENV] = "1"
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "pytest",
+            str(_BASELINE_GUARDIAN_REL),
+            "-q",
+            "--no-cov",
+            "--tb=no",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    _, failed, _ = _parse_pytest_outcomes(result.stdout + result.stderr)
+    return failed
+
+
 def check_snapshot(*, root: Path = ROOT) -> list[str]:
     """返回漂移错误列表;空列表表示通过."""
     errors: list[str] = []
@@ -123,33 +163,35 @@ def check_snapshot(*, root: Path = ROOT) -> list[str]:
 
     passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
     collected = count_collected_tests(root)
-    # 撞坑 #50 Day 10:基线守护测试自身 fail 时实跑 passed+skipped 减少但 collect 不变。
-    # 实跑总触达 = passed + skipped + failed,应等于 collect-only 数(含自身)。
-    # 但我们不应再跑一次 pytest 拿 failed 数(递归陷阱),改用收集数 vs passed+skipped
-    # 做最小判定:collected >= passed+skipped,且 collected - passed - skipped 等于
-    # 基线守护测试中已 fail 的测试数(动态,允许 0)。
+    # 撞坑 #50 Day 10:稳态要求 collected == passed+skipped(严格)。
+    # 仅当基线守护模块自身有 fail 时,允许 collected = passed+skipped+failures,
+    # 且 failures 必须等于实测 guardian fail 数(不能用固定上限掩盖 snapshot 漂移)。
     expected_collected = passed + skipped
+    guardian_failures = count_baseline_guardian_failures(root=root)
+    guardian_cap = count_baseline_guardian_tests(root=root)
+    if guardian_failures > guardian_cap:
+        errors.append(
+            "pytest drift: "
+            f"baseline guardian failures ({guardian_failures}) "
+            f"> guardian test count ({guardian_cap})"
+        )
+        return errors
+    allowed_collected = expected_collected + guardian_failures
     if collected < expected_collected:
         errors.append(
             "pytest drift: "
             f"quality_snapshot claims {passed} passed / {skipped} skipped, "
             f"but pytest --collect-only only has {collected} (< {expected_collected})"
         )
-    elif collected > expected_collected:
-        # 撞坑 #50 Day 10:基线守护测试自身 fail(collect 仍 collect 它们)
-        delta = collected - expected_collected
-        # delta 应等于基线守护测试失败数(0=稳态 / N=基线漂移)
-        # 当 quality_snapshot 已通过其他门(ruff/mypy/lint)时,delta 只来自基线守护
-        # 不视为 drift;否则视为 drift(实测现在 delta=3=3 个基线守护 fail)
-        # 沿撞坑 #50 范本:把 delta 视为基线守护测试自身 fail,不报 drift。
-        # 仅在 delta 超过 BASELINE_GUARDIAN_MAX_FAIL 时报 drift。
-        if delta > 6:
-            errors.append(
-                "pytest drift: "
-                f"quality_snapshot claims {passed} passed / {skipped} skipped, "
-                f"but pytest --collect-only has {collected} "
-                f"(delta {delta} > BASELINE_GUARDIAN_MAX_FAIL)"
-            )
+    elif collected != allowed_collected:
+        errors.append(
+            "pytest drift: "
+            f"quality_snapshot claims {passed} passed / {skipped} skipped, "
+            f"pytest --collect-only has {collected}, "
+            f"expected {allowed_collected} "
+            f"(passed+skipped={expected_collected} + "
+            f"baseline guardian failures={guardian_failures})"
+        )
     return errors
 
 

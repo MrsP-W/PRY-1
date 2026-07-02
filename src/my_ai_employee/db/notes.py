@@ -63,6 +63,7 @@ from my_ai_employee.core.notes_encryption import (
     NotesCipher,
     NotesFieldCipher,
     build_notes_cipher,
+    load_notes_master_key,
 )
 
 # ===== 自定义异常(D9.1 契约 — L1 UNIQUE 冲突 → 业务阻断入口)=====
@@ -262,7 +263,8 @@ class NoteStore:
 
         Args:
             session_factory: SQLAlchemy sessionmaker(Session 范本)
-            cipher: Notes 字段级加密(默认 build_notes_cipher();ENABLE_NOTES_ENCRYPTION=0 时为 Stub)
+            cipher: Notes 字段级加密(默认 build_notes_cipher(load_notes_master_key());
+                env 关闭或 Keychain 缺失时为 Stub)
         """
         if session_factory is None or not callable(session_factory):
             raise TypeError(
@@ -270,7 +272,7 @@ class NoteStore:
                 f"实际 type={type(session_factory).__name__}"
             )
         self._sf = session_factory
-        self._cipher = cipher if cipher is not None else build_notes_cipher()
+        self._cipher = cipher if cipher is not None else build_notes_cipher(load_notes_master_key())
         self._field_by_name: dict[str, NotesFieldCipher] = {
             field.field_name: field for field in DEFAULT_NOTES_FIELDS
         }

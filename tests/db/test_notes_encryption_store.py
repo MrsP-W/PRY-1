@@ -5,6 +5,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
 from sqlalchemy import create_engine
@@ -48,6 +49,39 @@ def store_encrypted(session_factory: Any) -> NoteStore:
     from my_ai_employee.db.notes import NoteStore
 
     return NoteStore(session_factory, cipher=NotesCipherImpl(master_key=b"x" * 32))
+
+
+def test_default_store_encrypts_when_env_and_keychain_ok(
+    session_factory: Any,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """默认 NoteStore:env=1 + Keychain OK 时应加密落库(不经手动注入 cipher)."""
+    from my_ai_employee.core.keychain import KeychainResult
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+    from my_ai_employee.db.notes import Note, NoteStore
+
+    monkeypatch.setenv("ENABLE_NOTES_ENCRYPTION", "1")
+    master_key_hex = "d" * 64
+    with patch(
+        "my_ai_employee.core.keychain.get_notes_master_key",
+        return_value=KeychainResult(ok=True, value=master_key_hex),
+    ):
+        default_store = NoteStore(session_factory)
+        note = default_store.insert(
+            apple_note_id="x-coredata://ICNote/DEFAULT-ENC1",
+            folder="Notes",
+            title="默认加密标题",
+            body="默认加密正文",
+            updated_at_ms=1700000002000,
+        )
+    assert note.title == "默认加密标题"
+    assert note.body == "默认加密正文"
+
+    with session_factory() as session:
+        raw = session.get(Note, note.id)
+        assert raw is not None
+        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V1)
+        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V1)
 
 
 def test_insert_stub_cipher_stores_plaintext_at_rest(
