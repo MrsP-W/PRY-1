@@ -375,3 +375,160 @@ class TestNoteConfirmServiceImplMagicMock:
         impl.confirm_note("test-id")
         mock_store.list_by_needs_confirm.assert_called()
         mock_store.mark_archived.assert_called_once_with("test-id")
+
+
+# ============================================================
+# Day 10 Phase 1.2 — 菜单栏 note_confirm_service 真实解密集成测试
+# 沿 [src/my_ai_employee/menu_bar/note_confirm_service.py:155-186] list_pending_confirm
+# 走 store.list_by_needs_confirm → NoteStore._decrypt_notes 出库前已 in-place 解密
+# 验证菜单栏弹窗实际拿到的 title 是明文(撞坑 #65 兼容)
+# ============================================================
+
+
+class TestNoteConfirmServiceImplRealCipher:
+    """Day 10 Phase 1.2:真实 NoteStore(Impl cipher) + NoteConfirmServiceImpl 集成."""
+
+    def test_impl_cipher_list_pending_confirm_returns_plaintext(
+        self,
+    ) -> None:
+        """真实 Impl cipher + needs_confirm=1 数据:list_pending_confirm 出库明文."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from my_ai_employee.core.models import Base
+        from my_ai_employee.core.notes_encryption import (
+            DEFAULT_NOTES_FIELDS,
+            NotesCipherImpl,
+        )
+        from my_ai_employee.db.notes import Note, NoteStore  # noqa: F401  # 触发 ORM 注册
+        from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
+
+        eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(eng)
+        sf = sessionmaker(bind=eng)
+
+        master = b"m" * 32
+        impl_seed = NotesCipherImpl(master_key=master)
+        title_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "title")
+        body_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "body")
+
+        # 1 条全密文 + 1 条全明文(混合场景)
+        from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+
+        with sf() as session:
+            session.add(
+                Note(
+                    apple_note_id="x-coredata://ICNote/MENU-LEGACY",
+                    folder="Notes",
+                    title="菜单明文标题",
+                    body="菜单明文正文",
+                    is_private=0,
+                    tags=None,
+                    synced_at_ms=1_700_000_001_000,
+                    updated_at_ms=1_700_000_001_000,
+                    sync_status="NEW",
+                    needs_confirm=1,
+                    candidate_match_id=None,
+                )
+            )
+            enc_title = impl_seed.encrypt("菜单密文标题", title_field)
+            enc_body = impl_seed.encrypt("菜单密文正文", body_field)
+            assert enc_title.startswith(_CIPHERTEXT_PREFIX_V1)
+            session.add(
+                Note(
+                    apple_note_id="x-coredata://ICNote/MENU-ENC",
+                    folder="Work",
+                    title=enc_title,
+                    body=enc_body,
+                    is_private=0,
+                    tags=None,
+                    synced_at_ms=1_700_000_002_000,
+                    updated_at_ms=1_700_000_002_000,
+                    sync_status="NEW",
+                    needs_confirm=1,
+                    candidate_match_id=None,
+                )
+            )
+            # 不需要确认的 note(needs_confirm=0)应被过滤
+            session.add(
+                Note(
+                    apple_note_id="x-coredata://ICNote/MENU-NO-CONFIRM",
+                    folder="Notes",
+                    title="无需求确认",
+                    body="body",
+                    is_private=0,
+                    tags=None,
+                    synced_at_ms=1_700_000_003_000,
+                    updated_at_ms=1_700_000_003_000,
+                    sync_status="ARCHIVED",
+                    needs_confirm=0,
+                    candidate_match_id=None,
+                )
+            )
+            session.commit()
+
+        store = NoteStore(sf, cipher=NotesCipherImpl(master_key=master))
+        service = NoteConfirmServiceImpl(store)
+
+        # count = 2(过滤掉 needs_confirm=0)
+        assert service.get_pending_confirm_count() == 2
+
+        # list 2 条,title 全部明文
+        items = service.list_pending_confirm(limit=10)
+        assert len(items) == 2
+        titles = {item["title"] for item in items}
+        assert titles == {"菜单明文标题", "菜单密文标题"}
+        for item in items:
+            assert not item["title"].startswith(_CIPHERTEXT_PREFIX_V1)
+            # 字段白名单 6 个,无 body/cipher_prefix 泄漏
+            assert set(item.keys()) == {
+                "apple_note_id",
+                "title",
+                "folder",
+                "synced_at_ms",
+                "candidate_match_id",
+                "needs_confirm",
+            }
+            assert item["needs_confirm"] == 1
+            assert item["folder"] in {"Notes", "Work"}
+
+    def test_stub_cipher_list_pending_confirm_legacy_plaintext(
+        self,
+    ) -> None:
+        """Stub cipher 读历史明文(撞坑 #65):list_pending_confirm 透传原值."""
+        from sqlalchemy import create_engine
+        from sqlalchemy.orm import sessionmaker
+
+        from my_ai_employee.core.models import Base
+        from my_ai_employee.db.notes import Note, NoteStore  # noqa: F401
+        from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
+
+        eng = create_engine("sqlite:///:memory:")
+        Base.metadata.create_all(eng)
+        sf = sessionmaker(bind=eng)
+
+        with sf() as session:
+            session.add(
+                Note(
+                    apple_note_id="x-coredata://ICNote/MENU-STUB-LEGACY",
+                    folder="Notes",
+                    title="Stub 读旧明文",
+                    body="Stub 透传",
+                    is_private=0,
+                    tags=None,
+                    synced_at_ms=1_700_000_001_000,
+                    updated_at_ms=1_700_000_001_000,
+                    sync_status="NEW",
+                    needs_confirm=1,
+                    candidate_match_id=None,
+                )
+            )
+            session.commit()
+
+        # 默认 cipher = Stub
+        store = NoteStore(sf)
+        service = NoteConfirmServiceImpl(store)
+        items = service.list_pending_confirm(limit=10)
+        assert len(items) == 1
+        assert items[0]["title"] == "Stub 读旧明文"
+        assert items[0]["folder"] == "Notes"

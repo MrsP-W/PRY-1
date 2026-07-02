@@ -549,6 +549,142 @@ def test_http_api_notes_pending(running_server: str) -> None:
     assert body["items"][0]["title"] == "L2 候选"
 
 
+# ============================================================
+# Day 10 Phase 1.2 — Dashboard /api/notes/pending 真实解密集成测试
+# 沿 [src/my_ai_employee/dashboard/responses.py:151-155] build_notes_pending_payload
+# 走 note_confirm_service.list_pending_confirm → NoteStore._decrypt_notes
+# 出库前 title/body 已 in-place 解密为明文(撞坑 #65 兼容)
+# ============================================================
+
+
+@pytest.fixture
+def dashboard_ctx_with_real_note_confirm() -> Any:
+    """真实 NoteStore(Impl cipher) + NoteConfirmServiceImpl 注入的 ctx."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+
+    from my_ai_employee.core.models import Base
+    from my_ai_employee.core.notes_encryption import NotesCipherImpl
+    from my_ai_employee.dashboard.context import DashboardContext
+    from my_ai_employee.db.notes import Note, NoteStore  # noqa: F401  # 触发 ORM 注册
+    from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
+
+    eng = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(eng)
+    sf = sessionmaker(bind=eng)
+
+    # 直接 SQLAlchemy 写入 needs_confirm=1 的 note(模拟上游 sync 已就位)
+    master = b"z" * 32
+    with sf() as session:
+        # 写 2 条全明文 + 1 条手动 enc:v1: 密文,验证混合场景
+        session.add(
+            Note(
+                apple_note_id="x-coredata://ICNote/DASH-LEGACY1",
+                folder="Notes",
+                title="明文标题 A",
+                body="明文正文 A",
+                is_private=0,
+                tags=None,
+                synced_at_ms=1_700_000_001_000,
+                updated_at_ms=1_700_000_001_000,
+                sync_status="NEW",
+                needs_confirm=1,
+                candidate_match_id=None,
+            )
+        )
+        # 手动预加密(用相同 master_key + NotesCipherImpl 写 enc:v1: ... 形式)
+        from my_ai_employee.core.notes_encryption import DEFAULT_NOTES_FIELDS
+
+        impl_for_seed = NotesCipherImpl(master_key=master)
+        title_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "title")
+        body_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "body")
+        # impl.encrypt 返回的密文**已带 enc:v1: 前缀**(notes_encryption.py:196)
+        enc_title = impl_for_seed.encrypt("密文标题 B", title_field)
+        enc_body = impl_for_seed.encrypt("密文正文 B", body_field)
+        session.add(
+            Note(
+                apple_note_id="x-coredata://ICNote/DASH-ENC1",
+                folder="Work",
+                title=enc_title,
+                body=enc_body,
+                is_private=0,
+                tags=None,
+                synced_at_ms=1_700_000_002_000,
+                updated_at_ms=1_700_000_002_000,
+                sync_status="NEW",
+                needs_confirm=1,
+                candidate_match_id=None,
+            )
+        )
+        session.add(
+            Note(
+                apple_note_id="x-coredata://ICNote/DASH-LEGACY2",
+                folder="Notes",
+                title="明文标题 C",
+                body="明文正文 C",
+                is_private=0,
+                tags=None,
+                synced_at_ms=1_700_000_003_000,
+                updated_at_ms=1_700_000_003_000,
+                sync_status="NEW",
+                needs_confirm=1,
+                candidate_match_id=None,
+            )
+        )
+        session.commit()
+
+    # 用同一 master_key 的 Impl cipher 构造 store
+    store = NoteStore(sf, cipher=NotesCipherImpl(master_key=master))
+    service = NoteConfirmServiceImpl(store)
+    base_ctx = DashboardContext(
+        git_head_resolver=lambda: "abc1234",
+        keychain_probe=lambda _s: False,
+    )
+    return base_ctx.with_note_confirm(service), store, master
+
+
+def test_build_notes_pending_payload_decrypts_real_encrypted_notes(
+    dashboard_ctx_with_real_note_confirm: Any,
+) -> None:
+    """真实 NoteStore(Impl)→ NoteConfirmServiceImpl → build_notes_pending_payload:
+    库内密文(enc:v1:)和明文混存,items[].title 全部出库为明文(撞坑 #65 兼容)."""
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+    from my_ai_employee.dashboard.responses import build_notes_pending_payload
+
+    ctx, store, _master = dashboard_ctx_with_real_note_confirm
+    payload = build_notes_pending_payload(ctx, limit=10)
+
+    # 1) count = 3
+    assert payload["count"] == 3
+    assert payload["read_only"] is True
+    assert len(payload["items"]) == 3
+
+    # 2) 字段白名单 — 6 字段都在,无 cipher_prefix/body 泄漏
+    expected_keys = {
+        "apple_note_id",
+        "title",
+        "folder",
+        "synced_at_ms",
+        "candidate_match_id",
+        "needs_confirm",
+    }
+    for item in payload["items"]:
+        assert set(item.keys()) == expected_keys
+        assert "body" not in item
+        assert "cipher_prefix" not in item
+        assert "encrypted_title" not in item
+
+    # 3) 全部 title 是明文(无 enc:v1: 前缀)
+    titles = {item["title"] for item in payload["items"]}
+    assert titles == {"明文标题 A", "密文标题 B", "明文标题 C"}
+    for item in payload["items"]:
+        assert not item["title"].startswith(_CIPHERTEXT_PREFIX_V1)
+
+    # 4) folder 字段同样按密文回退(明文 A/C=Notes,密文 B=Work)
+    folders = {item["folder"] for item in payload["items"]}
+    assert folders == {"Notes", "Work"}
+
+
 def test_http_api_finance_anomalies(running_server: str) -> None:
     status, body = _fetch_json(f"{running_server}/api/finance/anomalies")
     assert status == 200

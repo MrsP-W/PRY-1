@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-02(**Day 10 启动 — Phase 1.1 Keychain notes master key 接线**(2026-07-02 · `core/keychain.py` 加 `get/set/delete_notes_master_key` 复用 `KEYCHAIN_SERVICE_NOTES` + `notes_encryption.load_notes_master_key()` 工厂 + `tests/core/test_keychain_notes.py` **27 tests** · 撞坑累计 83 类 · 9 质量门基线 **2781 passed / 89.11%** / **244 MD** / mypy **248 files** · Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线(沿用) · Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地(沿用) · 候选 C 契约沿用 + 写路径仍 dry-run · 撞坑 #1/#18/#59/#64/#65 严判沿用 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开**))
+> 最后更新:2026-07-02(**Day 10 Phase 1.2 — fallback 集成测试 + 真实解密集成**(2026-07-02 · `tests/db/test_notes_encryption_store.py` +3 fallback 集成测试(Stub/Impl 读旧明文 + 混合密文明文) · `tests/dashboard/test_api.py` +1 真实 NoteStore(Impl) → `build_notes_pending_payload` 解密测试 · `tests/menu_bar/test_note_confirm_service.py` +2 真实 NoteStore(Impl/Stub) → `list_pending_confirm` 解密测试 · 撞坑 #1/#18/#64/#65 严判沿用 · 9 质量门基线 **2786 passed / 89.11%** / **244 MD** / mypy **248 files** · Day 10 Phase 1.1 Keychain notes master key 接线(沿用) · Day 9 移动伴侣只读真实接入 ✅(沿用) · Day 8 撞坑 #71 解除 ✅(沿用) · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开**))
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 10 启动 — Phase 1.1 Keychain notes master key 接线**(2026-07-02 · `core/keychain.py` 加 `get/set/delete_notes_master_key` 复用 `KEYCHAIN_SERVICE_NOTES` + `notes_encryption.load_notes_master_key()` 工厂 + `tests/core/test_keychain_notes.py` **27 tests** · 撞坑累计 83 类 · 9/9 质量门 **2781 passed / 89.11%** / **244 MD** / mypy **248 files** · Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线(沿用) · Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地(沿用) · 候选 C 契约沿用 · 写路径(/decide /actions)继续 dry-run · 撞坑 #1/#18/#59/#64/#65 严判沿用 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开**)。
+**当前阶段**：**Day 10 Phase 1.2 — fallback 集成测试 + 真实解密集成**(2026-07-02 · `tests/db/test_notes_encryption_store.py` +3 fallback 集成测试(Stub/Impl 读旧明文 + 混合密文明文) · `tests/dashboard/test_api.py` +1 真实 NoteStore(Impl) → `build_notes_pending_payload` 解密测试 · `tests/menu_bar/test_note_confirm_service.py` +2 真实 NoteStore(Impl/Stub) → `list_pending_confirm` 解密测试 · 撞坑累计 84 类 · 9/9 质量门 **2786 passed / 89.11%** / **244 MD** / mypy **248 files** · Day 10 Phase 1.1 Keychain notes master key 接线(沿用) · Day 9 移动伴侣只读真实接入 ✅(沿用) · Day 8 撞坑 #71 解除 ✅(沿用) · 候选 C 契约沿用 · 写路径(/decide /actions)继续 dry-run · 撞坑 #1/#18/#59/#64/#65 严判沿用 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开**)。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 
