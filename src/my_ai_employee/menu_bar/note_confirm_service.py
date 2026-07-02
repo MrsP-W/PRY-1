@@ -102,8 +102,7 @@ class NoteConfirmServiceImpl:
     """NoteConfirmService 真实实现 — 调 NoteStore 3 方法(沿 D8.3 ExpenseServiceImpl 范本).
 
     接入契约:
-        - get_pending_confirm_count → NoteStore.list_by_needs_confirm(limit=1) 取长度
-          (避免拉全部 notes, 性能 O(1) — 只需 count)
+        - get_pending_confirm_count → NoteStore.count_by_needs_confirm()(SQL COUNT(*))
         - list_pending_confirm → NoteStore.list_by_needs_confirm(limit=limit) 转 dict 列表
           (UI 层需要 dict 而非 ORM 对象, 序列化字段)
         - confirm_note → NoteStore.mark_archived(apple_note_id)
@@ -128,6 +127,7 @@ class NoteConfirmServiceImpl:
             raise TypeError(f"note_store 必填(非 None),实际 type={type(note_store).__name__}")
         # 严判 duck type(沿 D4.7.3 公共 helper 范本)
         required_methods = (
+            "count_by_needs_confirm",
             "list_by_needs_confirm",
             "mark_archived",
         )
@@ -145,10 +145,7 @@ class NoteConfirmServiceImpl:
         异常收容: 任何异常 → 返回 0(菜单栏静默降级).
         """
         try:
-            # limit=1 仅取 1 条, 计算 length 与实际 count 一致
-            # (NoteStore.list_by_needs_confirm 返回 list[Note], length 是 O(1))
-            notes = self._store.list_by_needs_confirm(limit=10000)
-            return len(notes)
+            return int(self._store.count_by_needs_confirm())
         except Exception:  # noqa: BLE001 — Stub 异常不能让菜单崩(沿 D8.3 范本)
             return 0
 

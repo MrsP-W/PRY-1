@@ -51,6 +51,7 @@ from sqlalchemy import (
     Integer,
     Text,
     UniqueConstraint,
+    func,
     select,
     text,
 )
@@ -786,6 +787,16 @@ class NoteStore:
                 .limit(limit)
             )
             return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
+
+    def count_by_needs_confirm(self) -> int:
+        """返回 needs_confirm=1 的 note 总数(SQL COUNT(*), 不解密).
+
+        沿 D6.4 transactions L2 范本 — 菜单栏 badge / Dashboard status 计数用,
+        避免 list_by_needs_confirm(limit=10000) 拉全量再 len()。
+        """
+        with self._sf() as session:
+            stmt = select(func.count()).select_from(Note).where(Note.needs_confirm == 1)
+            return int(session.execute(stmt).scalar_one())
 
     def list_by_needs_confirm(self, *, limit: int = 100) -> list[Note]:
         """v0.2.1+ L2 跨源待确认列表 — 按 needs_confirm=1 过滤 Note 列表(按 synced_at_ms DESC).

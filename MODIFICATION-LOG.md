@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2786 passed / 2 skipped** / **89.11%** / mypy --strict 0 / **248 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 10 Phase 1.2 fallback 集成测试 + Dashboard/菜单栏解密集成(`tests/db/test_notes_encryption_store.py` +3 + `tests/dashboard/test_api.py` +1 + `tests/menu_bar/test_note_confirm_service.py` +2 → 2786 passed / 2 skipped)→ Phase 2 `count_by_needs_confirm` SQL `COUNT(*)` 优化 → Phase 3 companion 写端点契约文档化 → Phase 4 9 门全绿 + auto-commit(默认不 push) |
+| **质量基线** | **2790 passed / 2 skipped** / **89.11%** / mypy --strict 0 / **248 files** / MD lint **244 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | Day 10 Phase 2 `count_by_needs_confirm` SQL COUNT(*) 优化 ✅ → Phase 3 companion 写端点契约文档化 → Phase 4 9 门全绿 + auto-commit(默认不 push) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
 

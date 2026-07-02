@@ -6,7 +6,7 @@
     - TestNoteConfirmServiceImpl — 构造 + 3 方法 + 异常收容(沿 D8.3 _on_anomaly_alert 范本)
 
 设计原则(沿 D4.7.3 v1.0.6 范本):
-    - 用 duck type FakeNoteStore(只实现 list_by_needs_confirm + mark_archived)
+    - 用 duck type FakeNoteStore(实现 count_by_needs_confirm + list_by_needs_confirm + mark_archived)
     - 严判 type/value 异常路径(避免 bool/int 互窜)
     - 异常收容验证: get_pending_confirm_count 失败 → 0, list_pending_confirm 失败 → []
 """
@@ -42,22 +42,36 @@ class _FakeNote:
 
 
 class _FakeNoteStore:
-    """NoteStore duck type — 记录 list_by_needs_confirm + mark_archived 调用.
+    """NoteStore duck type — 记录 count/list/mark 调用.
 
-    可配置 raise_on_list / raise_on_archive 让测试触发异常路径.
+    可配置 raise_on_count / raise_on_list / raise_on_archive 让测试触发异常路径.
     """
 
     def __init__(
         self,
         notes: list[_FakeNote] | None = None,
+        *,
+        pending_count: int | None = None,
+        raise_on_count: Exception | None = None,
         raise_on_list: Exception | None = None,
         raise_on_archive: Exception | None = None,
     ) -> None:
         self._notes = notes or []
+        self._pending_count = pending_count
+        self._raise_on_count = raise_on_count
         self._raise_on_list = raise_on_list
         self._raise_on_archive = raise_on_archive
+        self.count_calls: list[None] = []
         self.list_calls: list[int] = []
         self.archive_calls: list[str] = []
+
+    def count_by_needs_confirm(self) -> int:
+        self.count_calls.append(None)
+        if self._raise_on_count is not None:
+            raise self._raise_on_count
+        if self._pending_count is not None:
+            return self._pending_count
+        return len(self._notes)
 
     def list_by_needs_confirm(self, *, limit: int = 100) -> list[_FakeNote]:
         self.list_calls.append(limit)
@@ -168,53 +182,66 @@ class TestNoteConfirmServiceImplConstruction:
             NoteConfirmServiceImpl(None)
 
     def test_construct_with_missing_methods_raises_type_error(self) -> None:
-        """构造严判:缺 list_by_needs_confirm 或 mark_archived → TypeError."""
+        """构造严判:缺 count/list/mark 任一方法 → TypeError."""
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
-        # 缺 mark_archived
         class _IncompleteStore:
             def list_by_needs_confirm(self, *, limit: int = 100) -> list[Any]:
                 return []
 
+            def mark_archived(self, apple_note_id: str) -> Any:
+                return None
+
         with pytest.raises(TypeError, match="缺方法"):
             NoteConfirmServiceImpl(_IncompleteStore())
 
-        # 缺 list_by_needs_confirm
         class _IncompleteStore2:
+            def count_by_needs_confirm(self) -> int:
+                return 0
+
             def mark_archived(self, apple_note_id: str) -> Any:
                 return None
 
         with pytest.raises(TypeError, match="缺方法"):
             NoteConfirmServiceImpl(_IncompleteStore2())
 
+        class _IncompleteStore3:
+            def count_by_needs_confirm(self) -> int:
+                return 0
+
+            def list_by_needs_confirm(self, *, limit: int = 100) -> list[Any]:
+                return []
+
+        with pytest.raises(TypeError, match="缺方法"):
+            NoteConfirmServiceImpl(_IncompleteStore3())
+
 
 class TestNoteConfirmServiceImplGetCount:
     def test_get_count_returns_zero_when_no_notes(self) -> None:
-        """空 list_by_needs_confirm → get_pending_confirm_count = 0."""
+        """空 count → get_pending_confirm_count = 0."""
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
-        store = _FakeNoteStore(notes=[])
+        store = _FakeNoteStore(notes=[], pending_count=0)
         impl = NoteConfirmServiceImpl(store)
         assert impl.get_pending_confirm_count() == 0
-        # 验证内部调 list_by_needs_confirm(limit=10000)
-        assert store.list_calls == [10000]
+        assert store.count_calls == [None]
+        assert store.list_calls == []
 
     def test_get_count_returns_length(self) -> None:
-        """3 条 note → get_pending_confirm_count = 3."""
+        """count_by_needs_confirm=3 → get_pending_confirm_count = 3."""
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
-        notes = [_FakeNote(apple_note_id=f"id-{i}", title=f"Note {i}") for i in range(3)]
-        store = _FakeNoteStore(notes=notes)
+        store = _FakeNoteStore(pending_count=3)
         impl = NoteConfirmServiceImpl(store)
         assert impl.get_pending_confirm_count() == 3
+        assert store.count_calls == [None]
 
     def test_get_count_swallows_exceptions_returns_zero(self) -> None:
-        """list_by_needs_confirm 抛异常 → 静默降级返回 0(沿 D8.3 _on_anomaly_alert 范本)."""
+        """count_by_needs_confirm 抛异常 → 静默降级返回 0(沿 D8.3 _on_anomaly_alert 范本)."""
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
-        store = _FakeNoteStore(raise_on_list=RuntimeError("DB 锁 5s 后报 OperationalError"))
+        store = _FakeNoteStore(raise_on_count=RuntimeError("DB 锁 5s 后报 OperationalError"))
         impl = NoteConfirmServiceImpl(store)
-        # 不抛异常,返回 0
         assert impl.get_pending_confirm_count() == 0
 
 
@@ -366,6 +393,7 @@ class TestNoteConfirmServiceImplMagicMock:
 
         # MagicMock 自动实现所有属性,构造不抛
         mock_store = MagicMock()
+        mock_store.count_by_needs_confirm.return_value = 0
         mock_store.list_by_needs_confirm.return_value = []
         mock_store.mark_archived.return_value = None
         impl = NoteConfirmServiceImpl(mock_store)
@@ -373,6 +401,7 @@ class TestNoteConfirmServiceImplMagicMock:
         assert impl.get_pending_confirm_count() == 0
         assert impl.list_pending_confirm(limit=10) == []
         impl.confirm_note("test-id")
+        mock_store.count_by_needs_confirm.assert_called_once()
         mock_store.list_by_needs_confirm.assert_called()
         mock_store.mark_archived.assert_called_once_with("test-id")
 

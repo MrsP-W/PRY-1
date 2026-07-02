@@ -245,3 +245,38 @@ def test_list_by_needs_confirm_validates_limit(store: Any) -> Any:
         store.list_by_needs_confirm(limit=10001)
     with pytest.raises(ValueError, match="limit 必须是"):
         store.list_by_needs_confirm(limit=True)  # bool 子类陷阱
+
+
+# ===== 4. NoteStore.count_by_needs_confirm SQL COUNT(*)(Day 10 Phase 2)=====
+
+
+def test_count_by_needs_confirm_matches_pending_list(store: Any) -> Any:
+    """4.1 count_by_needs_confirm 与 list_by_needs_confirm 长度一致."""
+    store.insert(
+        apple_note_id="x-coredata://ICNote/COUNT-A",
+        folder="Notes",
+        title="首次",
+        body="",
+        updated_at_ms=1_700_000_000_000,
+    )
+    store.insert(
+        apple_note_id="x-coredata://ICNote/COUNT-B",
+        folder="Notes",
+        title="首次",
+        body="",
+        updated_at_ms=1_700_000_000_000,
+    )
+    assert store.count_by_needs_confirm() == 1
+    assert len(store.list_by_needs_confirm()) == 1
+
+
+def test_count_by_needs_confirm_zero_when_no_candidates(store: Any) -> Any:
+    """4.2 无 L2 候选时 count 为 0."""
+    store.insert(
+        apple_note_id="x-coredata://ICNote/COUNT-C",
+        folder="Notes",
+        title="独立笔记",
+        body="",
+        updated_at_ms=1_700_000_001_000,
+    )
+    assert store.count_by_needs_confirm() == 0
