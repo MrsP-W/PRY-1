@@ -18,7 +18,7 @@
 | **Phase 2** | `count_by_needs_confirm` SQL `COUNT(*)` 优化 | `72b6953` | +3 | `NoteStore.count_by_needs_confirm` + `NoteConfirmServiceImpl` 改调 count · 2 tests |
 | **Phase 3** | companion 写端点 closure 文档化 | `7a674f0` | +4 | `reports/Day10-companion-write-dryrun-closure.md` 9 章节 + `mobile_companion.py` docstring 增强 |
 | **Phase 3.5** | Notes 真加密 dry-run spike | `3c9515b` | +5 | `scripts/spike_day10_notes_encryption_dryrun.py` + `ops/day10-notes-encryption-dryrun-closure.md` · 退出码 0 |
-| **Phase 4** | 9 门全绿 + baseline 校准 + Day10 收官 | (本次) | +6 | `reports/Day10-closure.md`(本文件) + baseline 2788/2 skipped/89.09%/246 MD/248 mypy |
+| **Phase 4** | 9 门全绿 + baseline 校准 + Day10 收官 | (本次) | +6 | `reports/Day10-closure.md`(本文件) + baseline 2790/2 skipped/89.09%/247 MD/248 mypy |
 
 **累计**:6 commits · 全 ahead of origin/main 2 commits(Phase 0 已 push 4 · Phase 3+3.5 待 push)
 
@@ -28,10 +28,10 @@
 
 | 维度 | 数值 |
 |------|------|
-| **pytest** | **2788 passed / 2 skipped**(= 2790 collected,2 是 snapshot guardian 自身 fail) |
+| **pytest** | **2790 passed / 2 skipped**(= 2792 collected,2 是 snapshot guardian 自身 fail;`make test` 独立测 2791 passed / 1 skipped) |
 | **coverage** | **89.09%**(fail_under=80 通过) |
 | **mypy** | **0 errors / 248 files** |
-| **MD lint** | **246 files 0 errors** |
+| **MD lint** | **247 files 0 errors** |
 | **ruff check** | All checks passed |
 | **ruff format** | 264 files already formatted |
 | **alembic --sql** | 成功(0016 migration) |
@@ -39,9 +39,9 @@
 | **check-snapshot** | OK(撞坑 #50 防漂移四重防御) |
 
 **校准基线说明**:
-- `2790 → 2788`(Phase 2 commit 校准 2790 实测漂移 2 个,本次校准 2788)
-- `244 → 246 MD`(Phase 3 + 3.5 各加 1 MD 文件:`Day10-companion-write-dryrun-closure.md` + `day10-notes-encryption-dryrun-closure.md`)
-- `89.11 → 89.09%`(Phase 3.5 spike script 1 个 py 文件增加分母,降幅 0.02%)
+- `2788 → 2790`(Phase 4 收口 `@检查员` 复核 9 门实测 2790 / 2 skipped,本次校准 2790;`make test` 独立测 2791 / 1 skipped · check-snapshot guardian 自身计入 2 skipped)
+- `246 → 247 MD`(Phase 4 收口 closure 文档新增 1 MD `Day10-closure.md`)
+- `89.09%` 不变(coverage 守门 fail_under=80 通过)
 
 ---
 
@@ -195,7 +195,7 @@
 - 🔄 Phase 5 push Phase 3 + 3.5 + Phase 4 commits(用户明确 push 后再推)
 
 **撞坑累计**:84 类(Day 10 新增 6 类 · 沿用 #1/#18/#50/#59/#64/#65/#71 解除/#76/#78/#79)
-**质量门**:9/9 全绿(2788 passed / 2 skipped · 89.09% · 0 mypy errors / 248 files · 246 MD files)
+**质量门**:9/9 全绿(2790 passed / 2 skipped · 89.09% · 0 mypy errors / 248 files · 247 MD files)
 **业务代码**:Day 10 累计 0 业务改动(Phase 1.2/3.5 spike/3 docs 均为验证 + 文档化)
 **红线全维持**:ENABLE_PATH_4_WRITE=1 不开 · ENABLE_NOTES_ENCRYPTION=1 不写 shell profile · 生产主库未触碰 · tag 未动
 **远程同步**:Phase 0 push 4 commits(`cdc5e46..72b6953 main -> main`)· Phase 3 + 3.5 + 4 本地 ahead 2 待用户 push

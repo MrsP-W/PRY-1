@@ -131,8 +131,8 @@ Day 10 Phase 3.5 Notes 真加密 dry-run spike — 全绿
 | 决策项 | 当前状态 | 解锁条件 |
 |--------|---------|---------|
 | **Notes 真加密生产启用** | ⏸️ 延后 | 用户明确同意 + 写入 shell profile `export ENABLE_NOTES_ENCRYPTION=1` + 历史主库 re-encrypt runbook 评估 |
-| **Phase 4 全量 9 门** | 🔄 准备 | 直接跑 `make ci`(本地 2790 → 待实测)|
-| **push 4 commits** | ⏸️ 用户决策 | 用户说 push 我再推 `git push origin main` |
+| **Phase 4 全量 9 门** | ✅ 已实测(2026-07-02) | 9 门全绿:pytest 2791 passed / 1 skipped · coverage 89.09% · mypy 0 errors / 248 files · MD lint 247 / 0 errors · check-snapshot OK |
+| **push 4 commits** | ✅ 已推(2026-07-02 · `72b6953..429a7a1 main -> main`) | remote HEAD = `429a7a1`,本地工作区 clean |
 
 ---
 
