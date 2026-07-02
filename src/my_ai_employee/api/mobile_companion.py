@@ -22,12 +22,24 @@
     - 鉴权:本地 127.0.0.1 绑定(沿 dashboard/server.py 范本),无 HTTP 鉴权
     - 离线兜底:移动伴侣可缓存最近一次响应,网络断开时不绕过 Dashboard 写入
 
+Day 10 Phase 3 文档化(2026-07-02 — `reports/Day10-companion-write-dryrun-closure.md`):
+    - 8 端点契约 / handler 白名单 / 测试 30 cases 三处对齐(撞坑 #64)
+    - 6 GET:精确白名单改写,响应 `read_only=True`,与原生 `/api/*` 完全一致
+    - 2 POST:精确白名单改写,默认 `dry_run=True`,`write_executed=False`
+    - 路径混淆攻击防御:dict 精确匹配(`if path in _COMPANION_*_ALIASES`)
+    - 离线兜底契约:6 GET 缓存最近一次响应;2 POST 必须联机,离线按钮置灰
+    - 三类不许做:不开 `ENABLE_PATH_4_WRITE=1` / 不做 mobile 离线写队列 /
+      不写新真实写代码
+
 撞坑关联:
     - 撞坑 #1:不直连 DB,所有数据访问经 Dashboard API
     - 撞坑 #18:ENABLE_PATH_4_WRITE 维持 UNSET,5 门替代
     - 撞坑 #59:outlook/gmail 仍不配置
-    - 撞坑 #65:BusinessWriter + AuditContext 沿用
+    - 撞坑 #64:6 GET 响应字典与原生完全相等(测试 `test_companion_response_equals_legacy`)
+    - 撞坑 #65:BusinessWriter + AuditContext + WriteResult/Decision 沿用(dry-run)
     - 撞坑 #71 解除:业务代码改动日,本模块是 docs-only 接口设计
+    - 撞坑 #76:真写 outbox 契约(`test_companion_decide_post_matches_native_dry_run`)
+    - 撞坑 #78/#79:5 重门控严判(钉死 `dry_run=True` + `confirm_text=CONFIRM_WRITE`)
 """
 
 from __future__ import annotations
