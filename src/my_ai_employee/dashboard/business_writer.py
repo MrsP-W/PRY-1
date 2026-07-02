@@ -1,7 +1,7 @@
 """L5 Dashboard BusinessWriter — 写操作 Protocol + Stub(沿 v0.2.53.14 设计).
 
-本模块定义:
-    - `AuditContext` 审计上下文 dataclass(actor/reason/source/timestamp_ms)
+    本模块定义:
+    - `AuditContext` 审计上下文 dataclass(actor/reason/source/timestamp_ms/decision)
     - `WriteResult` 实际写入结果 dataclass(success/affected_id/error/...)
     - `WriteDecision` dry-run 决策 dataclass(write_executed=False 恒定)
     - `BusinessAction` 白名单常量(与 v0.2.53.11 ApprovalGate 契约对齐)
@@ -45,12 +45,14 @@ class AuditContext:
         - reason ≤ 240 字符(超长 ValueError)
         - source 默认 "dashboard"
         - timestamp_ms 默认 None(由 writer 实际写入时填充 now_ms)
+        - decision 可选,仅 /api/approval-gate/decide 传入 approve/reject
     """
 
     actor: str
     reason: str
     source: str = "dashboard"
     timestamp_ms: int | None = None
+    decision: str | None = None
 
     MAX_ACTOR_LEN: ClassVar[int] = 80
     MAX_REASON_LEN: ClassVar[int] = 240
@@ -64,6 +66,15 @@ class AuditContext:
             raise ValueError(
                 f"reason 超长({len(self.reason)}>{self.MAX_REASON_LEN}):{self.reason[:40]}..."
             )
+        if self.decision is not None:
+            if not isinstance(self.decision, str):
+                raise ValueError(
+                    f"decision 必须为 str 或 None,实际 type={type(self.decision).__name__}"
+                )
+            if self.decision not in {"approve", "reject"}:
+                raise ValueError(
+                    f"decision 必须为 'approve' / 'reject' 或 None,实际={self.decision!r}"
+                )
 
     @classmethod
     def default(cls) -> AuditContext:

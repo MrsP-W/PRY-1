@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 from http import HTTPStatus
 from http.server import ThreadingHTTPServer
+from typing import cast
 
 import pytest
 
@@ -36,7 +37,17 @@ from my_ai_employee.dashboard.approval_gate import (
     SUPPORTED_DECISIONS,
     evaluate_decide_request,
 )
+from my_ai_employee.dashboard.business_writer import AuditContext, BusinessWriter, WriteResult
 from my_ai_employee.dashboard.context import DashboardContext
+from my_ai_employee.dashboard.handlers import DashboardHandler
+
+
+def _make_handler(ctx: DashboardContext) -> DashboardHandler:
+    """构造带 ctx 的 handler,用于直接验证 handler 内部实写分发."""
+    handler = DashboardHandler.__new__(DashboardHandler)
+    handler.dashboard_context = ctx
+    return handler
+
 
 # ===== 单元: evaluate_decide_request =====
 
@@ -726,6 +737,44 @@ class TestDecideAuditChain:
         assert recent[0]["decision"] == "approve"
         assert recent[0]["actor"] == "Mr-PRY"
         assert recent[0]["affected_id"] == "42"
+
+    def test_handler_execute_writer_action_passes_decision_to_audit(self) -> None:
+        """真实 /decide 实写分发时,approve/reject 必须进入 AuditContext."""
+
+        class _CaptureWriter:
+            is_runtime_impl = True
+            last_audit: AuditContext | None = None
+
+            def approve_outbox(self, target_id: str, *, audit: AuditContext) -> WriteResult:
+                self.last_audit = audit
+                return WriteResult(
+                    success=True,
+                    affected_id=target_id,
+                    error=None,
+                    reason="approve ok",
+                    audit_id="audit:1",
+                )
+
+        writer = _CaptureWriter()
+        handler = _make_handler(
+            DashboardContext().with_business_writer(cast(BusinessWriter, writer))
+        )
+
+        status, payload = handler._execute_writer_action(
+            {
+                "approval_gate_passed": True,
+                "dry_run": False,
+                "action": ACTION_OUTBOX_APPROVE,
+                "target_id": "42",
+                "decision": "approve",
+                "audit": {"actor": "Mr-PRY", "reason": "1-click 批准", "source": "dashboard"},
+            }
+        )
+
+        assert status == HTTPStatus.OK
+        assert payload["audit_id"] == "audit:1"
+        assert writer.last_audit is not None
+        assert writer.last_audit.decision == "approve"
 
 
 if __name__ == "__main__":

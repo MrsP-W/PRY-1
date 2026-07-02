@@ -204,6 +204,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             actor=str(decision.get("audit", {}).get("actor", "local_dashboard")),
             reason=str(decision.get("audit", {}).get("reason", "")),
             source=str(decision.get("audit", {}).get("source", "dashboard")),
+            decision=self._audit_decision(decision),
         )
         try:
             writer = self.dashboard_context.resolve_business_writer()
@@ -246,6 +247,7 @@ class DashboardHandler(BaseHTTPRequestHandler):
             actor=str(decision.get("audit", {}).get("actor", "local_dashboard")),
             reason=str(decision.get("audit", {}).get("reason", "")),
             source=str(decision.get("audit", {}).get("source", "dashboard")),
+            decision=self._audit_decision(decision),
         )
         try:
             writer = self.dashboard_context.resolve_business_writer()
@@ -287,6 +289,14 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 "audit_id": result.audit_id,
             },
         )
+
+    @staticmethod
+    def _audit_decision(decision: dict[str, Any]) -> str | None:
+        """从 /decide 响应中提取 approve/reject,普通 /actions 返回 None."""
+        value = decision.get("decision")
+        if isinstance(value, str) and value in {"approve", "reject"}:
+            return value
+        return None
 
     @staticmethod
     def _call_writer_action(

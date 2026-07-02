@@ -184,6 +184,11 @@ def check_state_entries(*, root: Path = ROOT) -> list[str]:
                     f"(entry drift vs quality_snapshot)"
                 )
         for needle in spec.forbidden:
+            # When md_count == mypy_count - 1, a valid MD lint value can equal the
+            # stale mypy count. Required values win; missing current mypy is
+            # already caught by the required checks above.
+            if needle in spec.required:
+                continue
             if needle in line:
                 errors.append(
                     f"{spec.rel_path}:{spec.line_no} stale {needle!r} "

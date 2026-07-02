@@ -620,6 +620,7 @@ class BusinessWriterImpl:
             audit_id 字符串(成功)或 None(失败)
         """
         try:
+            record_decision = decision if decision is not None else audit.decision
             record = AuditRecord(
                 action=action,
                 target_id=target_id,
@@ -629,7 +630,7 @@ class BusinessWriterImpl:
                 affected_id=affected_id,
                 error=error,
                 executed_at_ms=self._audit_timestamp(audit),
-                decision=decision,
+                decision=record_decision,
             )
             result: AuditRecordResult = self._audit_store.record(record)
             return result.audit_id
