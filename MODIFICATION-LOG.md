@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2791 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **248 files** / MD lint **252 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2791 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **248 files** / MD lint **253 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | Day 10 收口 ✅ · check-snapshot 校准 → 本地 ahead commits 待 push(需用户授权) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
@@ -4706,3 +4706,36 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 撞坑累计:**84 类**(Day 10 新增 6 类 · 沿用 #1/#18/#50/#59/#64/#65/#71 解除/#76/#78/#79 · #50 第三层新增 docs-only 7 步同步范本)
 - 远程同步:Phase 0 已推 4 commits(`72b6953..429a7a1`) + Phase 5 已推 2 commits(`429a7a1..7fe1f50`)+ 本次 ahead 4 commits 待用户 push 授权
 - 下一棒:8/1 release tag readiness 准备(沿 `docs/v0.2.59-8-1-tag-evaluation-2026-08-01.md`)/ Notes 真加密生产启用(等用户授权 + runbook §1 五道门)/ Day 7 A 支付宝真导(等用户提供 ZIP 密码或解压 CSV)
+
+---
+
+## 67. 2026-07-03 · Day 12 周度抽测 + snapshot 校准 252→253
+
+> **触发**:用户「按照 1-2-3 执行」 = Phase 1.1 commit ops/ 周度报告 + Phase 1.2 docs 小补丁(触发 snapshot 校准链 252→253)+ Phase 1.3 收口
+
+### 1. 本次修改内容
+
+- **Phase 1.1 ops/ 报告** — `git add ops/day12-weekly-health-2026-07-03.md` + commit `11fefd1`(1 file / +169 · 7 章节 4 Step 全绿记录 · 默认不 push)
+- **Phase 1.1 抽测实测(4/4 全绿)** — `make check-snapshot` OK → `make test` 2791 passed / 1 skipped · coverage 89.11%(实测 0.02pp 抖动不触发校准)→ `pytest tests/dashboard/test_companion_readonly.py -v` 30/30 PASSED(6 类契约全覆盖)→ `python scripts/spike_day10_notes_encryption_dryrun.py` 退出码 0(临时 DB 隔离,Keychain mock,8 ✅ 全过)
+- **Phase 1.2 docs 小补丁** — runbook §1.5 baseline `250 MD` → `253 MD`(2026-07-03 起校准 + `11fefd1` 起锚定)
+- **Phase 1.2 snapshot 校准链 252→253** — `quality_snapshot.py` lint 字段同步 + 5 入口 substring 同步(README.md L7 / CLAUDE.md L7+L16 / SESSION-STATE.md L4+L18+L33 / MODIFICATION-LOG.md L116 / docs/v0.2-launch-plan.md L264)+ 修 `baseline ... 252 MD` 字面量使其不再触发 forbidden substring(`check_state_entries.py` 第四层校验)
+- **Phase 1.2 check-snapshot + check_state_entries 全绿** — 撞坑 #50 第三层(guardian pytest drift)+ 第四层(state_entry substring drift)同时诊断并修复
+- **业务代码 0 改动** — Day 12 累计 0 改动(docs-only + ops-only)
+
+### 2. 风险点
+
+- 🟢 **撞坑 #50 第三/四层同步范本二次激活** — 文档 MD +1 → 检查 scripts/check_quality_snapshot.py(L3)+ scripts/check_state_entries.py(L4)双层联动严判,7 步同步范本验证有效
+- 🟢 **`ENABLE_NOTES_ENCRYPTION=1` 仍不写 shell profile** — 抽测仅跑 dry-run spike(临时 DB),生产主库未触碰
+- 🟢 **`ENABLE_PATH_4_WRITE=1` 8/1 前不开** — companion 30 tests 仅验证只读契约,POST dry-run 默认仍未解锁
+- 🟢 **撞坑 #1 隐私铁律** — Keychain master key 走 mock(脚本内 32 bytes 随机),不入 docs / 不入 commit
+- 🟢 **撞坑 #76 spike 链路 4 坑严判** — 临时 DB 与生产主库路径硬编码隔离(`/var/folders/...` 不命中 `~/Library/Application Support/...`)
+- 🟢 **撞坑 #64 公共 API 一致性** — companion 30 tests 中"CompanionMatchesLegacyApi"组验证响应字典与原生 API 完全相同
+- 🟢 **baseline 抖动不触发校准** — coverage 89.09% → 89.11%(+0.02pp · 沿 v0.2.54-mypy-drift-sop 范本 < 0.1pp 不入快照)
+- 🟢 **挂起 4 项** — Phase 1.3 D-step 收口(`reports/Day12-weekly-checkpoint-2026-07-03.md` 待写)/ Phase 2 8/1 预热(7/20 启动)/ push(本地 ahead 1 = `11fefd1`)/ Notes 真加密生产(等授权)
+
+### 3. 当前项目整体总结
+
+- 进度:**2791 passed / 1 skipped / 89.11%**(实测)/ mypy --strict **0 / 248 files** / MD lint **253 files** / `make check-snapshot` + `make check_state_entries` 全绿
+- 撞坑累计:**84 类**(无新增 · 沿 Day 11 收口)
+- 远程同步:Day 11 已推(`492895f`)+ Day 12 ops/ + 校准 commit 待用户 push 授权(`11fefd1` + 计划中的校准 commit · 本地 ahead 1-2)
+- 下一棒:**Phase 1.3 D-step 收口报告**(@回顾员 · `reports/Day12-weekly-checkpoint-2026-07-03.md` 待写,可选)/ **push 校准 commit**(默认不 push · 等用户明确)/ 8/1 readiness 预热(7/20 启动 · Phase 2)/ Notes 真加密生产(等授权)
