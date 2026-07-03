@@ -208,6 +208,11 @@ def run_interactive() -> None:
 
 def main(argv: list[str] | None = None) -> int:
     """主入口。argv 可注入便于单测；不传时用 sys.argv[1:]。"""
+    # 统一入口加载 .env（幂等；凭据仍走 Keychain，不落 .env）
+    from my_ai_employee.core.config import load_env
+
+    load_env()
+
     parser = build_parser()
     args = parser.parse_args(argv)
 
