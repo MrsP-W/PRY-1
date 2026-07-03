@@ -58,6 +58,9 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make build$(RESET)    9 质量门 — uv build 本地构建 wheel + sdist"
 	@echo "  $(GREEN)make dashboard-api$(RESET) v0.2.53.2 P2 — 本地 Dashboard 只读 API(127.0.0.1:8765)"
 	@echo "  $(GREEN)make menu-bar$(RESET)  Day 1 — 启动菜单栏常驻(前台;后台用 nohup 或 ops/start-menubar.sh)"
+	@echo "  $(GREEN)make setup$(RESET)     Day 1.2 — 完全体首次配置向导(Keychain + DB + TCC)"
+	@echo "  $(GREEN)make setup-check$(RESET) Day 1.2 — 只检查 Keychain 现状(零副作用)"
+	@echo "  $(GREEN)make setup-tcc$(RESET)  Day 1.2 — 只打印 macOS TCC 授权引导"
 	@echo "  $(GREEN)make info$(RESET)     显示项目信息（Python 版本 + 关键路径）"
 	@echo "  $(GREEN)make venv$(RESET)     创建项目本地 venv（uv venv, Python 3.12）"
 	@echo "  $(GREEN)make install$(RESET)  同步依赖到 venv（uv sync --extra dev）"
@@ -89,6 +92,19 @@ dashboard-api: ## v0.2.53.2 P2 — 本地 Dashboard 只读 API
 menu-bar: ## Day 1 — 启动菜单栏常驻(前台,Ctrl+C 退出;后台用 nohup 或 ops/start-menubar.sh)
 	@echo "$(BLUE)🍎 启动菜单栏常驻(Day 1 基础设施)$(RESET)"
 	@$(PYTHON) scripts/run_menu_bar.py
+
+.PHONY: setup
+setup: ## Day 1.2 — 完全体首次配置向导(Keychain + DB 初始化 + TCC 引导)
+	@echo "$(BLUE)🍎 完全体首次配置向导(Day 1.2)$(RESET)"
+	@$(PYTHON) scripts/setup_wizard.py
+
+.PHONY: setup-check
+setup-check: ## Day 1.2 — 只检查 Keychain 现状(零副作用)
+	@$(PYTHON) scripts/setup_wizard.py --check-only
+
+.PHONY: setup-tcc
+setup-tcc: ## Day 1.2 — 只打印 macOS TCC 授权引导
+	@$(PYTHON) scripts/setup_wizard.py --tcc-only
 
 .PHONY: test
 test: ## 跑单元测试

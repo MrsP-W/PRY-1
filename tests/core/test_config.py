@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -19,7 +20,7 @@ from my_ai_employee.core import config
 
 
 @pytest.fixture(autouse=True)
-def _reset_flag() -> None:
+def _reset_flag() -> Generator[None, None, None]:
     """每个用例前后重置幂等 flag，避免相互污染。"""
     config.reset_for_test()
     yield
