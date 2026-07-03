@@ -430,6 +430,7 @@ class TestNoteConfirmServiceImplRealCipher:
             NotesCipherImpl,
         )
         from my_ai_employee.db.notes import Note, NoteStore  # noqa: F401  # 触发 ORM 注册
+        from my_ai_employee.events import models as _events_models  # noqa: F401
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
         eng = create_engine("sqlite:///:memory:")
@@ -530,6 +531,7 @@ class TestNoteConfirmServiceImplRealCipher:
 
         from my_ai_employee.core.models import Base
         from my_ai_employee.db.notes import Note, NoteStore  # noqa: F401
+        from my_ai_employee.events import models as _events_models  # noqa: F401
         from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
 
         eng = create_engine("sqlite:///:memory:")
