@@ -1,6 +1,7 @@
 # Day 12 — 8/1 release tag 预热 preflight checklist (docs-only · 2026-07-03)
 
 > **状态**:📘 docs-only 预热 · **8/1 当天不打 tag**(沿 7/1 复盘决议 #25 + `docs/v0.2.59-8-1-tag-evaluation-2026-08-01.md`)
+> **节点 2 锚定**(2026-07-20):8/1 preflight §1 baseline 校准日,沿 7/16 weekly #3 baseline 重验(2791 / 89.09% / 256 MD / 248 mypy)· 9/9 项实质满足沿用 · 撞坑累计 84 类沿用 · docs-only 不前进 pytest/coverage(撞坑 #50 第三/四层沿用)
 > **承接**:Day 11 companion 8/1 readiness + Day 12 周度抽测全绿 + push `4bdf3a3`
 > **当前基线(2026-07-03 校准)**:**2791 passed / 1 skipped / 89.09% / 256 MD / 248 mypy**(沿 7/3 校准 254→256,撞坑 #50 第三/四层沿用)
 
