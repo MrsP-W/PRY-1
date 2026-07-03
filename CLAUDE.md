@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-03(**Day 11 启动 ✅**(Phase 2.1 Notes runbook + Phase 2.2 companion 8/1 readiness + check-snapshot 校准 249→250 MD) · 9 质量门 **2790 passed / 2 skipped / 89.09%** / **250 MD** / mypy **248 files** · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开**))
+> 最后更新:2026-07-04(**Day 11 收口 ✅**(Phase 2.1-2.3 docs-only + Phase 4 closure + check-snapshot 校准 250→251 MD · 撞坑 #50 第三层 7 步同步范本沉淀) · 9 质量门 **2790 passed / 2 skipped / 89.09%** / **251 MD** / mypy **248 files** · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开**))
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 11 启动 ✅**(Phase 2.1 Notes 真加密生产 runbook + Phase 2.2 移动伴侣 8/1 实写启用 readiness + check-snapshot 校准 249→250 MD) · 9/9 质量门 **2790 passed / 2 skipped / 89.09%** / **250 MD** / mypy **248 files** · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开**。
+**当前阶段**：**Day 11 收口 ✅**(Phase 2.1 Notes 真加密生产 runbook + Phase 2.2 移动伴侣 8/1 实写启用 readiness + Phase 4 closure + check-snapshot 校准 250→251 MD · 撞坑 #50 第三层 7 步同步范本沉淀) · 9/9 质量门 **2790 passed / 2 skipped / 89.09%** / **251 MD** / mypy **248 files** · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开**。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 

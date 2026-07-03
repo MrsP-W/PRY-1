@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-02 Day 10 收口 · check-snapshot 校准 · 9/9 质量门全绿 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 11 启动 ✅**(Phase 2.1 Notes 真加密生产 runbook + Phase 2.2 移动伴侣 8/1 实写启用 readiness + check-snapshot 校准 249→250 MD · 2026-07-03)+ **Day 10 收口 ✅**(Phase 1.1–4 + Phase 3.5 Notes 加密 dry-run + Phase 4 9 门全绿 · 2026-07-02 · 沿用)+ **v0.2.66 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转 · 沿用)+ Day 9 移动伴侣只读 ✅ + Day 8 撞坑 #71 解除 ✅ ABCD 全落地 + Phase A+B+C 收口(沿用)+ **`v0.2.1` tag(`71b4602`)**。**质量门**:**2790 passed / 2 skipped** / 89.09% / lint **250** / mypy **248 files**。**下一棒**:本地 ahead commits 待 push(需用户授权) · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开。**边界**:`v0.1.0` 永不动 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · `ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · 撞坑 #59 outlook/gmail 仍不配置
+> **最后更新**:2026-07-04 Day 11 收口 · check-snapshot 校准 · 9/9 质量门全绿 · 撞坑 #50 第三层 7 步同步范本沉淀 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Day 11 收口 ✅**(Phase 2.1-2.3 docs-only + Phase 4 closure + check-snapshot 校准 250→251 MD · 撞坑 #50 第三层 7 步同步范本沉淀 · 2026-07-04)+ **Day 10 收口 ✅**(Phase 1.1–4 + Phase 3.5 Notes 加密 dry-run + Phase 4 9 门全绿 · 2026-07-02 · 沿用)+ **v0.2.66 `v0.2.1` 正式 tag 落地**(2026-07-01 · 撞坑 #60 反转 · 沿用)+ Day 9 移动伴侣只读 ✅ + Day 8 撞坑 #71 解除 ✅ ABCD 全落地 + Phase A+B+C 收口(沿用)+ **`v0.2.1` tag(`71b4602`)**。**质量门**:**2790 passed / 2 skipped** / 89.09% / lint **251** / mypy **248 files**。**下一棒**:本地 ahead commits 待 push(需用户授权) · Notes 真加密生产仍不开 · `ENABLE_PATH_4_WRITE=1` 8/1 前不开。**边界**:`v0.1.0` 永不动 · `ENABLE_PATH_4_WRITE=1` 不写 shell profile · `ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · 撞坑 #59 outlook/gmail 仍不配置
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 11 启动 ✅** + **Day 10 收口 ✅** + Day 8-9 收口(沿用) — **2790 passed / 2 skipped** / 89.09% / MD lint **250** / mypy **248 files**。**下一棒**:本地 ahead commits 待 push(需用户授权) · 90 封 QQ SMTP spike 仍跳过。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 11 收口 ✅** + **Day 10 收口 ✅** + Day 8-9 收口(沿用) — **2790 passed / 2 skipped** / 89.09% / MD lint **251** / mypy **248 files**。**下一棒**:本地 ahead commits 待 push(需用户授权) · 90 封 QQ SMTP spike 仍跳过。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2790 passed / 2 skipped** · **89.09%** coverage · mypy --strict 0 errors(**248 files**) · MD lint **250 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2790 passed / 2 skipped** · **89.09%** coverage · mypy --strict 0 errors(**248 files**) · MD lint **251 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
