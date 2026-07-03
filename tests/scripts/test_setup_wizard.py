@@ -203,16 +203,20 @@ class TestSetupWizardEdgeCases:
         assert "unrecognized arguments" in result.stderr or "no such option" in result.stderr
 
     def test_setup_wizard_tcc_only_does_not_touch_keychain(self) -> None:
-        """--tcc-only 严判零 Keychain 调用(只打印)。"""
-        # 监控 keychain 模块的调用
+        """--tcc-only 严判零 Keychain 调用(进程内 main,非子进程)."""
+        import importlib.util
+
         with (
             patch("my_ai_employee.core.keychain.get_imap_password") as mock_imap,
             patch("my_ai_employee.core.keychain.get_smtp_password_for_provider") as mock_smtp,
             patch("my_ai_employee.core.keychain.get_notes_master_key") as mock_notes,
         ):
-            result = _run_setup_wizard("--tcc-only")
-            assert result.returncode == 0
-            # tcc-only 不应触发任何 Keychain 读取
+            spec = importlib.util.spec_from_file_location("setup_wizard", SETUP_WIZARD)
+            assert spec and spec.loader
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+            rc = module.main(["--tcc-only"])
+            assert rc == 0
             mock_imap.assert_not_called()
             mock_smtp.assert_not_called()
             mock_notes.assert_not_called()

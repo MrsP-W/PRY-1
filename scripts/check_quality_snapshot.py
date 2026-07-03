@@ -19,6 +19,7 @@ sys.path.insert(0, str(ROOT))
 from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES  # noqa: E402
 
 _GUARDIAN_PROBE_ENV = "MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE"
+_SKIP_LIVE_PYTEST_ENV = "MYAI_EMPLOYEE_SNAPSHOT_SKIP_LIVE_PYTEST"
 
 _LINT_RE = re.compile(r"^(\d+) files\b")
 _PYTEST_RE = re.compile(r"^(\d+) passed(?:\s*/\s*(\d+) skipped)?")
@@ -149,6 +150,41 @@ def count_baseline_guardian_failures(*, root: Path = ROOT) -> int:
     return failed
 
 
+def count_live_pytest_outcomes(*, root: Path = ROOT) -> tuple[int, int, int] | None:
+    """实跑 pytest 解出 (passed, failed, skipped);SKIP 环境或已在 pytest 内时返回 None."""
+    import os
+
+    if os.environ.get(_SKIP_LIVE_PYTEST_ENV) == "1":
+        return None
+    if os.environ.get("PYTEST_CURRENT_TEST"):
+        return None
+    env = os.environ.copy()
+    env[_SKIP_LIVE_PYTEST_ENV] = "1"
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "pytest",
+            "-q",
+            "--no-cov",
+            "--tb=no",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    passed, failed, skipped = _parse_pytest_outcomes(result.stdout + result.stderr)
+    if passed == 0 and failed == 0 and skipped == 0:
+        msg = "无法解析 pytest 实跑 passed/skipped 分布"
+        raise RuntimeError(msg)
+    if failed > 0:
+        msg = f"pytest 实跑有 {failed} failed,无法校验 snapshot 分布"
+        raise RuntimeError(msg)
+    return passed, failed, skipped
+
+
 def check_snapshot(*, root: Path = ROOT) -> list[str]:
     """返回漂移错误列表;空列表表示通过."""
     errors: list[str] = []
@@ -192,6 +228,17 @@ def check_snapshot(*, root: Path = ROOT) -> list[str]:
             f"(passed+skipped={expected_collected} + "
             f"baseline guardian failures={guardian_failures})"
         )
+
+    # 撞坑 #50 Day 13:collected 总数对齐不够,须校验实跑 passed/skipped 分布
+    live = count_live_pytest_outcomes(root=root)
+    if live is not None:
+        live_passed, _live_failed, live_skipped = live
+        if live_passed != passed or live_skipped != skipped:
+            errors.append(
+                "pytest outcome drift: "
+                f"quality_snapshot claims {passed} passed / {skipped} skipped, "
+                f"live pytest reports {live_passed} passed / {live_skipped} skipped"
+            )
     return errors
 
 

@@ -61,6 +61,7 @@ help: ## 显示帮助
 	@echo "  $(GREEN)make setup$(RESET)     Day 1.2 — 完全体首次配置向导(Keychain + DB + TCC)"
 	@echo "  $(GREEN)make setup-check$(RESET) Day 1.2 — 只检查 Keychain 现状(零副作用)"
 	@echo "  $(GREEN)make setup-tcc$(RESET)  Day 1.2 — 只打印 macOS TCC 授权引导"
+	@echo "  $(GREEN)make setup-verify-db$(RESET) Day 1.4 — 三表只读验收(schema+索引+行数)"
 	@echo "  $(GREEN)make info$(RESET)     显示项目信息（Python 版本 + 关键路径）"
 	@echo "  $(GREEN)make venv$(RESET)     创建项目本地 venv（uv venv, Python 3.12）"
 	@echo "  $(GREEN)make install$(RESET)  同步依赖到 venv（uv sync --extra dev）"
@@ -105,6 +106,11 @@ setup-check: ## Day 1.2 — 只检查 Keychain 现状(零副作用)
 .PHONY: setup-tcc
 setup-tcc: ## Day 1.2 — 只打印 macOS TCC 授权引导
 	@$(PYTHON) scripts/setup_wizard.py --tcc-only
+
+.PHONY: setup-verify-db
+setup-verify-db: ## Day 1.4 — 只读验收 transactions/notes/outbox schema+索引+行数
+	@echo "$(BLUE)🔍 Day 1.4 三表只读验收(不写库)$(RESET)"
+	@$(PYTHON) scripts/verify_day14_db_tables.py
 
 .PHONY: test
 test: ## 跑单元测试
