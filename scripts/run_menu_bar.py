@@ -2,13 +2,14 @@
 
 设计要点:
     - 不依赖不存在的 `python -m menu_bar.app` 入口(Day 2 前置)
-    - 所有服务用 None 默认值(Stub 默认单例),不连真实 DB / 不读真实剪贴板
+    - 默认 Stub;`DASHBOARD_REAL_DB=1` 时注入真实 Expense/NoteConfirm/Outbox Impl
     - badge 轮询 30s 默认(可被 env `MYAIEMP_BADGE_POLL_SECONDS` 覆盖,test 用 0.1s 加快)
     - sys.path 注入 src/,允许 `uv run python scripts/run_menu_bar.py` 直接启动
 
 启动方式(沿 D9.3 + D10 范本):
     前台调试:uv run python scripts/run_menu_bar.py
-    后台常驻(Week 1 方案 A):nohup uv run python scripts/run_menu_bar.py > data/menu_bar.log 2>&1 &
+    真实数据:env DASHBOARD_REAL_DB=1 uv run python scripts/run_menu_bar.py
+    后台常驻(Week 1 方案 A):nohup env DASHBOARD_REAL_DB=1 uv run python scripts/run_menu_bar.py ...
     集成 Day 7 一键包:bash ops/start-digital-employee.sh
 
 撞坑关联:
@@ -25,7 +26,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from my_ai_employee.core.config import load_env  # noqa: E402
 from my_ai_employee.menu_bar.app import NotesMenuBarApp  # noqa: E402
+from my_ai_employee.menu_bar.context import build_menu_bar_services  # noqa: E402
 
 
 def _badge_poll_seconds() -> float:
@@ -44,7 +47,14 @@ def _badge_poll_seconds() -> float:
 
 def main() -> int:
     """启动菜单栏 App 阻塞运行(返回 0 = 正常退出)."""
-    NotesMenuBarApp(badge_poll_interval_seconds=_badge_poll_seconds()).run()
+    load_env()
+    services = build_menu_bar_services()
+    NotesMenuBarApp(
+        expense_service=services.expense_service,
+        note_confirm_service=services.note_confirm_service,
+        outbox_draft_service=services.outbox_draft_service,
+        badge_poll_interval_seconds=_badge_poll_seconds(),
+    ).run()
     return 0
 
 

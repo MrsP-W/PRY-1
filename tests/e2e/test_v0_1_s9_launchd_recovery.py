@@ -42,7 +42,8 @@ def test_s9_launchd_plist_deployment_structure() -> Any:
     assert "generate" in args, "S9.1 必传 generate 子命令"
 
     cal = data.get("StartCalendarInterval", {})
-    assert cal.get("Month") == 1 and cal.get("Day") == 1, f"S9.1 必每月 1 号触发,实际 {cal}"
+    assert "Month" not in cal, f"S9.1 Month 不应存在(否则仅 1 月触发),实际 {cal}"
+    assert cal.get("Day") == 1, f"S9.1 必每月 1 号触发,实际 {cal}"
     assert cal.get("Hour") == 9, "S9.1 必 09:00 触发"
 
     # RunAtLoad=false(避免开机就触发)

@@ -241,13 +241,13 @@ cmd_start_menubar() {
     mkdir -p "$DATA_DIR"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "[dry-run] nohup uv run python $RUN_MENUBAR > $MENUBAR_LOG 2>&1 &"
+        echo "[dry-run] DASHBOARD_REAL_DB=1 nohup uv run python $RUN_MENUBAR > $MENUBAR_LOG 2>&1 &"
         ok "菜单栏 dry-run 完成"
         return 0
     fi
 
     cd "$PROJECT_ROOT"
-    nohup uv run python "$RUN_MENUBAR" > "$MENUBAR_LOG" 2>&1 &
+    nohup env DASHBOARD_REAL_DB=1 uv run python "$RUN_MENUBAR" > "$MENUBAR_LOG" 2>&1 &
     local pid=$!
     echo "$pid" > "$MENUBAR_PID_FILE"
 

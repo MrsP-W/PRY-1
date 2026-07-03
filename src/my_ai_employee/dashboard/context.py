@@ -115,17 +115,21 @@ class DashboardContext:
         expense = _try_build_expense_from_session_factory(session_factory)
         if expense is not None:
             ctx = ctx.with_expense(expense)
+        audit_store = _try_build_audit_store(session_factory)
+        if audit_store is not None:
+            ctx = ctx.with_audit_store(audit_store)
         # v0.2.53.27 opt-in BusinessWriterImpl(沿 DASHBOARD_REAL_DB=1 范本)
         #   - BUSINESS_WRITER_ENABLED 未设 → 保持默认 BusinessWriterStub(沿 v0.2.53.18)
         #   - 已设 + session_factory 可用 → 尝试注入 Impl
         #   - 任一失败 → 静默降级 Stub(沿 v0.2.53.8 单项失败降级)
         #   - dry-run write_executed 恒 False;实写仍由 Path 4 五门严判
         if _is_business_writer_enabled():
-            # v0.2.53.54 audit_store 同源修复:
-            #   - 先构造 audit_store,再传给 BusinessWriterImpl
-            #   - ctx.audit_store 与 writer._audit_store 必须指向同一个对象
-            #   - _try_build_audit_store 失败时复用默认 Stub,保持单对象同源
-            audit_store = _try_build_audit_store() or ctx.audit_store
+            # v0.2.53.54 audit_store 同源:ctx 已注入 Impl 时复用,否则再尝试
+            audit_store = (
+                ctx.audit_store
+                if ctx.audit_store.is_enabled()
+                else _try_build_audit_store(session_factory) or ctx.audit_store
+            )
             writer = _try_build_business_writer_from_session_factory(
                 session_factory, audit_store=audit_store
             )
@@ -385,19 +389,20 @@ def _try_build_business_writer_from_session_factory(
         return None
 
 
-def _try_build_audit_store() -> ApprovalGateAuditStore | None:
-    """v0.2.53.52 opt-in InMemoryApprovalGateAuditStore 构造 — 失败返回 None 降级 Stub.
+def _try_build_audit_store(session_factory: Any | None = None) -> ApprovalGateAuditStore | None:
+    """v0.2.53.55 opt-in ApprovalGateAuditStoreImpl — 失败返回 None 降级 Stub.
 
-    边界(沿撞坑 #65 opt-in 4 阶段 + v0.2.53.51):
-        - 测试场景下使用 InMemoryApprovalGateAuditStore(无 DB 接入)
+    边界:
+        - session_factory 可用 → ApprovalGateAuditStoreImpl(真实 SQL 落档)
         - 任何 Exception → 静默降级 None(由 caller 走默认 Stub)
-        - 当前 InMemory 实现仅供 Dashboard 进程内 audit 展示
-        - 默认 ApprovalGateAuditStoreStub(is_enabled=False,record 永远失败)
+        - 测试可继续 monkeypatch 本函数返回 InMemoryApprovalGateAuditStore
     """
+    if session_factory is None:
+        return None
     try:
-        from my_ai_employee.menu_bar.approval_gate_audit import InMemoryApprovalGateAuditStore
+        from my_ai_employee.db.approval_gate_audits import ApprovalGateAuditStoreImpl
 
-        return InMemoryApprovalGateAuditStore()
+        return ApprovalGateAuditStoreImpl(session_factory)
     except Exception:  # noqa: BLE001 — 单项失败静默降级,不阻塞 Dashboard
         return None
 

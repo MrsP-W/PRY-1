@@ -19,6 +19,8 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLIST_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.agent.plist"
+PLIST_IMAP_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.imap-sync.plist"
+PLIST_START_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.digital-employee.plist"
 INSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_install.sh"
 UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
 KICKSTART_SEAL_SH = PROJECT_ROOT / "scripts" / "launchd_kickstart_and_seal.sh"
@@ -59,11 +61,11 @@ def test_a4_plist_program_arguments():
 
 
 def test_a5_plist_calendar_interval_monthly_1st_9am():
-    """A5. StartCalendarInterval 必为 1 号 9:0(每月 1 号 09:00)."""
+    """A5. StartCalendarInterval 必为每月 1 号 9:0(不含 Month → 每月重复)."""
     with PLIST_PATH.open("rb") as f:
         data = plistlib.load(f)
     cal = data.get("StartCalendarInterval", {})
-    assert cal.get("Month") == 1, f"Month 必为 1,实际 {cal.get('Month')}"
+    assert "Month" not in cal, f"Month 不应存在(否则仅 1 月触发),实际 {cal.get('Month')}"
     assert cal.get("Day") == 1, f"Day 必为 1,实际 {cal.get('Day')}"
     assert cal.get("Hour") == 9, f"Hour 必为 9,实际 {cal.get('Hour')}"
     assert cal.get("Minute") == 0, f"Minute 必为 0,实际 {cal.get('Minute')}"
@@ -269,3 +271,46 @@ def test_d7_kickstart_seal_sh_has_release_notes_flip():
         "kickstart_seal.sh 必含 release notes flip 段"
     )
     assert "sed -i" in text, "kickstart_seal.sh 必用 sed -i 改 release notes"
+
+
+# ===== E. IMAP sync plist =====
+
+
+def test_e1_imap_plist_exists():
+    assert PLIST_IMAP_PATH.exists()
+
+
+def test_e2_imap_plist_label():
+    with PLIST_IMAP_PATH.open("rb") as f:
+        data = plistlib.load(f)
+    assert data.get("Label") == "com.myaiemployee.imap-sync"
+
+
+def test_e3_imap_plist_daily_7am():
+    with PLIST_IMAP_PATH.open("rb") as f:
+        data = plistlib.load(f)
+    cal = data.get("StartCalendarInterval", {})
+    assert cal.get("Hour") == 7
+    assert cal.get("Minute") == 0
+    assert data.get("RunAtLoad") is False
+
+
+# ===== F. digital-employee plist =====
+
+
+def test_f1_start_plist_exists():
+    assert PLIST_START_PATH.exists()
+
+
+def test_f2_start_plist_label():
+    with PLIST_START_PATH.open("rb") as f:
+        data = plistlib.load(f)
+    assert data.get("Label") == "com.myaiemployee.digital-employee"
+
+
+def test_f3_start_plist_run_at_load():
+    with PLIST_START_PATH.open("rb") as f:
+        data = plistlib.load(f)
+    assert data.get("RunAtLoad") is True
+    args = data.get("ProgramArguments", [])
+    assert "my-ai-employee-start" in args[0]

@@ -1,14 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Day 2 launchd - 菜单栏 + Dashboard 开机自启
+
+  wrapper ~/bin/my-ai-employee-start 调 ops/start-digital-employee.sh start。
+  RunAtLoad=true:登录后自动拉起(撞坑 #81:TCC 须先授权 Python.framework 3.12)。
+-->
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.myaiemployee.agent</string>
+    <string>com.myaiemployee.digital-employee</string>
 
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/$USER/bin/my-ai-employee-monthly-report</string>
-        <string>generate</string>
+        <string>/Users/$USER/bin/my-ai-employee-start</string>
     </array>
 
     <key>EnvironmentVariables</key>
@@ -19,32 +24,22 @@
         <string>/Users/$USER</string>
     </dict>
 
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Day</key>
-        <integer>1</integer>
-        <key>Hour</key>
-        <integer>9</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
-
     <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
     <false/>
 
     <key>StandardOutPath</key>
-    <string>/Users/$USER/Library/Logs/MyAIEmployee/agent.out.log</string>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/digital-employee.out.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/$USER/Library/Logs/MyAIEmployee/agent.err.log</string>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/digital-employee.err.log</string>
 
     <key>WorkingDirectory</key>
     <string>/Users/$USER</string>
 
     <key>ProcessType</key>
     <string>Background</string>
-
-    <key>Nice</key>
-    <integer>1</integer>
 </dict>
 </plist>

@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
 > **最后更新**:2026-07-03 Day 12 维持期(push + 7/9 抽测 + 8/1 预热) · 9/9 质量门全绿 · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 12 维持期 ✅** + **Day 13 完全体启动 Day 1.2 ✅** + **Day 1.4 只读验收脚本 ✅**(`make setup-verify-db` · 不写库)(push 同步 · 7/9 周度抽测 3/3 · 8/1 preflight 预热 · MD 256 · 2026-07-03)+ **Day 11/10 收口 ✅**(沿用)+ **`v0.2.1` tag(`71b4602`)**。**质量门**:**2812 passed / 1 skipped** / 89.07% / lint **256** / mypy **250 files**。**下一棒**:Day 1.3 真实数据入库(待授权) · Day 2-3 菜单栏/审批/launchd 收口 · 8/1 tag 决策(默认不打) · 红线全维持。
+> **状态**:🟢 **Day 13 完全体 Day 2 真收口 ✅**(菜单栏 Impl + audit SQL + launchd 3 job) + Day 1.2/1.4 ✅ + v1.0 runbook dry-run ✅。**质量门**:**2823 passed / 1 skipped** / 89.07% / lint **257** / mypy **254 files**。**下一棒**:用户授权 **Day 1.3 真实入库** + Day 2 流水线(`process_inbox`) + 1-click SMTP 真发(每次临时授权)。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 12 收口 ✅** + **Day 11 收口 ✅** + **Day 10 收口 ✅** + Day 8-9 收口(沿用) + **Day 13 完全体启动 Day 1.2 ✅** + **Day 1.4 只读验收脚本 ✅** — **2812 passed / 1 skipped** / 89.07% / MD lint **256** / mypy **250 files**。**下一棒**:Day 1.3 真实数据入库(待授权) · Day 2-3 菜单栏/审批/launchd 收口 · 8/1 tag 决策(默认不打) · 维持期周度抽测(7/16 下一轮)。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 12 收口 ✅** + **Day 11 收口 ✅** + **Day 10 收口 ✅** + Day 8-9 收口(沿用) + **Day 13 完全体启动 Day 1.2 ✅** + **Day 1.4 只读验收脚本 ✅** + **Day 13 v1.0 launch runbook dry-run 闭环锁口 ✅** — **2823 passed / 1 skipped** / 89.07% / MD lint **257** / mypy **254 files**。**下一棒**:**v1.0 tag 默认不打**(沿撞坑 #71 docs-only 边界 + 用户"不使用真实数据"红线) · 维持期周度抽测(7/16 下一轮)。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2812 passed / 1 skipped** · **89.07%** coverage · mypy --strict 0 errors(**250 files**) · MD lint **256 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2823 passed / 1 skipped** · **89.07%** coverage · mypy --strict 0 errors(**254 files**) · MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |

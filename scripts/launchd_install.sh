@@ -60,48 +60,73 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_SCRIPT="${PROJECT_ROOT}/scripts/monthly_report.py"
 SOURCE_PLIST="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.agent.plist"
+SOURCE_PLIST_IMAP="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.imap-sync.plist"
+SOURCE_PLIST_START="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.digital-employee.plist"
+SOURCE_SYNC_IMAP="${PROJECT_ROOT}/scripts/sync_imap.py"
+SOURCE_START_SH="${PROJECT_ROOT}/ops/start-digital-employee.sh"
 
 HOME_BIN="${HOME}/bin"
 TARGET_SCRIPT="${HOME_BIN}/my-ai-employee-monthly-report"
+TARGET_IMAP_SCRIPT="${HOME_BIN}/my-ai-employee-imap-sync"
+TARGET_START_SCRIPT="${HOME_BIN}/my-ai-employee-start"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 TARGET_PLIST="${LAUNCH_AGENTS_DIR}/com.myaiemployee.agent.plist"
+TARGET_PLIST_IMAP="${LAUNCH_AGENTS_DIR}/com.myaiemployee.imap-sync.plist"
+TARGET_PLIST_START="${LAUNCH_AGENTS_DIR}/com.myaiemployee.digital-employee.plist"
 LOG_DIR="${HOME}/Library/Logs/MyAIEmployee"
+
+# Day 2: 全部 launchd job label(月报 / IMAP 每日同步 / 数字员工开机自启)
+LAUNCHD_LABELS=(
+    "com.myaiemployee.agent"
+    "com.myaiemployee.imap-sync"
+    "com.myaiemployee.digital-employee"
+)
 
 # ===== uninstall 流程(2026-06-15 D10.5.3 新增,沿 Spike A 手动 cleanup 4 步范本) =====
 if [[ "${MODE}" == "uninstall" ]]; then
     echo "===== uninstall 流程 ====="
-    # 1. launchctl unload(如果已注册 — D10.5.3 修正:用临时文件绕开 pipefail 影响)
+    # 1. launchctl unload(3 job)
     LC_OUT_UNINSTALL="$(mktemp -t launchctl_list_uninstall.XXXXXX)"
     trap 'rm -f "${LC_OUT_UNINSTALL:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
-    launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-    if grep -q "com.myaiemployee.agent" "${LC_OUT_UNINSTALL}"; then
-        echo "🔻 launchctl unload ${TARGET_PLIST}"
-        launchctl unload "${TARGET_PLIST}" 2>/dev/null || true
-        sleep 1
-        # 再次验证已真 unload
+    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+        target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-        if grep -q "com.myaiemployee.agent" "${LC_OUT_UNINSTALL}"; then
-            echo "⚠️  unload 后 list 仍见条目,尝试 bootout"
-            launchctl bootout "gui/$(id -u)/com.myaiemployee.agent" 2>/dev/null || true
+        if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+            echo "🔻 launchctl unload ${target_plist}"
+            launchctl unload "${target_plist}" 2>/dev/null || true
             sleep 1
+            launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
+            if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+                echo "⚠️  unload 后 list 仍见 ${label},尝试 bootout"
+                launchctl bootout "gui/$(id -u)/${label}" 2>/dev/null || true
+                sleep 1
+            fi
+        else
+            echo "ℹ️  ${label} 未注册,跳过 unload"
         fi
-    else
-        echo "ℹ️  未注册,跳过 unload"
-    fi
-    # 2. 删 plist
-    if [[ -f "${TARGET_PLIST}" ]]; then
-        rm -f "${TARGET_PLIST}"
-        echo "✅ 删除 plist: ${TARGET_PLIST}"
-    else
-        echo "ℹ️  plist 不存在,跳过"
-    fi
-    # 3. 删 ~/bin/ 脚本
-    if [[ -f "${TARGET_SCRIPT}" ]]; then
-        rm -f "${TARGET_SCRIPT}"
-        echo "✅ 删除脚本: ${TARGET_SCRIPT}"
-    else
-        echo "ℹ️  脚本不存在,跳过"
-    fi
+    done
+    # 2. 删 plist(3 job)
+    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+        target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
+        if [[ -f "${target_plist}" ]]; then
+            rm -f "${target_plist}"
+            echo "✅ 删除 plist: ${target_plist}"
+        else
+            echo "ℹ️  plist 不存在,跳过: ${target_plist}"
+        fi
+    done
+    # 3. 删 ~/bin/ 脚本(3 wrapper)
+    for script in \
+        "${HOME_BIN}/my-ai-employee-monthly-report" \
+        "${HOME_BIN}/my-ai-employee-imap-sync" \
+        "${HOME_BIN}/my-ai-employee-start"; do
+        if [[ -f "${script}" ]]; then
+            rm -f "${script}"
+            echo "✅ 删除脚本: ${script}"
+        else
+            echo "ℹ️  脚本不存在,跳过: ${script}"
+        fi
+    done
     # 4. 删日志目录
     if [[ -d "${LOG_DIR}" ]]; then
         rm -rf "${LOG_DIR}"
@@ -109,12 +134,14 @@ if [[ "${MODE}" == "uninstall" ]]; then
     else
         echo "ℹ️  日志目录不存在,跳过"
     fi
-    # 5. 验证无残留(D10.5.3 修正:同样用临时文件方案)
+    # 5. 验证无残留(3 job)
     launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-    if grep -q "com.myaiemployee.agent" "${LC_OUT_UNINSTALL}"; then
-        echo "❌ 验证失败:launchctl list 仍见 com.myaiemployee.agent" >&2
-        exit 3
-    fi
+    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+        if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+            echo "❌ 验证失败:launchctl list 仍见 ${label}" >&2
+            exit 3
+        fi
+    done
     echo ""
     echo "🎉 uninstall 完成(无残留)"
     exit 0
@@ -130,6 +157,22 @@ if [[ ! -f "${SOURCE_SCRIPT}" ]]; then
 fi
 if [[ ! -f "${SOURCE_PLIST}" ]]; then
     echo "❌ 源 plist 不存在: ${SOURCE_PLIST}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_PLIST_IMAP}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_IMAP}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_PLIST_START}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_START}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_SYNC_IMAP}" ]]; then
+    echo "❌ 源脚本不存在: ${SOURCE_SYNC_IMAP}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_START_SH}" ]]; then
+    echo "❌ 源脚本不存在: ${SOURCE_START_SH}" >&2
     exit 1
 fi
 
@@ -151,94 +194,120 @@ if [[ ! -w "${LAUNCH_AGENTS_DIR}" ]]; then
     exit 2
 fi
 
-# ===== 3. 复制脚本到 ~/bin/(沿 D5.6 memory ~/bin/ 部署范本) =====
-echo "📋 复制 ${SOURCE_SCRIPT} → ${TARGET_SCRIPT}"
-# 用 awk 把 shebang 写第一行(原 monthly_report.py 没用 shebang)
+# ===== 3. 部署 ~/bin/ wrapper 脚本 =====
+echo "📋 部署 ${TARGET_SCRIPT}(动态月份)"
 {
     echo "#!/usr/bin/env bash"
     echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
-    echo "exec uv run --project \"${PROJECT_ROOT}\" python -m scripts.monthly_report \"\$@\""
+    echo "MONTH=\$(date -v-1d +%Y-%m 2>/dev/null || date -d 'last month' +%Y-%m)"
+    echo "exec uv run --project \"${PROJECT_ROOT}\" python -m scripts.monthly_report generate --month \"\${MONTH}\""
 } > "${TARGET_SCRIPT}"
 chmod +x "${TARGET_SCRIPT}"
 echo "✅ ${TARGET_SCRIPT} 部署完成"
 
+echo "📋 部署 ${TARGET_IMAP_SCRIPT}(IMAP 每日同步)"
+{
+    echo "#!/usr/bin/env bash"
+    echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
+    echo "ENV_FILE=\"${PROJECT_ROOT}/.env\""
+    echo "IMAP_USER=\"\""
+    echo "if [[ -f \"\${ENV_FILE}\" ]]; then"
+    echo "  IMAP_USER=\$(grep -E '^IMAP_USER=' \"\${ENV_FILE}\" | head -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\")"
+    echo "fi"
+    echo "if [[ -z \"\${IMAP_USER}\" ]]; then"
+    echo "  echo 'IMAP_USER not set in .env' >&2"
+    echo "  exit 2"
+    echo "fi"
+    echo "exec uv run --project \"${PROJECT_ROOT}\" python scripts/sync_imap.py sync --provider qq --email \"\${IMAP_USER}\""
+} > "${TARGET_IMAP_SCRIPT}"
+chmod +x "${TARGET_IMAP_SCRIPT}"
+echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"
+
+echo "📋 部署 ${TARGET_START_SCRIPT}(数字员工开机自启)"
+{
+    echo "#!/usr/bin/env bash"
+    echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
+    echo "exec bash \"${PROJECT_ROOT}/ops/start-digital-employee.sh\" start"
+} > "${TARGET_START_SCRIPT}"
+chmod +x "${TARGET_START_SCRIPT}"
+echo "✅ ${TARGET_START_SCRIPT} 部署完成"
+
 # ===== 4. 复制 plist(替换 $USER 占位符) =====
-echo "📋 复制 ${SOURCE_PLIST} → ${TARGET_PLIST}"
-# 替换 $USER 占位符为当前用户名
-sed "s|\$USER|$(whoami)|g" "${SOURCE_PLIST}" > "${TARGET_PLIST}"
-chmod 644 "${TARGET_PLIST}"
-echo "✅ ${TARGET_PLIST} 部署完成"
+for src_plist in "${SOURCE_PLIST}" "${SOURCE_PLIST_IMAP}" "${SOURCE_PLIST_START}"; do
+    base_name="$(basename "${src_plist}")"
+    target_plist="${LAUNCH_AGENTS_DIR}/${base_name}"
+    echo "📋 复制 ${src_plist} → ${target_plist}"
+    sed "s|\$USER|$(whoami)|g" "${src_plist}" > "${target_plist}"
+    chmod 644 "${target_plist}"
+    echo "✅ ${target_plist} 部署完成"
+done
 
 # ===== 5. 确保日志目录存在 =====
 mkdir -p "${LOG_DIR}"
 touch "${LOG_DIR}/agent.out.log" "${LOG_DIR}/agent.err.log"
+touch "${LOG_DIR}/imap-sync.out.log" "${LOG_DIR}/imap-sync.err.log"
+touch "${LOG_DIR}/digital-employee.out.log" "${LOG_DIR}/digital-employee.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
 
-# ===== 6. launchctl load(沿 D5.6 范本 + D10.5.3 调整:容忍已注册状态) =====
-# D10.5.3 修正: macOS 26 (Tahoe) launchd 对已注册的 plist 重复 load 会报
-# "Load failed: 5: Input/output error" 但 entry 实际已存在。Spike A §3.3
-# 也观察到同样行为。改为"已注册则跳过 unload+load,未注册则 load"语义。
+# ===== 6. launchctl load(3 job) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"
 trap 'rm -f "${LC_OUT_LOAD}" "${LC_OUT:-}"' EXIT
-launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
-if grep -q "com.myaiemployee.agent" "${LC_OUT_LOAD}"; then
-    echo "ℹ️  已注册(com.myaiemployee.agent),先 unload 再 reload 防止 stale 配置"
-    launchctl unload "${TARGET_PLIST}" 2>/dev/null || true
-    sleep 1
-fi
-echo "🚀 launchctl load -w ${TARGET_PLIST}"
-if ! launchctl load -w "${TARGET_PLIST}" 2>/dev/null; then
-    # 退出码非 0 不一定是真失败(macOS 26 已注册则报 5)
-    # 用 list 探测最终状态:已注册则视为成功
-    sleep 1
+for target_plist in "${TARGET_PLIST}" "${TARGET_PLIST_IMAP}" "${TARGET_PLIST_START}"; do
+    label="$(basename "${target_plist}" .plist)"
     launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
-    if grep -q "com.myaiemployee.agent" "${LC_OUT_LOAD}"; then
-        echo "⚠️  launchctl load 报非 0 但 list 已见 com.myaiemployee.agent(macOS 26 已注册语义,沿 Spike A §3.3)"
-    else
-        echo "❌ launchctl load 失败且 list 未见 com.myaiemployee.agent" >&2
-        exit 3
+    if grep -q "${label}" "${LC_OUT_LOAD}"; then
+        echo "ℹ️  已注册(${label}),先 unload 再 reload"
+        launchctl unload "${target_plist}" 2>/dev/null || true
+        sleep 1
     fi
-fi
+    echo "🚀 launchctl load -w ${target_plist}"
+    if ! launchctl load -w "${target_plist}" 2>/dev/null; then
+        sleep 1
+        launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
+        if ! grep -q "${label}" "${LC_OUT_LOAD}"; then
+            echo "❌ launchctl load 失败且 list 未见 ${label}" >&2
+            exit 3
+        fi
+        echo "⚠️  launchctl load 报非 0 但 list 已见 ${label}"
+    fi
+done
 
-# ===== 7. 5 源验证(2026-06-15 D10.5.3 修复 P2-2:加 sleep 1 + retry 3 次,缓解 launchctl cache race) =====
+# ===== 7. 5 源验证(3 job) =====
 echo ""
 echo "===== 5 源验证 ====="
-# 1. 目录
 [[ -d "${HOME_BIN}" ]] && echo "✅ 源 1(目录): ${HOME_BIN}/ 存在" || echo "❌ 源 1: 缺失"
-# 2. 脚本
 [[ -x "${TARGET_SCRIPT}" ]] && echo "✅ 源 2(脚本): ${TARGET_SCRIPT} 可执行" || echo "❌ 源 2: 不可执行"
-# 3. plist
 [[ -f "${TARGET_PLIST}" ]] && echo "✅ 源 3(plist): ${TARGET_PLIST} 存在" || echo "❌ 源 3: 缺失"
-# 4. launchctl list(sleep + retry 缓解 cache race + 用临时文件绕开 pipefail 对 pipeline 的影响)
-# D10.5.3 实测: pipefail 下 "launchctl list | grep -q" 即使已注册也返回 1,
-# 根因是 pipefail 让 launchctl list 的输出 buffer 行为变化;改用临时文件捕获可解。
 LAUNCHCTL_OK=0
 LC_OUT="$(mktemp -t launchctl_list_verify.XXXXXX)"
-# trap 在 §6 已设置(覆盖 LC_OUT_LOAD + LC_OUT),无需再设
 for i in 1 2 3 4 5; do
     sleep 1
     launchctl list > "${LC_OUT}" 2>&1 || true
-    if grep -q "com.myaiemployee.agent" "${LC_OUT}"; then
+    missing=0
+    for label in "${LAUNCHD_LABELS[@]}"; do
+        if ! grep -q "${label}" "${LC_OUT}"; then
+            missing=1
+            break
+        fi
+    done
+    if [[ "${missing}" -eq 0 ]]; then
         LAUNCHCTL_OK=1
-        echo "✅ 源 4(launchctl list): com.myaiemployee.agent 已注册(retry ${i}/5,共睡 ${i}s)"
+        echo "✅ 源 4(launchctl list): 3 job 已注册(retry ${i}/5)"
         break
     fi
 done
 if [[ "${LAUNCHCTL_OK}" -eq 0 ]]; then
-    echo "❌ 源 4: launchctl list 仍未见 com.myaiemployee.agent(retry 5 次,共睡 5s)" >&2
-    echo "--- launchctl list 实际输出 ---" >&2
+    echo "❌ 源 4: launchctl list 未见全部 3 job(retry 5 次)" >&2
     cat "${LC_OUT}" >&2 || true
     exit 3
 fi
-# 5. 日志可写
 [[ -w "${LOG_DIR}/agent.out.log" ]] && echo "✅ 源 5(日志): ${LOG_DIR}/agent.out.log 可写" || echo "❌ 源 5: 日志不可写"
 
 echo ""
-echo "🎉 launchd 部署完成!"
-echo "下次触发:每月 1 号 09:00(沿 StartCalendarInterval)"
-echo "手动测试:open 'x-launchd://run/com.myaiemployee.agent'  或 launchctl kickstart -k gui/$(id -u)/com.myaiemployee.agent"
-echo "查看日志:tail -f ${LOG_DIR}/agent.out.log"
-echo "清理:bash scripts/launchd_install.sh uninstall"
+echo "🎉 launchd 部署完成(3 job)!"
+echo "  月报:每月 1 号 09:00 · 动态月份 wrapper"
+echo "  IMAP:每日 07:00 · 读 .env IMAP_USER"
+echo "  数字员工:RunAtLoad · menubar + dashboard"
 
 # 显式 exit 0(供测试 grep 验证,也是 bash 严格模式的明确结束)
 exit 0
