@@ -2,7 +2,7 @@
 
 > **状态**:📘 docs-only 预热 · **8/1 当天不打 tag**(沿 7/1 复盘决议 #25 + `docs/v0.2.59-8-1-tag-evaluation-2026-08-01.md`)
 > **承接**:Day 11 companion 8/1 readiness + Day 12 周度抽测全绿 + push `4bdf3a3`
-> **当前基线(2026-07-03)**:**2791 passed / 1 skipped / 89.09% / 254 MD / 248 mypy**
+> **当前基线(2026-07-03 校准)**:**2791 passed / 1 skipped / 89.09% / 256 MD / 248 mypy**(沿 7/3 校准 254→256,撞坑 #50 第三/四层沿用)
 
 ---
 
@@ -14,7 +14,7 @@
 | 2 | outlook/gmail Keychain | ⏭️ 用户豁免(QQ-only) | 不阻塞 |
 | 3 | W3 真账单 spike | ✅ v0.2.36 spike-49 | 沿用 |
 | 4 | v0.2.53.x UI 收口 | ✅ v0.2.53.1-58 + Day 9 companion 只读 | 沿用 |
-| 5 | 撞坑 #50 snapshot 防御 | ✅ 254 MD · check-snapshot 全绿 | 沿用 |
+| 5 | 撞坑 #50 snapshot 防御 | ✅ 256 MD · check-snapshot 全绿 | 沿用 |
 | 6 | ApprovalGate dry-run | ✅ Day 8 decide + 1-click UI | 沿用 |
 | 7 | 撞坑累计 | **84 类**(Day 10-12 无业务新增) | 沿用 |
 | 8 | Path 4 设计稿 + 5 门 | ✅ v0.2.53.53 v2 + Day 11 readiness | 实施留 8/1 后 |
