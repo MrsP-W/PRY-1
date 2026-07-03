@@ -1,9 +1,9 @@
-# Day 11 Closure — Docs-only 收口 + 启用前 runbook 落定(2026-07-04)
+# Day 11 Closure — Docs-only 收口 + 启用前 runbook 落定(2026-07-03)
 
 > **范围**:Day 11 全链路 docs-only 收口 — Phase 2.1 Notes 真加密生产 runbook + Phase 2.3 移动伴侣 8/1 实写启用 readiness + snapshot 校准 247→248→249→250 + 9 门全量复核
 > **目标**:Notes 加密链路启用前文档 + 移动伴侣 8/1 实写链路 readiness 双 readiness 落定
 > **承接**:Day 10 收口(`429a7a1`)+ D-step 三角色(`33b1b0d`)+ Day 10 push(`429a7a1..7fe1f50`)
-> **状态**:✅ 收口(2026-07-04)· **4 commits**(`7fe1f50` / `6fc4464` / `22a007f` / 本次)· 9/9 质量门全绿 · **业务代码 0 改动** · 撞坑累计 84 类
+> **状态**:✅ 收口(2026-07-03)· **5 commits**(含尾巴校准)· 9/9 质量门全绿 · **业务代码 0 改动** · 撞坑累计 84 类
 > **红线全维持**:`ENABLE_PATH_4_WRITE=1` 8/1 前不开 · `ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · 不动生产主库 · 90 封 SMTP 跳过 · tag 不动
 
 ---
@@ -42,24 +42,23 @@
 
 ---
 
-## 3. 9 门实测表(2026-07-04 · `@检查员` 复核)
+## 3. 9 门实测表(2026-07-03 · `@检查员` 复核)
 
 | # | 门 | 实测输出 | 期望 | 结果 |
 |---|----|---------|------|------|
-| 1 | `make test` | 2791 passed / 1 skipped · coverage 89.09% | 2790 / 2 skipped / ≥ 89.09% | ✅ |
+| 1 | `make test` | 2791 passed / 1 skipped · coverage 89.09% | 2791 / 1 skipped / ≥ 89.09% | ✅ |
 | 2 | `uv run ruff check src/ tests/` | All checks passed | passed | ✅ |
 | 3 | `uv run ruff format src/ tests/ --check` | 264 files already formatted | passed | ✅ |
 | 4+5 | `make mypy` | Success: 0 issues / 248 source files | 0 errors / 248 files | ✅ |
 | 6 | `uv run alembic upgrade head --sql` | 0016_approval_gate_audits migration | exit 0 | ✅ |
 | 7 | `uv build` | tar.gz + wheel built | success | ✅ |
-| 8 | `make lint` | 250 files / 0 errors | 250 files / 0 errors | ✅ |
-| 9 | `make check-snapshot` | OK(2790/2 · 250 md files)| OK | ✅ |
+| 8 | `make lint` | 252 files / 0 errors | 252 files / 0 errors | ✅ |
+| 9 | `make check-snapshot` | OK(2791/1 · 252 md files) | OK | ✅ |
 
 **实测口径说明**:
-- snapshot = `2790 passed / 2 skipped`
-- `make test` 独立测 = `2791 passed / 1 skipped`(total 2792 collected,均与 snapshot 守门匹配)
-- 撞坑 #50 联动:`MD lint 247 → 250` 3 次微调都没触发 pytest 漂移(guard 不会因 MD 变化错误升级为 pytest 漂移)
-- 撞坑 #50 第二层:`pytest + mypy tests strict` 历史 14 errors 已清零(2026-06-23 v0.2.42 闭环)
+- snapshot = `2791 passed / 1 skipped`(与 `make test` 独立测一致)
+- collected = 2792(稳态 `passed + skipped == collected`)
+- 尾巴校准:memory 文件入库 251→252 MD · pytest 2790/2→2791/1(总数不变,显示口径对齐)
 
 ---
 
@@ -146,8 +145,8 @@
 
 | 风险 | 影响范围 | 后续行动 |
 |------|---------|---------|
-| Day 11 closure 新增 MD(`Day11-closure.md`)+ runbook §1.5 修补 → MD lint 250 → 251 | snapshot 守卫需同步 | Phase 4 commit 前再跑 check-snapshot |
-| Phase 2.1 + 2.3 4 commits 未推(本地 ahead 4)| 仅本地待 push | 用户明确 push 后再 `git push origin main` |
+| Day 11 memory 未跟踪 → 入库 251→252 MD | snapshot 守卫需同步 | ✅ 尾巴 commit 已校准 |
+| 本地 ahead commits 未推 | 仅本地待 push | 用户明确 push 后再 `git push origin main` |
 | 8/1 实写启用前置 8 道门当前 docs-only(8 道门均为 ⏸️ 状态)| 8/1 前必须逐步 ✅ | 沿 `docs/day11-companion-write-8-1-readiness.md` §3 时序 |
 
 ### 7.2 8/1 前红线
@@ -179,8 +178,9 @@
 
 ---
 
-**最后更新**:2026-07-04 · `@检查员` 复核 9 门全绿后落定
-**状态**:✅ 收口 · 4 commits · 9/9 全绿 · 业务代码 0 改动 · 红线全维持
-**撞坑累计**:84 类 · #50 第三层沉淀
-**远程同步**:本地 ahead 4 等用户 push 授权
+**最后更新**:2026-07-03 · 尾巴校准(memory 入库 + pytest/MD 口径对齐)后落定
+**状态**:✅ 收口 · 9/9 全绿 · 业务代码 0 改动 · 红线全维持
+**质量门**:2791 passed / 1 skipped · 89.09% · 252 MD · 248 mypy
+**撞坑累计**:84 类 · #50 第三层沉淀(`memory/day11-snapshot-guardian-drift-2026-07-04.md`)
+**远程同步**:本地 ahead 待 push(需用户授权)
 **维护者**:Mr-PRY
