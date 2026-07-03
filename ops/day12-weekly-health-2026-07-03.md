@@ -17,7 +17,7 @@ make check-snapshot
 **输出**:
 ```
 🔍 quality_snapshot 防漂移检查
-OK: quality_snapshot matches live baseline (2791 passed / 1 skipped · 252 md files)
+OK: quality_snapshot matches live baseline (2791 passed / 1 skipped · 254 md files)
 OK: state entry docs match quality_snapshot
 ```
 
@@ -151,19 +151,19 @@ Day 10 Phase 3.5 Notes 真加密 dry-run spike — 全绿
 
 ### Phase 1.2 docs 小补丁(候选 · 可选)
 
-- `docs/day11-notes-encryption-production-runbook.md` §1.5 baseline → 252 MD(当前已 252,可不动)
+- `docs/day11-notes-encryption-production-runbook.md` §1.5 baseline → 254 MD(当前已同步)
 - `reports/Day10-closure.md` §2/§12 数字对齐 — 已是 Day 11 校准后数值
 
-### Phase 1.3 D-step 收口(下一棒候选)
+### Phase 1.3 D-step 收口(已补齐)
 
-- @回顾员:`reports/Day12-weekly-checkpoint-2026-07-03.md`(本周节奏,周末 Day 11-12 可合一)
-- MODIFICATION-LOG 追加 1 条(触发 #2 周度收口)
-- commit(默认不 push)
+- @回顾员:`reports/Day12-weekly-checkpoint-2026-07-03.md` 已补齐
+- MODIFICATION-LOG 当前入口同步 Day 12 checkpoint
+- 新增报告触发 MD 253→254,需沿 #50 第三/四层同步范本复核
 
 ---
 
 **最后更新**:2026-07-03 · 周五收工前抽测
 **抽测结果**:✅ 4/4 全绿 · 业务代码 0 改动 · 红线全维持
-**质量门**:2791 passed / 1 skipped · 89.11%(实测)/ 252 MD / 248 mypy
+**质量门**:2791 passed / 1 skipped · 89.11%(实测)/ 254 MD / 248 mypy
 **撞坑累计**:84 类(无新增)
 **维护者**:Mr-PRY

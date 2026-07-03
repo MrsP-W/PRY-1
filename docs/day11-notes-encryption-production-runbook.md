@@ -14,7 +14,7 @@
 | **1.2** | 当前生产主库全部为 legacy 明文或已知混合 | `sqlite3 ~/Library/Application\ Support/my-ai-employee/data.db "SELECT COUNT(*) FROM notes WHERE title NOT LIKE 'enc:v1:%' AND body NOT LIKE 'enc:v1:%'"` | 输出 = 笔记总数(全部明文) |
 | **1.3** | `ENABLE_NOTES_ENCRYPTION=1` 未写 shell profile | `grep -r "ENABLE_NOTES_ENCRYPTION" ~/.zshrc ~/.bash_profile ~/.zprofile 2>/dev/null` | 无输出 |
 | **1.4** | `ENABLE_PATH_4_WRITE=1` 未设置 | `echo "ENABLE_PATH_4_WRITE=${ENABLE_PATH_4_WRITE:-UNSET}"` | 输出 `UNSET` |
-| **1.5** | 9/9 质量门全绿 | `make ci` | 全部绿 · 沿用 Day 11+12 baseline 2791 / 1 skipped / 89.09% / 248 mypy / **253 MD**(2026-07-03 Day 12 ops/ 校准 · `11fefd1` 起 baseline 升 252→253) |
+| **1.5** | 9/9 质量门全绿 | `make ci` | 全部绿 · 沿用 Day 11+12 baseline 2791 / 1 skipped / 89.09% / 248 mypy / **254 MD**(2026-07-03 Day 12 checkpoint 补齐后 baseline 升 253→254) |
 
 **任一不满足 → 终止并修复,绝不进入 §2**。
 
