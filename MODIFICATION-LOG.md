@@ -113,7 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2791 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **248 files** / MD lint **254 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2791 passed / 1 skipped** / **89.09%** / mypy --strict 0 / **248 files** / MD lint **256 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 7/25 A3 readiness 刷新 · 8/1 tag 决策(默认不打 tag) · 维持期周度抽测 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
@@ -4706,6 +4707,28 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 撞坑累计:**84 类**(Day 10 新增 6 类 · 沿用 #1/#18/#50/#59/#64/#65/#71 解除/#76/#78/#79 · #50 第三层新增 docs-only 7 步同步范本)
 - 远程同步:Phase 0 已推 4 commits(`72b6953..429a7a1`) + Phase 5 已推 2 commits(`429a7a1..7fe1f50`)+ 本次 ahead 4 commits 待用户 push 授权
 - 下一棒:8/1 release tag readiness 准备(沿 `docs/v0.2.59-8-1-tag-evaluation-2026-08-01.md`)/ Notes 真加密生产启用(等用户授权 + runbook §1 五道门)/ Day 7 A 支付宝真导(等用户提供 ZIP 密码或解压 CSV)
+
+---
+
+## 68. 2026-07-03 · Day 12 维持期三项执行(push + 7/9 抽测 + 8/1 预热)
+
+> **触发**:用户「123都执行」— push + 周度抽测 + 8/1 readiness 预热
+
+### 1. 本次修改内容
+
+- **Phase 0 push** — `4bdf3a3` → `origin/main` 同步
+- **7/9 周度抽测** — check-snapshot OK · companion 30/30 · notes spike exit 0 → `ops/day12-weekly-health-2026-07-09.md`
+- **8/1 预热** — 新建 `docs/day12-8-1-preflight-checklist.md`(9 项刷新 + 决策矩阵 + 时间线)
+- **snapshot** — MD lint `254 → 256 files` · pytest 2791/1 不变
+
+### 2. 风险点
+
+- 🟢 8/1 默认不打 tag(选项 B 继续延后) · 红线全维持
+
+### 3. 当前项目整体总结
+
+- 进度:**2791 passed / 1 skipped / 89.09%** / **256 MD** / remote 已同步
+- 下一棒:7/25 A3 readiness 刷新
 
 ---
 
