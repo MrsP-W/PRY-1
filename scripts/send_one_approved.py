@@ -39,6 +39,13 @@ from my_ai_employee.scheduler.outbox_dispatcher import OutboxDispatcher  # noqa:
 
 _CONFIRM_PHRASE = "yes-i-understand-this-sends-real-email"
 
+# D13.x P3 修复(撞坑 #85 Layer 3 · 2026-07-07,业务代码改动日 撞坑 #71 边界破例):
+# SEND_REAL_NETWORK_RECIPIENT_DOMAINS env(逗号分隔 domain 白名单)
+# - 默认空 = 拒所有外发(最安全,撞坑 #85 暴露后,无 domain 白名单即拒)
+# - 设置后,outbox.recipient_email 的 domain 必须 ∈ 白名单
+# - 防 Layer 1+2 漏判 + LLM 幻觉收件人 domain 通过 --recipient per-call 严判
+_ENV_RECIPIENT_DOMAINS = "SEND_REAL_NETWORK_RECIPIENT_DOMAINS"
+
 
 def _print(msg: str) -> None:
     print(msg)
@@ -48,6 +55,20 @@ def _print_err(msg: str) -> None:
     print(f"❌ {msg}", file=sys.stderr)
 
 
+def _parse_whitelist_domains(env_value: str) -> set[str]:
+    """解析 env 逗号分隔 domain 白名单 → 小写 set.
+
+    严判入口: env_value 必须是 str(空字符串返空 set,严判外由调用方触发)。
+    """
+    if type(env_value) is not str:
+        raise ValueError(
+            f"env_value 必须是 str, 实际 {type(env_value).__name__}={env_value!r}"
+        )
+    if not env_value.strip():
+        return set()
+    return {d.strip().lower() for d in env_value.split(",") if d.strip()}
+
+
 def _validate_gate(*, confirm: str, recipient: str) -> str | None:
     if os.environ.get("SMTP_REAL_NETWORK") != "1":
         return "须设置 SMTP_REAL_NETWORK=1 才允许真实 SMTP 外发"
@@ -55,6 +76,23 @@ def _validate_gate(*, confirm: str, recipient: str) -> str | None:
         return f"--confirm 必须为 {_CONFIRM_PHRASE!r}"
     if not recipient or "@" not in recipient:
         return "--recipient 必填且须含 @"
+    # D13.x P3 修复(撞坑 #85 Layer 3):domain 白名单 env 门控
+    # 默认空 = 拒所有外发(撞坑 #85 暴露后,防 LLM 幻觉陌生 domain)
+    whitelist_raw = os.environ.get(_ENV_RECIPIENT_DOMAINS, "")
+    whitelist = _parse_whitelist_domains(whitelist_raw)
+    if not whitelist:
+        return (
+            f"撞坑 #85 Layer 3 门控: 须设置 {_ENV_RECIPIENT_DOMAINS} env "
+            f"(逗号分隔 domain 白名单,如 'qq.com,example.com'),"
+            f"否则拒所有外发"
+        )
+    # 提取 recipient 的 domain 并比对
+    recipient_domain = recipient.rsplit("@", 1)[-1].strip().lower()
+    if recipient_domain not in whitelist:
+        return (
+            f"撞坑 #85 Layer 3 门控: recipient domain {recipient_domain!r} "
+            f"不在白名单 {sorted(whitelist)} 内"
+        )
     return None
 
 

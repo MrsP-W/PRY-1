@@ -277,3 +277,202 @@ def test_list_candidate_emails_excludes_outboxed(tmp_path: Path) -> None:
     candidates = list_candidate_emails(sf, source="qq", limit=5)
     assert candidates == []
     eng.dispose()
+
+
+# ===== 撞坑 #85 Layer 2: process_inbox system sender 短路 =====
+
+
+def test_system_sender_short_circuits_drafter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """撞坑 #85 Layer 2: system sender 邮件 process_inbox 不调 drafter,不入 outbox.
+
+    撞坑 #85 案例: 原邮件 sender=root@systemmail.yunwu.ai,即使分类 TODO,
+    process_inbox 不调 drafter(避免 LLM 幻觉草稿入 outbox)。
+
+    关键: 本测试用 mock classifier 直接返回 TODO(绕过 Layer 1 短路),验证
+    Layer 2 兜底生效。Layer 1 + Layer 2 是双层防御,任一层都能拦截。
+    """
+    from sqlalchemy import text
+
+    from my_ai_employee.ai.drafter import EmailDrafter
+
+    db_path = tmp_path / "inbox.db"
+    _make_plain_db(db_path)
+
+    # seed system sender 邮件(撞坑 #85 案例)
+    from sqlalchemy.orm import sessionmaker
+
+    eng = _plain_engine(db_path)
+    sf = sessionmaker(bind=eng)
+    with sf() as session:
+        row = Email(
+            source="qq",
+            uid=812,
+            subject="周报",
+            sender="root@systemmail.yunwu.ai",  # system-style sender
+            body_text="本周工作周报请查收。",  # body 长(避免 Layer 1 主题黑名单词命中)
+            fetched_at=1_700_000_000_000,
+            received_at=1_700_000_000_000,
+        )
+        session.add(row)
+        session.commit()
+    eng.dispose()
+
+    monkeypatch.setenv("PROCESS_INBOX_EXECUTE", "1")
+
+    # Mock classifier 强制返 TODO(绕过 Layer 1 短路,验证 Layer 2 兜底)
+    class _ForceTodoClassifier:
+        def classify(
+            self,
+            *,
+            subject: str,
+            sender: str,
+            body_excerpt: str,
+        ) -> Any:
+            from my_ai_employee.ai.classifier import (
+                ClassificationResult,
+                EmailCategory,
+            )
+
+            return ClassificationResult(
+                category=EmailCategory.TODO,
+                confidence=0.8,
+                model_full_id="mock-force-todo",
+                latency_ms=0,
+                raw_content='{"category": "TODO", "confidence": 0.8}',
+            )
+
+    router = _MockRouter()
+    classifier = _ForceTodoClassifier()  # type: ignore[assignment,arg-type]
+    drafter = EmailDrafter(router=router)
+
+    code, counters = _run_with_plain_db(
+        db_path,
+        lambda: run_pipeline(
+            source="qq",
+            limit=1,
+            execute=True,
+            db_path=db_path,
+            classifier=classifier,  # type: ignore[arg-type]
+            drafter=drafter,
+        ),
+    )
+
+    # 关键: classifier 返 TODO(绕过 Layer 1),但 Layer 2 兜底 system sender,
+    # skipped_system_sender=1,outbox_stored=0
+    assert code == 0
+    assert counters.candidates == 1
+    assert counters.skipped_spam == 0  # 不是 SPAM,是被 Layer 2 兜底
+    assert counters.skipped_system_sender == 1
+    assert counters.outbox_stored == 0
+    assert counters.draft_failed == 0
+
+    # outbox 表应为空(没生成草稿)
+    eng2 = _plain_engine(db_path)
+    with eng2.connect() as conn:
+        outbox_count = conn.execute(text("SELECT COUNT(*) FROM outbox")).scalar()
+    assert outbox_count == 0
+    eng2.dispose()
+
+
+def test_system_sender_with_classifier_short_circuit_layer1(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """撞坑 #85 Layer 1 + Layer 2 协同: system sender + 紧急主题 + body 空
+    Layer 1 短路 SPAM(不算 system_sender_skip),但如果分类器漏判(返回 TODO),
+    Layer 2 兜底系统发件人短路。
+
+    本测试模拟 Layer 1 漏判(返回 TODO),验证 Layer 2 兜底生效。
+    """
+    from my_ai_employee.ai.classifier import EmailClassifier
+    from my_ai_employee.ai.drafter import EmailDrafter
+
+    db_path = tmp_path / "inbox.db"
+    _make_plain_db(db_path)
+
+    # seed 普通 user 邮件(非 system sender),body 短,主题含"紧急"
+    # 模拟 Layer 1 漏判: sender 是普通用户,但主题 + body 短不足以触发 Layer 1
+    from sqlalchemy.orm import sessionmaker
+
+    eng = _plain_engine(db_path)
+    sf = sessionmaker(bind=eng)
+    with sf() as session:
+        row = Email(
+            source="qq",
+            uid=900,
+            subject="[紧急] API 服务异常需立即处理",
+            sender="alerts@partner.example.com",  # 非 system sender
+            body_text="简短",  # 12 字符(< 30 阈值)
+            fetched_at=1_700_000_000_000,
+            received_at=1_700_000_000_000,
+        )
+        session.add(row)
+        session.commit()
+    eng.dispose()
+
+    monkeypatch.setenv("PROCESS_INBOX_EXECUTE", "1")
+    router = _MockRouter()
+    classifier = EmailClassifier(router=router)  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=router)  # type: ignore[arg-type]
+
+    code, counters = _run_with_plain_db(
+        db_path,
+        lambda: run_pipeline(
+            source="qq",
+            limit=1,
+            execute=True,
+            db_path=db_path,
+            classifier=classifier,
+            drafter=drafter,
+        ),
+    )
+
+    # Layer 1 应该短路 SPAM(alerts@ + 紧急 + body 短 → 双信号命中)
+    assert code == 0
+    assert counters.candidates == 1
+    # Layer 1 短路 → 走 skipped_spam 路径(不是 skipped_system_sender)
+    assert counters.skipped_spam == 1
+    assert counters.skipped_system_sender == 0
+    assert counters.outbox_stored == 0
+
+
+def test_normal_sender_not_short_circuited(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """撞坑 #85 反向验证: 普通 user sender → 不短路,正常走 drafter + outbox."""
+    from sqlalchemy import text
+
+    from my_ai_employee.ai.classifier import EmailClassifier
+    from my_ai_employee.ai.drafter import EmailDrafter
+
+    db_path = tmp_path / "inbox.db"
+    _make_plain_db(db_path)
+    # 默认 _seed_email 用 sender="user@example.com"(非 system)
+    _seed_email(db_path)
+    monkeypatch.setenv("PROCESS_INBOX_EXECUTE", "1")
+
+    router = _MockRouter()
+    classifier = EmailClassifier(router=router)  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=router)  # type: ignore[arg-type]
+
+    code, counters = _run_with_plain_db(
+        db_path,
+        lambda: run_pipeline(
+            source="qq",
+            limit=1,
+            execute=True,
+            db_path=db_path,
+            classifier=classifier,
+            drafter=drafter,
+        ),
+    )
+
+    # 普通 sender → 走完整 drafter + outbox
+    assert code == 0
+    assert counters.skipped_system_sender == 0
+    assert counters.outbox_stored == 1
+
+    eng = _plain_engine(db_path)
+    with eng.connect() as conn:
+        outbox_count = conn.execute(text("SELECT COUNT(*) FROM outbox")).scalar()
+    assert outbox_count == 1
+    eng.dispose()

@@ -47,6 +47,7 @@ from loguru import logger
 from .capability import TaskType
 from .providers import LLMError
 from .router import LLMRouter, get_router
+from .safety import is_obvious_spam  # 撞坑 #85 Layer 1 分类器 SPAM 短路
 
 
 class EmailCategory(StrEnum):
@@ -207,6 +208,26 @@ class EmailClassifier:
         # 正文截断(防御巨型 body)
         if len(body_excerpt) > self.MAX_BODY_CHARS:
             body_excerpt = body_excerpt[: self.MAX_BODY_CHARS]
+
+        # D13.x P1 修复(撞坑 #85 Layer 1 · 2026-07-07,业务代码改动日 撞坑 #71 边界破例):
+        # SPAM 短路 — system sender(撞坑 #85 案例 root@systemmail.yunwu.ai)
+        # 或主题黑名单词 + body 极短(撞坑 #85 案例"紧急 API 服务异常需立即处理"),
+        # 不走 LLM,直接返 SPAM,confidence=0.99。
+        # 撞坑 #76 只防"审批伪造",本短路补"LLM 草稿内容本身的不可信"缺口。
+        if is_obvious_spam(sender=sender, subject=subject, body_excerpt=body_excerpt):
+            self._stats["total"] += 1
+            self._stats["short_circuit_spam"] = self._stats.get("short_circuit_spam", 0) + 1
+            logger.warning(
+                f"[classifier] SPAM 短路(撞坑 #85 Layer 1) | subject={subject!r} | "
+                f"sender={sender!r}"
+            )
+            return ClassificationResult(
+                category=EmailCategory.SPAM,
+                confidence=0.99,
+                model_full_id="short_circuit:obvious_spam",
+                latency_ms=0,
+                raw_content="[short_circuit] obvious_spam_signal",
+            )
 
         self._stats["total"] += 1
 

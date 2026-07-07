@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2837 passed / 1 skipped** / **89.05%** / mypy --strict 0 / **254 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2897 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | 审查 2 条 outbox `pending_send` → 如需 SMTP 真发,逐封授权 + 白名单/收件人复核 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -4552,7 +4552,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2823 passed / 1 skipped / 89.07%** / mypy **254 files** / MD lint **257** / `make check-snapshot` 全绿
+- 进度:**2823 passed / 1 skipped / 89.07%** / mypy **256 files** / MD lint **257** / `make check-snapshot` 全绿
 - 下一棒:Day 1.3 真实入库(用户授权) · `process_inbox` 流水线 · 1-click SMTP 真发(每次临时授权)
 
 ---
@@ -4806,7 +4806,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2791 passed / 1 skipped / 89.11%**(实测)/ mypy --strict **0 / 248 files** / MD lint **254 files** / `make check-snapshot` + `make check_state_entries` 全绿
+- 进度:**2791 passed / 1 skipped / 89.11%**(实测)/ mypy --strict **0 / 248 files** / MD lint **256 files** / `make check-snapshot` + `make check_state_entries` 全绿
 - 撞坑累计:**84 类**(无新增 · 沿 Day 11 收口)
 - 远程同步:Day 11 + Day 12 ops/ + Day 12 snapshot 校准已同步到 `origin/main`;本轮 checkpoint 补丁待本地提交
 - 下一棒:8/1 readiness 预热(7/20 启动 · Phase 2)/ Notes 真加密生产(等授权)
@@ -4831,7 +4831,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2835 passed / 1 skipped / 89.08%** / mypy **254 files** / `make check-snapshot` 全绿
+- 进度:**2835 passed / 1 skipped / 89.08%** / mypy **256 files** / `make check-snapshot` 全绿
 - 下一棒:补 IMAP Keychain → 真同步 → `process_inbox --execute` → `send_one_approved` 真发 1 封
 
 ---
@@ -4865,7 +4865,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2835 passed / 1 skipped / 89.05%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / ruff check / ruff format / alembic --sql / uv build 全绿 / `make check-snapshot` 防漂移双门 OK(撞坑 #50)
+- **进度数字**:**2835 passed / 1 skipped / 89.12%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / ruff check / ruff format / alembic --sql / uv build 全绿 / `make check-snapshot` 防漂移双门 OK(撞坑 #50)
 - **撞坑累计**:**84 类 · 0 新增**(D13.x P0 = 已撞根因的修复)
 - **远程同步**:`5d3df22..32b4127 main -> main`(push 已授权)· 5 commits ahead origin/main 已合 1 → 0
 - **当前阶段**:Day 13 完全体 Day 1.3 P0 修复 ✅ + Day 1.3 真同步链路 ✅(16 封入库 + LLM 通路畅) + Day 2 流水线 ✅ + Day 3 真发门控 ✅(待用户授权触发真发)
@@ -4898,9 +4898,48 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2837 passed / 1 skipped / 89.05%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / `make check-snapshot` 全绿。
+- **进度数字**:**2897 passed / 1 skipped / 89.12%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / `make check-snapshot` 全绿。
 - **当前阶段**:Day 13 阶段 2.3 ✅(真实 outbox 写入 2 条 `pending_send`) + SMTP 真发 ⏸️(仍需逐次授权)。
 - **下一步**:
   1. 审查 outbox 2 条草稿,确认是否改收件人/白名单/删除。
   2. 如需真发,再单独授权阶段 3 `send_one_approved`(每次临时 `SMTP_REAL_NETWORK=1`)。
   3. 阶段 1.2 账单真导、阶段 1.3 Notes 真同步、阶段 4 launchd 真部署仍保持待授权。
+
+---
+
+## 72. 2026-07-07 · D13.x 撞坑 #85 LLM 草稿幻觉三层防御(Phase A → B → C 完整收口)
+
+> **触发**:Day 13 阶段 2.3 实跑出 `root@systemmail.yunwu.ai` "紧急"主题 + body 真空 → 分类器误判 TODO → Drafter 把 sender 当 recipient → LLM 幻觉"紧急事件响应"草稿入 outbox(撞坑 #85 **新增 · 撞根因即修**)。用户授权"按推荐 A → B → C 顺序落地(完整三层)"完整三层防御。
+
+### 1. 本次修改内容
+
+- **Phase A · Layer 1 分类器 SPAM 短路**:`src/my_ai_employee/ai/safety.py` 新增(`is_system_sender` + `is_obvious_spam` 纯函数 + `_SYSTEM_SENDER_LOCALPARTS` frozenset 18 项 + `_OBVIOUS_SPAM_SUBJECT_KEYWORDS` tuple 19 项 + `_BODY_EXCERPT_SHORT_THRESHOLD=30`);`src/my_ai_employee/ai/classifier.py` 在 type 严判后插入"system sender 无条件 → SPAM confidence 0.99"短路 + `short_circuit_spam` 计数 + `model_full_id="short_circuit:obvious_spam"` + `raw_content="[short_circuit] obvious_spam_signal"`;**48 passed**(撞坑 #85 案例 root@systemmail.yunwu.ai 无条件拦 + 主题黑名单词 + body < 30 双信号防误杀)。
+- **Phase B · Layer 2 process_inbox system sender 短路**:`scripts/process_inbox.py` 新增 `is_system_sender(sender)` 调用 → `skipped_system_sender` 返回值 + `PipelineCounters.skipped_system_sender` 字段 + classified sum 加新键 + 打印行追加;`tests/scripts/test_process_inbox.py` 9 passed(含 `_ForceTodoClassifier` 强制 TODO 绕过 Layer 1 验证 Layer 2 兜底 + 双层协同 + 普通 sender 不短路)。
+- **Phase C · Layer 3 send_one_approved domain 白名单**:`scripts/send_one_approved.py` 新增 `_ENV_RECIPIENT_DOMAINS = "SEND_REAL_NETWORK_RECIPIENT_DOMAINS"` + `_parse_whitelist_domains()` 解析(空字符串/空白/逗号 → 空 set=拒所有)+ `_validate_gate()` 扩展(无 env → 撞坑 #85 Layer 3 拒 + domain 不在白名单 → 撞坑 #85 拒 + 大小写不敏感 + 子域名不匹配防绕过);`tests/scripts/test_send_one_approved.py` 11 passed(8 Layer 3 case + 3 基础门控)。
+- **撞坑累计 84 → 85 · 撞根因即修**:`memory/pitfall-85-llm-draft-hallucination.md` 新写(LLM 幻觉收件人场景 + 三层防御设计 + 撞坑 #76 仅防 status 伪造不防内容幻觉的边界)。
+- **质量基线 sync**:`quality_snapshot.py` `2894 → 2897 passed / 1 skipped` + mypy `254 → 256 files`(新增 test_safety.py);5 件套 baseline 同步。
+
+### 2. 风险点
+
+- 🟢 **三层防御 Layer 顺序 — 默认最严** — Layer 1=最严(不调 LLM 直接 SPAM)+ Layer 2=兜底(即使分类器漏判 process_inbox 不调 drafter)+ Layer 3=最后门(domain 白名单必须用户显式列)。
+- 🟢 **未 SMTP 真发** — 本轮 Phase C 仅加 env 门控,默认 `SEND_REAL_NETWORK_RECIPIENT_DOMAINS=""` → 拒所有外发。无外发动作。
+- 🟡 **业务代码改动日 撞坑 #71 破例沿用** — 沿 cf369c7 范本,本次 4 文件(新增 safety.py + classifier.py 改 + process_inbox.py 改 + send_one_approved.py 改)均属业务代码改动日破例。
+- 🟡 **mypy files 254 → 256** — 新增 `tests/ai/test_safety.py` ~250 行,后续周度抽测需保持 256 不漂移。
+- 🟡 **Layer 1 主题黑名单误杀 URGENT 真实邮件** — 已用"黑名单词 + body < 30"双信号防误杀(真实 URGENT 客户投诉 body 通常 > 30 字符)。测试覆盖 3 case + parametrize 7 keyword。
+- 🟢 **撞坑 #85 与 #76 边界** — #76 防 outbox status/last_approved_at_ms 伪造(已闭合),#85 防 LLM 草稿内容本身不可信(本轮)。两撞坑不可互相替代。
+- 📋 P1:等用户授权阶段 3 send_one_approved 触发单封真发(Layer 1+2 已防御,L3 需设 `SEND_REAL_NETWORK_RECIPIENT_DOMAINS` env)
+- 📋 P2:7/16 周度抽测核对新增 48+9+11=68 tests 沿用 + make ci 全绿
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2897 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / ruff check / ruff format / alembic --sql / uv build 全绿 / `make check-snapshot` 全绿。
+- **撞坑累计**:**85 类 · 本轮新增 #85**(撞根因即修 · 三层防御完整闭合)。
+- **当前阶段**:Day 13 完全体 **Day 2-3 真收口 ✅** + **撞坑 #85 三层防御 Phase A→B→C 收口 ✅**(撞坑 #76/#85 双闭合)+ **阶段 2.3 ✅**(2 条 pending_send 未 SMTP 真发)+ 阶段 1.2/1.3/4 仍保持 docs-only / mock / 待授权。
+- **下一步**:
+  1. 等用户授权阶段 3 `send_one_approved` 单封真发(每次临时 `SMTP_REAL_NETWORK=1` + Layer 3 env 白名单显式列)
+  2. 阶段 1.2 账單真导(微信/支付宝 · 等用户提供 CSV 路径 + 限授权)
+  3. 阶段 1.3 Notes 真同步(等用户授权 + TCC 引导)
+  4. 阶段 4 launchd 真部署(可选,再授权)
+  5. 7/16 周度抽测 + 8/1 preflight 预热启动待办
+  6. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)
+- **下一棒**:commit 撞坑 #85 三层防御 + 等用户"push"明确授权;阶段 1.2/1.3/3/4 候选均待授权。

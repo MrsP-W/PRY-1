@@ -641,3 +641,122 @@ class TestD46V102Fixes:
         assert isinstance(results[0], ClassificationResult)
         assert isinstance(results[1], KeyError)
         assert isinstance(results[2], ClassificationResult)
+
+
+class TestD13xP1SpamShortCircuit:
+    """D13.x P1 修复(撞坑 #85 Layer 1 · 2026-07-07).
+
+    撞坑 #85 案例: 阶段 2.3 后 outbox 入 2 封 LLM 幻觉草稿,收件人 root@systemmail.yunwu.ai。
+    根因: 分类器把"system sender + 紧急主题 + body 空"误判 TODO → drafter 幻觉
+    出"API 中断事故响应"草稿 → process_inbox 用 sender 当 recipient 入 outbox。
+
+    Layer 1 修复: 分类器入口短路 — 系统发件人 / 主题黑名单词 + body 极短,
+    不调 LLM,直接返 SPAM。
+    """
+
+    def test_system_sender_short_circuits_to_spam(self) -> None:
+        """撞坑 #85 案例: root@systemmail.yunwu.ai → 短路 SPAM,不调 LLM."""
+        from my_ai_employee.ai.classifier import EmailCategory, EmailClassifier
+
+        mock_router = MagicMock()
+        classifier = EmailClassifier(router=mock_router)
+
+        result = classifier.classify(
+            subject="[紧急] 需立即处理事项",
+            sender="root@systemmail.yunwu.ai",
+            body_excerpt="",
+        )
+
+        assert result.category == EmailCategory.SPAM
+        assert result.confidence == 0.99
+        assert result.model_full_id == "short_circuit:obvious_spam"
+        assert result.latency_ms == 0
+        # 关键: mock router 不应被调用(短路,不走 LLM)
+        mock_router.route.assert_not_called()
+
+    def test_spam_keyword_plus_empty_body_short_circuits(self) -> None:
+        """主题黑名单词 + body 空 → 短路 SPAM,不调 LLM."""
+        from my_ai_employee.ai.classifier import EmailCategory, EmailClassifier
+
+        mock_router = MagicMock()
+        classifier = EmailClassifier(router=mock_router)
+
+        result = classifier.classify(
+            subject="[紧急] API 服务异常需立即处理",
+            sender="alerts@partner.example.com",
+            body_excerpt="",
+        )
+
+        assert result.category == EmailCategory.SPAM
+        assert result.model_full_id == "short_circuit:obvious_spam"
+        mock_router.route.assert_not_called()
+
+    def test_spam_keyword_with_long_body_not_short_circuited(self) -> None:
+        """主题含黑名单词 + body 长 → 不短路,正常调 LLM(防误杀真实 URGENT).
+
+        撞坑 #85 设计原则: 双信号(黑名单词 + body 极短)防误杀,真实"客户紧急
+        投诉"等 URGENT 邮件 body > 30 字符有上下文。
+        """
+        from my_ai_employee.ai.classifier import EmailClassifier
+
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(
+            '{"category": "URGENT", "confidence": 0.9}'
+        )
+        classifier = EmailClassifier(router=mock_router)
+
+        long_body = (
+            "订单 #1234 严重延迟超过 24 小时,客户已多次催促退款,"
+            "请相关同事立即介入处理事故根因并提交初步分析报告。"
+        )
+        result = classifier.classify(
+            subject="[紧急] 客户投诉",
+            sender="client@partner.example.com",
+            body_excerpt=long_body,
+        )
+
+        # 不应短路(mock router 被调用)
+        mock_router.route.assert_called_once()
+        assert result.category.value == "URGENT"
+
+    def test_normal_email_not_short_circuited(self) -> None:
+        """普通邮件 → 不短路,正常调 LLM."""
+        from my_ai_employee.ai.classifier import EmailClassifier
+
+        mock_router = MagicMock()
+        mock_router.route.return_value = _mock_router_response(
+            '{"category": "FYI", "confidence": 0.7}'
+        )
+        classifier = EmailClassifier(router=mock_router)
+
+        result = classifier.classify(
+            subject="下周项目评审会议",
+            sender="alice@example.com",
+            body_excerpt="我们下周三下午 2 点开项目评审会,请准备相关材料。",
+        )
+
+        mock_router.route.assert_called_once()
+        assert result.category.value == "FYI"
+
+    def test_short_circuit_increments_stats(self) -> None:
+        """短路命中 → stats["short_circuit_spam"] 累加."""
+        from my_ai_employee.ai.classifier import EmailClassifier
+
+        mock_router = MagicMock()
+        classifier = EmailClassifier(router=mock_router)
+
+        # 3 次短路
+        for i in range(3):
+            classifier.classify(
+                subject=f"[紧急] 测试 {i}",
+                sender="root@systemmail.yunwu.ai",
+                body_excerpt="",
+            )
+
+        stats = classifier.stats()
+        assert stats["short_circuit_spam"] == 3
+        assert stats["total"] == 3
+        # success 不应累加(短路不算 LLM 成功)
+        assert stats["success"] == 0
+        # mock router 0 次调用
+        mock_router.route.assert_not_called()

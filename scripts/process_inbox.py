@@ -46,6 +46,7 @@ from my_ai_employee.ai.drafter import (  # noqa: E402
     EmailDrafter,
     SpamBlockedError,
 )
+from my_ai_employee.ai.safety import is_system_sender  # 撞坑 #85 Layer 2 短路
 from my_ai_employee.ai.providers import LLMError  # noqa: E402
 from my_ai_employee.core.config import load_env  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
@@ -72,6 +73,7 @@ class PipelineCounters:
     outbox_stored: int = 0
     skipped_spam: int = 0
     skipped_duplicate: int = 0
+    skipped_system_sender: int = 0  # 撞坑 #85 Layer 2: system sender 短路
     classify_failed: int = 0
     draft_failed: int = 0
     outbox_failed: int = 0
@@ -160,6 +162,19 @@ def process_one_email(
     category = classification.category.value
     if category == EmailCategory.SPAM.value:
         return "skipped_spam"
+
+    # D13.x P2 修复(撞坑 #85 Layer 2 · 2026-07-07,业务代码改动日 撞坑 #71 边界破例):
+    # system-style sender 即使分类非 SPAM,process_inbox 也不再调 drafter。
+    # 撞坑 #85 案例: 原邮件 sender=root@systemmail.yunwu.ai,即使 Layer 1 漏判,
+    # process_inbox 用 sender 当 recipient_email 直接入 outbox → LLM 幻觉草稿
+    # 误发风险。Layer 2 兜底: 系统发件人邮件不调 drafter(无真人接管,无需 reply)。
+    if is_system_sender(email.sender or ""):
+        logger_obj = __import__("loguru").logger
+        logger_obj.warning(
+            f"[process_inbox] 撞坑 #85 Layer 2 短路: system sender 不调 drafter | "
+            f"email_id={email.id} sender={email.sender!r} category={category}"
+        )
+        return "skipped_system_sender"
 
     try:
         draft_result = drafter.draft(
@@ -291,6 +306,7 @@ def run_pipeline(
                 "outbox_stored",
                 "skipped_spam",
                 "skipped_duplicate",
+                "skipped_system_sender",  # 撞坑 #85 Layer 2 也算已分类
                 "draft_failed",
                 "outbox_failed",
             )
@@ -304,6 +320,7 @@ def run_pipeline(
             outbox_stored=outcomes.get("outbox_stored", 0),
             skipped_spam=outcomes.get("skipped_spam", 0),
             skipped_duplicate=outcomes.get("skipped_duplicate", 0),
+            skipped_system_sender=outcomes.get("skipped_system_sender", 0),
             classify_failed=outcomes.get("classify_failed", 0),
             draft_failed=outcomes.get("draft_failed", 0),
             outbox_failed=outcomes.get("outbox_failed", 0),
@@ -314,6 +331,7 @@ def run_pipeline(
             f"source={source!r} candidates={counters.candidates} "
             f"outbox_stored={counters.outbox_stored} "
             f"skipped_spam={counters.skipped_spam} "
+            f"skipped_system_sender={counters.skipped_system_sender} "
             f"classify_failed={counters.classify_failed} "
             f"draft_failed={counters.draft_failed} "
             f"outbox_failed={counters.outbox_failed} "
