@@ -167,6 +167,13 @@ class TestFallbackChain:
         chain = get_chain(TaskType.CLASSIFY)
         assert chain.primary == "deepseek/deepseek-chat"
 
+    def test_draft_chain_prefers_qwen_for_bare_json_contract(self) -> None:
+        """D13.x P0: 草稿链主选 Qwen,避免 MiniMax <think> 破坏裸 JSON 契约."""
+        chain = get_chain(TaskType.DRAFT)
+        assert chain.primary == "qwen/qwen3-max"
+        assert chain.secondary == "deepseek/deepseek-chat"
+        assert chain.tertiary == "minimax/MiniMax-M3"
+
     def test_circuit_breaker_opens_after_3_failures(self) -> None:
         """CircuitBreaker: 3 次失败后熔断."""
         cb = CircuitBreaker()

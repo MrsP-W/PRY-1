@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2835 passed / 1 skipped** / **89.08%** / mypy --strict 0 / **254 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | 补 QQ IMAP Keychain → IMAP 真同步 → `process_inbox --execute` → SMTP 真发 1 封(每次临时授权) |
+| **质量基线** | **2837 passed / 1 skipped** / **89.05%** / mypy --strict 0 / **254 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 审查 2 条 outbox `pending_send` → 如需 SMTP 真发,逐封授权 + 白名单/收件人复核 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
@@ -4877,3 +4877,30 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   5. 阶段 4 launchd 真部署(可选,再授权)
   6. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)
 - **下一棒**:等用户授权阶段 1.2 / 1.3 / 2.3 / 3 / 4 之一;7/16 周度抽测 + 8/1 preflight 预热启动待办
+
+## 71. 2026-07-07 · Day 13 阶段 2.3 `process_inbox` 真执行 + DRAFT P0 收口
+
+> **触发**:用户授权 2.3 继续跑 `process_inbox --execute --limit 5+`,目标是让真实 IMAP 邮件经 LLM 分类/草稿进入 outbox,不触发 SMTP 真发。
+
+### 1. 本次修改内容
+
+- **2.3 真执行**:`--limit 5` 先跑出 `outbox_stored=0 skipped_spam=5`;扩大到 `--limit 10` 后最终 `outbox_stored=2 skipped_spam=6 draft_failed=2`,主库 outbox 写入 2 条 `pending_send`。
+- **P0-1 防 traceback**:`scripts/process_inbox.py` 捕获 `DrafterResponseError`,将 MiniMax 非裸 JSON / 草稿解析失败计入 `draft_failed`,不再 traceback 中断整批。
+- **P0-2 DRAFT 路由修正**:`src/my_ai_employee/ai/fallback.py` 将 `TaskType.DRAFT` 主选从 MiniMax-M3 调为 Qwen,DeepSeek/MiniMax 继续 fallback,避免 `<think>` 前缀破坏裸 JSON 契约。
+- **测试同步**:`tests/scripts/test_process_inbox.py` 新增草稿解析失败不写 outbox 的回归;`tests/ai/test_router.py` 锁定 DRAFT 路由顺序。
+
+### 2. 风险点
+
+- 🟢 **未 SMTP 外发** — 本阶段只写 outbox,未设置 `SMTP_REAL_NETWORK=1`,没有调用 `send_one_approved`。
+- 🟡 **2 条 pending_send 待审查** — 当前收件人来自原始邮件 sender,下一步真发前必须逐封审查 + 白名单/收件人复核。
+- 🟡 **draft_failed=2 保留** — FYI 短回复 9 字符小于 `MIN_DRAFT_BODY_CHARS=10`,属于业务严判失败,不阻塞 2.3 收口。
+- 🟢 **撞坑累计 84 类 · 0 新增** — 本次是已暴露 DRAFT 裸 JSON 契约风险的 P0 修复,未新增真实发送风险。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2837 passed / 1 skipped / 89.05%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / `make check-snapshot` 全绿。
+- **当前阶段**:Day 13 阶段 2.3 ✅(真实 outbox 写入 2 条 `pending_send`) + SMTP 真发 ⏸️(仍需逐次授权)。
+- **下一步**:
+  1. 审查 outbox 2 条草稿,确认是否改收件人/白名单/删除。
+  2. 如需真发,再单独授权阶段 3 `send_one_approved`(每次临时 `SMTP_REAL_NETWORK=1`)。
+  3. 阶段 1.2 账单真导、阶段 1.3 Notes 真同步、阶段 4 launchd 真部署仍保持待授权。

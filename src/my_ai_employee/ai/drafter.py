@@ -3,7 +3,7 @@
 设计要点:
 
   - 复用 D4.1.1 LLM Router:`router.route(TaskType.DRAFT, messages)` 自动走
-    DeepSeek → Qwen → M3 fallback 链(`fallback.FALLBACK_CHAINS[TaskType.DRAFT]` 已配)
+    Qwen → DeepSeek → M3 fallback 链(`fallback.FALLBACK_CHAINS[TaskType.DRAFT]` 已配)
   - 严判 LLM 响应:必须严格 JSON `{"subject": str, "body": str, "tone": <枚举>}`
     - 字段缺 / 类型错 / tone 不在 3 类 → 抛 DrafterResponseError
     - 编程错误(type/ValueError) 透传(D3.3.3 教训:不 catch-all 兜底)

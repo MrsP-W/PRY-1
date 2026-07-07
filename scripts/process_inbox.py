@@ -26,7 +26,6 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
@@ -42,6 +41,7 @@ from my_ai_employee.ai.classifier import (  # noqa: E402
     EmailClassifier,
 )
 from my_ai_employee.ai.drafter import (  # noqa: E402
+    DrafterResponseError,
     DraftTone,
     EmailDrafter,
     SpamBlockedError,
@@ -182,7 +182,7 @@ def process_one_email(
             run_id=run_id,
         )
         return "skipped_spam"
-    except (LLMError, ValueError) as e:
+    except (DrafterResponseError, LLMError, ValueError) as e:
         draft_adapter.record_draft_failure_and_emit(
             email_id=email.id,
             last_error=str(e),

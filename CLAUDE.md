@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-04(**Day 12 维持期 ✅** + **Day 13 完全体启动 Day 1.2 ✅** + **Day 13 v1.0 launch runbook dry-run 闭环锁口 ✅** + **Day 13 完全体 Day 2 真收口 ✅**(`cf369c7` · 菜单栏 Impl + audit SQL + launchd 3-job upgrade · 撞坑 #71 docs-only 边界业务代码改动日破例 · 沿 DASHBOARD_REAL_DB opt-in 模式 撞坑 #65 范本)· push 同步 · 7/9 周度抽测 3/3 · 8/1 preflight 预热启动 · MD 257 · `make setup` 配置向导落地 · `tests/scripts/test_setup_wizard.py` 12 new tests · `tests/menu_bar/test_note_confirm_service.py` 撞坑 #50 衍生 +2 行 test fix · `docs/v1.0-launch-runbook.md` dry-run 闭环版新写 · 9 质量门 **2835 passed / 1 skipped / 89.08%** / **257 MD** / mypy **254 files** · **红线全维持**))
+> 最后更新:2026-07-07(**Day 13 阶段 2.3 process_inbox 真执行 ✅** · outbox 写入 2 条 `pending_send` · 未 SMTP 外发 · DRAFT 路由改 Qwen 优先 · 9 质量门 **2837 passed / 1 skipped / 89.05%** / **257 MD** / mypy **254 files** · **红线全维持**)
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 12 维持期 ✅** + **Day 13 完全体启动 Day 1.2 ✅** + **Day 13 v1.0 launch runbook dry-run 闭环锁口 ✅** + **Day 13 完全体 Day 2 真收口 ✅**(`cf369c7 feat(day2)` · 菜单栏 Impl + audit SQL + launchd 3-job upgrade · `DASHBOARD_REAL_DB=1` opt-in 注入真实服务 + 19 files / 655 +/-/153 - 业务代码改动日 撞坑 #71 业务代码改动日破例 · `docs/v1.0-launch-runbook.md` dry-run 闭环版 v1.0 release tag 默认不打)(remote 已 sync 至 `87f4986` · 7/9 周度抽测 3/3 · 8/1 preflight 预热 · MD 257 · 9/9 质量门 **2835 passed / 1 skipped / 89.08%** / **257 MD** / mypy **254 files** · **红线全维持**(撞坑 #1/#18/#59/#65/#71 · 用户 7/3 "不使用真实数据"红线 · 默认不 push · 默认不启用 `ENABLE_NOTES_ENCRYPTION=1` / `ENABLE_PATH_4_WRITE=1` · **Day 1.3 真实入库/1-click SMTP 真发待用户授权 · 每次临时授权**)。
+**当前阶段**：**Day 13 阶段 2.3 已完成**(`process_inbox --execute --limit 10` 真跑 · outbox 2 条 `pending_send` · 未 SMTP 外发 · 9/9 质量门 **2837 passed / 1 skipped / 89.05%** / **257 MD** / mypy **254 files** · **红线全维持**(撞坑 #1/#18/#59/#65/#71/#76/#78/#79 · 默认不 push · 默认不启用 `ENABLE_NOTES_ENCRYPTION=1` / `ENABLE_PATH_4_WRITE=1` · 1-click SMTP 真发仍需每次临时授权))。
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 

@@ -123,6 +123,32 @@ class _MockRouter:
         )
 
 
+class _BadDraftRouter:
+    def route(
+        self,
+        *,
+        task_type: Any,
+        messages: Any,
+        temperature: Any,
+        max_tokens: Any,
+    ) -> LLMResponse:
+        if task_type == TaskType.CLASSIFY:
+            return LLMResponse(
+                content='{"category": "TODO", "confidence": 0.91}',
+                model_full_id="mock-classifier",
+                input_tokens=10,
+                output_tokens=5,
+                latency_ms=12,
+            )
+        return LLMResponse(
+            content="<think>not bare json</think>",
+            model_full_id="mock-drafter",
+            input_tokens=20,
+            output_tokens=30,
+            latency_ms=18,
+        )
+
+
 def test_normalize_recipient_extracts_email() -> None:
     assert _normalize_recipient("Alice <alice@example.com>") == "alice@example.com"
     assert _normalize_recipient("bob@test.qq.com") == "bob@test.qq.com"
@@ -176,6 +202,45 @@ def test_execute_writes_outbox_with_mock_router(
     with eng.connect() as conn:
         outbox_count = conn.execute(text("SELECT COUNT(*) FROM outbox")).scalar()
     assert outbox_count == 1
+    eng.dispose()
+
+
+def test_execute_records_draft_response_error_without_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    db_path = tmp_path / "inbox.db"
+    _make_plain_db(db_path)
+    _seed_email(db_path)
+    monkeypatch.setenv("PROCESS_INBOX_EXECUTE", "1")
+
+    from my_ai_employee.ai.classifier import EmailClassifier
+    from my_ai_employee.ai.drafter import EmailDrafter
+
+    router = _BadDraftRouter()
+    classifier = EmailClassifier(router=router)  # type: ignore[arg-type]
+    drafter = EmailDrafter(router=router)  # type: ignore[arg-type]
+
+    code, counters = _run_with_plain_db(
+        db_path,
+        lambda: run_pipeline(
+            source="qq",
+            limit=1,
+            execute=True,
+            db_path=db_path,
+            classifier=classifier,
+            drafter=drafter,
+        ),
+    )
+    assert code == 2
+    assert counters.draft_failed == 1
+    assert counters.outbox_stored == 0
+
+    from sqlalchemy import text
+
+    eng = _plain_engine(db_path)
+    with eng.connect() as conn:
+        outbox_count = conn.execute(text("SELECT COUNT(*) FROM outbox")).scalar()
+    assert outbox_count == 0
     eng.dispose()
 
 

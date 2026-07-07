@@ -57,12 +57,13 @@ FALLBACK_CHAINS: dict[TaskType, FallbackChainConfig] = {
         secondary="qwen/qwen3-max",
         tertiary="minimax/MiniMax-M3",
     ),
-    # 草稿生成: 中长文本 + 中文质量敏感
-    # primary = M3 中文质量优, secondary = DeepSeek 性价比, tertiary = Qwen 1M context
+    # 草稿生成: 中长文本 + 裸 JSON 契约敏感
+    # Day 13.x P0: MiniMax-M3 会输出 <think> 前缀, 破坏 drafter 裸 JSON 契约;
+    # 先用 Qwen 作为主选, DeepSeek/M3 保持 fallback。
     TaskType.DRAFT: FallbackChainConfig(
-        primary="minimax/MiniMax-M3",
+        primary="qwen/qwen3-max",
         secondary="deepseek/deepseek-chat",
-        tertiary="qwen/qwen3-max",
+        tertiary="minimax/MiniMax-M3",
     ),
     # 财务异常检测: 推理深度敏感
     # primary = DeepSeek-R1 推理模型, secondary = M3 中文推理, tertiary = GLM 备选
