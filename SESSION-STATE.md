@@ -1,6 +1,6 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-08 项目检查 docs-only 口径修正:Day 13 P0 `send_one_approved` 审批顺序修复已同步远端(`ae071f0 = origin/main`) + outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **最后更新**:2026-07-08 项目检查 docs-only 口径修正:Day 13 P0 `send_one_approved` 审批顺序修复业务代码锚 `ae071f0` 已同步远端 + outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
 > **状态**:🟢 **Day 13 阶段 2.3 + P0 审批修复已推送** — outbox 2 条 `root@systemmail.yunwu.ai` 已作废(`cancelled`);SMTP 真发仍暂停。**质量门**:**2900 passed / 1 skipped** / 89.11% / lint **257** / mypy **256 files**。**下一棒**:如需 SMTP 真发,必须新草稿 + 人工审查 + 逐封授权。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复已推送 ✅**(`ae071f0 = origin/main`;outbox 2 条已 `cancelled` · 未 SMTP 外发) — **2900 passed / 1 skipped** / 89.11% / MD lint **257** / mypy **256 files**。**下一棒**:新草稿 + SMTP 真发逐封授权;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复已推送 ✅**(业务代码锚 `ae071f0` 已在远端;outbox 2 条已 `cancelled` · 未 SMTP 外发) — **2900 passed / 1 skipped** / 89.11% / MD lint **257** / mypy **256 files**。**下一棒**:新草稿 + SMTP 真发逐封授权;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 

@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复已推送(2026-07-08 核验 · `ae071f0 = origin/main`)** — 撞坑 #85 三层防御已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**下一棒**:只允许新草稿 + 人工审查 + 逐封 SMTP 授权;阶段 1.2/1.3/4 仍待授权 |
+| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复已推送(2026-07-08 核验 · 业务代码锚 `ae071f0` 已在远端)** — 撞坑 #85 三层防御已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**下一棒**:只允许新草稿 + 人工审查 + 逐封 SMTP 授权;阶段 1.2/1.3/4 仍待授权 |
 | **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
@@ -114,7 +114,7 @@
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | **2900 passed / 1 skipped** / **89.11%** / mypy --strict 0 / **256 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | push 已完成(`ae071f0 = origin/main`);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
+| **下一棒** | push 已完成(业务代码锚 `ae071f0` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
@@ -4942,7 +4942,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   4. 阶段 4 launchd 真部署(可选,再授权)
   5. 7/16 周度抽测 + 8/1 preflight 预热启动待办
   6. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)
-- **下一棒**:撞坑 #85 三层防御后续已推送到远端(`ae071f0 = origin/main`);阶段 1.2/1.3/3/4 候选均待授权。
+- **下一棒**:撞坑 #85 三层防御后续已推送到远端(业务代码锚 `ae071f0` 已在远端);阶段 1.2/1.3/3/4 候选均待授权。
 
 ---
 
@@ -4961,7 +4961,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 🟢 **未 SMTP 真发** — 本轮只修审批顺序 + 审查 outbox,未设 `SMTP_REAL_NETWORK=1`。
 - 🟢 **2 条 cancelled 草稿不可恢复发送** — 内容来自撞坑 #85 幻觉链路,不建议改收件人后发送。
-- 🟢 **远端已同步** — `2c971e1`(撞坑 #85) + P0 审批顺序修复后续已推送到 `ae071f0 = origin/main`。
+- 🟢 **远端已同步** — `2c971e1`(撞坑 #85) + P0 审批顺序修复业务代码锚 `ae071f0` 后续均已推送到远端。
 
 ### 3. 当前项目整体总结
 
@@ -4978,7 +4978,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 ### 1. 本次修改内容
 
 - **SESSION-STATE**:顶部状态改为 Day 13 阶段 2.3 + P0 审批修复已推送,下一棒改为"新草稿 + 人工审查 + 逐封授权"。
-- **MODIFICATION-LOG**:当前快照与最近两条记录补齐 `ae071f0 = origin/main` 远端同步事实,保留历史授权语境。
+- **MODIFICATION-LOG**:当前快照与最近两条记录补齐业务代码锚 `ae071f0` 已在远端的事实,保留历史授权语境。
 - **质量基线**:不改 `quality_snapshot.py`;仍以 **2900 passed / 1 skipped / 89.11%** / mypy **256 files** / MD lint **257 files** 为准。
 
 ### 2. 风险点
