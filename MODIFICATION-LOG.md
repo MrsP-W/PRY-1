@@ -4992,3 +4992,46 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2900 passed / 1 skipped / 89.11%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors**。
 - **当前阶段**:Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复均已推送;SMTP 真发仍需新草稿与逐封授权。
 - **下一步**:优先做 7/16 周度抽测;若要推进真实业务,按阶段 1.2 账单真导 / 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发分别授权。
+
+---
+
+## 73. 2026-07-08 · Phase 1 维持期第 3 次 weekly 提前 8 天预热启动(7/16 周度抽测 docs-only)
+
+> **触发**:用户授权"做 7/16 周度抽测;如要推进真实业务,再分别授权账单真导 / Notes 真同步 / SMTP 单封真发"。
+> **撞坑 #71 docs-only 边界严判**:本轮 7/8 preheat 仅 docs-only 巡检,**业务代码 0 改动**(撞坑 #85 + 收件人校验 push 已 7/7 完成,本轮无新增 commit)。
+
+### 1. 本次修改内容
+
+- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2900 passed / 1 skipped** · coverage **89.11%** · mypy **0 errors / 256 files** · MD lint **257 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2900 passed / 1 skipped · 257 md files`)。
+- **撞坑累计 84 → 85 类**:`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push;本轮仅 docs-only,**0 新增撞坑**。
+- **v0.2.57.3 文档升级**:沿 7/8 preheat 实测 baseline 实际化 §1 数字对账表(2791 → 2900 / 89.09% → 89.11% / 248 → 256 mypy / 256 → 257 md / 84 → 85 撞坑)+ §0 7/8 preheat 段新增(实测 baseline + 撞坑 85 累计 + 11/11 readiness) + §2 撞坑累计表追加 #85 行 + §3 边界表 +2 项(撞坑 #71 docs-only + 撞坑 #85 Layer 3 默认空) + §5 readiness 加 #10/#11 项 + §6 下一棒表加 7/8 19:00+ 本轮 docs-only + 4 个真实业务候选(均待授权) + §7 关联与依据 HEAD `1470dd0` → `ae071f0` + 最后更新 `2026-07-16` → `2026-07-08`。
+- **SESSION-STATE 7/8 preheat 行新增**:Phase 1 维持期第 3 次 weekly 提前 8 天预热启动(2026-07-08 周三);沿用 §0 7/8 preheat 段同样的实测 baseline。
+
+### 2. 风险点
+
+- 🟢 **业务代码 0 改动(撞坑 #71 docs-only 边界严判)** — 本轮仅 docs-only 巡检,无 src/tests 改动。
+- 🟢 **未 SMTP 真发** — 真实业务候选(阶段 1.2 / 1.3 / 3 / 4)均需单独授权;撞坑 #85 Layer 3 `SEND_REAL_NETWORK_RECIPIENT_DOMAINS` 默认空=拒所有外发。
+- 🟢 **未 kickstart launchd** — launchd 真部署属阶段 4,等用户授权。
+- 🟢 **未启用 `ENABLE_PATH_4_WRITE=1` / `ENABLE_NOTES_ENCRYPTION=1`** — 红线维持。
+- 🟢 **撞坑 #1 铁律维持** — notes.title / body 不打印到 chat/commit/docs(35 NEW · 撞坑 #64 normalized_fingerprint 去重)。
+- 🟡 **7/16 weekly 收口预期** — 7/8 preheat 数字(2900/89.11%/256/257/85)是当前实测 baseline;7/16 当天再做一次 docs-only 重验,数字若变化以新 commit 沿 docs-only 规则更新 v0.2.57.3。
+- 🟡 **撞坑累计沿用 85 类** — 7/9 / 7/16 weekly 仍 docs-only 边界,期望 0 新增撞坑。
+- 📋 P1:7/9 第 2 次 weekly 周检 docs-only 收口(`0a68503` 沿用)
+- 📋 P1:7/16 第 3 次 weekly 周检 docs-only 收口(沿 7/8 preheat 范本)
+- 📋 P1:7/20 8/1 preflight §1 baseline 校准(254→257)
+- 📋 P1:7/23 第 4 次 weekly `make ci`(Phase 1 收官前)
+- 📋 P1:7/25 / 7/28 / 7/31 阶段 3 A3 readiness docs-only 刷新 x3
+- 📋 P0:8/1 阶段 4 tag 评估 docs-only(不动 tag)
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2900 passed / 1 skipped / 89.11%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**85 类 · 0 新增**(本轮 docs-only 巡检 · 7/8 preheat 沿 7/7 撞坑 #85 落地基线)。
+- **当前阶段**:**Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复均已推送** ✅ + **7/16 周度抽测 7/8 preheat 启动** ✅(docs-only 边界严判)+ SMTP 真发 ⏸️(仍需新草稿与五重门控逐封授权)。
+- **下一步**:
+  1. **本轮 docs-only commit**(待 push 授权):三入口同步 + commit `docs(state): v0.2.57.3 weekly checkpoint 7/8 preheat`。
+  2. 7/9 第 2 次 weekly 周检 docs-only 收口(`0a68503` 沿用)。
+  3. 7/16 第 3 次 weekly 周检 docs-only 收口(沿 7/8 preheat 范本)。
+  4. 真实业务候选(均需单独授权):阶段 1.2 账单真导 / 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发 / 阶段 4 launchd 真部署。
+  5. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
+- **下一棒**:commit 7/16 weekly preheat docs-only + 等 push 授权;7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口沿用;真实业务候选均需单独授权。
