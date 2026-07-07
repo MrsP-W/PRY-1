@@ -97,8 +97,8 @@ def test_s1_imap_fetch_10_emails(monkeypatch: Any, tmp_path: Any) -> Any:
     assert len(result) == 10, f"期望 10 封,实际 {len(result)}"
     assert all("source" in r for r in result)
     assert all(r["source"] == "qq" for r in result)
-    # imapclient 3.x: subject 是 bytes,sender 是 str(bytes 拼 f-string 形式)沿 L222
-    assert result[0]["subject"] == "测试邮件 #1".encode()
+    # imapclient 3.x: subject 是 bytes,D13.x P0 修复后 _to_str helper 自动 decode utf-8 → str
+    assert result[0]["subject"] == "测试邮件 #1"
     # mailbox/host 是 bytes,f-string 拼成 "b'sender10'@b'example.com'" str 形式
     assert "sender10" in result[9]["sender"] and "example.com" in result[9]["sender"]
 

@@ -88,6 +88,45 @@ class JSONList(TypeDecorator[Any]):
 JSON_FIELD = JSONList
 
 
+class BytesToStr(TypeDecorator[str]):
+    """bytes/str → TEXT(utf-8 decode, errors="replace")。
+
+    设计动机(D13.x P0 修复,2026-07-07,撞坑 #71 业务代码改动日破例):
+        - sqlcipher3 driver 对 TEXT 列返回 bytes(不是 str,跟 pysqlcipher3 加密层行为有关)
+        - imapclient 3.x ENVELOPE 字段也是 bytes(subject / from_.mailbox / host / message_id)
+        - SQLAlchemy ORM `Mapped[str]` 期望 str,实际拿到 bytes
+        - 下游 classifier.classify 严判 `type(subject) is not str` → ValueError → classify_failed
+
+    范本(JSONList TypeDecorator):
+        - impl = Text(DDL 不变,schema.sql 不改,alembic 不生成迁移)
+        - cache_ok = True(类型缓存安全 — impl 不变)
+        - process_bind_param: ORM → DB,bytes/str → utf-8 str
+        - process_result_value: DB → ORM,bytes → utf-8 str(防御 sqlcipher3 driver 返回 bytes)
+
+    用途:
+        subject: Mapped[str] = mapped_column(BytesToStr, nullable=False, default="", server_default="")
+    """
+
+    impl = Text
+    cache_ok = True
+
+    def process_bind_param(self, value: Any, dialect: Any) -> str | None:
+        """ORM → DB:bytes/str 统一 utf-8 编码为 str。None → None。"""
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return str(value)
+
+    def process_result_value(self, value: Any, dialect: Any) -> str | None:
+        """DB → ORM:bytes 自动 decode(防御 sqlcipher3 driver)。str 透传。None 透传。"""
+        if value is None:
+            return None
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return str(value)
+
+
 # ===== 1. Email =====
 
 
@@ -123,16 +162,24 @@ class Email(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     source: Mapped[str] = mapped_column(Text, nullable=False)
     uid: Mapped[int] = mapped_column(Integer, nullable=False)
-    message_id: Mapped[str | None] = mapped_column(Text, nullable=True)
-    subject: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
-    sender: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    # ⚠️ D13.x P0 修复(2026-07-07,撞坑 #71 业务代码改动日破例):
+    # 改用 BytesToStr TypeDecorator 防御 sqlcipher3 driver 对 TEXT 列返回 bytes 的问题。
+    # 配合 connect.imap._envelope_to_dict 的 _to_str helper,入库前 + 读取后双层 decode。
+    # DDL 不变(impl=Text),alembic 不生成迁移。
+    message_id: Mapped[str | None] = mapped_column(BytesToStr, nullable=True)
+    subject: Mapped[str] = mapped_column(BytesToStr, nullable=False, default="", server_default="")
+    sender: Mapped[str] = mapped_column(BytesToStr, nullable=False, default="", server_default="")
     recipients: Mapped[list[str]] = mapped_column(
         JSONList, nullable=False, default=list[Any], server_default="[]"
     )
     received_at: Mapped[int | None] = mapped_column(Integer, nullable=True)
     raw_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    body_text: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
-    body_html: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
+    body_text: Mapped[str] = mapped_column(
+        BytesToStr, nullable=False, default="", server_default=""
+    )
+    body_html: Mapped[str] = mapped_column(
+        BytesToStr, nullable=False, default="", server_default=""
+    )
     fetched_at: Mapped[int] = mapped_column(Integer, nullable=False)
     labels: Mapped[list[str]] = mapped_column(
         JSONList, nullable=False, default=list[Any], server_default="[]"

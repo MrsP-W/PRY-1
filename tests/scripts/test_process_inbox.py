@@ -15,10 +15,9 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from my_ai_employee.ai.capability import TaskType  # noqa: E402
-from my_ai_employee.ai.drafter import DraftTone  # noqa: E402
 from my_ai_employee.ai.providers import LLMResponse  # noqa: E402
 from my_ai_employee.core.models import Base, Email  # noqa: E402
-from my_ai_employee.events import models as _events_models  # noqa: F401
+from my_ai_employee.events import models as _events_models  # noqa: E402, F401
 from scripts import process_inbox  # noqa: E402
 from scripts.process_inbox import (  # noqa: E402
     _normalize_recipient,
@@ -142,7 +141,9 @@ def test_dry_run_lists_candidates_without_llm(tmp_path: Path) -> None:
     assert counters.candidates == 1
 
 
-def test_execute_writes_outbox_with_mock_router(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_execute_writes_outbox_with_mock_router(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     db_path = tmp_path / "inbox.db"
     _make_plain_db(db_path)
     _seed_email(db_path)

@@ -213,22 +213,39 @@ class IMAPConnector(BaseConnector):
 
         真实 imapclient 3.x 返回的是 `Envelope` namedtuple，字段：
             date: datetime | None
-            subject: str
+            subject: str | bytes
             from_: tuple[Address, ...]  (Address = namedtuple(name, route, mailbox, host))
-            message_id: str
+            message_id: str | bytes
+
+        ⚠️ D13.x P0 修复(2026-07-07,撞坑 #71 业务代码改动日破例):
+            imapclient 3.x 实际返回 bytes(utf-8 编码),2.x 是 str。
+            直接 bytes 入库会导致 SQLAlchemy `Mapped[str]` 严判 type 时抛 ValueError,
+            Email 读取时收到 bytes(因为 sqlcipher3 driver 对 TEXT 列也返回 bytes),
+            下游 classifier.classify 严判 type(subject) is not str → ValueError → classify_failed。
+
+            修复:_to_str helper 统一 decode utf-8(errors="replace"),保证入 dict 全部 str。
+            配合 models.BytesToStr TypeDecorator 做读取侧二次防御。
         """
-        # imapclient 3.x: 字段都是 str / datetime / Address（不是 bytes）
-        subject = envelope.subject or ""
+
+        def _to_str(val: Any, *, default: str = "") -> str:
+            """bytes/str/None 统一转 str(bytes 走 utf-8 decode,errors='replace' 防炸)。"""
+            if val is None:
+                return default
+            if isinstance(val, bytes):
+                return val.decode("utf-8", errors="replace")
+            return str(val)
+
+        subject = _to_str(envelope.subject)
         sender = ""
         if envelope.from_:
-            # from_ = (name, route, mailbox, host) — 全部 str
+            # from_ = (name, route, mailbox, host) — 实际是 bytes
             addr = envelope.from_[0]
-            mailbox = addr.mailbox or ""
-            host = addr.host or ""
+            mailbox = _to_str(addr.mailbox)
+            host = _to_str(addr.host)
             if mailbox and host:
                 sender = f"{mailbox}@{host}"
-        message_id = envelope.message_id or ""
-        # date 已经是 datetime
+        message_id = _to_str(envelope.message_id)
+        # date 已经是 datetime(无需 decode)
         received_at = envelope.date
         uid_int = uid if isinstance(uid, int) else int(uid)
         return {
