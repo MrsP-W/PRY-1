@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2823 passed / 1 skipped** / **89.07%** / mypy --strict 0 / **254 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | Day 1.3 真实入库(待授权) · Day 2 流水线 · 1-click SMTP(每次授权) · 维持期周度抽测 |
+| **质量基线** | **2835 passed / 1 skipped** / **89.08%** / mypy --strict 0 / **254 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **下一棒** | 补 QQ IMAP Keychain → IMAP 真同步 → `process_inbox --execute` → SMTP 真发 1 封(每次临时授权) |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
@@ -4810,3 +4810,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 撞坑累计:**84 类**(无新增 · 沿 Day 11 收口)
 - 远程同步:Day 11 + Day 12 ops/ + Day 12 snapshot 校准已同步到 `origin/main`;本轮 checkpoint 补丁待本地提交
 - 下一棒:8/1 readiness 预热(7/20 启动 · Phase 2)/ Notes 真加密生产(等授权)
+
+---
+
+## 69. 2026-07-07 · Day 1.3-2 `process_inbox` 流水线 + `send_one_approved` 真发门控
+
+> **触发**:用户「按照推荐执行」— Day 1.3 真实入库 + Day 2 流水线 + 1-click SMTP 授权链路
+
+### 1. 本次修改内容
+
+- **Day 2 流水线** — 新增 `scripts/process_inbox.py` + `scripts/process_inbox_gate.py`(默认 dry-run · `PROCESS_INBOX_EXECUTE=1` + `--execute` + `--confirm` + `--limit` 门控)串分类→草稿→outbox; +12 tests
+- **Day 3 SMTP 门控** — 新增 `scripts/send_one_approved.py`(审批 1 条 pending_send → OutboxDispatcher 真发 · `SMTP_REAL_NETWORK=1` 门控) + 2 tests
+- **Day 1.3 实测** — Notes `sync --max-rows 3` 幂等 skip(35 行维持); IMAP 因 **QQ IMAP 授权码未入 Keychain** 拉取 0 封(需 `test_imap.py --set-password`); transactions 90 / outbox 0 维持
+- **基线** — `quality_snapshot.py` + 五入口 sync → **2835 passed / 1 skipped / 89.08%**
+
+### 2. 风险点
+
+- 🟡 **IMAP 阻塞** — Keychain 缺 IMAP 授权码 → `emails` 表仍为 0 · `process_inbox --execute` 暂无可处理邮件
+- 🟢 **红线维持** — 未写 shell profile · 未 kickstart launchd · 未打 v1.0 tag · SMTP 真发须每次 `SMTP_REAL_NETWORK=1`
+
+### 3. 当前项目整体总结
+
+- 进度:**2835 passed / 1 skipped / 89.08%** / mypy **254 files** / `make check-snapshot` 全绿
+- 下一棒:补 IMAP Keychain → 真同步 → `process_inbox --execute` → `send_one_approved` 真发 1 封
