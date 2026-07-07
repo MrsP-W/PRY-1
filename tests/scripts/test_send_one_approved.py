@@ -13,19 +13,31 @@
     - 设白名单 + recipient domain 不在内 → 拒
     - 设空白白名单(env="" 或 "  ,  ")→ 视为未设,拒
     - 大小写不敏感(recipient "A@QQ.COM" 匹配白名单 "qq.com")
+
+  P0 审批顺序(撞坑 #85):
+    - 收件人不匹配时拒批,不写 APPROVED
+    - 收件人匹配后才写 APPROVED
 """
 
 from __future__ import annotations
 
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from scripts.send_one_approved import _CONFIRM_PHRASE, _validate_gate  # noqa: E402
+from my_ai_employee.core.outbox import OutboxStatus  # noqa: E402
+from scripts import send_one_approved  # noqa: E402
+from scripts.send_one_approved import (  # noqa: E402
+    _CONFIRM_PHRASE,
+    _recipient_matches,
+    _validate_gate,
+    main,
+)
 
 # ===== 基础门控(撞坑 #76 防审批伪造范本)=====
 
@@ -138,3 +150,95 @@ class TestPitfall85Layer3DomainWhitelist:
         err = _validate_gate(confirm=_CONFIRM_PHRASE, recipient="alice@mail.qq.com")
         assert err is not None
         assert "mail.qq.com" in err
+
+
+# ===== P0 审批顺序(撞坑 #85: 先校验收件人再写 APPROVED) =====
+
+
+def test_recipient_matches_case_insensitive() -> None:
+    assert _recipient_matches("Alice@QQ.COM", "alice@qq.com")
+    assert not _recipient_matches("root@systemmail.yunwu.ai", "you@qq.com")
+
+
+def _make_pending_entry(*, recipient: str) -> MagicMock:
+    entry = MagicMock()
+    entry.id = 42
+    entry.email_id = 11
+    entry.status = OutboxStatus.PENDING_SEND.value
+    entry.recipient_email = recipient
+    return entry
+
+
+def _run_main_with_mock_store(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    pending: MagicMock,
+    whitelist_recipient: str,
+) -> tuple[int, MagicMock]:
+    monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
+    monkeypatch.setenv("SEND_REAL_NETWORK_RECIPIENT_DOMAINS", "qq.com")
+
+    store = MagicMock()
+    store.by_status.side_effect = lambda status, limit=1: (
+        [pending] if status == OutboxStatus.PENDING_SEND.value else []
+    )
+
+    mock_db = MagicMock()
+    dispatcher_result = MagicMock(
+        total_picked=0,
+        sent=0,
+        technical_failed=0,
+        business_blocked=0,
+    )
+    with (
+        patch.object(send_one_approved, "Database") as mock_db_cls,
+        patch.object(send_one_approved, "make_sqlalchemy_engine"),
+        patch.object(send_one_approved, "OutboxStore", return_value=store),
+        patch.object(
+            send_one_approved.keychain,
+            "get_smtp_password_for_provider",
+            return_value=MagicMock(ok=True, value="smtp-pwd"),
+        ),
+        patch.object(send_one_approved, "OutboxDispatcher") as mock_dispatcher_cls,
+    ):
+        mock_db_cls.open.return_value = mock_db
+        mock_dispatcher_cls.return_value.run_once.return_value = dispatcher_result
+        rc = main(
+            [
+                "--recipient",
+                whitelist_recipient,
+                "--confirm",
+                _CONFIRM_PHRASE,
+                "--smtp-username",
+                "sender@qq.com",
+            ]
+        )
+    return rc, store
+
+
+def test_main_rejects_mismatch_before_approve(monkeypatch: pytest.MonkeyPatch) -> None:
+    """撞坑 #85: outbox 收件人与 --recipient 不符 → 拒批,不写 APPROVED."""
+    pending = _make_pending_entry(recipient="root@systemmail.yunwu.ai")
+    rc, store = _run_main_with_mock_store(
+        monkeypatch,
+        pending=pending,
+        whitelist_recipient="you@qq.com",
+    )
+    assert rc == 1
+    store.update_status.assert_not_called()
+
+
+def test_main_approves_only_after_recipient_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    """收件人匹配后才写 APPROVED."""
+    pending = _make_pending_entry(recipient="you@qq.com")
+    rc, store = _run_main_with_mock_store(
+        monkeypatch,
+        pending=pending,
+        whitelist_recipient="you@QQ.COM",
+    )
+    assert rc == 2
+    store.update_status.assert_called_once()
+    kwargs = store.update_status.call_args.kwargs
+    assert kwargs["new_status"] == OutboxStatus.APPROVED.value
+    assert kwargs["from_status"] == OutboxStatus.PENDING_SEND.value
+    assert kwargs["last_approved_at_ms"] is not None

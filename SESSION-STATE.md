@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-07 Day 13 阶段 2.3 `process_inbox` 真执行收口(真实 outbox 2 条 `pending_send` · 未 SMTP 外发 · DRAFT 路由改 Qwen 优先) · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 13 阶段 2.3 已完成** — `process_inbox --execute --limit 10` 真跑,outbox 写入 2 条 `pending_send`;MiniMax `<think>` 非裸 JSON 已修为失败计数 + Qwen 优先。**质量门**:**2897 passed / 1 skipped** / 89.12% / lint **257** / mypy **256 files**。**下一棒**:审查 2 条 outbox → 如需 SMTP 真发,逐封授权 + 白名单/收件人复核。
+> **最后更新**:2026-07-07 Day 13 P0 `send_one_approved` 审批顺序修复(先校验收件人再写 APPROVED) + outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Day 13 阶段 2.3 + P0 审批修复** — outbox 2 条 `root@systemmail.yunwu.ai` 已作废(`cancelled`);SMTP 真发仍暂停。**质量门**:**2900 passed / 1 skipped** / 89.11% / lint **257** / mypy **256 files**。**下一棒**:你说「push OK」后推 `2c971e1` + 本修;如需 SMTP 真发,须新草稿 + 逐封授权。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅**(outbox 2 条 `pending_send` · 未 SMTP 外发) — **2897 passed / 1 skipped** / 89.12% / MD lint **257** / mypy **256 files**。**下一棒**:审查 outbox 草稿 → SMTP 真发需每次临时授权;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅**(outbox 2 条已 `cancelled` · 未 SMTP 外发) — **2900 passed / 1 skipped** / 89.11% / MD lint **257** / mypy **256 files**。**下一棒**:push `2c971e1`(待授权) → 新草稿 + SMTP 真发逐封授权;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2897 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2900 passed / 1 skipped** · **89.11%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |

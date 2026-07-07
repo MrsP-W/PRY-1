@@ -61,12 +61,15 @@ def _parse_whitelist_domains(env_value: str) -> set[str]:
     严判入口: env_value 必须是 str(空字符串返空 set,严判外由调用方触发)。
     """
     if type(env_value) is not str:
-        raise ValueError(
-            f"env_value 必须是 str, 实际 {type(env_value).__name__}={env_value!r}"
-        )
+        raise ValueError(f"env_value 必须是 str, 实际 {type(env_value).__name__}={env_value!r}")
     if not env_value.strip():
         return set()
     return {d.strip().lower() for d in env_value.split(",") if d.strip()}
+
+
+def _recipient_matches(outbox_recipient: str, whitelist_recipient: str) -> bool:
+    """outbox 收件人与 --recipient 白名单是否一致(大小写不敏感)."""
+    return outbox_recipient.strip().lower() == whitelist_recipient.strip().lower()
 
 
 def _validate_gate(*, confirm: str, recipient: str) -> str | None:
@@ -142,6 +145,16 @@ def main(argv: list[str] | None = None) -> int:
             target = approved[0]
         else:
             target = pending[0]
+
+        # P0(撞坑 #85): 先校验收件人再写 APPROVED,避免误批陌生 domain 草稿
+        if not _recipient_matches(target.recipient_email, args.recipient):
+            _print_err(
+                f"收件人不匹配白名单: outbox={target.recipient_email!r} "
+                f"whitelist={args.recipient!r}"
+            )
+            return 1
+
+        if target.status == OutboxStatus.PENDING_SEND.value:
             now_ms = int(time.time() * 1000)
             store.update_status(
                 outbox_id=int(target.id),
@@ -150,13 +163,6 @@ def main(argv: list[str] | None = None) -> int:
                 last_approved_at_ms=now_ms,
             )
             _print(f"已审批 outbox_id={target.id} → APPROVED")
-
-        if target.recipient_email.strip().lower() != args.recipient.strip().lower():
-            _print_err(
-                f"收件人不匹配白名单: outbox={target.recipient_email!r} "
-                f"whitelist={args.recipient!r}"
-            )
-            return 1
 
         transport = SmtpLibTransport()
         send_adapter = EmailSendAdapter(
