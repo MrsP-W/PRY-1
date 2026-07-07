@@ -4833,3 +4833,47 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 进度:**2835 passed / 1 skipped / 89.08%** / mypy **254 files** / `make check-snapshot` 全绿
 - 下一棒:补 IMAP Keychain → 真同步 → `process_inbox --execute` → `send_one_approved` 真发 1 封
+
+---
+
+## 70. 2026-07-07 · D13.x P0 `IMAP + Email 字段双层 bytes→str 防御`
+
+> **触发**:Day 1.3 真实入库(IMAP)阶段暴露 `imapclient 3.x` 返回 bytes + `sqlcipher3 driver` 对 TEXT 列也返回 bytes → `classifier.classify` 严判 `type(subject) is not str` → `classify_failed=1`
+
+### 1. 本次修改内容
+
+- **修复 commit**:`32b4127` `fix(day1.3-p0): IMAP + Email 字段双层 bytes→str 防御`(4 files / 84 +/-/19 -)
+- **双层防御**:
+  1. `connectors/imap.py:_envelope_to_dict` 新增 `_to_str` helper,bytes 统一 `decode("utf-8", errors="replace")`(subject / from_.mailbox / host / message_id)
+  2. `core/models.py` 新增 `BytesToStr(TypeDecorator[str])`(`impl=Text`,`cache_ok=True`,DDL 不变 alembic 不生成迁移),Email 5 字段(message_id / subject / sender / body_text / body_html)改用
+- **测试同步**:`tests/e2e/test_v0_1_s1_imap_classify.py` 断言 bytes → str;`tests/scripts/test_process_inbox.py` 加 `# noqa: E402, F401` 防 ruff E402
+- **集成验证**:16 封 QQ 邮件(UID 815-834)全 str 入库 · sender 干净如 `security@info.n8n.io`(无 `b'xxx'@b'yyy.com'` repr)· `process_inbox --execute --limit 1` 走 qwen 9164ms 成功,outbox=0(spike 邮件被 LLM 判 spam 跳过 · 撞坑 #76 严判确保只 `pending_send`)
+
+### 2. 风险点
+
+- 🟡 **历史脏数据** — 修复前入库的 16 封邮件全是 bytes,**已 DELETE + re-sync** 全替换为 str(沿 D3.3 幂等 `UNIQUE(source, uid)` 范本)
+- 🟢 **撞坑累计 84 类 · 0 新增** — D13.x P0 = 已撞根因(3.x bytes + sqlcipher3 driver bytes)的修复,非新撞坑
+- 🟢 **DDL 不变** — `BytesToStr` TypeDecorator 不生成 alembic 迁移,不污染 schema 历史
+- 🟢 **撞坑 #71 docs-only 边界再次破例** — 沿 `cf369c7` 范本,业务代码改动日(D13.x P0 = 业务代码)与 7/6 docs-only 收口区分清晰
+- 🟢 **红线全维持** — 撞坑 #1 / #18 / #59 / #65 / #76 / #78 / #79 · 用户 7/3 红线 · `.env` 在 `.gitignore` · Keychain via `scripts/spike_set_smtp_password.py` · 不写 `ENABLE_NOTES_ENCRYPTION=1` / `ENABLE_PATH_4_WRITE=1` 到 shell profile · v1.0 tag 默认不打 · 默认不 push(本轮已授权 push)
+- 🔵 **撞坑 #1 警告持续** — `nmfebglidehfbjib` 16 字符在 chat 出现 2 次,rotate 是必做项
+- 📋 P1:跑 `process_inbox --execute --limit 5+` 让 LLM 选非 spike 邮件入 outbox(沿撞坑 #76 严判)
+- 📋 P1:阶段 1.2 账單真导(微信/支付宝 fixture 18 passed 后,等用户授权真导)
+- 📋 P1:阶段 1.3 Notes 真同步(等用户授权 + TCC 引导)
+- 📋 P1:阶段 3 `send_one_approved` 1-click SMTP 真发(每次临时授权 `SMTP_REAL_NETWORK=1`)
+- 📋 P2:7/16 周度抽测 + 8/1 preflight 预热启动
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2835 passed / 1 skipped / 89.05%** / mypy **254 files / 0 errors** / MD lint **257 files / 0 errors** / ruff check / ruff format / alembic --sql / uv build 全绿 / `make check-snapshot` 防漂移双门 OK(撞坑 #50)
+- **撞坑累计**:**84 类 · 0 新增**(D13.x P0 = 已撞根因的修复)
+- **远程同步**:`5d3df22..32b4127 main -> main`(push 已授权)· 5 commits ahead origin/main 已合 1 → 0
+- **当前阶段**:Day 13 完全体 Day 1.3 P0 修复 ✅ + Day 1.3 真同步链路 ✅(16 封入库 + LLM 通路畅) + Day 2 流水线 ✅ + Day 3 真发门控 ✅(待用户授权触发真发)
+- **下一步**:
+  1. 阶段 1.2 账單真导(微信/支付宝 · 等用户提供 CSV 路径 + 限授权)
+  2. 阶段 1.3 Notes 真同步(等用户授权 + TCC 引导)
+  3. 阶段 2.3 跑更大 limit(`--limit 5+`)试 LLM 选非 spike 邮件入 outbox(撞坑 #76 严判确保只 `pending_send`)
+  4. 阶段 3 `send_one_approved` 1-click SMTP 真发(每次临时授权)
+  5. 阶段 4 launchd 真部署(可选,再授权)
+  6. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)
+- **下一棒**:等用户授权阶段 1.2 / 1.3 / 2.3 / 3 / 4 之一;7/16 周度抽测 + 8/1 preflight 预热启动待办
