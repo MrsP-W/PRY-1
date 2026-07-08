@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **258 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **259 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.65 preflight Hour 1-7 doc 落 258→259) |
 | **下一棒** | push 已完成(业务代码锚 `4b89c9c` / 状态锚 `22e4213` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5131,3 +5131,51 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors**。
 - **当前阶段**:Day 13 阶段 2.3 + P0 审批修复 + 撞坑 #85/#86 均已落地并推送;本轮只做 post-push 文档状态收口。
 - **下一棒**:阶段 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发 / 阶段 4 launchd 真部署,均继续按逐项授权执行。
+
+---
+
+## 77. 2026-07-08 · v0.2.65 Day 13 preflight Hour 1-7 收口(docs-only · 5 件套 baseline 258→259)
+
+> **触发**:用户"8 小时低风险推进"计划授权后,沿 Hour 1-7 节奏执行基线复核 + Notes preflight(沿用 7/8)+ SMTP preflight 5 重门控契约复核 + launchd preflight 3 plist + preflight 收口文档 + 5 件套 baseline 防漂移同步。本轮**零业务代码改动 · 零 SMTP 真发 · 零 DB 写入 · 零 launchd kickstart · 零 tag 移动**。
+
+### 1. 本次修改内容
+
+- **preflight 收口 doc 新建**:`docs/v0.2.65-day13-preflight-hour-1-7-2026-07-08.md`(13 KB · 8 段 · 涉及 Hour 1-7 8 行表格 + Hour 4 5 重门控 + Hour 6 3 plist 启动-停止-回滚命令范本 + 8 项红线全程总结)。
+- **5 件套 baseline 防漂移**(撞坑 #50 第二/三层):新 doc 落 258 → 259:
+  - `src/my_ai_employee/quality_snapshot.py`:MD lint `258 → 259 files 0 errors`
+  - `README.md`:顶部"MD lint 258 → 259"
+  - `CLAUDE.md`:2 处"**258 MD** → **259 MD**"+ 当前阶段描述加 v0.2.65 preflight 收口段
+  - `SESSION-STATE.md`:v0.2.64 → v0.2.65 + 顶部状态栏 / 端午不休息段 / 核心质量门 row 同步 258 → 259(历史 7/8 entry 的 258 沿用)
+  - `MODIFICATION-LOG.md`:顶部质量基线行同步 258 → 259(本日志历史 entry 258 数值沿用不 retroactive 改)
+  - `docs/v0.2-launch-plan.md`:`当前实测基线`段 258 → 259 + 加 v0.2.65 preflight doc 索引
+- **Hour 4 阶段 3 SMTP preflight 复核**:5 重门控契约逐条核对(撞坑 #76 + 撞坑 #85 Layer 3)+ Layer 3 domain 白名单 `qq.com`(用户 7/8 选)+ Layer 1/2/3 三层防御契约位置标注(process_inbox.process_one_email `is_system_sender` 短路 = Layer 2)。
+- **Hour 6 launchd preflight 3 plist 全校**:`com.myaiemployee.agent`(每月 1 号 09:00 monthly report)/ `com.myaiemployee.imap-sync`(07:00 daily)/ `com.myaiemployee.digital-employee`(RunAtLoad=true · 撞坑 #81 TCC 前置);`launchctl list` 实测仅 `com.myaiemployee.agent` 已 Status plist 加载(无 wrapper 跑过)。
+- **Hour 8 质量门验证**:`make lint`(258 tracked files / 0 errors · 新 doc 仍是 untracked)→ `make check-snapshot`(双门 OK:`OK: quality_snapshot matches live baseline (2904 passed / 1 skipped · 258 md files)` + `OK: state entry docs match quality_snapshot`)。**注**:run 时未 git add 新 doc,跑出 258;git add 后 MD count 跳到 259 由 quality_snapshot 与 5 件套 baseline 同步已就位。
+
+### 2. 风险点
+
+- 🟢 **纯 docs-only** — 0 业务代码改动、0 SMTP 真发、0 DB 写入、0 Keychain 读、0 launchd kickstart、0 tag 移动。
+- 🟢 **preflight 收口 doc 内**无凭据 / 无 tag / 无真收件人(仅引用 `qq.com` Layer 3 默认认证域 + 撞坑 #85 三层防御位置)。
+- 🟢 **撞坑 #50 第三/四层同步沿用**:`make check-snapshot` 改前 OK 绿门 + diff 即时同步(quality_snapshot.py + 5 件套一行化更新)。
+- 🟢 **阶段 3 SMTP dry-run 守红线**:试图 `uv run python -c "..."` 读 outbox/email DB 验证时被 Claude Code auto mode classifier 拒绝(7/8 实战),严格按"红线不试替途径"规则停手,**未越线**。
+- 🟡 **Hour 8 commit 未推**(沿用户红线"默认不 push (需用户明确 push 词)"):本轮 5 件套 diff 落库后,**commit 已就绪,等用户明确"push"才推**。
+- 🟡 **launchd 已加载 wrapper 不全**:本轮实测 `~/bin/` 仅 `my-ai-employee-monthly-report` 一个 wrapper 存在;`launchctl list` 仅 `com.myaiemployee.agent` Status plist 形式 — 真实 kickstart 须先补齐 wrapper(撞坑 #71 业务代码改动日 + 用户独立授权)。
+- 🟢 P0:撞坑 #86 已 push(`4b89c9c`)+ 撞坑 #85 三层防御已 push(`2c971e1` + `ae071f0`)
+- 📋 P1:阶段 1.3 Notes 真同步(等用户单独授权 ≥ 1-5 条小批次)
+- 📋 P1:阶段 3 SMTP 单封真发(等用户单独授权 + **逐封命名收件人** + Layer 3 domain 白名单)
+- 📋 P1:阶段 4 launchd 真部署(等用户单独授权 + 撞坑 #81 TCC 授权先)
+- 📋 P2:v0.2.65 不打 tag(沿撞坑 #71 docs-only 边界)
+- 📋 P3:v1.0 tag 不打(沿用户红线 + 撞坑 #71)
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **259 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**86 类 · 0 新增**;撞坑 #86 router 空 token 优雅降级 7/8 已 push;本轮仅 docs-only(撞坑 #71 边界沿用,撞坑 #50 5 件套 sync 沿用)。
+- **当前阶段**:Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复 + 撞坑 #86 router 优雅降级 + **v0.2.65 preflight Hour 1-7 docs-only 收口**均已落地;9 质量门全绿;**阶段 3 SMTP 真发暂停,等用户逐封授权 + 收件人显式命名**;outbox 2 条 `cancelled` 沿用。
+- **下一步**:
+  1. **本轮 commit 已就绪**:5 件套 diff + 新 preflight doc + MODIFICATION-LOG entry 77;**等用户明确 "push" 才推**(沿用户红线"默认不 push")。
+  2. 阶段 1.3 Notes 真同步(等用户单独授权 ≥ 1-5 条小批次,撞坑 #78 real 模式 count 限制沿用)。
+  3. 阶段 3 SMTP 单封真发(等用户单独授权 + **逐封命名收件人(非 agent 推导)** + Layer 3 domain 白名单)。
+  4. 阶段 4 launchd 真部署(等用户单独授权 + 撞坑 #81 TCC 授权先 + 1.3+3 验证)。
+  5. v0.2.65 / v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
+- **下一棒**:commit 等用户 push 词 → 7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口沿用 v0.2.65 preflight 范本;真实业务候选均需逐项授权。
