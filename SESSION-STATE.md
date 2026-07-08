@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.64 `v0.2.1` 正式 tag 落地(撞坑 #60 反转) + `v0.2.1-rc1` 维持期(2026-07-01)
 
-> **最后更新**:2026-07-08 项目检查 docs-only 口径修正:Day 13 P0 `send_one_approved` 审批顺序修复业务代码锚 `ae071f0` 已同步远端 + outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 13 阶段 2.3 + P0 审批修复已推送** — outbox 2 条 `root@systemmail.yunwu.ai` 已作废(`cancelled`);SMTP 真发仍暂停。**质量门**:**2904 passed / 1 skipped** / 89.12% / lint **257** / mypy **256 files**。**下一棒**:如需 SMTP 真发,必须新草稿 + 人工审查 + 逐封授权。
+> **最后更新**:2026-07-08 项目检查修复:撞坑 #86 router 空 token 优雅降级已在远端 + 本轮补齐 MD count 257→258 防漂移 · outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Day 13 阶段 2.3 + 撞坑 #86 已推送** — outbox 2 条 `root@systemmail.yunwu.ai` 已作废(`cancelled`);SMTP 真发仍暂停。**质量门**:**2904 passed / 1 skipped** / 89.12% / lint **258** / mypy **256 files**。**下一棒**:如需 SMTP 真发,必须新草稿 + 人工审查 + 逐封授权。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复已推送 ✅**(业务代码锚 `ae071f0` 已在远端;outbox 2 条已 `cancelled` · 未 SMTP 外发) — **2904 passed / 1 skipped** / 89.12% / MD lint **257** / mypy **256 files**。**下一棒**:新草稿 + SMTP 真发逐封授权;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复 ✅ + 撞坑 #86 router 降级修复 ✅**(业务代码锚 `ae071f0` 已在远端;outbox 2 条已 `cancelled` · 未 SMTP 外发) — **2904 passed / 1 skipped** / 89.12% / MD lint **258** / mypy **256 files**。**下一棒**:新草稿 + SMTP 真发逐封授权;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2904 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| 核心质量门 | **2904 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **258 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
@@ -153,7 +153,7 @@
 | 7/2 | 周三 | **Phase 1 维持期第 1 次 weekly `make ci` 全绿** — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 208 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 · 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57-phase1-weekly-checkpoint-2026-07-02.md 新建(首个 weekly 周检范本)+ 三入口同步 + commit | ✅ |
 | 7/9 | 周三 | **Phase 1 维持期第 2 次 weekly `make ci` 全绿** — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 209 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(本周无 commit)· 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57.2-phase1-weekly-checkpoint-2026-07-09.md 新建(第 2 个 weekly 周检范本)+ 三入口同步 + commit | ✅ |
 | 7/16 | 周三 | **Phase 1 维持期第 3 次 weekly `make ci` 全绿** — 9 质量门 baseline 重验通过(**2791 passed / 1 skipped / 89.09%** / **MD lint 256** / **mypy 248 files** / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(本周无 commit · 沿 docs-only 规则)· 撞坑累计 **84 类**沿用(沿 7/3 收口基线)· docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md 新建(第 3 个 weekly 周检范本)+ 三入口同步 + commit | ✅ |
-| **7/8** | **周三** | **Phase 1 维持期第 3 次 weekly 提前 8 天预热启动 ✅** — 9 质量门 baseline 重验通过(**2904 passed / 1 skipped / 89.12%** / **MD lint 257** / **mypy 256 files** / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动(撞坑 #71 docs-only 边界严判)· 撞坑累计 **85 类**沿用(`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push)· docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md 沿 7/8 preheat 实测 baseline 升级 + §0 7/8 preheat 段新增 + §11 send_one_approved 收件人校验补项 + §6 真实业务候选(阶段 1.2/1.3/3/4 均需单独授权)· **7/16 当天再做一次 docs-only 收口**(数字若变化以新 commit 沿 docs-only 规则更新本文件)· 三入口同步 + commit | ✅ |
+| **7/8** | **周三** | **Phase 1 维持期第 3 次 weekly 提前 8 天预热启动 ✅** — 9 质量门 baseline 重验通过(**2904 passed / 1 skipped / 89.12%** / **MD lint 258** / **mypy 256 files** / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动(撞坑 #71 docs-only 边界严判)· 撞坑累计 **85 类**沿用(`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push)· docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md 沿 7/8 preheat 实测 baseline 升级 + §0 7/8 preheat 段新增 + §11 send_one_approved 收件人校验补项 + §6 真实业务候选(阶段 1.2/1.3/3/4 均需单独授权)· **7/16 当天再做一次 docs-only 收口**(数字若变化以新 commit 沿 docs-only 规则更新本文件)· 三入口同步 + commit | ✅ |
 | 8/1(本日-跨项目)| 周六 | **8/1 后 v0.2.x 链路收口跨项目沉淀 docs-only**(沿 `d879847` 范本 + `v0.2.2-p5-oauth-phase2-launch-2026-06-18` 7 段格式)— `Agent Assistant/L2_memory/_cross-project/v0.2.x-linkage-closure-2026-08-01.md` 新建(7 段 + 累计 commits 202+ + 撞坑 84 类沿用 + 8/1 选项 B 最终决策 + 10 项关键设计 + 8/1 后候选棒)+ 主项目 `docs/v0.2-launch-plan.md` 追加跨项目沉淀索引 + SESSION-STATE 同步 · docs-only · 业务代码 0 改动(撞坑 #71 沿用)· docs-only 不前进 pytest/coverage(撞坑 #50 第三/四层沿用)· 撞坑累计 84 类 0 新增 | ✅ |
 | 7/23 | 周三 | **Phase 1 维持期收官前第 4 次 weekly `make ci` 全绿**(Phase 1 维持期 4/4 全收官) — 9 质量门 baseline 重验通过(2605 passed / 88.85% / MD lint 211 / mypy 0 errors / ruff 全绿 / alembic exit 0 / uv build OK)· 业务代码 0 改动 + 0 commit(连续 4 周 0 commit)· 撞坑累计 #71/#76/#78/#79 沿用 · docs/v0.2.57.4-phase1-weekly-checkpoint-2026-07-23.md 新建(Phase 1 收官前最后一次周检)+ 三入口同步 + commit | ✅ |
 | 7/25 | 周六 | **阶段 3 第 1 次 A3 readiness docs-only 刷新** — 9 项前置条件实质满足(QQ-only 口径 · #2/#9 outlook/gmail 已豁免)· 撞坑累计 #71/#76/#78/#79 沿用 · 业务代码 0 改动 · docs/v0.2.58-a3-readiness-2026-07-25.md 新建 + 三入口同步 + commit | ✅ |

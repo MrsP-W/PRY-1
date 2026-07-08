@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复已推送(2026-07-08 核验 · 业务代码锚 `ae071f0` 已在远端)** — 撞坑 #85 三层防御已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**下一棒**:只允许新草稿 + 人工审查 + 逐封 SMTP 授权;阶段 1.2/1.3/4 仍待授权 |
+| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复 + 撞坑 #86 已推送(2026-07-08 核验)** — 撞坑 #85 三层防御与 router 空 token 优雅降级均已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**下一棒**:只允许新草稿 + 人工审查 + 逐封 SMTP 授权;阶段 1.2/1.3/4 仍待授权 |
 | **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **258 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | push 已完成(业务代码锚 `ae071f0` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5002,7 +5002,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 1. 本次修改内容
 
-- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2904 passed / 1 skipped** · coverage **89.12%** · mypy **0 errors / 256 files** · MD lint **257 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2904 passed / 1 skipped · 257 md files`)。
+- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2904 passed / 1 skipped** · coverage **89.12%** · mypy **0 errors / 256 files** · MD lint **258 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2904 passed / 1 skipped · 258 md files`)。
 - **撞坑累计 84 → 85 类**:`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push;本轮仅 docs-only,**0 新增撞坑**。
 - **v0.2.57.3 文档升级**:沿 7/8 preheat 实测 baseline 实际化 §1 数字对账表(2791 → 2900 / 89.09% → 89.12% / 248 → 256 mypy / 256 → 257 md / 84 → 85 撞坑)+ §0 7/8 preheat 段新增(实测 baseline + 撞坑 85 累计 + 11/11 readiness) + §2 撞坑累计表追加 #85 行 + §3 边界表 +2 项(撞坑 #71 docs-only + 撞坑 #85 Layer 3 默认空) + §5 readiness 加 #10/#11 项 + §6 下一棒表加 7/8 19:00+ 本轮 docs-only + 4 个真实业务候选(均待授权) + §7 关联与依据 HEAD `1470dd0` → `ae071f0` + 最后更新 `2026-07-16` → `2026-07-08`。
 - **SESSION-STATE 7/8 preheat 行新增**:Phase 1 维持期第 3 次 weekly 提前 8 天预热启动(2026-07-08 周三);沿用 §0 7/8 preheat 段同样的实测 baseline。
@@ -5014,7 +5014,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **未 kickstart launchd** — launchd 真部署属阶段 4,等用户授权。
 - 🟢 **未启用 `ENABLE_PATH_4_WRITE=1` / `ENABLE_NOTES_ENCRYPTION=1`** — 红线维持。
 - 🟢 **撞坑 #1 铁律维持** — notes.title / body 不打印到 chat/commit/docs(35 NEW · 撞坑 #64 normalized_fingerprint 去重)。
-- 🟡 **7/16 weekly 收口预期** — 7/8 preheat 数字(2900/89.12%/256/257/85)是当前实测 baseline;7/16 当天再做一次 docs-only 重验,数字若变化以新 commit 沿 docs-only 规则更新 v0.2.57.3。
+- 🟡 **7/16 weekly 收口预期** — 7/8 preheat 数字(2904/89.12%/256/258/86)是当前实测 baseline;7/16 当天再做一次 docs-only 重验,数字若变化以新 commit 沿 docs-only 规则更新 v0.2.57.3。
 - 🟡 **撞坑累计沿用 85 类** — 7/9 / 7/16 weekly 仍 docs-only 边界,期望 0 新增撞坑。
 - 📋 P1:7/9 第 2 次 weekly 周检 docs-only 收口(`0a68503` 沿用)
 - 📋 P1:7/16 第 3 次 weekly 周检 docs-only 收口(沿 7/8 preheat 范本)
@@ -5025,16 +5025,16 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**85 类 · 0 新增**(本轮 docs-only 巡检 · 7/8 preheat 沿 7/7 撞坑 #85 落地基线)。
 - **当前阶段**:**Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复均已推送** ✅ + **7/16 周度抽测 7/8 preheat 启动** ✅(docs-only 边界严判)+ SMTP 真发 ⏸️(仍需新草稿与五重门控逐封授权)。
 - **下一步**:
-  1. **本轮 docs-only commit**(待 push 授权):三入口同步 + commit `docs(state): v0.2.57.3 weekly checkpoint 7/8 preheat`。
+  1. **本轮 docs-only commit 已推送**:`71da194 docs(state): v0.2.57.3 weekly checkpoint 7/8 preheat`。
   2. 7/9 第 2 次 weekly 周检 docs-only 收口(`0a68503` 沿用)。
   3. 7/16 第 3 次 weekly 周检 docs-only 收口(沿 7/8 preheat 范本)。
   4. 真实业务候选(均需单独授权):阶段 1.2 账单真导 / 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发 / 阶段 4 launchd 真部署。
   5. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
-- **下一棒**:commit 7/16 weekly preheat docs-only + 等 push 授权;7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口沿用;真实业务候选均需单独授权。
+- **下一棒**:7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口沿用;真实业务候选均需单独授权。
 
 ---
 
@@ -5063,22 +5063,47 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **业务代码改动日边界严判** — 撞坑 #71 docs-only 边界破例沿 cf369c7 范本(`feat(day2)` 业务代码改动日),撞坑 #86 沉淀属撞坑类新规则,合理破例。
 - 🟢 **未 SMTP 真发** — 撞坑 #85 Layer 3 `SEND_REAL_NETWORK_RECIPIENT_DOMAINS` 默认空 + 阶段 3 SMTP 真发仍需单独授权。
 - 🟢 **撞坑 #1 铁律维持** — Notes.title/body 不打印;`.env` 中 api_key 仅注释占位(无真值)。
-- 🟡 **新增 4 tests 跑通** — TestRouterHealthcheckGate 4/4 passed,9 质量门全绿(`2904 passed / 89.12% / 256 mypy files / 257 MD`)。
+- 🟡 **新增 4 tests 跑通** — TestRouterHealthcheckGate 4/4 passed,9 质量门全绿(`2904 passed / 89.12% / 256 mypy files / 258 MD`)。
 - 🟡 **熔断语义不变** — 真业务失败(HTTP 4xx/5xx/timeout)仍计入熔断;配置缺失跳过熔断(新增)。
-- 📋 P0:**撞坑 #86 commit + push**(待 push 授权)
+- 🟢 P0:**撞坑 #86 commit + push 已完成**(`4b89c9c = origin/main`)
 - 📋 P0:阶段 1.3 Notes 真同步(用户已"全部授权",等 TCC + Apple ID 重确认)
 - 📋 P0:阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)
 - 📋 P0:阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**86 类 · +1 新增**(撞坑 #86 router 空 token 优雅降级 · 实战触发 + 三层闭合完成)。
 - **当前阶段**:Day 13 完全体 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复 + 撞坑 #86 router 优雅降级均已落地;9 质量门全绿。
 - **下一步**:
-  1. **本轮 commit + push**(待 push 授权):撞坑 #86 修复 + 4 tests + 5 件套 sync。
+  1. **本轮 commit + push 已完成**:`4b89c9c` 撞坑 #86 修复 + 4 tests + 5 件套 sync。
   2. 阶段 1.3 Notes 真同步更大规模(用户已"全部授权",等 TCC + Apple ID 重确认)。
   3. 阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)。
   4. 阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)。
   5. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
-- **下一棒**:撞坑 #86 commit + push(待 push 授权)→ 阶段 1.3 真同步(等 TCC)→ 阶段 3 SMTP 单封(等新草稿)→ 阶段 4 launchd(等 1.3+3 验证)。
+- **下一棒**:阶段 1.3 真同步(等 TCC)→ 阶段 3 SMTP 单封(等新草稿)→ 阶段 4 launchd(等 1.3+3 验证)。
+
+---
+
+## 75. 2026-07-08 · 项目检查修复 MD count 漂移(257→258)
+
+> **触发**:用户要求"项目检查和修改";实时 `make lint` 显示 tracked Markdown 已是 258 files,但 `quality_snapshot.py` 与 5 入口仍写 257,导致 `make check-snapshot` 三个 guardian 测试失败。
+
+### 1. 本次修改内容
+
+- **snapshot 修复**:`src/my_ai_employee/quality_snapshot.py` MD lint `257 → 258 files 0 errors`。
+- **入口同步**:README / CLAUDE / SESSION-STATE / MODIFICATION-LOG / `docs/v0.2-launch-plan.md` 当前入口同步 258。
+- **weekly 文档同步**:`docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md` 7/8 preheat baseline 同步到 `2904 / 89.12% / 256 mypy / 258 MD / 撞坑 86`。
+- **验证闭环**:`make ci` 9 门全绿;针对失败点 `tests/test_quality_snapshot.py` 8 passed。
+
+### 2. 风险点
+
+- 🟢 **docs/snapshot-only** — 未改业务代码、未改数据库、未触发 SMTP。
+- 🟢 **根因明确** — 撞坑 #86 新增 `memory/pitfall-86-router-empty-api-key-graceful-degradation.md` 后未同步 MD count。
+- 🟡 **需要提交/推送授权** — 当前是本地修复,远端仍停在 `4b89c9c`。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors**。
+- **当前阶段**:撞坑 #86 业务修复已在远端;本轮补齐状态快照防漂移。
+- **下一步**:等用户明确 push 授权后提交并推送本轮 docs/snapshot-only 修复。
