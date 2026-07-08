@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复 + 撞坑 #86 + 撞坑 #81 + v0.2.68 P3 prep 已收口** — 撞坑 #85 三层防御与 router 空 token 优雅降级均已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**HEAD = origin/main = `2eec62e`**;P2 launchd 真 install 已完成,数字员工 1/3 因 TCC bootout 等用户授权后手动恢复。**下一棒**:P3 真实业务最小闭环逐项授权;P4 24h dry-run;P5 v1.0 tag 评估 |
+| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复 + 撞坑 #86 + 撞坑 #81 + v0.2.68 P3 prep + pytest outcome 修复已收口** — 撞坑 #85 三层防御与 router 空 token 优雅降级均已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**HEAD / origin/main 以 `git status --short --branch` 为准**;P2 launchd 真 install 已完成,数字员工 1/3 因 TCC bootout 等用户授权后手动恢复。**下一棒**:P3 真实业务最小闭环逐项授权;P4 24h dry-run;P5 v1.0 tag 评估 |
 | **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
@@ -114,7 +114,7 @@
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **263 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.68 P3 launch prep doc 落 262→263) |
-| **下一棒** | 远端已到 `2eec62e`(HEAD = origin/main)· P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· P3 真实业务需新草稿 + 人工审查 + 逐封授权 |
+| **下一棒** | 远端状态以 `git status --short --branch` 为准 · P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· P3 真实业务需新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5395,7 +5395,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **单一事实源修复**:`src/my_ai_employee/quality_snapshot.py` pytest `2900 passed / 3 skipped → 2904 passed / 1 skipped`。
 - **当前入口同步**:README / CLAUDE / SESSION-STATE / MODIFICATION-LOG / `docs/v0.2-launch-plan.md` 当前基线同步到 `2904 passed / 1 skipped / 89.12% / 263 MD / 256 mypy`。
-- **状态口径同步**:当前远端锚更新为 `2eec62e = HEAD = origin/main`;P3 prep docs-only 已推送,不再沿用 `76cd2eb` 旧远端锚。
+- **状态口径同步**:当前远端锚更新为 `64f8288 = HEAD = origin/main`;P3 prep docs-only + snapshot outcome 修复均已推送,不再沿用 `76cd2eb` / `2eec62e` 旧远端锚。
 
 ### 2. 风险点
 
@@ -5406,5 +5406,25 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 ### 3. 当前项目整体总结
 
 - **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **263 files / 0 errors**。
-- **当前阶段**:P0-P3 prep 已推送到 `2eec62e`;P2 launchd 已 install 但数字员工因撞坑 #81 TCC bootout,等用户授权后恢复。
+- **当前阶段**:P0-P3 prep + snapshot outcome 修复已推送到 `64f8288`;P2 launchd 已 install 但数字员工因撞坑 #81 TCC bootout,等用户授权后恢复。
 - **下一棒**:P3 真实业务最小闭环 3 选(Notes 1-5 / SMTP 单封 / 回滚审计),每项继续逐项授权。
+
+## 82. 2026-07-08 · P3 预检清单纠偏 + 当前 HEAD 锚点防漂移(docs-only)
+
+> **触发**:项目检查继续推进时发现 `docs/v0.2.68-p3-launch-prep-2026-07-08.md` 沿用了早期 `data/data.db` 与泛化 Keychain service `my-ai-employee` 检查口径,会误导 P3 前置验证。本轮只修文档与状态锚点,不执行真实业务动作。
+
+### 1. 本次修改内容
+
+- **P3 DB 路径纠偏**:`data/data.db` → `~/Library/Application Support/my-ai-employee/data.db`,与 `src/my_ai_employee/core/db.py` 的生产默认路径一致。
+- **P3 Keychain service 纠偏**:`my-ai-employee` → `my-ai-employee.imap.qq` / `my-ai-employee.smtp.qq`,与 `src/my_ai_employee/core/keychain.py` 的高层封装一致。
+- **当前锚点防漂移**:入口文档不再把当前 HEAD 写死为某个 commit,改为以 `git status --short --branch` / `git rev-parse --short HEAD` 为准,避免 docs-only commit 后立即产生新漂移。
+
+### 2. 风险点
+
+- 🟢 **docs-only** — 未改业务代码、未触发 SMTP、未写真实 DB、未 reload/kickstart launchd、未打 v1.0 tag。
+- 🟡 **P3 仍待授权** — Notes 真同步需明确 Note ID/标题;SMTP 真发需逐封命名收件人、To/Cc/Bcc、草稿 ID 与一次性授权。
+
+### 3. 当前项目整体总结
+
+- **主质量门**:继续以 `make check-snapshot` + `make lint` + `scripts/check_state_entries.py` 当前实测为准。
+- **下一棒**:先完成 P3 安全预检;真实 Notes / SMTP / launchd 恢复 / v1.0 tag 继续逐项授权。
