@@ -114,7 +114,7 @@
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **258 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
-| **下一棒** | push 已完成(业务代码锚 `ae071f0` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
+| **下一棒** | push 已完成(业务代码锚 `4b89c9c` / 状态锚 `22e4213` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5065,7 +5065,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **撞坑 #1 铁律维持** — Notes.title/body 不打印;`.env` 中 api_key 仅注释占位(无真值)。
 - 🟡 **新增 4 tests 跑通** — TestRouterHealthcheckGate 4/4 passed,9 质量门全绿(`2904 passed / 89.12% / 256 mypy files / 258 MD`)。
 - 🟡 **熔断语义不变** — 真业务失败(HTTP 4xx/5xx/timeout)仍计入熔断;配置缺失跳过熔断(新增)。
-- 🟢 P0:**撞坑 #86 commit + push 已完成**(`4b89c9c = origin/main`)
+- 🟢 P0:**撞坑 #86 commit + push 已完成**(`4b89c9c` 为业务代码锚;远端后续已推进到 `22e4213`)
 - 📋 P0:阶段 1.3 Notes 真同步(用户已"全部授权",等 TCC + Apple ID 重确认)
 - 📋 P0:阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)
 - 📋 P0:阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)
@@ -5076,7 +5076,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **撞坑累计**:**86 类 · +1 新增**(撞坑 #86 router 空 token 优雅降级 · 实战触发 + 三层闭合完成)。
 - **当前阶段**:Day 13 完全体 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复 + 撞坑 #86 router 优雅降级均已落地;9 质量门全绿。
 - **下一步**:
-  1. **本轮 commit + push 已完成**:`4b89c9c` 撞坑 #86 修复 + 4 tests + 5 件套 sync。
+  1. **本轮 commit + push 已完成**:`4b89c9c` 撞坑 #86 修复 + 4 tests + 5 件套 sync;远端后续推进到 `22e4213` docs/snapshot sync。
   2. 阶段 1.3 Notes 真同步更大规模(用户已"全部授权",等 TCC + Apple ID 重确认)。
   3. 阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)。
   4. 阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)。
@@ -5100,10 +5100,34 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - 🟢 **docs/snapshot-only** — 未改业务代码、未改数据库、未触发 SMTP。
 - 🟢 **根因明确** — 撞坑 #86 新增 `memory/pitfall-86-router-empty-api-key-graceful-degradation.md` 后未同步 MD count。
-- 🟡 **需要提交/推送授权** — 当前是本地修复,远端仍停在 `4b89c9c`。
+- 🟢 **提交/推送已完成** — `22e4213` 已同步到 `origin/main`;本轮检查前工作区干净。
 
 ### 3. 当前项目整体总结
 
 - **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors**。
 - **当前阶段**:撞坑 #86 业务修复已在远端;本轮补齐状态快照防漂移。
-- **下一步**:等用户明确 push 授权后提交并推送本轮 docs/snapshot-only 修复。
+- **下一步**:继续执行后续计划时,先做 post-push 状态文案复核,再进入阶段 1.3 / 阶段 3 / 阶段 4 的单独授权动作。
+
+---
+
+## 76. 2026-07-08 · 后续计划执行 — post-push 状态文案收口(docs-only)
+
+> **触发**:用户要求"执行后续工作计划";实时核验 `HEAD = origin/main = 22e4213`,但 v0.2.57.3 周检文档与本日志仍残留旧 HEAD / 旧测试数 / "等待 push"口径。
+
+### 1. 本次修改内容
+
+- **周检文档收口**:`docs/v0.2.57.3-phase1-weekly-checkpoint-2026-07-16.md` 改为 Git 锚以 `git rev-parse` 为准,并补齐 `22e4213` 状态锚、`4b89c9c` 撞坑 #86、`2904 passed / 1 skipped / 89.12%`、MD lint 258、撞坑累计 86。
+- **修改日志收口**:本文件顶部快照 + 第 74/75 条旧口径同步为已 push,不再把 `4b89c9c` 写成当前 `origin/main`。
+- **验证闭环**:执行前 `make check-snapshot` 已通过,确认 `quality_snapshot` 与入口状态文档一致。
+
+### 2. 风险点
+
+- 🟢 **docs-only** — 未改业务代码、未触发 SMTP、未写真实数据库、未部署 launchd、未打 tag。
+- 🟢 **防自引用漂移** — 当前 HEAD 不再硬写到周检正文,统一要求以 `git rev-parse --short HEAD` 读取。
+- 🟡 **后续真实动作仍需单独授权** — Notes 真同步、SMTP 单封真发、launchd 真部署均不随本次推进自动执行。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **258 files / 0 errors**。
+- **当前阶段**:Day 13 阶段 2.3 + P0 审批修复 + 撞坑 #85/#86 均已落地并推送;本轮只做 post-push 文档状态收口。
+- **下一棒**:阶段 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发 / 阶段 4 launchd 真部署,均继续按逐项授权执行。
