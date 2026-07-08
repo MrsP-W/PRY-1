@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **260 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.66 P2 preflight doc 落 259→260) |
-| **下一棒** | 远端已到 `3058e11`(P0 push 后 = HEAD = origin/main)· P1 质量门 3 门全绿 · P2 launchd preflight 收口(等 install 显式授权)· SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **262 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.67 P2 install docs 落 260→262) |
+| **下一棒** | 远端已到 `76cd2eb`(P0 push 后 = HEAD = origin/main)· P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5267,3 +5267,59 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   4. P4 24h dry-run:本会话无法观察 24h,需独立会话。
   5. P5 v1.0 发布评估:收口日写 release checklist + 风险清单 + 决策记录。
 - **下一棒**:本轮 P2 commit → push 词 → 7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口 → P2 install 决策 → P3 真实闭环 → P4 24h → P5 v1.0 tag 评估。
+
+## 79. 2026-07-08 · v0.2.67 P2 launchd 真 install + 撞坑 #81 bootout 收口(docs-only · 5 件套 baseline 260→262)
+
+**主题**:Day 13 P0-P2.5 收口(本轮 P0 push + P1 质量门全绿 + P2 真 install + 撞坑 #81 bootout)· 数字员工 RunAtLoad=true TCC 鉴权拦截 → 立即 `launchctl bootout` 恢复 · **3 wrapper + 3 plist 部署完成 · 2/3 job 仍注册 · 1/3 TCC 授权后手动 `launchctl load -w`**。
+
+### 1. 本次修改内容
+
+| Commit | 内容 |
+|--------|------|
+| `3058e11..76cd2eb` | P0 推送(`git push origin main`)· 远端 ahead 0 = HEAD(`76cd2eb`)|
+| `bash scripts/launchd_install.sh install` | P2 launchd 完整 install · 3 wrapper (`monthly-report` 290 B + `imap-sync` 530 B + `start` 183 B)+ 3 plist (`com.myaiemployee.agent` 1269 B + `.imap-sync` 1266 B + `.digital-employee` 1332 B)+ launchctl load -w × 3 · 5/7 章节绿 |
+| `launchctl bootout gui/$UID/com.myaiemployee.digital-employee` | 撞坑 #81 实测命中恢复(PID 126 / exit 126 → bootout 退出 0)· plist + wrapper 持久保留 |
+| 本轮 docs-only commit(预计)| `docs(state): v0.2.67 P2 install 真部署 + 撞坑 #81 bootout 收口 + 5 件套 baseline 260→262` · 7 files / +320 -13 |
+
+**改动范围**(本 docs commit):
+- 7 files:
+  - `docs/v0.2.67-p2-install-2026-07-08.md` 新建(290 行 · 7 段 · 撞坑 #81 实测命中详情 + TCC 授权 5 步骤 + 4 红点 + 完整产物矩阵)
+  - `reports/v0.2.67-p2-install-2026-07-08.md` 新建(阶段报告 · 撞坑 #81 复盘 + 当前 launchd 部署状态 1×3 矩阵)
+  - `src/my_ai_employee/quality_snapshot.py` MD count 260 → 262 防漂移(撞坑 #50 第三层)
+  - `README.md` L7 状态行翻 `MD lint 260 → 262` + v0.2.67 P2 install 描述
+  - `CLAUDE.md` 顶部日期行 `260 MD → 262 MD` + `P0-P2 docs-only → P0-P2.5 全环` + 撞坑 #81 bootout 描述
+  - `SESSION-STATE.md` L1/L3/L18/L33 5 件套 sync 同步
+  - `docs/v0.2-launch-plan.md` 当前实测基线段 260 → 262
+- 0 new tests, 0 业务代码改动(撞坑 #71 docs-only 边界严判)
+
+### 2. 风险点
+
+#### 已识别风险
+
+- ⚠️ **数字员工 TCC 未授权**(用户决策点):数字员工 plist RunAtLoad=true 启动触发 TCC Python.framework 3.12 鉴权拦截 → 已 bootout。需用户手动在 System Settings → Privacy & Security → Files and Folders 授权 Python.framework 3.12 后再 `launchctl load -w ~/Library/LaunchAgents/com.myaiemployee.digital-employee.plist`。
+- ⚠️ **撞坑 #81 复测待用户手动执行**:本轮 docs-only 仅完成 bootout 恢复,TCC 授权后必须手动验证 §3 5 步骤全绿(menu bar 启动 + dashboard 监听 + scheduling loop + 24h PID 稳定)。
+
+#### B 类延后(本轮不动)
+
+- ⏸️ 数字员工 24h 观察 P4:本会话无法观察 24h,需独立会话。
+- ⏸️ P3 真实业务最小闭环:Notes 1-5 真同步 + SMTP 单封真发(需逐封命名收件人授权)。
+- ⏸️ P5 v1.0 tag 评估:撞坑 #60 反转决议(不打 `v1.0` tag 默认值)沿用,等 P3+P4 完成后再决策。
+
+#### P1/P2/P3 待办
+
+- P1:撞坑 #81 TCC 授权 5 步骤(用户手动操作)— 不可远程。
+- P2:撞坑 #81 复测后激活数字员工 launchd job。
+- P3:P3 真实业务最小闭环启动准备(待用户逐项授权)。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **262 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**86 类 · 0 新增**;撞坑 #81(数字员工 TCC 前置)在 P2 install 真部署**实测命中**(`bash: ... Operation not permitted` · PID 126 / exit 126)→ 立即 bootout 恢复;撞坑 #71 docs-only 边界沿用;撞坑 #50 5 件套 sync 沿用。
+- **当前阶段**:P0-P2.5 docs-only 已收口 · P0 已 push(`76cd2eb = HEAD = origin/main`)· P1 质量门 3 门全绿 · P2 launchd 真 install 执行完成(3 wrapper + 3 plist 部署 · 2/3 job 仍注册 · 1/3 bootout)· 撞坑 #81 实测命中 → bootout 恢复 → TCC 5 步骤授权 runbook 已编写(`docs/v0.2.67` §3)· **P3 真实业务 / P4 24h / P5 v1.0 tag 评估仍需用户逐项授权**。
+- **下一步**:
+  1. 本轮 docs-only commit 推 `76cd2eb..HEAD`(已通过 `git push 3058e11..76cd2eb`,本轮未新 commit)。
+  2. 用户手动 TCC 授权 Python.framework 3.12 + 手动 `launchctl load -w` 重新激活数字员工 + 24h 观察(P4 部分前置)。
+  3. P3 真实业务最小闭环(Notes 1-5 真同步 + SMTP 单封真发逐封命名收件人 + 审计 + 失败回滚)。
+  4. P4 24h dry-run:本会话无法观察 24h,需独立会话;菜单栏 / dashboard / IMAP 7:00 同步 / 数字员工 PID 稳定链路不可破。
+  5. P5 v1.0 发布评估:收口日写 release checklist + 风险清单 + "打 / 不打 v1.0 tag"决策(默认不打 · 撞坑 #60)。
+- **下一棒**:P2 TCC 授权(用户)+ 数字员工重新激活 → P3 真实业务逐封授权 → P4 24h 观察 → P5 v1.0 tag 评估 → 7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口。
