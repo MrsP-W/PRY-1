@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **259 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.65 preflight Hour 1-7 doc 落 258→259) |
-| **下一棒** | 远端已到 `75e2ec9`,本地 v0.2.65 docs-only 收口从 `f7c0b2f` 起处于 ahead 待 push;未收到明确 "push" 前不推送。SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **260 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.66 P2 preflight doc 落 259→260) |
+| **下一棒** | 远端已到 `3058e11`(P0 push 后 = HEAD = origin/main)· P1 质量门 3 门全绿 · P2 launchd preflight 收口(等 install 显式授权)· SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5203,3 +5203,67 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **259 files / 0 errors**。
 - **当前阶段**:Day 13 阶段 2.3 + 撞坑 #85/#86 + v0.2.65 preflight docs-only 收口均已落地;本轮只优化状态口径。
 - **下一棒**:等用户明确 "push" 后再推送本地 ahead;真实 Notes/SMTP/launchd 继续逐项授权。
+
+---
+
+## 78. 2026-07-08 · P0-P2 远端同步+冻结基线+launchd preflight 收口(docs-only · 5 件套 baseline 259→260)
+
+> **触发**:用户给出 v1.0 发布 5 阶段计划(P0-P5 约 2-4 天)+ 优先级 "先 push 本地 ahead 2,再做 launchd 无人值守预演,最后真实小流量"。本轮执行 P0 推送 + P1 质量门冻结 + P2 launchd preflight 收口,3 阶段全 docs-only。
+
+### 1. 本次修改内容
+
+- **P0 push ahead 2**:`git push` 推 `f7c0b2f` + `3058e11`(2 个 docs-only commit 沿用户显式 push 授权)· 远端从 `75e2ec9` → `3058e11` · 当前 `HEAD = origin/main = 3058e11` · 无 ahead。
+- **P1 质量门 3 门全绿**:
+  - `make lint`:259 file(s) / 0 errors(本轮 P2 preflight doc 入库后跳 260)
+  - `make check-snapshot`:双门 OK · `OK: quality_snapshot matches live baseline (2904 passed / 1 skipped · 259 md files)` + `OK: state entry docs match quality_snapshot`
+  - `make mypy`:`Success: no issues found in 256 source files` · 0 errors / 256 files
+  - **未跑** `make ci`(聚合 9 门,~3+ 分钟,撞坑 #71 docs-only 边界 + SIGKILL 137 误报风险沿用)— 3 门独立跑已覆盖 v1.0 冻结基线需求
+- **P2 launchd preflight 收口 doc 新建**:`docs/v0.2.66-p2-launchd-preflight-2026-07-08.md`(本轮 ~9 KB · 7 段 · 3 plist 状态矩阵 + 7 章节 install 脚本全貌 + 缺 2/3 wrapper 预览 + 3 决策选项)
+- **5 件套 baseline 防漂移**(撞坑 #50 第二/三层):新 doc 落 259 → 260:
+  - `src/my_ai_employee/quality_snapshot.py`:MD lint `259 → 260 files 0 errors`
+  - `README.md`:顶部"MD lint 259 → 260"
+  - `CLAUDE.md`:2 处 **259 MD** → **260 MD** + 当前阶段描述加 P0-P1 远端同步+冻结基线+ P2 launchd preflight 段
+  - `SESSION-STATE.md`:v0.2.65 → v0.2.66 + 顶部状态栏 / 核心质量门 row 同步 259 → 260
+  - `MODIFICATION-LOG.md`:顶部质量基线行同步 259 → 260(本日志历史 entry 沿用不 retroactive 改)
+- **P2 preflight 关键发现**(不真 install):
+  - 3/3 plist 语法 `plutil -lint` OK
+  - 1/3 wrapper 已装(`~/bin/my-ai-employee-monthly-report` 2026-06-16 部署)
+  - 1/3 plist 已装(`~/Library/LaunchAgents/com.myaiemployee.agent.plist`)
+  - `~/Library/Logs/MyAIEmployee/` 6 个 log 文件 touch OK
+  - 缺 2/3 wrapper(应建 `imap-sync` + `start`)+ 缺 2/3 plist 安装
+  - `scripts/launchd_install.sh` 313 行 7 章节全貌已知(0 模式分发 + 0 路径 + uninstall 85-148 + install 153-313)
+  - **真 install 决策**:3 选项(完整 install / 局部 install / 暂缓 install)— 等用户显式授权
+
+### 2. 风险点
+
+- 🟢 **P0 push 已完成** — 远端 `origin/main = 3058e11`,无 ahead;后续 commit 不默推。
+- 🟢 **P1 3 门全绿** — baseline 2904 / 89.12% / 256 mypy 沿用;`make ci` 聚合未跑沿撞坑 #71 边界。
+- 🟢 **P2 preflight 收口非真 install** — 仅 docs-only;0 `launchctl load` / 0 `cp ~/bin/` / 0 `cp ~/Library/LaunchAgents/`。
+- 🟢 **真 install 决策红线守住**:
+  - 撞坑 #81:数字员工 RunAtLoad=true → TCC Python.framework 3.12 须先授权(用户 7/3 重确认已就位)
+  - 撞坑 #71:docs-only 边界沿用
+  - 不写凭据入档(本 preflight doc + commit message 全无)
+- 🟡 **P3-P5 全部需用户逐项授权**:
+  - P3 真实业务最小闭环(Notes 1-5 + SMTP 单封逐封命名收件人 + 审计记录 + 失败回滚)
+  - P4 24h dry-run 观察(假设 P2 install 已完成,本轮无法在本会话观察 24h)
+  - P5 v1.0 发布评估(写 release checklist + 风险清单 + "打 / 不打 v1.0 tag"决策)
+- 🟢 P0:推 ahead 2 docs-only commit ✅ 完成(`3058e11`)
+- 🟢 P1:质量门 3 门全绿 ✅ 完成(lint 259 / check-snapshot OK / mypy 256)
+- 🟢 P2:launchd preflight 收口 ✅ 完成(3 plist lint OK + 1/3 已装 + install 脚本 7 章节全貌 + 3 决策选项)
+- 📋 P2 真 install:等用户选 A/B/C 选项后执行(红线:不默推)
+- 📋 P3 真实业务最小闭环:等用户授权
+- 📋 P4 24h dry-run 观察:等 P2+P3 完成后启动
+- 📋 P5 v1.0 发布评估:收口日执行
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **260 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**86 类 · 0 新增**;撞坑 #81(数字员工 TCC 前置)在本轮 P2 preflight 重提;撞坑 #71 docs-only 边界沿用;撞坑 #50 5 件套 sync 沿用。
+- **当前阶段**:P0-P2 docs-only 全部完成 · P0 已 push(`3058e11 = HEAD = origin/main`);P1 质量门 3 门全绿;P2 launchd preflight 收口(3 plist lint OK + 1/3 已装 + install 脚本全貌 + 3 决策选项);**真 install + P3-P5 仍需用户逐项授权**。
+- **下一步**:
+  1. **本轮 P2 commit 已就绪**(v0.2.66 preflight doc + 5 件套 baseline 259→260):`git commit` 后**等用户 "push" 词再推**(沿用户红线"默认不 push")。
+  2. P2 真 install 决策:3 选项 A 完整(撞坑 #81 风险)/ B 局部(只装 imap-sync)/ C 暂缓(等 7/16 weekly)— 等用户答复。
+  3. P3 真实业务最小闭环:Notes 1-5 + SMTP 单封 + 审计 + 回滚(等用户独立授权)。
+  4. P4 24h dry-run:本会话无法观察 24h,需独立会话。
+  5. P5 v1.0 发布评估:收口日写 release checklist + 风险清单 + 决策记录。
+- **下一棒**:本轮 P2 commit → push 词 → 7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口 → P2 install 决策 → P3 真实闭环 → P4 24h → P5 v1.0 tag 评估。
