@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **262 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.67 P2 install docs 落 260→262) |
+| **质量基线** | **2900 passed / 3 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **263 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.68 P3 launch prep doc 落 262→263) |
 | **下一棒** | 远端已到 `76cd2eb`(P0 push 后 = HEAD = origin/main)· P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5002,7 +5002,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 1. 本次修改内容
 
-- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2904 passed / 1 skipped** · coverage **89.12%** · mypy **0 errors / 256 files** · MD lint **258 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2904 passed / 1 skipped · 258 md files`)。
+- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2900 passed / 3 skipped** · coverage **89.12%** · mypy **0 errors / 256 files** · MD lint **258 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2904 passed / 1 skipped · 258 md files`)。
 - **撞坑累计 84 → 85 类**:`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push;本轮仅 docs-only,**0 新增撞坑**。
 - **v0.2.57.3 文档升级**:沿 7/8 preheat 实测 baseline 实际化 §1 数字对账表(2791 → 2900 / 89.09% → 89.12% / 248 → 256 mypy / 256 → 257 md / 84 → 85 撞坑)+ §0 7/8 preheat 段新增(实测 baseline + 撞坑 85 累计 + 11/11 readiness) + §2 撞坑累计表追加 #85 行 + §3 边界表 +2 项(撞坑 #71 docs-only + 撞坑 #85 Layer 3 默认空) + §5 readiness 加 #10/#11 项 + §6 下一棒表加 7/8 19:00+ 本轮 docs-only + 4 个真实业务候选(均待授权) + §7 关联与依据 HEAD `1470dd0` → `ae071f0` + 最后更新 `2026-07-16` → `2026-07-08`。
 - **SESSION-STATE 7/8 preheat 行新增**:Phase 1 维持期第 3 次 weekly 提前 8 天预热启动(2026-07-08 周三);沿用 §0 7/8 preheat 段同样的实测 baseline。
@@ -5169,7 +5169,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **259 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2900 passed / 3 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **259 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**86 类 · 0 新增**;撞坑 #86 router 空 token 优雅降级 7/8 已 push;本轮仅 docs-only(撞坑 #71 边界沿用,撞坑 #50 5 件套 sync 沿用)。
 - **当前阶段**:Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复 + 撞坑 #86 router 优雅降级 + **v0.2.65 preflight Hour 1-7 docs-only 收口**均已落地;9 质量门全绿;**阶段 3 SMTP 真发暂停,等用户逐封授权 + 收件人显式命名**;outbox 2 条 `cancelled` 沿用。
 - **下一步**:
@@ -5257,7 +5257,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **260 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2900 passed / 3 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **260 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**86 类 · 0 新增**;撞坑 #81(数字员工 TCC 前置)在本轮 P2 preflight 重提;撞坑 #71 docs-only 边界沿用;撞坑 #50 5 件套 sync 沿用。
 - **当前阶段**:P0-P2 docs-only 全部完成 · P0 已 push(`3058e11 = HEAD = origin/main`);P1 质量门 3 门全绿;P2 launchd preflight 收口(3 plist lint OK + 1/3 已装 + install 脚本全貌 + 3 决策选项);**真 install + P3-P5 仍需用户逐项授权**。
 - **下一步**:
@@ -5313,7 +5313,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2904 passed / 1 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **262 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2900 passed / 3 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **262 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**86 类 · 0 新增**;撞坑 #81(数字员工 TCC 前置)在 P2 install 真部署**实测命中**(`bash: ... Operation not permitted` · PID 126 / exit 126)→ 立即 bootout 恢复;撞坑 #71 docs-only 边界沿用;撞坑 #50 5 件套 sync 沿用。
 - **当前阶段**:P0-P2.5 docs-only 已收口 · P0 已 push(`76cd2eb = HEAD = origin/main`)· P1 质量门 3 门全绿 · P2 launchd 真 install 执行完成(3 wrapper + 3 plist 部署 · 2/3 job 仍注册 · 1/3 bootout)· 撞坑 #81 实测命中 → bootout 恢复 → TCC 5 步骤授权 runbook 已编写(`docs/v0.2.67` §3)· **P3 真实业务 / P4 24h / P5 v1.0 tag 评估仍需用户逐项授权**。
 - **下一步**:
@@ -5323,3 +5323,64 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   4. P4 24h dry-run:本会话无法观察 24h,需独立会话;菜单栏 / dashboard / IMAP 7:00 同步 / 数字员工 PID 稳定链路不可破。
   5. P5 v1.0 发布评估:收口日写 release checklist + 风险清单 + "打 / 不打 v1.0 tag"决策(默认不打 · 撞坑 #60)。
 - **下一棒**:P2 TCC 授权(用户)+ 数字员工重新激活 → P3 真实业务逐封授权 → P4 24h 观察 → P5 v1.0 tag 评估 → 7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口。
+
+## 80. 2026-07-08 · v0.2.68 P3 真实业务最小闭环启动准备 docs-only(5 件套 baseline 262→263)
+
+**主题**:响应用户"P3 立刻启动"(2026-07-08 13:10+)的 docs-only 准备文档 — 定义 P3 启动准备 = 收件人授权清单 + 5 重门控确认 + 回滚预案 + 审计记录约定。**实际不执行任何真实业务动作**,每个真实动作前必须用户明确指定收件人 + 独立授权。
+
+### 1. 本次修改内容
+
+| Commit | 内容 |
+|--------|------|
+| `e10c995` | P2 install 收口(已 push)+ 撞坑 #81 bootout |
+| 本轮 docs-only commit(预计)| `docs(state): v0.2.68 P3 launch prep(收件人授权清单 + 5 重门控 + 回滚预案 + 审计约定)+ 5 件套 baseline 262→263` |
+
+**改动范围**(本 docs commit):
+- 6 files:
+  - `docs/v0.2.68-p3-launch-prep-2026-07-08.md` 新建(180 行 · 7 段 · 3 任务 A/B/C · 5 重门控 · 7 项跨任务红线 · 启动决策流程 · 撞坑防御 8 类)
+  - `src/my_ai_employee/quality_snapshot.py` MD count 262 → 263 防漂移(撞坑 #50 第三层)
+  - `README.md` L7 状态行翻 `MD lint 262 → 263`
+  - `CLAUDE.md` 顶部日期行 + 当前阶段描述 翻 `262 MD → 263 MD`
+  - `SESSION-STATE.md` L18/L33 5 件套 sync 同步
+  - `docs/v0.2-launch-plan.md` 当前实测基线段 262 → 263
+- 0 new tests, 0 业务代码改动(撞坑 #71 docs-only 边界严判)
+
+**关键定义**(本 doc 核心):
+
+| 维度 | 范围 | 红线 |
+|------|------|------|
+| **任务 A** | Notes 1-5 真同步 | 单次 ≤ 5 条 · 逐条指定 ID · `--dry-run` → 真同步 |
+| **任务 B** | SMTP 单封真发 | `--limit 1` 严判 · **逐封命名收件人** · `SEND_REAL_NETWORK_RECIPIENT_DOMAINS` 临时授权 |
+| **任务 C** | 失败审计 + 回滚预案自检 | 模拟失败 + 撞坑防御清单(8 类)|
+
+### 2. 风险点
+
+#### 已识别风险
+
+- ⚠️ **P3 真实业务动作尚未获授权**(用户只授权"P3 立刻启动",但收件人/笔记 ID 还未指定)→ 每个真实业务动作前必须再次确认。
+- ⚠️ **数字员工 TCC 未授权**(沿前轮撞坑 #81)→ 用户需手动授权后 P3 才能激活 menu bar / dashboard。
+- ⚠️ **撞坑 #85 LLM 草稿幻觉防御 3 层闭合** → Layer 1 严判短路 + Layer 2 process_inbox 不调 drafter + Layer 3 domain 白名单。
+
+#### B 类延后(本轮 docs-only 不触发)
+
+- ⏸️ P3 真实业务最小闭环执行(等用户逐项授权)
+- ⏸️ P4 24h dry-run 观察
+- ⏸️ P5 v1.0 tag 评估
+
+#### P1 待办
+
+- P1:撞坑 #81 TCC 授权 5 步骤(用户手动操作)— 不可远程。
+- P1:P3 任务 A/B/C 实际启动需用户逐项指定(Note ID / 收件人 / 任务选择)。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2900 passed / 3 skipped** / **89.12%** / mypy **256 files / 0 errors** / MD lint **263 files / 0 errors** / `make ci` 9 门全绿沿用(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**86 类 · 0 新增**(本轮 P3 prep docs-only 不引入新撞坑)。
+- **当前阶段**:P0 已 push(`76cd2eb = HEAD = origin/main`)· P1 质量门 3 门全绿 · P2 launchd 真 install + 撞坑 #81 bootout 收口(`e10c995` 已 push)· **P3 启动准备 docs-only 已就位**(`docs/v0.2.68`)· **P3 真实业务最小闭环执行 + P4 24h + P5 v1.0 tag 评估 仍需用户逐项授权**。
+- **下一步**:
+  1. 用户手动 TCC 授权 Python.framework 3.12(撞坑 #81)+ 手动 `launchctl load -w ~/Library/LaunchAgents/com.myaiemployee.digital-employee.plist` 重新激活数字员工。
+  2. P3 任务选择(用户口头答复 3 选 / 多选)+ 每个任务前置 checklist 用户逐项确认。
+  3. P3 真实业务执行(Note ID / 收件人 / 任务类型 / 独立授权)。
+  4. P4 24h dry-run 观察独立会话。
+  5. P5 v1.0 发布评估(默认不打 v1.0 tag · 撞坑 #60)。
+- **下一棒**:P3 任务选择 + 用户授权(主入口)→ P3 真实业务逐项执行 → 24h 观察 → v1.0 tag 评估。

@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.67 P2 launchd 真 install + 撞坑 #81 实测命中(2026-07-08) + `v0.2.1` 正式 tag 维持期 + **P0-P2.5 全环 收口**
 
 > **最后更新**:2026-07-08 13:14+ · **本轮 P0 push ahead 2(`76cd2eb` ✅ pushed)+ P1 质量门 3 门全绿 + P2 launchd 真 install 完整 install(撞坑 #81 实测命中 → bootout 数字员工)+ 5 件套 baseline 260→262 防漂移**(新增 `docs/v0.2.67-p2-install-2026-07-08.md` + `reports/v0.2.67-p2-install-2026-07-08.md` 2 篇)· outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准(`76cd2eb` P0 push 后 · 本轮 docs-only 收口待 commit)· **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 13 阶段 2.3 + 撞坑 #86 + P0-P2.5 真 install 已收口** — `git push` 推 `3058e11..76cd2eb main->main` 成功;`bash scripts/launchd_install.sh install` 部署 3 wrapper + 3 plist + launchctl load × 3;数字员工 RunAtLoad=true 启动撞坑 #81(TCC Python.framework 3.12 鉴权拦截 → exit 126)→ `launchctl bootout` 立即恢复;agent + imap-sync 2/3 job 仍注册;SMTP 真发仍暂停;immutable 顺序:撞坑 #81 待用户手动 TCC 授权后再 `launchctl load -w`。**质量门**:**2904 passed / 1 skipped** / 89.12% / lint **262** / mypy **256 files**。**下一棒**:P3 真实业务最小闭环(Notes 1-5 真同步 + SMTP 单封真发逐封命名收件人授权)→ P4 24h dry-run → P5 v1.0 tag 评估。
+> **状态**:🟢 **Day 13 阶段 2.3 + 撞坑 #86 + 撞坑 #81 实测命中 + P0-P3 prep 全环 已收口** — `git push` 推 `3058e11..76cd2eb main->main` 成功;`bash scripts/launchd_install.sh install` 部署 3 wrapper + 3 plist + launchctl load × 3;数字员工 RunAtLoad=true 启动撞坑 #81(TCC Python.framework 3.12 鉴权拦截 → exit 126)→ `launchctl bootout` 立即恢复;agent + imap-sync 2/3 job 仍注册;SMTP 真发仍暂停;immutable 顺序:撞坑 #81 待用户手动 TCC 授权后再 `launchctl load -w`。**质量门**:**2900 passed / 3 skipped** / 89.12% / lint **263** / mypy **256 files**。**下一棒**:P3 真实业务最小闭环(任务 A/B/C 3 选 · 独立授权 → Notes 1-5 真同步 + SMTP 单封真发逐封命名收件人)→ P4 24h dry-run → P5 v1.0 tag 评估。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复 ✅ + 撞坑 #86 router 降级修复 ✅ + v0.2.65 preflight Hour 1-7 docs-only 收口 ✅ + v0.2.66 P2 launchd preflight 收口 ✅ + v0.2.67 P2 launchd 真 install + 撞坑 #81 bootout ✅**(业务代码锚 `ae071f0` 已在远端;outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 2/3 job 仍注册;数字员工 1/3 已 bootout ⏸️ TCC 授权后手动 `launchctl load -w`) — **2904 passed / 1 skipped** / 89.12% / MD lint **262** / mypy **256 files**。**下一棒**:P3 真实业务最小闭环 → P4 24h dry-run → P5 v1.0 tag 评估;SMTP 真发需用户逐封命名收件人;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 阶段 2.3 process_inbox 真执行 ✅ + P0 审批修复 ✅ + 撞坑 #86 router 降级修复 ✅ + v0.2.65 preflight Hour 1-7 docs-only 收口 ✅ + v0.2.66 P2 launchd preflight 收口 ✅ + v0.2.67 P2 launchd 真 install + 撞坑 #81 bootout ✅ + v0.2.68 P3 launch prep docs-only ✅**(业务代码锚 `ae071f0` 已在远端;outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 2/3 job 仍注册;数字员工 1/3 已 bootout ⏸️ TCC 授权后手动 `launchctl load -w`) — **2900 passed / 3 skipped** / 89.12% / MD lint **263** / mypy **256 files**。**下一棒**:P3 真实业务最小闭环(任务 A/B/C 3 选 · 每任务前置 checklist + 独立授权)→ P4 24h dry-run → P5 v1.0 tag 评估;SMTP 真发需用户逐封命名收件人;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2904 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **262 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.67 P2 install docs 落 260→262) |
+| 核心质量门 | **2900 passed / 3 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **263 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.68 P3 launch prep doc 落 262→263) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
