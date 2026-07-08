@@ -79,7 +79,7 @@
 
 | 维度 | 状态 |
 |------|------|
-| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复 + 撞坑 #86 + 撞坑 #81 + v0.2.68 P3 prep + pytest outcome 修复已收口** — 撞坑 #85 三层防御与 router 空 token 优雅降级均已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**HEAD / origin/main 以 `git status --short --branch` 为准**;P2 launchd 真 install 已完成,数字员工 1/3 因 TCC bootout 等用户授权后手动恢复。**下一棒**:P3 真实业务最小闭环逐项授权;P4 24h dry-run;P5 v1.0 tag 评估 |
+| **当前阶段** | ✅ **Day 13 阶段 2.3 + P0 审批顺序修复 + 撞坑 #86 + 撞坑 #81 + v0.2.69 P3-C dry-run 已收口** — 撞坑 #85 三层防御与 router 空 token 优雅降级均已落地,2 条 `root@systemmail.yunwu.ai` 幻觉草稿已 `cancelled`,未 SMTP 外发。**HEAD / origin/main 以 `git status --short --branch` 为准**;P2 launchd 真 install 已完成,数字员工 1/3 因 TCC bootout 等用户授权后手动恢复。**下一棒**:P3-A Notes 单条 dry-run;P3-B SMTP 单封逐封授权;P4 24h dry-run;P5 v1.0 tag 评估 |
 | **上一阶段** | ✅ **v0.2.56 D5.6.3 设计 docs-only(2026-06-30 · `6ee7c8a`)** — 设计 + @审计员 review PASS · MD lint 203→205 |
 | **上一阶段** | ✅ **v0.2.55.1 Path 4 spike + 撞坑 #71 P0 修复(2026-06-30 · `be0c199`)** — 临时 DB 5 门全开 2 笔实写 + OutboxStatus 大小写契约对齐 + spike 报告 |
 | **上一阶段** | ✅ **v0.2.55.2 项目检查 + 文档/UI 漂移修复(2026-06-30)** — Path 4 5 门 card `/api/status` 驱动 + launch-plan/SESSION oauth2 误记修正 + +2 status 契约测试 |
@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **263 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.68 P3 launch prep doc 落 262→263) |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **265 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.69 P3-C docs + pitfall-88 doc 落 263→265) |
 | **下一棒** | 远端状态以 `git status --short --branch` 为准 · P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· P3 真实业务需新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5428,3 +5428,35 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **主质量门**:继续以 `make check-snapshot` + `make lint` + `scripts/check_state_entries.py` 当前实测为准。
 - **下一棒**:先完成 P3 安全预检;真实 Notes / SMTP / launchd 恢复 / v1.0 tag 继续逐项授权。
+
+## 83. 2026-07-08 · P3-C 失败审计 dry-run 收口(spike × 2 全绿 + 撞坑 #88 修复)
+
+> **触发**:用户授权路径节奏 1。P0-P3 prep 收口后首次真跑 spike 暴露两层 drift(撞坑 #88)。用户显式选 #1(修 spike + 跑通 + 沉范本)。
+
+### 1. 本次修改内容
+
+- **spike_day10_notes_encryption_dryrun.py**:全跑通(`uv run python scripts/spike_day10_notes_encryption_dryrun.py`)退出码 0,7 步全绿(撞坑 #65 dry-run 沿用),生产主库 ~/Library/.../data.db 0 触碰,shell profile 未写 ENABLE_NOTES_ENCRYPTION=1。
+- **spike_outbox_100.py 撞坑 #88 修复**:1 处(状态机 block)· OLD 5 行 → NEW 30 行(2 处 6 行 in-line 改动 + 撞坑 #88 注释 + 3 跳 state machine)· D5.2 必传 `from_status` 关键字 + D5.6.3 P1-1 `last_approved_at_ms` 必传规则(APPROVED 写,其他 None) + D5.2 ALLOWED_TRANSITIONS 6 状态机(APPROVED → SENDING → SENT 必经中间态)· 重跑退出码 0,stored=100 / idempotency=PASS / state_machine=100/100 / urgent_priority=30/30 / 0 SMTP 真发(契约 5)。
+- **`docs/v0.2.69-p3-c-dryrun-2026-07-08.md`**:新增 7 段(spike_day10/spike_outbox_100/撞坑 #88/红线/P3 进度/产出/收官),190+ 行。
+- **`memory/pitfall-88-spike-src-signature-drift.md`**:新增撞坑 #88 范本(三联 drift:update_status signature + last_approved_at_ms 必传 + ALLOWED_TRANSITIONS 6 状态机)+ 修复范本(3 跳代码)+ How to apply(grep/update_status 公式/6 状态机/docs-only 边界冲突 4 步)。
+- **P3-C doc 漂移修复**:`docs/v0.2.68-p3-launch-prep-2026-07-08.md` 不再引用不存在的 `spike_draft_hallucination.py`,改为实际已跑通的 `spike_day10_notes_encryption_dryrun.py` + `spike_outbox_100.py`。
+- 详细报告:`docs/v0.2.69-p3-c-dryrun-2026-07-08.md`(本收口)+ spike 自报告 `output/spike/spike_outbox_100_20260708_161001.md`。
+
+### 2. 风险点
+
+- 🟢 **scripts/ ≠ src/ 业务代码**:`scripts/spike_outbox_100.py` 在 scripts/ 而非 src/my_ai_employee/,撞坑 #71 边界允许 spike 改动,但本次 audit doc 显式声明以利后续审计。
+- 🟢 **0 SMTP 真发**:spike × 2 都 spec 0 SMTP(撞坑 #76 契约 5);`PENDING_SEND → APPROVED → SENDING → SENT` 仅状态推进,不真发邮件。
+- 🟢 **0 Notes 真同步**:spike_day10 跑临时 SQLite(`/var/folders/.../spike_day10_notes_*.db`)+ monkeypatch setenv 进程内 + mp.undo() + shutil.rmtree 自动清理。
+- 🟢 **pytest/coverage/mypy baseline 不动**:`quality_snapshot.py` 仍是 2904 passed / 1 skipped / 89.12% / 256 mypy files;新增 2 个 tracked Markdown 后 MD lint 同步 263 → 265。
+- 🟢 **0 v1.0 tag**:P5 阶段决策。
+- 🟢 **0 launchd 恢复**:数字员工仍 bootout,TCC 授权待 user 手动(`launchctl load -w`)。
+- 🟡 **历史 spike 风险盘待 P3-A 周内做**:`scripts/spike_review_100.py` / `scripts/spike_send_100.py` / `scripts/spike_d8_1000.py` 等若调 `OutboxStore.update_status` 也可能同型撞坑 #88,建议 grep 预盘。
+- 🟡 **P3-A 推迟到本周内(7/9 / 7/10)**:需 user 显式 Note ID + Keychain 真取 vs fixture 由 user 选,逐项授权红线维持。
+- 🟢 **docs/v0.2.68 漂移已修复**:不存在的 `spike_draft_hallucination.py` 引用已替换为 P3-C 实际 dry-run 范本。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy --strict **0 errors / 256 files** / MD lint **265 files / 0 errors**(新增 v0.2.69 + pitfall-88 两个 tracked Markdown,沿撞坑 #50 同步)。
+- **当前阶段**:P0-P3 prep + 真实 spike 跑通 + 撞坑 #88 沉淀(P3-C 任务已收口)。
+- **P3 任务状态**:C ✅ 完成(本收口) · A ⏸ 推迟本周内等 user Note ID + Keychain 模式 · B ⏸ 推迟到 P3 收口后等 5 重门控决策。
+- **下一棒**:git status --short --branch 锚点 · 等 user push 授权(本文档默认不 push) · 等 P3-A Note ID 明示后启动。

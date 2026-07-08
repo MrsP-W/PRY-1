@@ -4,7 +4,7 @@
 D4.8.11 范围:
     1. 100 封入库(store_and_emit 成功 100 次,全部 status=pending_send)
     2. 幂等性(同 email_id=1 第 2 次入库 → OutboxEmailDuplicateError → 业务阻断入口)
-    3. 状态机正确性(100 行 pending_send → approved → sent,D5+ 调度器模拟)
+    3. 状态机正确性(100 行 pending_send → approved → sending → sent,D5+ 调度器模拟)
     4. 紧急邮件优先(30 行 priority=urgent,by_priority("urgent") 先返回)
 
 不真发 SMTP(契约 5).DB 用临时 sqlite + Keychain monkeypatch(不污染真实 ~/Library).
@@ -263,23 +263,52 @@ def run_spike(output_dir: Path) -> None:
                 ]
             )
 
-            # 5. 状态机:100 行 pending_send → approved → sent
-            print("   状态机验证:100 行 pending_send → approved → sent ...")
+            # 5. 状态机:100 行 pending_send → approved → sending → sent
+            # 撞坑 #88 修复(2026-07-08):
+            #   (a) D5.2 update_status 加 from_status 关键字(防 concurrent 写漂移)
+            #   (b) D5.6.3 P1-1 last_approved_at_ms 必传(APPROVED 写,其他 None 保留)
+            #   (c) D5.2 ALLOWED_TRANSITIONS 6 状态机 — APPROVED 不能直跳 SENT,必经 SENDING
+            print("   状态机验证:100 行 pending_send → approved → sending → sent ...")
+            now_ms = int(time.time() * 1000)
             for outbox_id in outbox_ids:
-                row = outbox_store.update_status(outbox_id, OutboxStatus.APPROVED.value)
+                # 5a. PENDING_SEND → APPROVED(D5.6.3 P1-1 写审批凭据)
+                row = outbox_store.update_status(
+                    outbox_id,
+                    OutboxStatus.APPROVED.value,
+                    from_status=OutboxStatus.PENDING_SEND.value,
+                    last_approved_at_ms=now_ms,
+                )
                 assert row.status == "approved"
-                row2 = outbox_store.update_status(outbox_id, OutboxStatus.SENT.value)
+                # 5b. APPROVED → SENDING(D5 调度器触发 — SENT 必经 SENDING 中间态)
+                row1 = outbox_store.update_status(
+                    outbox_id,
+                    OutboxStatus.SENDING.value,
+                    from_status=OutboxStatus.APPROVED.value,
+                    last_approved_at_ms=None,
+                )
+                assert row1.status == "sending"
+                # 5c. SENDING → SENT(SMTP 真实成功 — spike 0 真发,模拟状态推进)
+                row2 = outbox_store.update_status(
+                    outbox_id,
+                    OutboxStatus.SENT.value,
+                    from_status=OutboxStatus.SENDING.value,
+                    last_approved_at_ms=None,
+                )
                 assert row2.status == "sent"
             counters["state_machine_passed"] = len(outbox_ids)
-            print(f"   ✅ 状态机正确({len(outbox_ids)} 行 approved → sent 全部通过)")
+            print(
+                "   ✅ 状态机正确("
+                f"{len(outbox_ids)} 行 pending_send → approved → sending → sent 全部通过)"
+            )
 
             report_lines.extend(
                 [
-                    "## 3. ⚙️ 状态机(pending_send → approved → sent)",
+                    "## 3. ⚙️ 状态机(pending_send → approved → sending → sent)",
                     "",
                     f"- **测试行数**:{len(outbox_ids)}",
                     "- **pending_send → approved**:✅",
-                    "- **approved → sent**:✅",
+                    "- **approved → sending**:✅",
+                    "- **sending → sent**:✅",
                     f"- **全部通过**:{counters['state_machine_passed']}/{len(outbox_ids)}",
                     "",
                 ]
@@ -318,7 +347,7 @@ def run_spike(output_dir: Path) -> None:
                     "",
                     "- **入库 100/100**:✅",
                     "- **幂等性 + 业务阻断**:✅",
-                    "- **状态机 pending_send → approved → sent**:✅",
+                    "- **状态机 pending_send → approved → sending → sent**:✅",
                     "- **紧急优先 by_priority(urgent) 返回 30 行**:✅",
                     "- **D4.8 v1.0.1 5 契约全验证**:✅",
                     "- **不真发 SMTP(契约 5)**:✅",
