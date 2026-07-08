@@ -166,6 +166,22 @@ class LLMRouter:
                     self._stats.fallback_attempts += 1
 
                 provider = get_provider(full_id)
+
+                # 4a. 撞坑 #86: 配置完整性门控
+                #    空 api_key / 空 base_url 时 httpx 会抛 "Illegal header value b'Bearer '"
+                #    这种是"配置问题",不是网络问题 — 跳过本档走下一档,不计入熔断
+                if not provider.healthcheck():
+                    logger.warning(
+                        f"[router] {full_id} 配置不完整(api_key 或 base_url 缺失),"
+                        f"跳过 {tier_name} | task_type={task_type.value}"
+                    )
+                    # 还原 primary_attempts 计数(未真正尝试)
+                    if tier_name == "primary":
+                        self._stats.primary_attempts -= 1
+                    else:
+                        self._stats.fallback_attempts -= 1
+                    continue
+
                 request = LLMRequest(
                     model_full_id=full_id,
                     messages=messages,

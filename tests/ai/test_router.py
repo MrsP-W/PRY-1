@@ -320,6 +320,12 @@ def _make_mock_chat(mock: _MockProviderResult) -> Any:
 class TestRouterDecision:
     """router.py 单元测试(mock chat, 不发 HTTP)."""
 
+    @pytest.fixture(autouse=True)
+    def _ensure_deepseek_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """撞坑 #86 修复后: router 在 chat() 前会做 healthcheck 门控,
+        空 api_key 会被跳过 — 所以 mock deepseek 的测试必须先确保 env 有 key."""
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key-fixture")
+
     def test_primary_success_no_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """主选成功: 不走 fallback, 只调 1 次."""
         mock = _MockProviderResult(
@@ -559,6 +565,11 @@ class TestRouterExceptionNarrowing:
     教训来源: D3.3.3 "异常范围要窄化到真要处理的类型".
     """
 
+    @pytest.fixture(autouse=True)
+    def _ensure_deepseek_key(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """撞坑 #86 修复后:同 TestRouterDecision,确保 deepseek 走 healthcheck 门."""
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "test-deepseek-key-fixture")
+
     def test_programming_error_passes_through(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """ValueError(编程错误)从 chat() 抛出 → router 不 catch, 直接透传.
 
@@ -644,3 +655,146 @@ class TestRouterExceptionNarrowing:
                 messages=[{"role": "user", "content": "test"}],
             )
             assert response.content == "recovered", f"{type(business_exc).__name__} 没走 fallback"
+
+
+# ============================================================
+# Router 配置完整性门控(撞坑 #86 · 2026-07-08 实战触发)
+# ============================================================
+
+
+class TestRouterHealthcheckGate:
+    """撞坑 #86: provider 配置不完整(空 api_key / 空 base_url)时,
+    router 不调 chat(),直接 skip 该档并走 fallback.
+
+    触发场景:DEEPSEEK_API_KEY 未设置 → _resolve_api_key 返回 ""
+    → provider.healthcheck() 返回 False → router 跳过 deepseek 走 qwen,
+    不再产生 "Illegal header value b'Bearer '" 噪声 + 不熔断(配置问题非网络问题).
+    """
+
+    def test_empty_deepseek_key_skips_primary(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """DEEPSEEK_API_KEY 未设置 → primary(deepseek)healthcheck=False → 跳过,secondary(qwen)成功."""
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+        # 留 OPENAI_API_KEY(避免 _resolve_api_key 兜底让 deepseek 又配上 — 实际不会,
+        # 因为 _resolve_api_key 优先用 DEEPSEEK_API_KEY,空字符串 '' 仍会触发 False 分支)
+        # 实际上 _resolve_api_key: if override: → 用 override
+        #                       else: env_name = DEEPSEEK_API_KEY → os.environ.get(DEEPSEEK_API_KEY, "") or OPENAI_API_KEY
+        # monkeypatch.delenv 后 get 返回 "",短路 or → 走到 OPENAI_API_KEY
+        # 所以要同时 unset OPENAI_API_KEY 才能让 deepseek 真的"空"
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        mock = _MockProviderResult(
+            {
+                # deepseek 不应被调,因为 healthcheck False
+                "deepseek/deepseek-chat": LLMResponse(
+                    content="should not reach",
+                    model_full_id="deepseek/deepseek-chat",
+                    input_tokens=10,
+                    output_tokens=5,
+                    latency_ms=100,
+                ),
+                "qwen/qwen3-max": LLMResponse(
+                    content="classify result from qwen",
+                    model_full_id="qwen/qwen3-max",
+                    input_tokens=10,
+                    output_tokens=5,
+                    latency_ms=200,
+                ),
+            }
+        )
+        monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+        router = LLMRouter()
+        response = router.route(
+            task_type=TaskType.CLASSIFY,
+            messages=[{"role": "user", "content": "test"}],
+        )
+        assert response.content == "classify result from qwen"
+        # 关键: 只调了 qwen,deepseek 因 healthcheck=False 被跳过
+        assert len(mock.calls) == 1
+        assert mock.calls[0].model_full_id == "qwen/qwen3-max"
+
+    def test_empty_key_does_not_trip_breaker(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """配置缺失不计入熔断(配置问题非网络问题) — 撞坑 #86 关键设计."""
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+        mock = _MockProviderResult(
+            {
+                "qwen/qwen3-max": LLMResponse(
+                    content="qwen ok",
+                    model_full_id="qwen/qwen3-max",
+                    input_tokens=10,
+                    output_tokens=5,
+                    latency_ms=100,
+                ),
+            }
+        )
+        monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+        router = LLMRouter()
+        for _ in range(5):  # 多次路由
+            router.route(
+                task_type=TaskType.CLASSIFY,
+                messages=[{"role": "user", "content": "test"}],
+            )
+        # deepseek 熔断器不应被打开(配置问题不计入失败计数)
+        assert not router._breaker("deepseek/deepseek-chat").is_open()
+        assert router._breaker("deepseek/deepseek-chat").failure_count == 0
+
+    def test_empty_key_all_tiers_config_missing_raises(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """全链都缺 api_key → LLMAllFallbacksError(行为不变)."""
+        monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+        monkeypatch.delenv("DASHSCOPE_API_KEY", raising=False)  # qwen 实际 env 名
+        monkeypatch.delenv("QWEN_API_KEY", raising=False)
+        monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+        monkeypatch.delenv("MINIMAX_API_KEY", raising=False)
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.delenv("GLM_API_KEY", raising=False)
+        monkeypatch.delenv("TENCENT_API_KEY", raising=False)
+
+        from my_ai_employee.ai.providers import LLMAllFallbacksError
+
+        router = LLMRouter()
+        with pytest.raises(LLMAllFallbacksError, match="所有 fallback 都失败"):
+            router.route(
+                task_type=TaskType.CLASSIFY,
+                messages=[{"role": "user", "content": "test"}],
+            )
+
+    def test_valid_key_still_uses_primary(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """DEEPSEEK_API_KEY 存在 → primary 仍被调(不破坏正常路径)."""
+        monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key-not-empty")
+
+        mock = _MockProviderResult(
+            {
+                "deepseek/deepseek-chat": LLMResponse(
+                    content="classify from deepseek",
+                    model_full_id="deepseek/deepseek-chat",
+                    input_tokens=10,
+                    output_tokens=5,
+                    latency_ms=100,
+                ),
+            }
+        )
+        monkeypatch.setattr(OpenAICompatibleProvider, "chat", _make_mock_chat(mock))
+
+        router = LLMRouter()
+        response = router.route(
+            task_type=TaskType.CLASSIFY,
+            messages=[{"role": "user", "content": "test"}],
+        )
+        assert response.content == "classify from deepseek"
+        assert len(mock.calls) == 1
+        assert mock.calls[0].model_full_id == "deepseek/deepseek-chat"

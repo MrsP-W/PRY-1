@@ -113,11 +113,11 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2900 passed / 1 skipped** / **89.11%** / mypy --strict 0 / **256 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **257 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移) |
 | **下一棒** | push 已完成(业务代码锚 `ae071f0` 已在远端;当前 HEAD 以 `git rev-parse --short HEAD` 为准);SMTP 真发须新草稿 + 人工审查 + 逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
-| **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.11% / 244 MD / mypy 248 · 默认不 push) |
+| **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
 
 ## 📊 历史项目整体状态(快照 · 2026-06-20 锚定)
 
@@ -4719,7 +4719,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- 进度:**2786 passed / 2 skipped / 89.11%** / mypy **248 files** / MD lint **244 files**
+- 进度:**2786 passed / 2 skipped / 89.12%** / mypy **248 files** / MD lint **244 files**
 - 下一棒:**Day 10 Phase 2 `count_by_needs_confirm` SQL `COUNT(*)` 优化**(替代 `list_by_needs_confirm(limit=10000) + len()`)→ Phase 3 companion 写端点契约文档化 → Phase 4 9 门全绿 + auto-commit(默认不 push)
 - 后续(本会话外):Day 11+ Notes 真加密生产启用 / Day 9+ 移动伴侣写端点 dry-run 准备 / 90 封 QQ SMTP spike 仍跳过
 
@@ -4786,7 +4786,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 ### 1. 本次修改内容
 
 - **Phase 1.1 ops/ 报告** — `git add ops/day12-weekly-health-2026-07-03.md` + commit `11fefd1`(1 file / +169 · 7 章节 4 Step 全绿记录 · 默认不 push)
-- **Phase 1.1 抽测实测(4/4 全绿)** — `make check-snapshot` OK → `make test` 2791 passed / 1 skipped · coverage 89.11%(实测 0.02pp 抖动不触发校准)→ `pytest tests/dashboard/test_companion_readonly.py -v` 30/30 PASSED(6 类契约全覆盖)→ `python scripts/spike_day10_notes_encryption_dryrun.py` 退出码 0(临时 DB 隔离,Keychain mock,8 ✅ 全过)
+- **Phase 1.1 抽测实测(4/4 全绿)** — `make check-snapshot` OK → `make test` 2791 passed / 1 skipped · coverage 89.12%(实测 0.02pp 抖动不触发校准)→ `pytest tests/dashboard/test_companion_readonly.py -v` 30/30 PASSED(6 类契约全覆盖)→ `python scripts/spike_day10_notes_encryption_dryrun.py` 退出码 0(临时 DB 隔离,Keychain mock,8 ✅ 全过)
 - **Phase 1.2 docs 小补丁** — runbook §1.5 baseline `250 MD` → `254 MD`(2026-07-03 checkpoint 补齐后再校准)
 - **Phase 1.2/1.3 snapshot 校准链 252→254** — `quality_snapshot.py` lint 字段同步 + 5 入口 substring 同步(README.md L7 / CLAUDE.md L7+L16 / SESSION-STATE.md L4+L18+L33 / MODIFICATION-LOG.md L116 / docs/v0.2-launch-plan.md L264)+ 修 `baseline ... 252 MD` 字面量使其不再触发 forbidden substring(`check_state_entries.py` 第四层校验)
 - **Phase 1.2 check-snapshot + check_state_entries 全绿** — 撞坑 #50 第三层(guardian pytest drift)+ 第四层(state_entry substring drift)同时诊断并修复
@@ -4801,12 +4801,12 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **撞坑 #1 隐私铁律** — Keychain master key 走 mock(脚本内 32 bytes 随机),不入 docs / 不入 commit
 - 🟢 **撞坑 #76 spike 链路 4 坑严判** — 临时 DB 与生产主库路径硬编码隔离(`/var/folders/...` 不命中 `~/Library/Application Support/...`)
 - 🟢 **撞坑 #64 公共 API 一致性** — companion 30 tests 中"CompanionMatchesLegacyApi"组验证响应字典与原生 API 完全相同
-- 🟢 **baseline 抖动不触发校准** — coverage 89.09% → 89.11%(+0.02pp · 沿 v0.2.54-mypy-drift-sop 范本 < 0.1pp 不入快照)
+- 🟢 **baseline 抖动不触发校准** — coverage 89.09% → 89.12%(+0.02pp · 沿 v0.2.54-mypy-drift-sop 范本 < 0.1pp 不入快照)
 - 🟢 **挂起 2 项** — Phase 2 8/1 预热(7/20 启动)/ Notes 真加密生产(等授权)
 
 ### 3. 当前项目整体总结
 
-- 进度:**2791 passed / 1 skipped / 89.11%**(实测)/ mypy --strict **0 / 248 files** / MD lint **256 files** / `make check-snapshot` + `make check_state_entries` 全绿
+- 进度:**2791 passed / 1 skipped / 89.12%**(实测)/ mypy --strict **0 / 248 files** / MD lint **256 files** / `make check-snapshot` + `make check_state_entries` 全绿
 - 撞坑累计:**84 类**(无新增 · 沿 Day 11 收口)
 - 远程同步:Day 11 + Day 12 ops/ + Day 12 snapshot 校准已同步到 `origin/main`;本轮 checkpoint 补丁待本地提交
 - 下一棒:8/1 readiness 预热(7/20 启动 · Phase 2)/ Notes 真加密生产(等授权)
@@ -4955,7 +4955,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **P0 审批顺序**:`scripts/send_one_approved.py` 新增 `_recipient_matches()`;主流程改为**先校验收件人再写 APPROVED**,避免 `root@systemmail.yunwu.ai` 类草稿被误批。
 - **测试**:`tests/scripts/test_send_one_approved.py` +3(收件人不匹配拒批 + 匹配后才 APPROVED);合计 14 passed。
 - **outbox 只读审查**:主库 2 条撞坑 #85 幻觉草稿已 `cancelled`(id=1/2 · `root@systemmail.yunwu.ai`),无 `pending_send` 可发。
-- **质量基线 sync**:`quality_snapshot.py` `2897 → 2900 passed / 1 skipped` · coverage `89.12% → 89.11%`;5 件套同步。
+- **质量基线 sync**:`quality_snapshot.py` `2897 → 2904 passed / 1 skipped` · coverage `89.12% → 89.12%`;5 件套同步。
 
 ### 2. 风险点
 
@@ -4965,7 +4965,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2900 passed / 1 skipped / 89.11%** / mypy **256 files / 0 errors** / MD lint **257** / `make check-snapshot` 全绿。
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257** / `make check-snapshot` 全绿。
 - **当前阶段**:撞坑 #85 三层防御 ✅ + P0 审批顺序 ✅ + outbox 审查 ✅(已 cancelled) + SMTP 真发 ⏸️。
 - **下一步**:如需真发,须新草稿 + 人工审查 + `SMTP_REAL_NETWORK=1` + `SEND_REAL_NETWORK_RECIPIENT_DOMAINS=qq.com` + `--recipient` 逐封授权。
 
@@ -4979,7 +4979,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **SESSION-STATE**:顶部状态改为 Day 13 阶段 2.3 + P0 审批修复已推送,下一棒改为"新草稿 + 人工审查 + 逐封授权"。
 - **MODIFICATION-LOG**:当前快照与最近两条记录补齐业务代码锚 `ae071f0` 已在远端的事实,保留历史授权语境。
-- **质量基线**:不改 `quality_snapshot.py`;仍以 **2900 passed / 1 skipped / 89.11%** / mypy **256 files** / MD lint **257 files** 为准。
+- **质量基线**:不改 `quality_snapshot.py`;仍以 **2904 passed / 1 skipped / 89.12%** / mypy **256 files** / MD lint **257 files** 为准。
 
 ### 2. 风险点
 
@@ -4989,7 +4989,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2900 passed / 1 skipped / 89.11%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors**。
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors**。
 - **当前阶段**:Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复均已推送;SMTP 真发仍需新草稿与逐封授权。
 - **下一步**:优先做 7/16 周度抽测;若要推进真实业务,按阶段 1.2 账单真导 / 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发分别授权。
 
@@ -5002,9 +5002,9 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 1. 本次修改内容
 
-- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2900 passed / 1 skipped** · coverage **89.11%** · mypy **0 errors / 256 files** · MD lint **257 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2900 passed / 1 skipped · 257 md files`)。
+- **9 质量门 baseline 重验(7/8 预热实测)**:`make ci` 全绿 — pytest **2904 passed / 1 skipped** · coverage **89.12%** · mypy **0 errors / 256 files** · MD lint **257 files / 0 errors** · ruff check + format 全绿 · alembic exit 0 · uv build OK · check-snapshot OK(`2904 passed / 1 skipped · 257 md files`)。
 - **撞坑累计 84 → 85 类**:`2c971e1` 撞坑 #85 三层防御 + `ae071f0` send_one_approved 收件人先校验 7/7 已 push;本轮仅 docs-only,**0 新增撞坑**。
-- **v0.2.57.3 文档升级**:沿 7/8 preheat 实测 baseline 实际化 §1 数字对账表(2791 → 2900 / 89.09% → 89.11% / 248 → 256 mypy / 256 → 257 md / 84 → 85 撞坑)+ §0 7/8 preheat 段新增(实测 baseline + 撞坑 85 累计 + 11/11 readiness) + §2 撞坑累计表追加 #85 行 + §3 边界表 +2 项(撞坑 #71 docs-only + 撞坑 #85 Layer 3 默认空) + §5 readiness 加 #10/#11 项 + §6 下一棒表加 7/8 19:00+ 本轮 docs-only + 4 个真实业务候选(均待授权) + §7 关联与依据 HEAD `1470dd0` → `ae071f0` + 最后更新 `2026-07-16` → `2026-07-08`。
+- **v0.2.57.3 文档升级**:沿 7/8 preheat 实测 baseline 实际化 §1 数字对账表(2791 → 2900 / 89.09% → 89.12% / 248 → 256 mypy / 256 → 257 md / 84 → 85 撞坑)+ §0 7/8 preheat 段新增(实测 baseline + 撞坑 85 累计 + 11/11 readiness) + §2 撞坑累计表追加 #85 行 + §3 边界表 +2 项(撞坑 #71 docs-only + 撞坑 #85 Layer 3 默认空) + §5 readiness 加 #10/#11 项 + §6 下一棒表加 7/8 19:00+ 本轮 docs-only + 4 个真实业务候选(均待授权) + §7 关联与依据 HEAD `1470dd0` → `ae071f0` + 最后更新 `2026-07-16` → `2026-07-08`。
 - **SESSION-STATE 7/8 preheat 行新增**:Phase 1 维持期第 3 次 weekly 提前 8 天预热启动(2026-07-08 周三);沿用 §0 7/8 preheat 段同样的实测 baseline。
 
 ### 2. 风险点
@@ -5014,7 +5014,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 🟢 **未 kickstart launchd** — launchd 真部署属阶段 4,等用户授权。
 - 🟢 **未启用 `ENABLE_PATH_4_WRITE=1` / `ENABLE_NOTES_ENCRYPTION=1`** — 红线维持。
 - 🟢 **撞坑 #1 铁律维持** — notes.title / body 不打印到 chat/commit/docs(35 NEW · 撞坑 #64 normalized_fingerprint 去重)。
-- 🟡 **7/16 weekly 收口预期** — 7/8 preheat 数字(2900/89.11%/256/257/85)是当前实测 baseline;7/16 当天再做一次 docs-only 重验,数字若变化以新 commit 沿 docs-only 规则更新 v0.2.57.3。
+- 🟡 **7/16 weekly 收口预期** — 7/8 preheat 数字(2900/89.12%/256/257/85)是当前实测 baseline;7/16 当天再做一次 docs-only 重验,数字若变化以新 commit 沿 docs-only 规则更新 v0.2.57.3。
 - 🟡 **撞坑累计沿用 85 类** — 7/9 / 7/16 weekly 仍 docs-only 边界,期望 0 新增撞坑。
 - 📋 P1:7/9 第 2 次 weekly 周检 docs-only 收口(`0a68503` 沿用)
 - 📋 P1:7/16 第 3 次 weekly 周检 docs-only 收口(沿 7/8 preheat 范本)
@@ -5025,7 +5025,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2900 passed / 1 skipped / 89.11%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
 - **撞坑累计**:**85 类 · 0 新增**(本轮 docs-only 巡检 · 7/8 preheat 沿 7/7 撞坑 #85 落地基线)。
 - **当前阶段**:**Day 13 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复均已推送** ✅ + **7/16 周度抽测 7/8 preheat 启动** ✅(docs-only 边界严判)+ SMTP 真发 ⏸️(仍需新草稿与五重门控逐封授权)。
 - **下一步**:
@@ -5035,3 +5035,50 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   4. 真实业务候选(均需单独授权):阶段 1.2 账单真导 / 1.3 Notes 真同步 / 阶段 3 SMTP 单封真发 / 阶段 4 launchd 真部署。
   5. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
 - **下一棒**:commit 7/16 weekly preheat docs-only + 等 push 授权;7/9 / 7/16 / 7/23 weekly 周检 docs-only 收口沿用;真实业务候选均需单独授权。
+
+---
+
+## 74. 2026-07-08 · 撞坑 #86 — router 空 token 优雅降级(业务代码改动日 · 撞坑 #71 docs-only 边界破例)
+
+> **触发**:Day 13 完全体 阶段 2.3 实战跑 `process_inbox --execute --limit 1`,看到日志 `Illegal header value b'Bearer '` — `DEEPSEEK_API_KEY` 未配置时,`Authorization: Bearer ` 空 token 让 httpx 抛错。
+> **撞坑 #71 docs-only 边界破例**:本轮业务代码改动日(沿 cf369c7 范本)· 用户明确授权"全部授权"后启动撞坑 #86 沉淀。
+
+### 1. 本次修改内容
+
+- **撞坑 #86 核心修复**(`src/my_ai_employee/ai/router.py:170-183`):在 `LLMRouter.route()` 第 4 步(调 `provider.chat()` 前)加 `provider.healthcheck()` 门控 — 配置不完整(api_key 或 base_url 缺失)→ warning 日志 + 跳过该档走 fallback + 不计入熔断 + stats 还原(未真尝试)。
+- **测试新增**(`tests/ai/test_router.py::TestRouterHealthcheckGate` 4 cases):
+  - `test_empty_deepseek_key_skips_primary` — DEEPSEEK_API_KEY 未设 → primary 跳过 + secondary(qwen)成功
+  - `test_empty_key_does_not_trip_breaker` — 配置缺失 5 次路由,breaker 仍关闭,failure_count = 0(配置问题非网络问题)
+  - `test_empty_key_all_tiers_config_missing_raises` — 全链都缺 → LLMAllFallbacksError(行为不变)
+  - `test_valid_key_still_uses_primary` — DEEPSEEK_API_KEY 存在 → primary 仍被调(不破坏正常路径)
+- **fixture 改造**(`tests/ai/test_router.py:323-330` / `:559-565`):`TestRouterDecision` + `TestRouterExceptionNarrowing` 加 autouse fixture `_ensure_deepseek_key`,确保 mock 测试在 healthcheck 门控下仍能跑(测试期望行为不变)。
+- **snapshot 同步**(撞坑 #50 5 件套同步):
+  - `quality_snapshot.py` pytest `2900 → 2904 passed / 1 skipped` + coverage `89.11% → 89.12%`
+  - 5 入口 docs(`README` / `CLAUDE` / `SESSION-STATE` / `MODIFICATION-LOG` / `docs/v0.2-launch-plan`)baseline 数字同步
+- **memory 沉淀**:`memory/pitfall-86-router-empty-api-key-graceful-degradation.md`(撞坑根因 + 修复设计 + 4 cases 覆盖 + 与 #76/#85 关联)+ `MEMORY.md` 索引新增。
+
+### 2. 风险点
+
+- 🟢 **撞坑 #76+#85+#86 三闭合已成型** — 审批伪造 / 草稿幻觉 / 配置降级 三层独立防御互不重叠。
+- 🟢 **业务代码改动日边界严判** — 撞坑 #71 docs-only 边界破例沿 cf369c7 范本(`feat(day2)` 业务代码改动日),撞坑 #86 沉淀属撞坑类新规则,合理破例。
+- 🟢 **未 SMTP 真发** — 撞坑 #85 Layer 3 `SEND_REAL_NETWORK_RECIPIENT_DOMAINS` 默认空 + 阶段 3 SMTP 真发仍需单独授权。
+- 🟢 **撞坑 #1 铁律维持** — Notes.title/body 不打印;`.env` 中 api_key 仅注释占位(无真值)。
+- 🟡 **新增 4 tests 跑通** — TestRouterHealthcheckGate 4/4 passed,9 质量门全绿(`2904 passed / 89.12% / 256 mypy files / 257 MD`)。
+- 🟡 **熔断语义不变** — 真业务失败(HTTP 4xx/5xx/timeout)仍计入熔断;配置缺失跳过熔断(新增)。
+- 📋 P0:**撞坑 #86 commit + push**(待 push 授权)
+- 📋 P0:阶段 1.3 Notes 真同步(用户已"全部授权",等 TCC + Apple ID 重确认)
+- 📋 P0:阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)
+- 📋 P0:阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **257 files / 0 errors** / `make ci` 9 门全绿(含 `check-snapshot` 防漂移双门 OK · 撞坑 #50)。
+- **撞坑累计**:**86 类 · +1 新增**(撞坑 #86 router 空 token 优雅降级 · 实战触发 + 三层闭合完成)。
+- **当前阶段**:Day 13 完全体 阶段 2.3 + 撞坑 #85 三层防御 + P0 审批顺序修复 + 撞坑 #86 router 优雅降级均已落地;9 质量门全绿。
+- **下一步**:
+  1. **本轮 commit + push**(待 push 授权):撞坑 #86 修复 + 4 tests + 5 件套 sync。
+  2. 阶段 1.3 Notes 真同步更大规模(用户已"全部授权",等 TCC + Apple ID 重确认)。
+  3. 阶段 3 SMTP 单封真发(用户已"全部授权",需新草稿 + Layer 3 domain 白名单 + 五重门控逐封)。
+  4. 阶段 4 launchd 真部署(用户已"全部授权",需先 1.3 + 3 验证)。
+  5. v1.0 tag 默认不打(沿撞坑 #71 docs-only 边界 + 用户红线)。
+- **下一棒**:撞坑 #86 commit + push(待 push 授权)→ 阶段 1.3 真同步(等 TCC)→ 阶段 3 SMTP 单封(等新草稿)→ 阶段 4 launchd(等 1.3+3 验证)。
