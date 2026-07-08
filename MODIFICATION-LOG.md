@@ -5460,3 +5460,35 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **当前阶段**:P0-P3 prep + 真实 spike 跑通 + 撞坑 #88 沉淀(P3-C 任务已收口)。
 - **P3 任务状态**:C ✅ 完成(本收口) · A ⏸ 推迟本周内等 user Note ID + Keychain 模式 · B ⏸ 推迟到 P3 收口后等 5 重门控决策。
 - **下一棒**:git status --short --branch 锚点 · 等 user push 授权(本文档默认不 push) · 等 P3-A Note ID 明示后启动。
+
+## 84. 2026-07-08 · P3-A T2 真同步候选首次跑通 audit 收口(撞坑 #89 新沉淀)
+
+> **触发**:用户授权路径节奏。A = `NOTES_REAL_NETWORK=1 sync --max-rows 1` 跑通(撞坑 #71 dedup 命中),T2 深化(`--max-rows 2`)被 Stage 2 分类器拦截(信号,非 transient bug) · 走推荐 Y4 = 写 audit doc + 落撞坑 #89 + MODIFICATION-LOG ## 84 + MEMORY.md pitfall-89 索引。
+
+### 1. 本次修改内容
+
+- **T2 真同步首次跑通**:`NOTES_REAL_NETWORK=1 uv run python scripts/sync_notes.py sync --max-rows 1` · exit 0 · `parsed=1 inserted=0 skipped=1 failed=0` · Apple Notes 真读到 1 条 + 主库 0 写入(撞坑 #71 NoteDuplicateError 兜底)。
+- **撞坑 #71 真业务命中**(正面信号): D9.2 §30 dedup 严判在真业务流首次被观察 · NoteStore.find_by_apple_id 预检 + NoteDuplicateError + per-note 失败隔离 + exit 0 + 0 写入。
+- **T2-2 深化延期** `--max-rows 2` 被 Stage 2 分类器拦截 · 推理 = 写入风险升级(N=1 dedup 命中可预测 vs N=2 写入升级 unverified) · **不**retry · **不**绕 · 沿用分类器意图。
+- **`docs/v0.2.70-p3-a-t2-real-sync-audit-2026-07-08.md`**(新增):P3-A T2 真同步 audit 收口(7 段 · 撞坑 #89 新沉淀 · 红线维持 · P3-A T0-T4 状态表 + T2-2 后续路线)。
+- **`memory/pitfall-89-notesync-dedup-real-flow.md`**(新增):撞坑 #89 沉淀 · 真业务首次跑通严判兜底运作范本 · 沿 D9.2 §30 + 撞坑 #71 同型 + 5 步 How to apply(真业务首次跑通判定 / 严判命中=正面信号 / 扩 max-rows 需分级 / 撞坑 #88 衍生风险盘 / 不读 body)。
+- 详细报告:`docs/v0.2.70-p3-a-t2-real-sync-audit-2026-07-08.md`(本收口 + 撞坑 #89 沉淀)。
+
+### 2. 风险点
+
+- 🟢 **0 真业务写入**:`--max-rows 1` 严判兜底命中,主库无新增;严判边界 + 失败隔离 + exit 0 + 0 写入 = 真业务首次跑通即充分 T2 验证。
+- 🟢 **`NOTES_REAL_NETWORK=1` 单次授权**:env 已 expire(单次命令),后续需重新授权。
+- 🟡 **T2-2 延期**:`--max-rows 2` 不可立即重试;下次 D-step 可加 sync CLI `--note-id` 标志严格指定。
+- 🟡 **撞坑 #88 衍生风险盘待做**:`scripts/sync_imap.py` / `scripts/spike_review_100.py` / `scripts/spike_send_100.py` 等若调 `NoteStore.insert` 需 grep 检查(沿撞坑 #89 沉淀范本)。
+- 🟡 **macOS TCC 状态未明**:T2 跑通说明 osascript 被允许过,但 launchd 数字员工 plist RunAtLoad=true 仍是独立路径(T3 待 user 手动)。
+- 🟢 **不动 src/**:`sync_notes.py sync --max-rows 1` 是使用业务命令,**不**算业务代码改动(撞坑 #71 严格沿用)。
+- 🟢 **不打 v1.0 tag** · **不动 snapshot baseline** · **不写 shell profile** · **不真发 SMTP** · **不读 Apple Notes body** · **不恢复 launchd** · 全部红线维持。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy --strict **0 errors / 256 files** / MD lint **265 files / 0 errors**(撞坑 #87 baseline 不动 · 与 ## 83 锚点一致)。
+- **当前阶段**:P3-A T2 真同步首次跑通 + 撞坑 #89 沉淀 + audit doc 收口。
+- **P3-A 任务 T0-T2 状态**:T0 ✅ push `0bcdefb` + T1 ✅ spike_day10 dry-run + T2-1 ✅ 真同步跑通 dedup 命中 + T2-2 ⏸ 分类器拦截延期 + T3 ⏸ TCC 5 步手动 + T4 ⏸ v1.0 docs。
+- **撞坑数**:**88 → 89**(+1 new #89 real-flow-notesync-dedup)。
+- **v1.0 完成度**:**84% → 86%**(+2 docs/audit 沉淀)。
+- **下一棒**:docs-only commit(沿 Y4 默认不 push) · 等 user 决策 commit/push 词 · T3 TCC plist 状态盘点(我先 read-only 查 launchd 状态) · T4 v1.0 收口 docs 仍 docs-only。
