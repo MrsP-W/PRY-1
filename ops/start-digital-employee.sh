@@ -54,6 +54,10 @@ DASHBOARD_PID_FILE="$DATA_DIR/dashboard.pid"
 # 启动入口
 RUN_MENUBAR="$PROJECT_ROOT/scripts/run_menu_bar.py"
 
+# 撞坑 #93 修复(2026-07-09):launchd 子进程 PATH 不含 /opt/homebrew/bin(uv 安装位置),
+# 用 command -v 优先探测 PATH · fallback 绝对路径,沿 v1.0 launch runbook 范本(可移植)
+UV_BIN="$(command -v uv 2>/dev/null || echo /opt/homebrew/bin/uv)"
+
 # 颜色(沿 ops/start-menubar.sh + scripts/launchd_install.sh 范本)
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -188,7 +192,7 @@ preflight_check() {
     esac
 
     # 4. alembic head 状态(仅检查 DDL,不实际升级)
-    if cd "$PROJECT_ROOT" && uv run alembic current >/dev/null 2>&1; then
+    if cd "$PROJECT_ROOT" && "${UV_BIN}" run alembic current >/dev/null 2>&1; then
         ok "  [4/9] alembic current OK"
     else
         warn "  [4/9] alembic current 失败(可能未跑 alembic upgrade head)"
@@ -204,7 +208,7 @@ preflight_check() {
     fi
 
     # 6. Dashboard 服务入口
-    if cd "$PROJECT_ROOT" && uv run python -c "import my_ai_employee.dashboard.server" 2>/dev/null; then
+    if cd "$PROJECT_ROOT" && "${UV_BIN}" run python -c "import my_ai_employee.dashboard.server" 2>/dev/null; then
         ok "  [6/9] dashboard.server 模块 OK"
     else
         warn "  [6/9] dashboard.server 导入失败"
@@ -251,13 +255,13 @@ cmd_start_menubar() {
     mkdir -p "$DATA_DIR"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "[dry-run] DASHBOARD_REAL_DB=1 nohup uv run python $RUN_MENUBAR > $MENUBAR_LOG 2>&1 &"
+        echo "[dry-run] DASHBOARD_REAL_DB=1 nohup ${UV_BIN} run python $RUN_MENUBAR > $MENUBAR_LOG 2>&1 &"
         ok "菜单栏 dry-run 完成"
         return 0
     fi
 
     cd "$PROJECT_ROOT"
-    nohup env DASHBOARD_REAL_DB=1 uv run python "$RUN_MENUBAR" > "$MENUBAR_LOG" 2>&1 &
+    nohup env DASHBOARD_REAL_DB=1 "${UV_BIN}" run python "$RUN_MENUBAR" > "$MENUBAR_LOG" 2>&1 &
     local pid=$!
     echo "$pid" > "$MENUBAR_PID_FILE"
 
@@ -284,13 +288,13 @@ cmd_start_dashboard() {
     mkdir -p "$LOG_DIR"
 
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "[dry-run] DASHBOARD_REAL_DB=1 nohup uv run python -m my_ai_employee.dashboard.server > $DASHBOARD_LOG 2>&1 &"
+        echo "[dry-run] DASHBOARD_REAL_DB=1 nohup ${UV_BIN} run python -m my_ai_employee.dashboard.server > $DASHBOARD_LOG 2>&1 &"
         ok "Dashboard dry-run 完成"
         return 0
     fi
 
     cd "$PROJECT_ROOT"
-    nohup env DASHBOARD_REAL_DB=1 uv run python -m my_ai_employee.dashboard.server > "$DASHBOARD_LOG" 2>&1 &
+    nohup env DASHBOARD_REAL_DB=1 "${UV_BIN}" run python -m my_ai_employee.dashboard.server > "$DASHBOARD_LOG" 2>&1 &
     local pid=$!
     echo "$pid" > "$DASHBOARD_PID_FILE"
 

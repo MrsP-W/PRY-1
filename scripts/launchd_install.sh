@@ -230,7 +230,8 @@ echo "📋 部署 ${TARGET_SCRIPT}(动态月份)"
     echo "#!/usr/bin/env bash"
     echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
     echo "MONTH=\$(date -v-1d +%Y-%m 2>/dev/null || date -d 'last month' +%Y-%m)"
-    echo "exec uv run --project \"${PROJECT_ROOT}\" python -m scripts.monthly_report generate --month \"\${MONTH}\""
+    # 撞坑 #93 修复(2026-07-09):launchd 子进程 PATH 不含 /opt/homebrew/bin(uv 安装位置),用绝对路径
+    echo "exec /opt/homebrew/bin/uv run --project \"${PROJECT_ROOT}\" python -m scripts.monthly_report generate --month \"\${MONTH}\""
 } > "${TARGET_SCRIPT}"
 chmod +x "${TARGET_SCRIPT}"
 echo "✅ ${TARGET_SCRIPT} 部署完成"
@@ -252,7 +253,7 @@ if [[ -z "\${IMAP_USER}" ]]; then
   echo 'IMAP_USER not set in .env' >&2
   exit 2
 fi
-exec uv run --project "${PROJECT_ROOT}" python scripts/sync_imap.py sync --provider qq --email "\${IMAP_USER}"
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python scripts/sync_imap.py sync --provider qq --email "\${IMAP_USER}"
 EOF
 chmod +x "${TARGET_IMAP_SCRIPT}"
 echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"

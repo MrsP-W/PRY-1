@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2913 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **278 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91 → 278) |
-| **下一棒** | P3-A T3 L3(#91 真实 load 复验,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
+| **质量基线** | **2917 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **282 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91/92/93 → 282) |
+| **下一棒** | P3-A T3 L4(撞坑 #93 真实 load 复验,需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5711,3 +5711,45 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **当前阶段**:P3-A T3 L2 撞坑 #92 修复路径 B 收口 · 9/9 质量门 + check-snapshot + deploy-only 全绿 · 待 user 授权 T3 L3 launchctl load -w 数字员工实测验证 #92 修复 B 命中。
 - **完成度**:项目约 **94%**;可无人值守生产运行约 **90%**;v1.0 发布就绪约 **91%**(撞坑 #92 修复 +2/+4/-0)。
 - **下一棒**:user 授权 T3 L3 launchctl load -w 实测 → 撞坑 #92 修复 B 命中验证 → 撞坑 #90 launchd 持久化方案 D-step 评估 → docs/v0.2.67 §19-21 误归校正(docs-only 可选)→ P3-B SMTP → P4 24h → P5 v1.0 tag 评估(默认不打)。
+
+## 91. v0.2.75 撞坑 #93 修复收口(launchd uv PATH 绝对路径 + ${UV_BIN} 检测,2026-07-09)
+
+### 1. 本次修改内容
+
+- **commit hash**:本轮 commit(待 push · ahead 1)
+- **主题**:撞坑 #93 修复 — launchd 子进程 PATH 不含 `/opt/homebrew/bin`(uv 安装位置)· wrapper 改绝对路径 + ops 脚本 `${UV_BIN}` 检测
+- **改动范围**:**3 代码 + 1 test + 1 snapshot + 5 state files + 4 new docs = 14 files / 约 +650 lines**
+  - `ops/start-digital-employee.sh`(修改):顶部加 `UV_BIN="$(command -v uv 2>/dev/null || echo /opt/homebrew/bin/uv)"` + 替换 6 处 `uv`(2 precheck + 2 real nohup + 2 dry-run echo)
+  - `scripts/launchd_install.sh`(修改):wrapper heredoc 模板(monthly-report + imap-sync)改 `/opt/homebrew/bin/uv run --project` 绝对路径
+  - `tests/scripts/test_launchd_install.py`(修改):新增 H1-H4 测试(UV_BIN 检测 + 6 处全替换 + 2 wrapper 绝对路径)
+  - `src/my_ai_employee/quality_snapshot.py`(修改):lint 278 → 282(撞坑 #87 self-drift 校准)
+  - `README.md` / `CLAUDE.md` / `SESSION-STATE.md` / `MODIFICATION-LOG.md` / `docs/v0.2-launch-plan.md`(5 件套 sync 282)
+  - `docs/v0.2.74.1-p3-a-92-preload-audit-2026-07-09.md`(新增):撞坑 #92 修复后 1h 只读巡检报告
+  - `docs/v0.2.75-p3-a-t3-l3-93-fix-2026-07-09.md`(新增):撞坑 #93 修复详细 docs
+  - `memory/pitfall-93-launchd-uv-path-not-in-path.md`(新增):撞坑 #93 沉淀
+  - `memory/checkpoint-2026-07-09-p3-a-t3-l3-93-fix.md`(新增):本 checkpoint
+
+- **链接到 reports/**:[docs/v0.2.75-p3-a-t3-l3-93-fix-2026-07-09.md](docs/v0.2.75-p3-a-t3-l3-93-fix-2026-07-09.md) 详细修复 + [memory/pitfall-93-launchd-uv-path-not-in-path.md](memory/pitfall-93-launchd-uv-path-not-in-path.md) 沉淀范本
+
+### 2. 风险点
+
+- 🟢 **撞坑 #93 修复实施完成**:`ops/start-digital-employee.sh` + `scripts/launchd_install.sh` 路径迁移 + UV_BIN 检测 + 4 新测试(H1-H4)· 47/47 launchd 测试 PASSED · 9/9 质量门 + check-snapshot 全绿 · 业务代码改动日撞坑 #71 docs-only 边界破例(实施必需)
+- 🟡 **数字员工 launchd 仍 exit 1**(撞坑 #93 修复代码 + 测试就位 · 待 user 授权 T3 L4 launchctl load -w 实测验证):
+  - 实施后预期:`tail ~/Library/Logs/MyAIEmployee/menu_bar.log` 无 `env: uv: No such file or directory`
+  - 实施后预期:`tail ~/Library/Logs/MyAIEmployee/dashboard.log` 显示 `Dashboard 已启动(PID=...)`
+  - 实施后预期:`tail ~/Library/Logs/MyAIEmployee/digital-employee.out.log` 9/9 预检全 OK(原本 4/9 alembic + 6/9 dashboard import 也会因 uv 找到而通过)
+  - 实施后预期:`launchctl list | grep myaiemployee` 数字员工 exit 0
+- 🟡 **撞坑 #90 launchd session-bound 仍未触及**(9.5h 内 active 衰减 · 4 候选持久化方案 — D-step 评估)
+- 🟡 **docs/v0.2.67 §19-21 误归** 未校正(撞坑 #91/#92/#93 真实根因,沿 docs-only 边界可选)
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag
+- 🟢 **撞坑 #87 self-drift 已校准**(`2913/1/278/89.10%` → `2917/1/282/89.10%`,5 件套 baseline 全 sync)
+- ⚠️ **coverage 89.10%(无变化)**:沿 [[pitfall-50]] 范本不入校准
+- ⚠️ **业务代码改动日**:本轮撞坑 #71 docs-only 边界破例(沿 v0.2.67 D5.7.0 + #91/#92 修复范本,可接受)
+- ⚠️ **H2 测试 bug 修复**:f-string `${{UV_BIN}}` 转义 + regex `\$\{UV_BIN\}[\"']?\s+run` 兼容 quoted/unquoted 两种形式
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2917 passed / 1 skipped / 89.10%** / mypy **256 files / 0 errors** / MD lint **282 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 修复实施完成)。
+- **当前阶段**:P3-A T3 L3 撞坑 #93 修复收口 · 9/9 质量门 + check-snapshot + 47/47 launchd 测试全绿 · 待 user 授权 T3 L4 launchctl load -w 数字员工实测验证 #93 修复命中。
+- **完成度**:项目约 **94%**;可无人值守生产运行约 **91%**;v1.0 发布就绪约 **92%**(撞坑 #93 修复 +0/+1/+1)。
+- **下一棒**:user 授权 T3 L4 launchctl load -w 实测 → 撞坑 #93 修复命中验证 → 撞坑 #90 launchd 持久化方案 D-step 评估 → docs/v0.2.67 §19-21 误归校正(docs-only 可选)→ P3-B SMTP → P4 24h → P5 v1.0 tag 评估(默认不打)。

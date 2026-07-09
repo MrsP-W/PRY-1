@@ -409,3 +409,62 @@ def test_g2_start_digital_employee_uses_app_support_data_dir():
     assert 'LOG_DIR="$DATA_DIR/logs"' not in text  # 不再用链式 PROJECT_ROOT/data/logs
     # LOG_DIR 必用 ~/Library/Logs/MyAIEmployee
     assert 'LOG_DIR="${MY_AI_EMPLOYEE_LOG_DIR:-$HOME/Library/Logs/MyAIEmployee}"' in text
+
+
+# ===== H. 撞坑 #93 修复 — uv 绝对路径(2026-07-09) =====
+
+
+def test_h1_start_digital_employee_detects_uv_bin_with_fallback():
+    """H1. 撞坑 #93 修复:ops/start-digital-employee.sh 必 UV_BIN 检测(command -v 优先 + 绝对路径 fallback)."""
+    text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
+    assert 'UV_BIN="$(command -v uv 2>/dev/null || echo /opt/homebrew/bin/uv)"' in text
+
+
+def test_h2_start_digital_employee_uses_uv_bin_for_all_invocations():
+    """H2. 撞坑 #93 修复:所有 uv run 调用必用 ${UV_BIN}(6 处:precheck alembic/dashboard + 2 real + 2 dry-run echo)."""
+    text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
+    # 移除注释后,不应出现裸的 `uv run`(必须 ${UV_BIN} run)
+    # 排除注释里的描述性 `uv run`
+    import re
+
+    # 抽取非注释行
+    code_lines = [
+        line
+        for line in text.splitlines()
+        if not line.lstrip().startswith("#")
+    ]
+    code_text = "\n".join(code_lines)
+    # 禁止裸 uv run(只能 ${UV_BIN} run)
+    bare_uv_run = re.findall(r"(?<!\$\{UV_BIN\})\buv\s+run\b", code_text)
+    assert not bare_uv_run, (
+        "撞坑 #93 修复:所有 uv run 必须 ${{UV_BIN}} run,发现裸调用 " + str(bare_uv_run)
+    )
+    # 必有 6 处 ${UV_BIN} run(2 precheck + 2 real nohup + 2 dry-run echo)
+    # 匹配两种形式:"${UV_BIN}" run(quoted)与 ${UV_BIN} run(unquoted in echo)
+    uv_bin_count = len(re.findall(r"\$\{UV_BIN\}[\"']?\s+run\b", code_text))
+    assert uv_bin_count >= 6, (
+        "撞坑 #93 修复:${{UV_BIN}} run 应至少 6 处(precheck alembic/dashboard + menubar/dashboard nohup + 2 dry-run echo),实际 "
+        + str(uv_bin_count)
+    )
+
+
+def test_h3_install_sh_monthly_report_wrapper_uses_absolute_uv_path():
+    """H3. 撞坑 #93 修复:monthly-report wrapper 必用绝对路径 /opt/homebrew/bin/uv(launchd 子进程 PATH 不含 uv)."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    monthly_block_start = text.index("📋 部署 ${TARGET_SCRIPT}(动态月份)")
+    monthly_block_end = text.index("✅ ${TARGET_SCRIPT} 部署完成")
+    monthly_block = text[monthly_block_start:monthly_block_end]
+    assert "/opt/homebrew/bin/uv run --project" in monthly_block, (
+        f"撞坑 #93 修复:monthly-report wrapper 必用绝对路径,实际 block:\n{monthly_block}"
+    )
+
+
+def test_h4_install_sh_imap_wrapper_uses_absolute_uv_path():
+    """H4. 撞坑 #93 修复:imap-sync wrapper 必用绝对路径 /opt/homebrew/bin/uv."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
+    imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
+    imap_block = text[imap_block_start:imap_block_end]
+    assert "exec /opt/homebrew/bin/uv run --project" in imap_block, (
+        f"撞坑 #93 修复:imap-sync wrapper 必用绝对路径,实际 block:\n{imap_block}"
+    )
