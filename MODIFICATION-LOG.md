@@ -5822,3 +5822,53 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **当前阶段**:#94 B 路径代码修复候选已落地;数字员工仍 bootout,待 user 授权真实 load 复验
 - **完成度**:项目约 **95%**;可无人值守生产运行约 **88%**;v1.0 发布就绪约 **89%**
 - **下一棒**:授权 `launchctl load -w` 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)
+
+---
+
+## 93. v0.2.77 T3 L4 撞坑 #94 B 路径实战验证收口 + 撞坑 #95 NEW 暴露(2026-07-09)
+
+### 1. 本次修改内容
+
+- **commit hash**:本轮 commit(待 push · ahead 1)
+- **主题**:T3 L4 撞坑 #94 B 路径(`make_sqlalchemy_engine(db_path=...)` 长生命周期连接重开)真实 launchctl load -w 复验完全通过 + 撞坑 #95 NEW 暴露(`ProcessType=Background` 不允许 fork)
+- **改动范围**:**4 docs/memory + 5件套 sync = 9 files / 约 +580 lines**(纯 docs-only,无代码改动 · #94 B 路径修复已在 c8049ec 由 user 落地)
+  - `docs/v0.2.77-p3-a-t3-l4-94-b-verify-95-expose-2026-07-09.md`(新增):#94 B 路径实战验证 + #95 NEW 暴露 docs
+  - `memory/pitfall-95-launchd-background-process-type-no-fork.md`(新增):撞坑 #95 沉淀 + 4 修复路径候选
+  - `memory/checkpoint-2026-07-09-p3-a-t3-l4-94-b-verify.md`(新增):T3 L4 #94 复验 + #95 checkpoint
+  - `README.md` / `CLAUDE.md` / `SESSION-STATE.md` / `MODIFICATION-LOG.md` / `docs/v0.2-launch-plan.md`(5 件套 sync 285 · 撞坑 #87 self-drift 校准)
+- **核心验证执行**(撞坑 #94 B 路径实战通过):
+  - HEAD `74dc9db` = `fix(launchd): #94 menu_bar db_path sqlalchemy engine` · 已 push
+  - 9/9 质量门 全绿(mypy 257/0 + lint 285/0 + check-snapshot 双门 OK 2920/1/285md)
+  - 备份+清干 log → `cp /tmp/digital-employee.{err,out}.log.bak2` + `cp /tmp/menu_bar.log.bak2` + `: > log`
+  - `launchctl load -w com.myaiemployee.digital-employee.plist` → load OK · RunAtLoad 触发
+  - 10 秒后 `launchctl list` 3/3 注册 + 数字员工 exit 0(从 c8049ec 时 exit 1 → 0)
+  - out.log:9/9 预检全过 ✅ + 菜单栏 PID=26648 + Dashboard PID=26659 + 🎉 启动完成
+  - err.log:**完全空**(无任何错误)
+  - menu_bar.log:DB 反复 open/close 模式(B 路径生效)
+- **撞坑 #95 NEW 暴露**:
+  - 30 秒后 `pgrep` 空 → menu_bar + dashboard 全部退出
+  - `lsof -i :8765` 空 → 端口未监听
+  - `launchctl print` → `state=not running · active count=0`
+  - plist `ProcessType=Background` 禁止 fork → launchd 回收 subprocess
+  - 4 修复路径候选:A docs-only 接受 / B 改 plist `ProcessType=Interactive` / C 拆守护 + nohup setsid / D 不走 launchd 改 tmux daemon
+- **bootout 维持**:撞坑 #95 决定数字员工 launcher 一次性 RunAtLoad 模式可工作(8 秒内 9/9 全过 + 启动 menu_bar/dashboard)但 subprocess 立即被回收 · 1h 观察以 agent + imap-sync 为锚
+- **链接到 reports/**:[docs/v0.2.77-p3-a-t3-l4-94-b-verify-95-expose-2026-07-09.md](docs/v0.2.77-p3-a-t3-l4-94-b-verify-95-expose-2026-07-09.md) 详细收口 + [memory/pitfall-95-launchd-background-process-type-no-fork.md](memory/pitfall-95-launchd-background-process-type-no-fork.md) 沉淀范本
+
+### 2. 风险点
+
+- ✅ **撞坑 #94 B 路径修复实战完全通过**:menu_bar.log DB 反复 open/close 模式 + 无 RuntimeError + 数字员工 exit 0
+- ⚠️ **撞坑 #95 NEW 暴露**:`ProcessType=Background` 不允许 fork · menu_bar/dashboard 启动后 50s 内被 launchd 回收
+  - 触发链路:launcher fork menu_bar/dashboard → launchd 检测 Background fork 行为 → 回收 subprocess
+  - 4 修复路径候选:**A** docs-only 接受 launcher 一次性模式(0 改动 · 1h 观察以 agent+imap-sync 为锚) / **B** 改 plist `ProcessType=Interactive`(需 GUI session) / **C** 拆守护进程 + nohup setsid / **D** 不走 launchd 改 tmux daemon · **等 user 决策**
+  - 影响范围:数字员工 UI/HTTP 子进程常驻受限 · 数字员工核心 9/9 预检 + launcher 启动序列仍可达
+- 🟡 **1h 观察窗启动中**:选项 D · A + B 混合 · 锚 launchd 注册表稳定性 · 0 改动
+- 🟡 **撞坑 #90 launchd session-bound 仍未实施**:reboot/logout 后 agent + imap-sync 失效 · 4 候选持久化方案待 D-step 评估
+- 🟢 **数字员工 plist 仍注册**:keepAlive=false + RunAtLoad=true · 每次 load 触发一次性 launcher
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag · 不写 shell profile
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #94 B 路径代码修复 + 撞坑 #95 NEW 暴露待决策)· commit ahead 1 待 push
+- **当前阶段**:P3-A T3 L4 撞坑 #94 B 路径实战验证 ✅ + 撞坑 #95 NEW 暴露 ⚠️ · 1h 观察窗启动中 · 等 user 决策 #95 修复路径(A/B/C/D)
+- **完成度**:项目约 **94%**(不变)· 可无人值守生产运行约 **82%**(↓ 3pp · #95 限制 menu_bar/dashboard 常驻)· v1.0 发布就绪约 **87%**(不变 · #94 修复 +0% v1.0)
+- **下一棒**:user 决策 #95(推荐 A 立即 + B/C 后续 D-step)→ docs/v0.2.78 #95 修复 D-step → 24h 完整观察窗(锚 3/3 launchd job)→ v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
