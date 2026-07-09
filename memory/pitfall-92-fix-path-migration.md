@@ -63,9 +63,9 @@ LOG_DIR="${MY_AI_EMPLOYEE_LOG_DIR:-$HOME/Library/Logs/MyAIEmployee}"
 
 ## 9 门 + check-snapshot 双门
 
-实测结果:`2913 passed / 1 skipped / 89.10% / 275 MD / mypy 256 files` · make check-snapshot 双门 OK。
+实测结果:`2913 passed / 1 skipped / 89.10% / 278 MD / mypy 256 files` · make check-snapshot 双门 OK。
 
-撞坑 #87 self-referential drift 校准:`2908/1/270/89.12%` → `2913/1/275/89.10%`(5 件套 baseline 同步,沿 [[day11-snapshot-guardian-drift-2026-07-04]] 第 7 步)。
+撞坑 #87 self-referential drift 校准:`2908/1/270/89.12%` → `2913/1/278/89.10%`(5 件套 baseline 同步,沿 [[day11-snapshot-guardian-drift-2026-07-04]] 第 7 步)。
 
 ## deploy-only 实测
 

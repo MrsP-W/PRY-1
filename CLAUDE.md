@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
-> 最后更新:2026-07-09(**Day 13 阶段 2.3 + 撞坑 #86 router 空 token 优雅降级已推送 ✅ + 撞坑 #91 启动链路修复 ✅ + v0.2.73 deploy-only 收口** · outbox 2 条已 `cancelled` · 未 SMTP 外发 · P0 `send_one_approved` 先校验收件人再审批 · 9 质量门 **2913 passed / 1 skipped / 89.10%** / **275 MD** / mypy **256 files** · **P0-P3 prep 远端同步+冻结基线+launchd 真 install+P3 启动准备+snapshot 修复已 push**(当前 HEAD 以 `git rev-parse --short HEAD` 为准) · **v0.2.65 preflight + v0.2.66 P2 preflight + v0.2.67 P2 真 install + v0.2.68 P3 prep + v0.2.69 P3-C + 撞坑 #81 bootout 收口 docs-only**(3 wrapper + 3 plist 部署 · agent + imap-sync 2/3 job 仍注册 · 数字员工 1/3 TCC 授权后手动 `launchctl load -w`))
+> 最后更新:2026-07-09(**Day 13 阶段 2.3 + 撞坑 #86 router 空 token 优雅降级已推送 ✅ + 撞坑 #91 启动链路修复 ✅ + v0.2.73 deploy-only 收口** · outbox 2 条已 `cancelled` · 未 SMTP 外发 · P0 `send_one_approved` 先校验收件人再审批 · 9 质量门 **2913 passed / 1 skipped / 89.10%** / **278 MD** / mypy **256 files** · **P0-P3 prep 远端同步+冻结基线+launchd 真 install+P3 启动准备+snapshot 修复已 push**(当前 HEAD 以 `git rev-parse --short HEAD` 为准) · **v0.2.65 preflight + v0.2.66 P2 preflight + v0.2.67 P2 真 install + v0.2.68 P3 prep + v0.2.69 P3-C + 撞坑 #81 bootout 收口 docs-only**(3 wrapper + 3 plist 部署 · agent + imap-sync 2/3 job 仍注册 · 数字员工 1/3 TCC 授权后手动 `launchctl load -w`))
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。
-**当前阶段**：**Day 13 阶段 2.3 + 撞坑 #86 + 撞坑 #81 实测命中 + P0-P3 prep + P3-C dry-run 收口**(`process_inbox --execute --limit 10` 真跑 · outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · 未 SMTP 外发 · P0 审批顺序修复 · router 空 token 优雅降级已推送 · **HEAD / origin/main 以 `git status --short --branch` + `git rev-parse --short HEAD` 为准** · **P1 质量门 3 门全绿(lint/check-snapshot/mypy)** · **P2 launchd 完整 install 已完成;T3 L2 wrapper 代码修复 + deploy-only runtime 刷新完成** · **撞坑 #91 修复完成(wrapper 改调 ~/bin runner;未自动 load · agent + imap-sync 2/3 job 仍注册 · 数字员工待授权实测)** · **P3-C 失败审计 dry-run 已收口(0 SMTP/0 Notes 真同步 · 撞坑 #88 沉淀)** · 9/9 质量门 **2913 passed / 1 skipped / 89.10%** / **275 MD** / mypy **256 files** · **红线全维持**(撞坑 #1/#18/#59/#65/#71/#76/#78/#79/#81/#85/#86/#88 · 默认不启用 `ENABLE_NOTES_ENCRYPTION=1` / `ENABLE_PATH_4_WRITE=1` · 1-click SMTP 真发仍需每次临时授权 · P3 真实业务逐封命名收件人授权)).
+**当前阶段**：**Day 13 阶段 2.3 + 撞坑 #86 + 撞坑 #81 实测命中 + P0-P3 prep + P3-C dry-run 收口**(`process_inbox --execute --limit 10` 真跑 · outbox 2 条撞坑 #85 幻觉草稿已 `cancelled` · 未 SMTP 外发 · P0 审批顺序修复 · router 空 token 优雅降级已推送 · **HEAD / origin/main 以 `git status --short --branch` + `git rev-parse --short HEAD` 为准** · **P1 质量门 3 门全绿(lint/check-snapshot/mypy)** · **P2 launchd 完整 install 已完成;T3 L2 wrapper 代码修复 + deploy-only runtime 刷新完成** · **撞坑 #91 修复完成(wrapper 改调 ~/bin runner;未自动 load · agent + imap-sync 2/3 job 仍注册 · 数字员工待授权实测)** · **P3-C 失败审计 dry-run 已收口(0 SMTP/0 Notes 真同步 · 撞坑 #88 沉淀)** · 9/9 质量门 **2913 passed / 1 skipped / 89.10%** / **278 MD** / mypy **256 files** · **红线全维持**(撞坑 #1/#18/#59/#65/#71/#76/#78/#79/#81/#85/#86/#88 · 默认不启用 `ENABLE_NOTES_ENCRYPTION=1` / `ENABLE_PATH_4_WRITE=1` · 1-click SMTP 真发仍需每次临时授权 · P3 真实业务逐封命名收件人授权)).
 
 ### 🎯 L4 Agent 层 7 角色（事实校验：src/my_ai_employee/agents/ 下 7 普通文件,沿 D5.5.3 P0 修复软链 → 实际文件复制）
 

@@ -11,7 +11,7 @@ metadata:
 
 ## 🎯 一句话
 
-撞坑 #92 业务代码路径 Documents 沙箱修复路径 B 实施完成:`ops/start-digital-employee.sh` + `scripts/launchd_install.sh` + `tests/scripts/test_launchd_install.py` 三件套协同改动,4 files / ~80 lines 净增 / 5 新测试(F8/F9/F10/G1/G2)+ 撞坑 #87 #87 校准 5 件套 baseline sync(`2908/1/270/89.12%` → `2913/1/275/89.10%`)· 9/9 质量门 + check-snapshot 双门 OK · `bash scripts/launchd_install.sh deploy-only` 实测成功(`.env` 自动迁移 2355 bytes / 58 lines,3 wrapper + 3 plist 部署)· launchctl list 终态 2/3 active + 数字员工 bootout · **user 单独授权后 T3 L3 实测验证 #92 修复 B 是否真命中(预期 err log 无 `Operation not permitted` + 9/9 预检 OK + 菜单栏启动成功)**。
+撞坑 #92 业务代码路径 Documents 沙箱修复路径 B 实施完成:`ops/start-digital-employee.sh` + `scripts/launchd_install.sh` + `tests/scripts/test_launchd_install.py` 三件套协同改动,4 files / ~80 lines 净增 / 5 新测试(F8/F9/F10/G1/G2)+ 撞坑 #87 #87 校准 5 件套 baseline sync(`2908/1/270/89.12%` → `2913/1/278/89.10%`)· 9/9 质量门 + check-snapshot 双门 OK · `bash scripts/launchd_install.sh deploy-only` 实测成功(`.env` 自动迁移 2355 bytes / 58 lines,3 wrapper + 3 plist 部署)· launchctl list 终态 2/3 active + 数字员工 bootout · **user 单独授权后 T3 L3 实测验证 #92 修复 B 是否真命中(预期 err log 无 `Operation not permitted` + 9/9 预检 OK + 菜单栏启动成功)**。
 
 ## HH:MM [T3 L2 #92 修复 B 收口]
 
@@ -19,7 +19,7 @@ metadata:
 - 撞坑 #92 修复 B 实施:`ops/start-digital-employee.sh` 路径变量(`APP_SUPPORT_DIR` + `ENV_FILE` + `DATA_DIR` + `LOG_DIR`)+ `scripts/launchd_install.sh` 改 heredoc(`cat << EOF`) + APP_SUPPORT setup + .env 自动迁移 + 3 wrapper export 三变量
 - 新增 5 测试:F8(APP_SUPPORT setup)+ F9(wrapper 显式 export)+ F10(IMAP wrapper 用 APP_SUPPORT_ENV)+ G1(start 读 ENV_FILE)+ G2(start DATA_DIR 用 APP_SUPPORT)
 - F5 同步调整:从 `echo "..."` 转义形式(`\\"${VAR}\\"`)改 heredoc 形式(`"${VAR}"`)
-- 撞坑 #87 self-drift 校准 5 件套 baseline sync:`2908/1/270/89.12%` → `2913/1/275/89.10%`
+- 撞坑 #87 self-drift 校准 5 件套 baseline sync:`2908/1/270/89.12%` → `2913/1/278/89.10%`
 - 9/9 质量门 + check-snapshot 双门 OK
 - deploy-only 实测 6/6 wrapper 文件就位 + 3 plist 部署 + .env 自动迁移(`Documents/.env` 58L → `~/Library/Application Support/MyAIEmployee/.env` 58L · 2355 bytes)
 
@@ -81,7 +81,7 @@ metadata:
 
 | 维度 | 状态 |
 |------|------|
-| 9/9 质量门 | ✅ 全绿(2913/1/89.10/275/256)|
+| 9/9 质量门 | ✅ 全绿(2913/1/89.10/278/256)|
 | launchd 实际 | 2/3 active(agent + imap-sync)+ 数字员工 bootout |
 | 撞坑数 | 92(= 上轮 · #92 修复不增)|
 | v1.0 完成度 | 89% → **91%** |

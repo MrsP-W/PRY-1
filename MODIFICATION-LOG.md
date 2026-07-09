@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2913 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **275 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91 → 275) |
+| **质量基线** | **2913 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **278 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91 → 278) |
 | **下一棒** | P3-A T3 L3(#91 真实 load 复验,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5707,7 +5707,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2913 passed / 1 skipped / 89.10%** / mypy **256 files / 0 errors** / MD lint **275 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #92 修复 B 实施完成)。
+- **进度数字**:**2913 passed / 1 skipped / 89.10%** / mypy **256 files / 0 errors** / MD lint **278 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #92 修复 B 实施完成)。
 - **当前阶段**:P3-A T3 L2 撞坑 #92 修复路径 B 收口 · 9/9 质量门 + check-snapshot + deploy-only 全绿 · 待 user 授权 T3 L3 launchctl load -w 数字员工实测验证 #92 修复 B 命中。
 - **完成度**:项目约 **94%**;可无人值守生产运行约 **90%**;v1.0 发布就绪约 **91%**(撞坑 #92 修复 +2/+4/-0)。
 - **下一棒**:user 授权 T3 L3 launchctl load -w 实测 → 撞坑 #92 修复 B 命中验证 → 撞坑 #90 launchd 持久化方案 D-step 评估 → docs/v0.2.67 §19-21 误归校正(docs-only 可选)→ P3-B SMTP → P4 24h → P5 v1.0 tag 评估(默认不打)。
