@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **265 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.69 P3-C docs + pitfall-88 doc 落 263→265) |
-| **下一棒** | 远端状态以 `git status --short --branch` 为准 · P1 质量门 3 门全绿 · P2 launchd 真 install 收口 · 数字员工撞坑 #81 bootout(TCC 5 步骤授权 runbook 在 `docs/v0.2.67` §3)· P3 真实业务需新草稿 + 人工审查 + 逐封授权 |
+| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **269 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.71 + pitfall-90/91 → 269) |
+| **下一棒** | P3-A T3 L2(#91 脚本迁出 Documents,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5492,3 +5492,76 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **撞坑数**:**88 → 89**(+1 new #89 real-flow-notesync-dedup)。
 - **v1.0 完成度**:**84% → 86%**(+2 docs/audit 沉淀)。
 - **下一棒**:docs-only commit(沿 Y4 默认不 push) · 等 user 决策 commit/push 词 · T3 TCC plist 状态盘点(我先 read-only 查 launchd 状态) · T4 v1.0 收口 docs 仍 docs-only。
+
+## 85. 2026-07-08 · P3-A T3 launchd 状态盘点 audit 收口(撞坑 #90 / #91 新发现 + docs/v0.2.67 误判根因被打破)
+
+> **触发**:用户授权路径节奏。"完成所有 T3" = L1 Phase 1(load agent + imap-sync) + 真实根因破案 + docs-only audit + 撞坑沉淀。
+
+### 1. 本次修改内容
+
+- **T3 L1 launchctl load 执行**:`launchctl load -w ~/Library/LaunchAgents/com.myaiemployee.agent.plist` + 同 imap-sync plist · `Load failed: 5` 是 false alarm(plist 已注册 + `launchctl print` 确认 `type=LaunchAgent`) · 实际状态 **2/3 job 已 load 到 `gui/501` domain** · `state = not running`(预期,没到 StartCalendarInterval)。
+- **launchd 现状盘点**:
+  - `plist` 文件:**3/3 存在**(`com.myaiemployee.{agent,digital-employee,imap-sync}.plist`)
+  - `wrapper`:**3/3 存在**(`~/bin/my-ai-employee-{start,monthly-report,imap-sync}`)
+  - `launchctl list`:仅 agent + imap-sync(数字员工仍 bootout,沿 docs/v0.2.67)
+  - `launchctl print-disabled gui/501`:**3/3 job enabled**(数字员工 plist enabled 但被 bootout,无 load)
+  - 数字员工 stderr 关键证据:`bash: /Users/wei/Documents/DesktopOrganizer/我的AI员工/ops/start-digital-employee.sh: Operation not permitted`
+- **撞坑 #90 新发现**:`launchctl load -w` 注册到 user domain `gui/$UID` 的 LaunchAgent job **不跨 session 持久化** · 9 小时 47 分内(docs/v0.2.67 13:13 → 本次 23:0x)从 2/3 active → 0/3 active · plist 文件 / enabled 状态保持不变,只有 `launchctl list` 中的注册失效。
+- **撞坑 #91 新发现 + docs/v0.2.67 误判根因被打破**:
+  - docs/v0.2.67 §19-21 历史报告:**错把**数字员工 RunAtLoad=true exit 126 归因"TCC Python.framework 3.12 鉴权拦截"
+  - 实测 stderr:`bash: <path>: Operation not permitted`(前缀是 **bash** exec step,**不是** Python TCC)
+  - 文件权限正确(`-rwxr-xr-x`)+ 无 `com.apple.quarantine`
+  - **`/Users/wei/Documents/DesktopOrganizer/` 在 iCloud Drive 同步目录** = macOS 对 Documents 同步目录 sh 脚本 **OS 层 exec 拦截**
+  - 真实路径:wrapper `exec bash <sh_path>` → bash 试图 exec → macOS OS 层拒 → `Operation not permitted` → 根本没启动 Python
+- **`docs/v0.2.71-p3-a-t3-launchd-audit-2026-07-08.md`**(新增,8 段):launchd 状态盘点 + 撞坑 #90 / #91 双发现 + docs/v0.2.67 误判校正路径 + 红线维持 + P3-A T0-T4 状态表 + 产出清单。
+- **`memory/pitfall-91-launchd-documents-shell-operation-not-permitted.md`**(新增):撞坑 #91 范本 · stderr 排查(`Operation not permitted` ≠ TCC)· 修复路径 4 候选(移非 Documents / cat 替代 exec / osascript / TCC 加 Allow)· docs/v0.2.67 校正建议。
+- **`memory/pitfall-90-launchd-domain-not-persistent.md`**(新增):撞坑 #90 范本 · launchd user-domain session-bound 设计 · 4 持久化候选方案(`~/.zshrc` 后置 load / `launchctl bootstrap` system / LaunchHelper / docs runbook)。
+- 详细报告:`docs/v0.2.71-p3-a-t3-launchd-audit-2026-07-08.md`(本收口)+ 撞坑 #90 / #91 范本。
+
+### 2. 风险点
+
+- 🟢 **数字员工 plist 不动**(`load -w` L1 不包含)· 沿 docs/v0.2.67 bootout 维持 + 不绕分类器意图。
+- 🟢 **`launchctl load -w` 是 use,非 modify** · 不算业务代码改动(撞坑 #71 维持 · 不动 src/)。
+- 🟢 **0 真业务** · 0 SMTP 真发 · 0 Notes 真同步 · 0 shell profile 写入 · 0 v1.0 tag · 0 改动 wrapper / plist / sh 文件。
+- 🟡 **撞坑 #90 提醒**:`load -w` 不跨 session 持久化 · 下次 reboot 后 2/3 又会失效 · D-step 评估 reboot 后 re-load runbook。
+- 🟡 **撞坑 #91 修复路径 4 候选**留给 D-step 评估:**不**本会话立即修(避免链式风险)。
+- 🟡 **docs/v0.2.67 误判**:**不**回滚(已 commit `76cd2eb`)· 下次 D-step 评估是否校正 §19-21 误归 · audit trail 显式标记本次发现。
+- 🟢 **2/3 launchd job 等待调度**:
+  - `agent`(月报)下一次触发 = 9/1 09:00(约 24 天后)
+  - `imap-sync` 下一次触发 = 7/9 07:00(明天凌晨 · 距现在 ~8 小时)
+  - 明早可观察 imap-sync.out.log 是否真正产出(撞坑 #90 监控点)
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy --strict **0 errors / 256 files** / MD lint **265 files / 0 errors**(撞坑 #87 baseline 不动 · 与 ## 84 锚点一致)。
+- **当前阶段**:P3-A T3 L1 收口 + 撞坑 #90 / #91 双发现 + docs/v0.2.67 误判根因被打破。
+- **P3-A T0-T4 状态**:T0 ✅ push `0bcdefb` · T1 ✅ spike_day10 全绿 · T2-1 ✅ 真同步跑通 + 撞坑 #89 · T2-2 ⏸ Stage 2 分类器延期 · **T3 L1 ✅ load 2/3 + 撞坑 #90 / #91 沉淀** · T3 L2 ⏸ 撞坑 #91 修复后试 · T4 ⏸ v1.0 docs。
+- **撞坑数**:**89 → 91**(+2 new · #90 launchd session-bound + #91 Documents exec OS 层拦截)。
+- **v1.0 完成度**:**86% → 88%**(+2 · T3 L1 + 误判破案)。
+- **launchd 实际状态**:2/3 registered + 1/3 bootout(数字员工 plist enabled)。
+- **下一棒**:docs-only commit(沿 W1 默认不 push) · 等 user 决策 commit/push 词 · T3 L2 / T4 v1.0 docs 留给下次 D-step。
+
+---
+
+## 86. 2026-07-09 · 下一棒执行:v0.2.71 收口入库 + Notes dry-run 复验 + P3-B 阻塞标清
+
+> **触发**:用户「执行下一棒」(项目检查后:commit/push docs → P3-A → P3-B)。
+
+### 1. 本次修改内容
+
+- **docs 收口**:入库 `docs/v0.2.71-p3-a-t3-launchd-audit-2026-07-08.md` + 补齐缺失的 `memory/pitfall-90` / `memory/pitfall-91`(审计文档已引用但未落盘)。
+- **质量基线**:`quality_snapshot` MD lint **266 → 269**(+3 MD);5 件套同步。
+- **P3-A T1 复验**:`uv run python scripts/spike_day10_notes_encryption_dryrun.py` **全绿**;临时 DB;未触主库;未写 shell profile。
+- **只读核验**:launchd `agent`+`imap-sync` 仍注册;数字员工 err 仍为撞坑 #91(`Operation not permitted`);outbox `pending_send=0`。
+
+### 2. 风险点
+
+- 🟢 本轮无 SMTP / 无数字员工 `load -w` / 无 Path4 / 无 Notes 生产加密。
+- 🟡 **P3-B 阻塞**:无可用 `pending_send`;须新草稿 + 命名收件人 + 五重门控。
+- 🟡 **T3 L2 阻塞**:撞坑 #91 首选修复(脚本迁出 Documents)需单独授权,本轮不改 ops/wrapper。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256** / MD lint **269**。
+- **当前阶段**:P3-A T1 ✅ + T3 L1 docs ✅;T3 L2 / P3-B / P4 / P5 待授权。
+- **下一棒**:授权 T3 L2(#91 迁出 Documents)或授权 `process_inbox --limit 1` 产新草稿后 P3-B 单封真发。
