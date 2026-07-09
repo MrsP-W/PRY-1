@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2917 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **282 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91/92/93 → 282) |
+| **质量基线** | **2917 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
 | **下一棒** | P3-A T3 L4(撞坑 #93 真实 load 复验,需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5753,3 +5753,45 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **当前阶段**:P3-A T3 L3 撞坑 #93 修复收口 · 9/9 质量门 + check-snapshot + 47/47 launchd 测试全绿 · 待 user 授权 T3 L4 launchctl load -w 数字员工实测验证 #93 修复命中。
 - **完成度**:项目约 **94%**;可无人值守生产运行约 **91%**;v1.0 发布就绪约 **92%**(撞坑 #93 修复 +0/+1/+1)。
 - **下一棒**:user 授权 T3 L4 launchctl load -w 实测 → 撞坑 #93 修复命中验证 → 撞坑 #90 launchd 持久化方案 D-step 评估 → docs/v0.2.67 §19-21 误归校正(docs-only 可选)→ P3-B SMTP → P4 24h → P5 v1.0 tag 评估(默认不打)。
+
+---
+
+## 92. v0.2.76 T3 L4 撞坑 #93 实战验证收口 + 撞坑 #94 NEW 暴露(2026-07-09)
+
+### 1. 本次修改内容
+
+- **commit hash**:本轮 commit(待 push · ahead 1)
+- **主题**:T3 L4 launchctl 真实 load -w 实测验证撞坑 #93 完全修复(launchd 9/9 预检全过 + UV_BIN 链路打通 + err.log 无 Documents 错误)+ 新撞坑 #94(menu_bar SQLAlchemy DB context manager RuntimeError)暴露
+- **改动范围**:**4 docs/memory + 5件套 sync = 9 files / 约 +500 lines**(纯 docs-only,无代码改动)
+  - `docs/v0.2.76-p3-a-t3-l4-93-verify-94-expose-2026-07-09.md`(新增):T3 L4 实战验证 + #94 新暴露 docs
+  - `memory/pitfall-94-launchd-menubar-db-context-manager.md`(新增):撞坑 #94 沉淀 + 4 修复路径候选
+  - `memory/checkpoint-2026-07-09-p3-a-t3-l4-93-verify.md`(新增):T3 L4 验证 checkpoint
+  - `README.md` / `CLAUDE.md` / `SESSION-STATE.md` / `MODIFICATION-LOG.md` / `docs/v0.2-launch-plan.md`(5 件套 sync 282)
+- **核心验证执行**(撞坑 #93 完全实战通过):
+  - 16:35 旧 wrapper bootout 残留 exit 1 清理 → `launchctl bootout gui/$UID/com.myaiemployee.digital-employee`
+  - log 备份 + 清干 → `cp /tmp/digital-employee.{err,out}.log.bak` + `: > log`
+  - `launchctl load -w com.myaiemployee.digital-employee.plist` → load OK · RunAtLoad 触发
+  - 10 秒后验证:`launchctl list | grep myaiemployee` 3/3 全注册 · err.log 仅 1 行 ❌(无 Documents 错误)· out.log 9/9 预检全过(对比 16:35 5/9 OK + 4⚠️)
+- **撞坑 #94 NEW 暴露**:`menu_bar.log` 栈 `sqlcipher_compat.py:63 creator → db.py:297 RuntimeError("DB 已关闭...")` · 数字员工 launcher 检测 menu_bar 失败 → exit 1 · KeepAlive=false 不重启循环
+- **bootout 已执行**:清理 launchd 表残留 exit 1 · 维持 2/3 active + 1/3 bootout(数字员工)
+- **链接到 reports/**:[docs/v0.2.76-p3-a-t3-l4-93-verify-94-expose-2026-07-09.md](docs/v0.2.76-p3-a-t3-l4-93-verify-94-expose-2026-07-09.md) 详细收口 + [memory/pitfall-94-launchd-menubar-db-context-manager.md](memory/pitfall-94-launchd-menubar-db-context-manager.md) 沉淀范本
+
+### 2. 风险点
+
+- ✅ **撞坑 #93 修复完全实战验证**:launchctl load -w 真实 RunAtLoad 触发 + 9/9 预检全过 + UV_BIN 找到 /opt/homebrew/bin/uv → .venv 路径打通 + APP_SUPPORT/.env 实际读取 + data dir 创建 · 无 Documents/.env Operation not permitted 任何错误
+- ⚠️ **撞坑 #94 NEW 暴露**:`menu_bar subprocess 启动后 ~5s 在 SQLAlchemy pool creator 抛 RuntimeError`(db.py:297 _closed=True raise)· 数字员工 launcher 检测 menu_bar 失败 → ❌ → exit 1
+  - 触发链路:`build_menu_bar_services()` → 真实 Expense/NoteConfirm/Outbox Impl → SQLAlchemy engine + pool → lazy connection → `creator() → db.connection → _closed=True`
+  - 根因候选:**α** reader 线程持有 db 实例 → `with` 块退出 join 失败 / **β** build_menu_bar_services 嵌套 with 模式状态机 / **γ** launchd subprocess Pool.size 与 pool_pre_ping 行为差异
+  - 4 修复路径候选:A docs-only 接受 / B make_sqlalchemy_engine 接 db_path / C creator() 内 lazy reopen / D 暂缓仅 scheduler/imap/agent launchd 监控 · **等 user 决策**
+  - 影响范围:仅菜单栏 UI · 数字员工核心 scheduler 链路(trigger task chains)不依赖菜单栏 → 解耦可能
+- ⚠️ **1h/24h 无人值守观察暂缓**:user 授权"通过后进入 1h/24h 观察"前提是 T3 L4 完全通过(=菜单栏稳定运行)· #94 暴露需先决策
+- 🟡 **撞坑 #90 launchd session-bound 仍未实施**:reboot/logout 后 agent + imap-sync 失效 · 4 候选持久化方案待 D-step 评估
+- 🟢 **launchd 实际状态**:数字员工 bootout(已清理) + agent exit 0 + imap-sync exit 2(明早 07:00 cron 触发验证 wrapper)
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag · 不写 shell profile
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2917 passed / 1 skipped / 89.10%** / mypy **256 files / 0 errors** / MD lint **282 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 完全实战验证 + 撞坑 #94 暴露未决策)· commit ahead 1 待 push
+- **当前阶段**:P3-A T3 L4 launchctl 真实 load -w 撞坑 #93 完全验证 ✅ + 撞坑 #94 NEW 暴露 ⚠️ · 数字员工 bootout 维持 · 等 user 决策 #94 修复路径(A/B/C/D)
+- **完成度**:项目约 **94%**(不变)· 可无人值守生产运行约 **85%**(↓ 6pp · menu_bar 不可达 + #94 + 撞坑 #90 持久化未实施)· v1.0 发布就绪约 **87%**(↓ 5pp)
+- **下一棒**:user 决策 #94(推荐 A 立即 + B/C 后续 D-step)→ docs/v0.2.77 #94 修复 D-step → launchctl load -w 重试验证 → 1h 观察窗(scheduler/imap-sync 锚)→ 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
