@@ -331,8 +331,9 @@ def test_f5_install_start_wrapper_avoids_documents_ops_exec():
     text = INSTALL_SH.read_text(encoding="utf-8")
     forbidden = 'exec bash \\"${PROJECT_ROOT}/ops/start-digital-employee.sh\\" start'
     assert forbidden not in text
-    assert 'export MY_AI_EMPLOYEE_PROJECT_ROOT=\\"${PROJECT_ROOT}\\"' in text
-    assert 'exec \\"${TARGET_START_RUNNER}\\" start' in text
+    # heredoc 格式(无 \\" 转义,2026-07-09 撞坑 #92 修复 B 后)
+    assert 'export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"' in text
+    assert 'exec "${TARGET_START_RUNNER}" start' in text
 
 
 def test_f6_start_script_accepts_explicit_project_root_override():
@@ -353,3 +354,58 @@ def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
     deploy_block = text[deploy_exit:load_section]
     assert "launchctl load -w" in deploy_block
     assert "exit 0" in deploy_block
+
+
+def test_f8_install_sh_sets_up_app_support_dir_and_env_migration():
+    """F8. 撞坑 #92 修复(2026-07-09):APP_SUPPORT_DIR 创建 + .env 自动迁移."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert 'APP_SUPPORT_DIR="${HOME}/Library/Application Support/MyAIEmployee"' in text
+    assert 'APP_SUPPORT_ENV="${APP_SUPPORT_DIR}/.env"' in text
+    # 创建 APP_SUPPORT_DIR 段
+    assert 'mkdir -p "${APP_SUPPORT_DIR}"' in text
+    # .env 迁移逻辑
+    assert 'cp "${PROJECT_ROOT}/.env" "${APP_SUPPORT_ENV}"' in text
+    assert 'if [[ -f "${PROJECT_ROOT}/.env" && ! -f "${APP_SUPPORT_ENV}" ]]' in text
+
+
+def test_f9_install_start_wrapper_exports_app_support_env_explicit():
+    """F9. 撞坑 #92 修复:digital-runner wrapper 显式 export APP_SUPPORT_DIR + ENV_FILE."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert 'export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"' in text
+    assert 'export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"' in text
+
+
+def test_f10_install_imap_wrapper_uses_app_support_env():
+    """F10. 撞坑 #92 修复:IMAP wrapper ENV_FILE 必读 APP_SUPPORT_ENV 而非 PROJECT_ROOT/.env."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert 'ENV_FILE="${APP_SUPPORT_ENV}"' in text
+    # 旧路径不应再出现(只允许作为迁移源)
+    imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
+    imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
+    imap_block = text[imap_block_start:imap_block_end]
+    assert 'ENV_FILE="${PROJECT_ROOT}/.env"' not in imap_block
+
+
+def test_g1_start_digital_employee_uses_env_file_not_project_root():
+    """G1. 撞坑 #92 修复:ops/start-digital-employee.sh 读 ENV_FILE 而非 PROJECT_ROOT/.env."""
+    text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
+    assert 'ENV_FILE="${MY_AI_EMPLOYEE_ENV_FILE:-$APP_SUPPORT_DIR/.env}"' in text
+    # 禁止 PROJECT_ROOT/.env 直接 grep(只允许 ENV_FILE 引用)
+    assert 'grep -E "^IMAP_USER=" "$PROJECT_ROOT/.env"' not in text
+    assert 'grep -qE "^DB_ENCRYPTION_KEY=' in text  # 用 ENV_FILE 而非 PROJECT_ROOT/.env
+    assert 'grep -qE "^DB_ENCRYPTION_KEY=[a-fA-F0-9]{64}$" "$ENV_FILE"' in text
+
+
+def test_g2_start_digital_employee_uses_app_support_data_dir():
+    """G2. 撞坑 #92 修复:ops/start-digital-employee.sh DATA_DIR/LOG_DIR 必用 APP_SUPPORT_DIR(非 PROJECT_ROOT/data)."""
+    text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
+    assert (
+        'APP_SUPPORT_DIR="${MY_AI_EMPLOYEE_APP_SUPPORT_DIR:-$HOME/Library/Application Support/MyAIEmployee}"'
+        in text
+    )
+    assert 'DATA_DIR="$APP_SUPPORT_DIR/data"' in text
+    # 禁止 PROJECT_ROOT/data 直接引用
+    assert 'DATA_DIR="$PROJECT_ROOT/data"' not in text
+    assert 'LOG_DIR="$DATA_DIR/logs"' not in text  # 不再用链式 PROJECT_ROOT/data/logs
+    # LOG_DIR 必用 ~/Library/Logs/MyAIEmployee
+    assert 'LOG_DIR="${MY_AI_EMPLOYEE_LOG_DIR:-$HOME/Library/Logs/MyAIEmployee}"' in text

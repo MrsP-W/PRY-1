@@ -30,16 +30,24 @@ set -euo pipefail
 
 # 路径约定(沿 ops/day1-phase2-env.md)
 # launchd 安装时会把本脚本复制到 ~/bin,此时必须显式传入真实项目根目录。
+# 撞坑 #92 修复(2026-07-09):runtime 配置/日志/数据路径迁出 ~/Documents/(iCloud 同步目录沙箱拦截)
+#   - .env   → ~/Library/Application Support/MyAIEmployee/.env
+#   - data/  → ~/Library/Application Support/MyAIEmployee/data/
+#   - logs/  → ~/Library/Logs/MyAIEmployee/(已沿 v1.0 launch plan 范本)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="${MY_AI_EMPLOYEE_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
 PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
-DATA_DIR="$PROJECT_ROOT/data"
-LOG_DIR="$DATA_DIR/logs"
+
+# 撞坑 #92 修复路径 B(2026-07-09):runtime 状态文件全部迁非 Documents 目录
+APP_SUPPORT_DIR="${MY_AI_EMPLOYEE_APP_SUPPORT_DIR:-$HOME/Library/Application Support/MyAIEmployee}"
+ENV_FILE="${MY_AI_EMPLOYEE_ENV_FILE:-$APP_SUPPORT_DIR/.env}"
+DATA_DIR="$APP_SUPPORT_DIR/data"
+LOG_DIR="${MY_AI_EMPLOYEE_LOG_DIR:-$HOME/Library/Logs/MyAIEmployee}"
 LOG_FILE="$LOG_DIR/digital_employee.log"
-MENUBAR_LOG="$DATA_DIR/menu_bar.log"
+MENUBAR_LOG="$LOG_DIR/menu_bar.log"
 DASHBOARD_LOG="$LOG_DIR/dashboard.log"
 
-# PID 文件(分文件,避免互冲)
+# PID 文件(分文件,避免互冲) — 沿 Application Support/data/ 不进 iCloud 沙箱
 MENUBAR_PID_FILE="$DATA_DIR/menu_bar.pid"
 DASHBOARD_PID_FILE="$DATA_DIR/dashboard.pid"
 
@@ -62,11 +70,11 @@ err() { echo -e "${RED}❌${NC} $*" >&2; }
 KEYCHAIN_SMTP_QQ_SERVICE="my-ai-employee.smtp.qq"
 
 _get_imap_user_from_env() {
-    if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
+    if [[ ! -f "$ENV_FILE" ]]; then
         return 1
     fi
     local line account
-    line=$(grep -E "^IMAP_USER=" "$PROJECT_ROOT/.env" | head -1 || true)
+    line=$(grep -E "^IMAP_USER=" "$ENV_FILE" | head -1 || true)
     if [[ -z "$line" ]]; then
         return 1
     fi
@@ -143,17 +151,17 @@ preflight_check() {
 
     local fail=0
 
-    # 1. .env 存在
-    if [[ -f "$PROJECT_ROOT/.env" ]]; then
-        ok "  [1/9] .env 存在"
+    # 1. .env 存在(撞坑 #92 修复:读 ~/Library/Application Support/MyAIEmployee/.env)
+    if [[ -f "$ENV_FILE" ]]; then
+        ok "  [1/9] .env 存在 ($ENV_FILE)"
     else
-        warn "  [1/9] .env 不存在(撞坑 #1 风险门控)"
+        warn "  [1/9] .env 不存在(撞坑 #1 风险门控 · 期望路径: $ENV_FILE)"
         fail=$((fail + 1))
     fi
 
     # 2. SQLCipher key 非空
-    if [[ -f "$PROJECT_ROOT/.env" ]]; then
-        if grep -qE "^DB_ENCRYPTION_KEY=[a-fA-F0-9]{64}$" "$PROJECT_ROOT/.env"; then
+    if [[ -f "$ENV_FILE" ]]; then
+        if grep -qE "^DB_ENCRYPTION_KEY=[a-fA-F0-9]{64}$" "$ENV_FILE"; then
             ok "  [2/9] DB_ENCRYPTION_KEY 64 hex OK"
         else
             warn "  [2/9] DB_ENCRYPTION_KEY 缺失或格式错"
@@ -213,11 +221,11 @@ preflight_check() {
         warn "  [8/9] docs/ui/codex-style-dashboard.html 缺失(可选)"
     fi
 
-    # 9. data/ 目录
+    # 9. data/ 目录(撞坑 #92 修复:在 ~/Library/Application Support/MyAIEmployee/data/)
     if [[ -d "$DATA_DIR" ]]; then
-        ok "  [9/9] data/ 目录存在"
+        ok "  [9/9] data/ 目录存在 ($DATA_DIR)"
     else
-        warn "  [9/9] data/ 不存在(首次启动会自动创建)"
+        warn "  [9/9] data/ 不存在(首次启动会自动创建:$DATA_DIR)"
     fi
 
     if [[ $fail -eq 0 ]]; then

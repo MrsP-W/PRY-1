@@ -82,6 +82,10 @@ TARGET_PLIST_IMAP="${LAUNCH_AGENTS_DIR}/com.myaiemployee.imap-sync.plist"
 TARGET_PLIST_START="${LAUNCH_AGENTS_DIR}/com.myaiemployee.digital-employee.plist"
 LOG_DIR="${HOME}/Library/Logs/MyAIEmployee"
 
+# 撞坑 #92 修复(2026-07-09):runtime .env / data/ 路径迁出 ~/Documents/ iCloud 同步目录
+APP_SUPPORT_DIR="${HOME}/Library/Application Support/MyAIEmployee"
+APP_SUPPORT_ENV="${APP_SUPPORT_DIR}/.env"
+
 # Day 2: 全部 launchd job label(月报 / IMAP 每日同步 / 数字员工开机自启)
 LAUNCHD_LABELS=(
     "com.myaiemployee.agent"
@@ -201,6 +205,24 @@ if [[ ! -w "${LAUNCH_AGENTS_DIR}" ]]; then
     echo "❌ ${LAUNCH_AGENTS_DIR}/ 不可写" >&2
     exit 2
 fi
+# 撞坑 #92 修复:APP_SUPPORT_DIR 创建 + 权限校验
+if [[ ! -d "${APP_SUPPORT_DIR}" ]]; then
+    echo "📁 创建 ${APP_SUPPORT_DIR}/ 目录(撞坑 #92 修复 · runtime .env/data/ 迁出 ~/Documents/)"
+    mkdir -p "${APP_SUPPORT_DIR}"
+fi
+if [[ ! -w "${APP_SUPPORT_DIR}" ]]; then
+    echo "❌ ${APP_SUPPORT_DIR}/ 不可写" >&2
+    exit 2
+fi
+# 撞坑 #92 修复:.env 首次迁移(若 PROJECT_ROOT/.env 存在且 APP_SUPPORT_ENV 不存在 → 自动 cp)
+if [[ -f "${PROJECT_ROOT}/.env" && ! -f "${APP_SUPPORT_ENV}" ]]; then
+    cp "${PROJECT_ROOT}/.env" "${APP_SUPPORT_ENV}"
+    echo "✅ 首次迁移 .env:${PROJECT_ROOT}/.env → ${APP_SUPPORT_ENV}(撞坑 #92 修复)"
+elif [[ -f "${APP_SUPPORT_ENV}" ]]; then
+    echo "ℹ️  .env 已存在:${APP_SUPPORT_ENV}(不覆盖,撞坑 #92 修复)"
+else
+    echo "ℹ️  .env 待用户创建:${APP_SUPPORT_ENV}(撞坑 #92 修复)"
+fi
 
 # ===== 3. 部署 ~/bin/ wrapper 脚本 =====
 echo "📋 部署 ${TARGET_SCRIPT}(动态月份)"
@@ -214,20 +236,24 @@ chmod +x "${TARGET_SCRIPT}"
 echo "✅ ${TARGET_SCRIPT} 部署完成"
 
 echo "📋 部署 ${TARGET_IMAP_SCRIPT}(IMAP 每日同步)"
-{
-    echo "#!/usr/bin/env bash"
-    echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
-    echo "ENV_FILE=\"${PROJECT_ROOT}/.env\""
-    echo "IMAP_USER=\"\""
-    echo "if [[ -f \"\${ENV_FILE}\" ]]; then"
-    echo "  IMAP_USER=\$(grep -E '^IMAP_USER=' \"\${ENV_FILE}\" | head -1 | cut -d= -f2- | tr -d '\"' | tr -d \"'\")"
-    echo "fi"
-    echo "if [[ -z \"\${IMAP_USER}\" ]]; then"
-    echo "  echo 'IMAP_USER not set in .env' >&2"
-    echo "  exit 2"
-    echo "fi"
-    echo "exec uv run --project \"${PROJECT_ROOT}\" python scripts/sync_imap.py sync --provider qq --email \"\${IMAP_USER}\""
-} > "${TARGET_IMAP_SCRIPT}"
+# 撞坑 #92 修复:用 heredoc 直接写 wrapper(避免 echo 转义地狱,F10 易校验)
+#   - \$VAR 留给 wrapper 运行期展开
+#   - 不转义的 ${VAR}/${PROJECT_ROOT} 在 install 期展开
+cat << EOF > "${TARGET_IMAP_SCRIPT}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+# 撞坑 #92 修复(2026-07-09):ENV_FILE 路径从 PROJECT_ROOT/.env → APP_SUPPORT/.env
+ENV_FILE="${APP_SUPPORT_ENV}"
+IMAP_USER=""
+if [[ -f "\${ENV_FILE}" ]]; then
+  IMAP_USER=\$(grep -E '^IMAP_USER=' "\${ENV_FILE}" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")
+fi
+if [[ -z "\${IMAP_USER}" ]]; then
+  echo 'IMAP_USER not set in .env' >&2
+  exit 2
+fi
+exec uv run --project "${PROJECT_ROOT}" python scripts/sync_imap.py sync --provider qq --email "\${IMAP_USER}"
+EOF
 chmod +x "${TARGET_IMAP_SCRIPT}"
 echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"
 
@@ -237,13 +263,17 @@ cp "${SOURCE_START_SH}" "${TARGET_START_RUNNER}"
 chmod +x "${TARGET_START_RUNNER}"
 echo "✅ ${TARGET_START_RUNNER} 部署完成"
 
-{
-    echo "#!/usr/bin/env bash"
-    echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
-    echo "set -euo pipefail"
-    echo "export MY_AI_EMPLOYEE_PROJECT_ROOT=\"${PROJECT_ROOT}\""
-    echo "exec \"${TARGET_START_RUNNER}\" start"
-} > "${TARGET_START_SCRIPT}"
+# 撞坑 #92 修复:用 heredoc 写 wrapper(F9 易校验)
+cat << EOF > "${TARGET_START_SCRIPT}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+set -euo pipefail
+export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
+# 撞坑 #92 修复(2026-07-09):runtime APP_SUPPORT_DIR / ENV_FILE 显式导出(避免 ops 默认 fallback 到 Documents 路径)
+export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
+export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
+exec "${TARGET_START_RUNNER}" start
+EOF
 chmod +x "${TARGET_START_SCRIPT}"
 echo "✅ ${TARGET_START_SCRIPT} 部署完成"
 
