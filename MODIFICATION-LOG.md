@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2907 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **270 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.72 + pitfall-90/91 → 270) |
+| **质量基线** | **2908 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **270 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.73 + pitfall-90/91 → 270) |
 | **下一棒** | P3-A T3 L3(#91 真实 load 复验,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5588,3 +5588,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2907 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **270 files / 0 errors**。
 - **当前阶段**:P3-A T3 L2 代码修复完成;数字员工真实 load 复验仍待授权;P3-B/P4/P5 仍按逐项授权推进。
 - **完成度**:项目约 **92%**;可无人值守生产运行约 **86%**;v1.0 发布就绪约 **88%**。
+
+## 88. 2026-07-09 · P3-A T3 L2 deploy-only 安全部署收口
+
+> **触发**:项目检查发现代码已修复并推送,但本机 `~/bin/my-ai-employee-start` 仍是 7/8 旧 wrapper,缺少 `~/bin/my-ai-employee-digital-runner`。用户要求"按照建议动作执行"。
+
+### 1. 本次修改内容
+
+- **安全模式新增**:`scripts/launchd_install.sh` 支持 `deploy-only` / `no-load`;部署 wrapper/plist/log 后在 `launchctl load` 前退出。
+- **runtime 已刷新**:`bash scripts/launchd_install.sh deploy-only` 已执行;`~/bin/my-ai-employee-start` 改调 `~/bin/my-ai-employee-digital-runner`;runner 已存在并可执行。
+- **契约测试补强**:`tests/scripts/test_launchd_install.py` 新增 F7,确认 deploy-only/no-load 模式存在且退出点在 load 段之前。
+- **收口文档更新**:`docs/v0.2.72-p3-a-t3-l2-91-fix-2026-07-09.md` 增补 deploy-only 执行证据。
+
+### 2. 风险点
+
+- 🟢 **未自动 load**:`launchctl list` 仍只有 `agent` 和 `imap-sync`;数字员工未自动加载。
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag。
+- 🟡 **旧 err log 仍保留**:`digital-employee.err.log` 尾部仍有历史 #91;需下一次授权真实 load 后观察是否新增。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2908 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **270 files / 0 errors**。
+- **当前阶段**:P3-A T3 L2 代码 + runtime deploy-only 均完成;T3 L3 真实 load 复验仍待单独授权。
+- **完成度**:项目约 **93%**;可无人值守生产运行约 **88%**;v1.0 发布就绪约 **89%**。

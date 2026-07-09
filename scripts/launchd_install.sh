@@ -11,10 +11,12 @@
 #   4. 目标位置:~/Library/LaunchAgents/com.myaiemployee.agent.plist 必可写
 #   5. launchctl:launchctl list 必见 com.myaiemployee.agent(macOS 必现)
 #
-# 使用方式(2026-06-15 D10.5.3 新增 install/uninstall 双模式):
-#   bash scripts/launchd_install.sh install    # 部署 + launchctl load
-#   bash scripts/launchd_install.sh uninstall  # 清理:unload + 删 plist + 删脚本 + 删日志
-#   bash scripts/launchd_install.sh            # 默认 install(向后兼容)
+# 使用方式(2026-07-09 新增 deploy-only/no-load 安全模式):
+#   bash scripts/launchd_install.sh install      # 部署 + launchctl load
+#   bash scripts/launchd_install.sh deploy-only # 只部署 wrapper/plist/log,不 load
+#   bash scripts/launchd_install.sh no-load     # deploy-only 别名
+#   bash scripts/launchd_install.sh uninstall    # 清理:unload + 删 plist + 删脚本 + 删日志
+#   bash scripts/launchd_install.sh              # 默认 install(向后兼容)
 #
 # 部署步骤(install 模式):
 #   1. ~/bin/ 不存在 → 创建
@@ -40,17 +42,21 @@ set -euo pipefail
 
 # ===== 0. 模式分发(2026-06-15 D10.5.3 新增) =====
 MODE="${1:-install}"
+DEPLOY_ONLY=false
 case "${MODE}" in
     install)
         : # 继续走 install 流程(向后兼容)
+        ;;
+    deploy-only | no-load)
+        DEPLOY_ONLY=true
         ;;
     uninstall)
         # 跳到 uninstall 段
         MODE_TAG="uninstall"
         ;;
     *)
-        echo "❌ 未知模式: ${MODE}(只支持 install / uninstall)" >&2
-        echo "用法: bash $0 [install|uninstall]" >&2
+        echo "❌ 未知模式: ${MODE}(只支持 install / deploy-only / no-load / uninstall)" >&2
+        echo "用法: bash $0 [install|deploy-only|no-load|uninstall]" >&2
         exit 1
         ;;
 esac
@@ -257,6 +263,16 @@ touch "${LOG_DIR}/agent.out.log" "${LOG_DIR}/agent.err.log"
 touch "${LOG_DIR}/imap-sync.out.log" "${LOG_DIR}/imap-sync.err.log"
 touch "${LOG_DIR}/digital-employee.out.log" "${LOG_DIR}/digital-employee.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
+
+if [[ "${DEPLOY_ONLY}" == "true" ]]; then
+    echo ""
+    echo "🎉 deploy-only 完成(未调用 launchctl load -w)"
+    echo "  已更新 wrapper:${TARGET_START_SCRIPT}"
+    echo "  已更新 runner:${TARGET_START_RUNNER}"
+    echo "  已更新 plist:${TARGET_PLIST_START}"
+    echo "  下一步如需真实加载,需用户单独授权 launchctl load -w"
+    exit 0
+fi
 
 # ===== 6. launchctl load(3 job) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"

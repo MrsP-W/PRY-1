@@ -340,3 +340,16 @@ def test_f6_start_script_accepts_explicit_project_root_override():
     text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
     assert "MY_AI_EMPLOYEE_PROJECT_ROOT" in text
     assert 'PROJECT_ROOT="${MY_AI_EMPLOYEE_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"' in text
+
+
+def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
+    """F7. deploy-only/no-load 必只部署文件,不进入 launchctl load 段."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert "deploy-only | no-load)" in text
+    assert "DEPLOY_ONLY=true" in text
+    deploy_exit = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
+    load_section = text.index("# ===== 6. launchctl load(3 job) =====")
+    assert deploy_exit < load_section
+    deploy_block = text[deploy_exit:load_section]
+    assert "launchctl load -w" in deploy_block
+    assert "exit 0" in deploy_block
