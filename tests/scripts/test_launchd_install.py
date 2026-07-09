@@ -24,6 +24,7 @@ PLIST_START_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.digital-em
 INSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_install.sh"
 UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
 KICKSTART_SEAL_SH = PROJECT_ROOT / "scripts" / "launchd_kickstart_and_seal.sh"
+START_DIGITAL_EMPLOYEE_SH = PROJECT_ROOT / "ops" / "start-digital-employee.sh"
 
 
 # ===== A. plist XML 良构 =====
@@ -314,3 +315,28 @@ def test_f3_start_plist_run_at_load():
     assert data.get("RunAtLoad") is True
     args = data.get("ProgramArguments", [])
     assert "my-ai-employee-start" in args[0]
+
+
+def test_f4_install_sh_deploys_digital_runner_to_home_bin():
+    """F4. 数字员工 runner 必部署到 ~/bin,避免 launchd 执行 Documents 下的 sh."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    assert 'TARGET_START_RUNNER="${HOME_BIN}/my-ai-employee-digital-runner"' in text
+    assert 'cp "${SOURCE_START_SH}" "${TARGET_START_RUNNER}"' in text
+    assert 'chmod +x "${TARGET_START_RUNNER}"' in text
+    assert '"${HOME_BIN}/my-ai-employee-digital-runner"' in text
+
+
+def test_f5_install_start_wrapper_avoids_documents_ops_exec():
+    """F5. start wrapper 不得再 exec 项目 Documents 目录下的 ops 脚本."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    forbidden = 'exec bash \\"${PROJECT_ROOT}/ops/start-digital-employee.sh\\" start'
+    assert forbidden not in text
+    assert 'export MY_AI_EMPLOYEE_PROJECT_ROOT=\\"${PROJECT_ROOT}\\"' in text
+    assert 'exec \\"${TARGET_START_RUNNER}\\" start' in text
+
+
+def test_f6_start_script_accepts_explicit_project_root_override():
+    """F6. 被复制到 ~/bin 的 runner 必能用显式项目根路径定位资源."""
+    text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
+    assert "MY_AI_EMPLOYEE_PROJECT_ROOT" in text
+    assert 'PROJECT_ROOT="${MY_AI_EMPLOYEE_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"' in text

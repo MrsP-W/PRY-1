@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2904 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **269 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.71 + pitfall-90/91 → 269) |
-| **下一棒** | P3-A T3 L2(#91 脚本迁出 Documents,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
+| **质量基线** | **2907 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **256 files** / MD lint **270 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.72 + pitfall-90/91 → 270) |
+| **下一棒** | P3-A T3 L3(#91 真实 load 复验,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5565,3 +5565,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2904 passed / 1 skipped / 89.12%** / mypy **256** / MD lint **269**。
 - **当前阶段**:P3-A T1 ✅ + T3 L1 docs ✅;T3 L2 / P3-B / P4 / P5 待授权。
 - **下一棒**:授权 T3 L2(#91 迁出 Documents)或授权 `process_inbox --limit 1` 产新草稿后 P3-B 单封真发。
+
+## 87. 2026-07-09 · P3-A T3 L2 撞坑 #91 wrapper 修复收口
+
+> **触发**:用户选择 A,授权 T3 L2 / #91 修复。边界:不自动 `launchctl load -w`,不触发 SMTP,不做 Notes 生产同步,不启用 Path4,不打 v1.0 tag。
+
+### 1. 本次修改内容
+
+- **launchd wrapper 修复**:`scripts/launchd_install.sh` 新增 `~/bin/my-ai-employee-digital-runner`;`my-ai-employee-start` 改为设置 `MY_AI_EMPLOYEE_PROJECT_ROOT` 后调用 runner,不再 `exec bash <PROJECT_ROOT>/ops/start-digital-employee.sh`。
+- **runner 根路径修复**:`ops/start-digital-employee.sh` 支持 `MY_AI_EMPLOYEE_PROJECT_ROOT`,复制到 `~/bin` 后仍定位真实项目根目录。
+- **契约测试**:`tests/scripts/test_launchd_install.py` 新增 F4-F6,锁住 runner 部署、禁止 Documents ops exec、显式项目根路径 override。
+- **审计文档**:新增 `docs/v0.2.72-p3-a-t3-l2-91-fix-2026-07-09.md`。
+
+### 2. 风险点
+
+- 🟢 **未自动 load**:本轮只改安装产物模板和测试,没有执行 `launchctl load -w`。
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag。
+- 🟡 **仍需真实验证**:下一棒需用户单独授权重新生成 `~/bin` wrapper/runner 并只加载数字员工 plist,确认 err log 不再出现 #91。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2907 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **270 files / 0 errors**。
+- **当前阶段**:P3-A T3 L2 代码修复完成;数字员工真实 load 复验仍待授权;P3-B/P4/P5 仍按逐项授权推进。
+- **完成度**:项目约 **92%**;可无人值守生产运行约 **86%**;v1.0 发布就绪约 **88%**。

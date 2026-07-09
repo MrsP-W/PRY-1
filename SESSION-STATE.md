@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.69 P3-C dry-run + 撞坑 #88 收口(2026-07-08) + `v0.2.1` 正式 tag 维持期
 
-> **最后更新**:2026-07-09 · **P3-A 下一棒推进**:v0.2.71 T3 L1 docs 收口 + pitfall-90/91 落盘 + Notes 加密 dry-run spike 全绿 · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 **Day 13 + P3-A T1/T3 L1 已推进** — Notes 真加密 dry-run(`spike_day10`)全绿且未触主库;launchd agent+imap-sync 2/3 仍注册;数字员工 1/3 仍 bootout(撞坑 #91,勿盲目 load);SMTP 真发仍暂停。**质量门**:**2904 passed / 1 skipped** / 89.12% / lint **269** / mypy **256 files**。**下一棒**:P3-A T3 L2(#91 脚本迁出 Documents,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 tag 评估。
+> **最后更新**:2026-07-09 · **P3-A 下一棒推进**:v0.2.72 T3 L2 #91 wrapper 修复完成 · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 **Day 13 + P3-A T3 L2 代码修复已完成** — Notes 真加密 dry-run(`spike_day10`)全绿且未触主库;launchd agent+imap-sync 2/3 仍注册;数字员工 1/3 未自动 load(#91 代码修复完成,待授权实测);SMTP 真发仍暂停。**质量门**:**2907 passed / 1 skipped** / 89.12% / lint **270** / mypy **256 files**。**下一棒**:P3-A T3 L3(#91 真实 load 复验,需授权)→ P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 tag 评估。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 + P3-A T1 dry-run ✅ + T3 L1 launchd 盘点 ✅(v0.2.71 · 撞坑 #90/#91)** — outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 2/3 注册;数字员工 1/3 bootout(撞坑 #91 Documents exec,非单纯 TCC) — **2904 passed / 1 skipped** / 89.12% / MD lint **269** / mypy **256 files**。**下一棒**:T3 L2(#91 修复授权)→ P3-B 新草稿+命名收件人 SMTP → P4/P5;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 + P3-A T1 dry-run ✅ + T3 L2 #91 wrapper 修复 ✅(v0.2.72)** — outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 2/3 注册;数字员工 1/3 未自动 load(#91 代码修复完成,待授权实测) — **2907 passed / 1 skipped** / 89.12% / MD lint **270** / mypy **256 files**。**下一棒**:T3 L3(#91 真实 load 复验授权)→ P3-B 新草稿+命名收件人 SMTP → P4/P5;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2904 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **269 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.71 + pitfall-90/91 → 269) |
+| 核心质量门 | **2907 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **270 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.72 + pitfall-90/91 → 270) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |

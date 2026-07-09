@@ -69,6 +69,7 @@ HOME_BIN="${HOME}/bin"
 TARGET_SCRIPT="${HOME_BIN}/my-ai-employee-monthly-report"
 TARGET_IMAP_SCRIPT="${HOME_BIN}/my-ai-employee-imap-sync"
 TARGET_START_SCRIPT="${HOME_BIN}/my-ai-employee-start"
+TARGET_START_RUNNER="${HOME_BIN}/my-ai-employee-digital-runner"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 TARGET_PLIST="${LAUNCH_AGENTS_DIR}/com.myaiemployee.agent.plist"
 TARGET_PLIST_IMAP="${LAUNCH_AGENTS_DIR}/com.myaiemployee.imap-sync.plist"
@@ -119,7 +120,8 @@ if [[ "${MODE}" == "uninstall" ]]; then
     for script in \
         "${HOME_BIN}/my-ai-employee-monthly-report" \
         "${HOME_BIN}/my-ai-employee-imap-sync" \
-        "${HOME_BIN}/my-ai-employee-start"; do
+        "${HOME_BIN}/my-ai-employee-start" \
+        "${HOME_BIN}/my-ai-employee-digital-runner"; do
         if [[ -f "${script}" ]]; then
             rm -f "${script}"
             echo "✅ 删除脚本: ${script}"
@@ -224,10 +226,17 @@ chmod +x "${TARGET_IMAP_SCRIPT}"
 echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"
 
 echo "📋 部署 ${TARGET_START_SCRIPT}(数字员工开机自启)"
+echo "📋 部署 ${TARGET_START_RUNNER}(数字员工 runner · 非 Documents 执行)"
+cp "${SOURCE_START_SH}" "${TARGET_START_RUNNER}"
+chmod +x "${TARGET_START_RUNNER}"
+echo "✅ ${TARGET_START_RUNNER} 部署完成"
+
 {
     echo "#!/usr/bin/env bash"
     echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
-    echo "exec bash \"${PROJECT_ROOT}/ops/start-digital-employee.sh\" start"
+    echo "set -euo pipefail"
+    echo "export MY_AI_EMPLOYEE_PROJECT_ROOT=\"${PROJECT_ROOT}\""
+    echo "exec \"${TARGET_START_RUNNER}\" start"
 } > "${TARGET_START_SCRIPT}"
 chmod +x "${TARGET_START_SCRIPT}"
 echo "✅ ${TARGET_START_SCRIPT} 部署完成"

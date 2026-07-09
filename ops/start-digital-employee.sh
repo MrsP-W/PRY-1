@@ -29,8 +29,10 @@
 set -euo pipefail
 
 # 路径约定(沿 ops/day1-phase2-env.md)
+# launchd 安装时会把本脚本复制到 ~/bin,此时必须显式传入真实项目根目录。
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="${MY_AI_EMPLOYEE_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+PROJECT_ROOT="$(cd "$PROJECT_ROOT" && pwd)"
 DATA_DIR="$PROJECT_ROOT/data"
 LOG_DIR="$DATA_DIR/logs"
 LOG_FILE="$LOG_DIR/digital_employee.log"
