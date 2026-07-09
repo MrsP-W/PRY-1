@@ -428,16 +428,12 @@ def test_h2_start_digital_employee_uses_uv_bin_for_all_invocations():
     import re
 
     # 抽取非注释行
-    code_lines = [
-        line
-        for line in text.splitlines()
-        if not line.lstrip().startswith("#")
-    ]
+    code_lines = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
     code_text = "\n".join(code_lines)
     # 禁止裸 uv run(只能 ${UV_BIN} run)
     bare_uv_run = re.findall(r"(?<!\$\{UV_BIN\})\buv\s+run\b", code_text)
-    assert not bare_uv_run, (
-        "撞坑 #93 修复:所有 uv run 必须 ${{UV_BIN}} run,发现裸调用 " + str(bare_uv_run)
+    assert not bare_uv_run, "撞坑 #93 修复:所有 uv run 必须 ${{UV_BIN}} run,发现裸调用 " + str(
+        bare_uv_run
     )
     # 必有 6 处 ${UV_BIN} run(2 precheck + 2 real nohup + 2 dry-run echo)
     # 匹配两种形式:"${UV_BIN}" run(quoted)与 ${UV_BIN} run(unquoted in echo)
