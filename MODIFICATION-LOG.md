@@ -5611,3 +5611,34 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **进度数字**:**2908 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **270 files / 0 errors**。
 - **当前阶段**:P3-A T3 L2 代码 + runtime deploy-only 均完成;T3 L3 真实 load 复验仍待单独授权。
 - **完成度**:项目约 **93%**;可无人值守生产运行约 **88%**;v1.0 发布就绪约 **89%**。
+
+## 89. 2026-07-09 · P3-A T3 L3 数字员工 launchctl load 真实复验收口(撞坑 #91 完全修复 + 撞坑 #92 新暴露)
+
+> **触发**:用户授权 T3 L3 · 单 job load 数字员工 plist 复验撞坑 #91 是否完全消失。边界:不触发 SMTP,不做 Notes 生产同步,不启用 Path4,不自动 retry,失败立刻 bootout。
+
+### 1. 本次修改内容(audit only · 业务代码改动=0)
+
+- **load 数字员工 plist**:`launchctl load -w ~/Library/LaunchAgents/com.myaiemployee.digital-employee.plist` ✅ 成功(无 Load failed: 5)。
+- **launchctl list**:`3/3 注册`(`- 0 agent` / `9404 0 digital-employee` / `- 2 imap-sync`),PID 9404 短暂运行后 exit 1。
+- **撞坑 #91 真实修复验证**:`bash: .../ops/start-digital-employee.sh: Operation not permitted` **完全消失**;启动链路 `~/bin/my-ai-employee-start` → `~/bin/my-ai-employee-digital-runner` → `MY_AI_EMPLOYEE_PROJECT_ROOT` 显式 override → `ops/start-digital-employee.sh` 100% 命中。
+- **9 维度预检流程**:out log 显示完整 1-9 流程(5/9 OK + 4/9 fail,因 #92 .env 读不到)。
+- **新撞坑 #92 暴露**:runner 内 `grep: .../.env: Operation not permitted` + `.../data/menu_bar.log: Operation not permitted`(撞坑 #91 同根因在业务代码层)。
+- **安全处置**:`launchctl bootout gui/501/com.myaiemployee.digital-employee` 立即执行,plist enabled 保留,launchctl list 终态 2/3 注册。
+- **memory 沉淀**:`memory/pitfall-92-launchd-documents-data-path-block.md` + `memory/checkpoint-2026-07-09-p3-a-t3-l3-reverify.md`。
+
+### 2. 风险点
+
+- 🟢 **撞坑 #91 已完全修复**(launchd 启动链路层):路径 A `db3f2e4` + `f430304` 真实 load 验证通过。
+- 🟡 **撞坑 #92 业务代码路径依赖 Documents 沙箱**(撞坑 #91 同根因在不同阶段):
+  - 触发:`grep .env`(读 Documents/.env) + `> data/menu_bar.log`(写 Documents/data/)
+  - 影响:[2/9] DB_ENCRYPTION_KEY 缺 / [3/9] Keychain 缺 / [4/9] alembic current fail / [6/9] dashboard.server 导入 fail / [9/9] 菜单栏启动失败
+- 🟡 **数字员工 plist 仍 bootout**(撞坑 #92 修复前不能 load):沿 docs/v0.2.67 范本维持。
+- 🟢 **0 真实业务**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag。
+- 🟢 **已 bootout**:数字员工 plist 立即 bootout,无 crash loop 风险。
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2908 passed / 1 skipped / 89.12%** / mypy **256 files / 0 errors** / MD lint **270 files / 0 errors**(未变更 commit,本轮 audit only)。
+- **当前阶段**:撞坑 #91 完全修复;撞坑 #92 业务代码层暴露,待 user 决策 4 修复路径(A 改 runner 路径 / B 移整个项目 / C 软链 / D 暂缓维持 bootout)。
+- **完成度**:项目约 **93%**;可无人值守生产运行约 **86%**;v1.0 发布就绪约 **89%**(撞坑 #92 阻塞数字员工)。
+- **下一棒**:user 决策 #92 修复路径 → #92 修复后再次 T3 L3 真实复验 → 撞坑 #90 持久化方案 → P3-B SMTP → P4 24h → P5 v1.0 tag 评估。
