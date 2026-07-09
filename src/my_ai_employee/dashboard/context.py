@@ -300,7 +300,8 @@ def _try_build_real_session_factory() -> Any | None:
         return None
     try:
         with Database.open() as db:
-            engine = make_sqlalchemy_engine(db)
+            db_path = db.db_path
+        engine = make_sqlalchemy_engine(db_path=db_path)
         if engine is None:
             return None
         return sessionmaker(bind=engine, expire_on_commit=False)

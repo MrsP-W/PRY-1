@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2917 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **256 files** / MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
-| **下一棒** | P3-A T3 L4(撞坑 #93 真实 load 复验,需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
+| **质量基线** | **2920 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **257 files** / MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
+| **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
@@ -5791,7 +5791,34 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2917 passed / 1 skipped / 89.10%** / mypy **256 files / 0 errors** / MD lint **282 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 完全实战验证 + 撞坑 #94 暴露未决策)· commit ahead 1 待 push
-- **当前阶段**:P3-A T3 L4 launchctl 真实 load -w 撞坑 #93 完全验证 ✅ + 撞坑 #94 NEW 暴露 ⚠️ · 数字员工 bootout 维持 · 等 user 决策 #94 修复路径(A/B/C/D)
-- **完成度**:项目约 **94%**(不变)· 可无人值守生产运行约 **85%**(↓ 6pp · menu_bar 不可达 + #94 + 撞坑 #90 持久化未实施)· v1.0 发布就绪约 **87%**(↓ 5pp)
-- **下一棒**:user 决策 #94(推荐 A 立即 + B/C 后续 D-step)→ docs/v0.2.77 #94 修复 D-step → launchctl load -w 重试验证 → 1h 观察窗(scheduler/imap-sync 锚)→ 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 完全实战验证 + 撞坑 #94 B 路径代码修复候选)· commit ahead 1 待 push + 本轮代码修复待 commit
+- **当前阶段**:P3-A T3 L4 launchctl 真实 load -w 撞坑 #93 完全验证 ✅ + 撞坑 #94 B 路径代码修复候选 ⚠️ · 数字员工 bootout 维持 · 待 user 授权 #94 真实 load 复验
+- **完成度**:项目约 **95%**· 可无人值守生产运行约 **88%**(待 menu_bar 真实 load 复验 + 撞坑 #90 持久化未实施)· v1.0 发布就绪约 **89%**
+- **下一棒**:授权 launchctl load -w 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
+
+---
+
+## 93. 撞坑 #94 B 路径代码修复候选(2026-07-09)
+
+### 1. 本次修改内容
+
+- **commit hash**:本轮 commit(待创建 · 不 push)
+- **主题**:修复 menu_bar 长生命周期 SQLAlchemy engine 复用已关闭 `Database` 实例的问题
+- **改动范围**:业务代码 + 回归测试 + 5 件套质量基线同步
+  - `src/my_ai_employee/core/sqlcipher_compat.py`: `make_sqlalchemy_creator` / `make_sqlalchemy_engine` 支持 `db_path`
+  - `src/my_ai_employee/dashboard/context.py`:真实 session factory 改为 `make_sqlalchemy_engine(db_path=db_path)`
+  - `tests/core/test_sqlcipher_compat.py`:新增 3 个回归测试,覆盖 db_path 模式和关闭 DB 失败快路径
+  - `quality_snapshot.py` + README / CLAUDE / SESSION-STATE / launch-plan 同步 `2920/1/89.12%/285/257`
+
+### 2. 风险点
+
+- 🟡 **待真实 load 复验**:本轮未执行 `launchctl load -w`,只完成代码修复候选与质量门验证
+- 🟢 **红线维持**:未 SMTP 真发,未 Notes 生产同步,未 Path4 写入,未打 v1.0 tag,未 push
+- 🟡 **撞坑 #90 未动**:launchd session-bound 持久化仍需单独 D-step
+
+### 3. 当前项目整体总结
+
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**
+- **当前阶段**:#94 B 路径代码修复候选已落地;数字员工仍 bootout,待 user 授权真实 load 复验
+- **完成度**:项目约 **95%**;可无人值守生产运行约 **88%**;v1.0 发布就绪约 **89%**
+- **下一棒**:授权 `launchctl load -w` 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)

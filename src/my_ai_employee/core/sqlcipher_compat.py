@@ -28,6 +28,7 @@ conn.row_factory 常态是 None — SA 探针 OK，业务代码 dict 访问也 O
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 
 import sqlcipher3.dbapi2 as _dbapi2
 from sqlalchemy import create_engine
@@ -41,7 +42,11 @@ __all__ = [
 ]
 
 
-def make_sqlalchemy_creator(db: Database) -> Callable[[], _dbapi2.Connection]:
+def make_sqlalchemy_creator(
+    db: Database | None = None,
+    *,
+    db_path: Path | None = None,
+) -> Callable[[], _dbapi2.Connection]:
     """返回 SA engine 的 creator 函数（D3.2 关键工具）。
 
     creator 干一件事：拿 `db.connection`（**受控入口** — D3.1.2 设计，
@@ -52,20 +57,37 @@ def make_sqlalchemy_creator(db: Database) -> Callable[[], _dbapi2.Connection]:
     `conn.row_factory` 常态是 None — SA 探针天然满足。
 
     Args:
-        db: 已 open 的 Database 实例
+        db: 已 open 的 Database 实例(短生命周期脚本/测试用)
+        db_path: DB 路径(长生命周期进程用;每次连接独立 Database.open)
 
     Returns:
         接受 0 参数、返回 sqlcipher3 connection 的 callable
     """
+    if (db is None) == (db_path is None):
+        raise ValueError("make_sqlalchemy_creator 需要且只能传入 db 或 db_path")
+
+    if db_path is not None:
+        path = db_path
+
+        def creator_from_path() -> _dbapi2.Connection:
+            # 长生命周期服务不能持有已离开 context manager 的 db.connection。
+            return Database.open(db_path=path).connection
+
+        return creator_from_path
 
     def creator() -> _dbapi2.Connection:
         # D3.1.2 受控入口（不是私有 _conn）
+        assert db is not None
         return db.connection
 
     return creator
 
 
-def make_sqlalchemy_engine(db: Database) -> Engine:
+def make_sqlalchemy_engine(
+    db: Database | None = None,
+    *,
+    db_path: Path | None = None,
+) -> Engine:
     """便捷函数：一步拿到走 SQLCipher 的 SA engine。
 
     等价于：
@@ -74,10 +96,11 @@ def make_sqlalchemy_engine(db: Database) -> Engine:
     但更明确（明确走 SQLCipher，不让用户疑惑 sqlite:/// 含义）。
 
     Args:
-        db: 已 open 的 Database 实例
+        db: 已 open 的 Database 实例(短生命周期脚本/测试用)
+        db_path: DB 路径(长生命周期进程用;每次连接独立 Database.open)
 
     Returns:
         SQLAlchemy Engine，creator 走 SQLCipher Database.open()
     """
-    creator = make_sqlalchemy_creator(db)
+    creator = make_sqlalchemy_creator(db, db_path=db_path)
     return create_engine("sqlite:///", creator=creator)

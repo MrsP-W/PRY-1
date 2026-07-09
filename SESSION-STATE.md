@@ -1,7 +1,7 @@
-# SESSION-STATE — v0.2.76 T3 L4 撞坑 #93 实战验证 ✅ + 撞坑 #94 NEW ⚠️(2026-07-09) + `v0.2.1` 正式 tag 维持期
+# SESSION-STATE — v0.2.76 T3 L4 撞坑 #93 实战验证 ✅ + 撞坑 #94 B 路径代码修复候选 ⚠️(2026-07-09) + `v0.2.1` 正式 tag 维持期
 
-> **最后更新**:2026-07-09 · **P3-A 下一棒推进**:v0.2.73 deploy-only + v0.2.74 #92 修复 B path migration + v0.2.74.1 巡检报告 + v0.2.75 #93 launchd uv PATH 修复代码 + 测试就位 + **v0.2.76 T3 L4 撞坑 #93 实战验证 ✅(09/09 预检全过 + UV_BIN 链路 + err.log 无 Documents 错误)** + **撞坑 #94 NEW 暴露(menu_bar subprocess SQLAlchemy DB context manager RuntimeError · 等 user 决策 4 修复路径)** · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **状态**:🟢 → ⚠️ **Day 13 + P3-A T3 L4 撞坑 #93 实战验证完全通过** + 撞坑 #94 NEW 暴露 — **T3 L4 launchctl load -w 真实验证**(09/09 预检全过 + UV_BIN 链路 + err.log 无 Documents 错误)· 撞坑 #94 menu_bar subprocess SQLAlchemy pool creator 抛 `RuntimeError: DB 已关闭` · 数字员工 launcher 检测 menu_bar 失败 exit 1 · bootout 已执行 · **1h/24h 观察暂缓** · 等 #94 决策(A docs-only / B make_sqlalchemy_engine 接 db_path / C creator() 内 lazy reopen / D 暂缓仅 scheduler 锚)· Notes 真加密 dry-run(`spike_day10`)全绿且未触主库;launchd 实际 2/3 active + 1/3 bootout(数字员工);agent + imap-sync 2/3 注册;数字员工维持 bootout;SMTP 真发仍暂停。**质量门**:**2917 passed / 1 skipped** / 89.10% / lint **285** / mypy **256 files**。**完成度**:整体 ~94%(不变)/可无人值守 ~85%(↓ 6pp · menu_bar 不可达)/v1.0 ~87%(↓ 5pp)。**下一棒**:user 决策 #94 修复路径 → docs/v0.2.77 #94 修复 D-step → launchctl load -w 重试验证 → 1h 观察窗(scheduler/imap-sync 锚)→ 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
+> **最后更新**:2026-07-09 · **P3-A 下一棒推进**:v0.2.73 deploy-only + v0.2.74 #92 修复 B path migration + v0.2.74.1 巡检报告 + v0.2.75 #93 launchd uv PATH 修复代码 + 测试就位 + **v0.2.76 T3 L4 撞坑 #93 实战验证 ✅(09/09 预检全过 + UV_BIN 链路 + err.log 无 Documents 错误)** + **撞坑 #94 B 路径代码修复候选(menu_bar subprocess SQLAlchemy DB context manager RuntimeError → `make_sqlalchemy_engine(db_path=...)` 长生命周期连接重开)** · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
+> **状态**:🟢 → ⚠️ **Day 13 + P3-A T3 L4 撞坑 #93 实战验证完全通过** + 撞坑 #94 B 路径代码修复候选 — **T3 L4 launchctl load -w 真实验证**(09/09 预检全过 + UV_BIN 链路 + err.log 无 Documents 错误)· 撞坑 #94 menu_bar subprocess SQLAlchemy pool creator 抛 `RuntimeError: DB 已关闭` · 已改为 db_path 模式让长生命周期进程按连接独立 `Database.open()` · 数字员工 bootout 维持 · **1h/24h 观察暂缓到真实 load 验证后** · Notes 真加密 dry-run(`spike_day10`)全绿且未触主库;launchd 实际 2/3 active + 1/3 bootout(数字员工);agent + imap-sync 2/3 注册;SMTP 真发仍暂停。**质量门**:**2920 passed / 1 skipped** / 89.12% / lint **285** / mypy **257 files**。**完成度**:整体 ~95%/可无人值守 ~88%(待 menu_bar 真实 load 复验)/v1.0 ~89%。**下一棒**:授权 launchctl load -w 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
 >
 > **Phase A 沿用**:`reports/v0.2.55.2-path4-spike-L0L1L2-2026-07-01.md` 8 节(L0 2/2 + L1 10/10 + L2 4/4 = 12/12 全绿 · 撞坑 #71 回归)· commit `9770e38`。
 >
@@ -15,7 +15,7 @@
 
 **决策**:端午不休息(沿 6/17 用户指令)。B 选项「端午连休保持」已废弃,6/19-22 链路不再暂停,继续推进 v0.2.2+ 启动候选。
 
-**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 + P3-A T1 dry-run ✅ + T3 L2 #91 deploy-only ✅(v0.2.73) + T3 L3 #92 修复 B + #93 修复 ✅(v0.2.74/v0.2.74.1/v0.2.75)** — outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 3/3 注册;数字员工 exit 1(撞坑 #93 修复代码 + 测试就位 · 47/47 launchd 测试 PASSED · 等 user 授权 T3 L4 重 load 验证) — **2917 passed / 1 skipped** / 89.10% / MD lint **285** / mypy **256 files**。**下一棒**:T3 L4(撞坑 #93 真实 load 复验授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人 SMTP → P4/P5;v1.0 tag 默认不打。
+**当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 13 + P3-A T1 dry-run ✅ + T3 L2 #91 deploy-only ✅(v0.2.73) + T3 L3 #92 修复 B + #93 修复 ✅(v0.2.74/v0.2.74.1/v0.2.75) + #94 B 路径代码修复候选** — outbox 2 条已 `cancelled` · 未 SMTP 外发;launchd 实际 2/3 active + 1/3 bootout;数字员工待真实 load 复验 — **2920 passed / 1 skipped** / 89.12% / MD lint **285** / mypy **257 files**。**下一棒**:授权 T3 L4 #94 重 load 验证 → 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人 SMTP → P4/P5;v1.0 tag 默认不打。
 
 **v0.2.2 #5 OAuth 2.0 Phase 2 5 commits 收口完成**(沿用):docs-only 启动 `b7b9ea7` + commit 2-4 主代码 + commit 5 依赖加锁 `6a0549e`。
 
@@ -30,7 +30,7 @@
 | 分支 | `main` |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
-| 核心质量门 | **2917 passed / 1 skipped** · **89.10%** coverage · mypy --strict 0 errors(**256 files**) · MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
+| 核心质量门 | **2920 passed / 1 skipped** · **89.12%** coverage · mypy --strict 0 errors(**257 files**) · MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
 | outlook/gmail SMTP provider | ⏭️ **用户决策不配置**(2026-06-29) — 不使用 Outlook/Gmail · 不写入 Keychain · 不跑真实 spike · 代码 factory/OAuth 保留供未来,非本项目发布阻塞 |
