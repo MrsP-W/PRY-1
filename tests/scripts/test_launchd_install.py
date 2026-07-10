@@ -13,9 +13,13 @@ launchd_plist/com.myaiemployee.agent.plist(D10 启动).
 
 from __future__ import annotations
 
+import os
 import plistlib
 import re
+import subprocess
 from pathlib import Path
+
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLIST_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.agent.plist"
@@ -374,7 +378,7 @@ def test_f6_start_script_accepts_explicit_project_root_override():
 
 
 def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
-    """F7. deploy-only/no-load 必只部署文件,不进入 launchctl load 段(撞坑 #95 修复后 4 job)."""
+    """F7. deploy-only/no-load 早退必须位于 launchctl load 段之前."""
     text = INSTALL_SH.read_text(encoding="utf-8")
     assert "deploy-only | no-load)" in text
     assert "DEPLOY_ONLY=true" in text
@@ -383,7 +387,6 @@ def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
     load_section = text.index("# ===== 6. launchctl load(4 job")
     assert deploy_exit < load_section
     deploy_block = text[deploy_exit:load_section]
-    assert "launchctl load -w" in deploy_block
     assert "exit 0" in deploy_block
 
 
@@ -779,7 +782,7 @@ def test_k1_install_sh_has_legacy_retirement_step():
 def test_k2_install_sh_legacy_retirement_runs_before_load():
     """K2. 撞坑 #95 P1 补遗:legacy retirement 段必在 launchctl load 新 job 之前."""
     text = INSTALL_SH.read_text(encoding="utf-8")
-    legacy_pos = text.index("legacy retirement")
+    legacy_pos = text.index('LEGACY_LABEL="com.myaiemployee.digital-employee"')
     load_pos = text.index("# ===== 6. launchctl load")
     assert legacy_pos < load_pos, (
         "撞坑 #95 P1 补遗:legacy retirement 必在 launchctl load 之前(否则旧实例仍在 8765)"
@@ -862,4 +865,81 @@ def test_k5_deploy_only_does_not_trigger_legacy_retirement():
     # 5.5 段可含 "rm -f" 但不能含 my-ai-employee-start(legacy wrapper)
     assert "my-ai-employee-start" not in code_5_5, (
         "撞坑 #98 P1-3 修复:5.5 段代码(deploy-only)禁删 ~/bin/my-ai-employee-start legacy wrapper"
+    )
+
+
+@pytest.mark.parametrize("mode", ("deploy-only", "no-load"))
+def test_k6_deploy_only_modes_leave_legacy_files_and_launchctl_untouched(
+    tmp_path: Path, mode: str
+) -> None:
+    """K6. deploy-only/no-load 实际运行时不应 retire legacy 或改变 launchd 运行态."""
+    home = tmp_path / "home"
+    legacy_files = {
+        home / "Library/LaunchAgents/com.myaiemployee.digital-employee.plist": "legacy plist\n",
+        home / "bin/my-ai-employee-start": "legacy wrapper\n",
+        home / "Library/Logs/MyAIEmployee/digital-employee.out.log": "legacy stdout\n",
+        home / "Library/Logs/MyAIEmployee/digital-employee.err.log": "legacy stderr\n",
+    }
+    for path, contents in legacy_files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents, encoding="utf-8")
+    app_support_env = home / "Library/Application Support/MyAIEmployee/.env"
+    app_support_env.parent.mkdir(parents=True, exist_ok=True)
+    app_support_env.write_text("# test-only environment\n", encoding="utf-8")
+
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    launchctl_calls = tmp_path / "launchctl.calls"
+    fake_launchctl = fake_bin / "launchctl"
+    fake_launchctl.write_text(
+        "#!/usr/bin/env bash\n"
+        'if [[ "${1:-}" == "list" ]]; then\n'
+        "    printf '%s\\n' 'com.myaiemployee.digital-employee'\n"
+        "else\n"
+        '    printf \'%s\\n\' "$*" >> "${FAKE_LAUNCHCTL_LOG:?}"\n'
+        "fi\n",
+        encoding="utf-8",
+    )
+    fake_launchctl.chmod(0o755)
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(home),
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+            "FAKE_LAUNCHCTL_LOG": str(launchctl_calls),
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(INSTALL_SH), mode],
+        cwd=PROJECT_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=15,
+    )
+
+    assert result.returncode == 0, (
+        f"撞坑 #98 P1-3 修复:{mode} 必只部署并成功早退,"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    for path, contents in legacy_files.items():
+        assert path.read_text(encoding="utf-8") == contents, (
+            f"撞坑 #98 P1-3 修复:{mode} 不得修改 legacy 文件 {path}"
+        )
+    for path in (
+        home / "bin/my-ai-employee-monthly-report",
+        home / "bin/my-ai-employee-imap-sync",
+        home / "bin/my-ai-employee-menu-bar-runner",
+        home / "bin/my-ai-employee-dashboard-runner",
+        home / "Library/LaunchAgents/com.myaiemployee.agent.plist",
+        home / "Library/LaunchAgents/com.myaiemployee.imap-sync.plist",
+        home / "Library/LaunchAgents/com.myaiemployee.menu-bar.plist",
+        home / "Library/LaunchAgents/com.myaiemployee.dashboard.plist",
+    ):
+        assert path.exists(), f"撞坑 #98 P1-3 修复:{mode} 必部署当前文件 {path}"
+    calls = launchctl_calls.read_text(encoding="utf-8") if launchctl_calls.exists() else ""
+    assert not re.search(r"^(?:unload|bootout|load)\b", calls, re.MULTILINE), (
+        f"撞坑 #98 P1-3 修复:{mode} 不得改变 launchd 运行态,实际调用={calls}"
     )
