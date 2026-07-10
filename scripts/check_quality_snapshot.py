@@ -125,8 +125,9 @@ def count_baseline_guardian_failures(*, root: Path = ROOT) -> int:
     """仅跑基线守护模块,返回 fail 数(用于解释 collect vs passed+skipped 差值)."""
     import os
 
-    if os.environ.get(_GUARDIAN_PROBE_ENV) == "1":
-        # 已在 guardian 探测子进程内 — 避免 test_quality_snapshot 递归 spawn pytest
+    if os.environ.get(_GUARDIAN_PROBE_ENV) == "1" or os.environ.get("PYTEST_CURRENT_TEST"):
+        # pytest 进程内不得再启动 guardian：测试本身会调用 check_snapshot/CLI，
+        # 否则会高扇出地递归 spawn pytest。仅顶层 CLI 做一次 guardian 探测。
         return 0
     env = os.environ.copy()
     env[_GUARDIAN_PROBE_ENV] = "1"
@@ -160,6 +161,10 @@ def count_live_pytest_outcomes(*, root: Path = ROOT) -> tuple[int, int, int] | N
         return None
     env = os.environ.copy()
     env[_SKIP_LIVE_PYTEST_ENV] = "1"
+    # The live pytest includes the snapshot guardian tests. The outer check has
+    # already run the guardian probe above, so prevent this child suite from
+    # spawning another guardian probe.
+    env[_GUARDIAN_PROBE_ENV] = "1"
     result = subprocess.run(
         [
             "uv",

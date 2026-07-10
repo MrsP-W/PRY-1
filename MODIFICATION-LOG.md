@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2942 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **257 files** / MD lint **291 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 2942/1) |
+| **质量基线** | **2946 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **257 files** / MD lint **291 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 2946/1) |
 | **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -150,6 +150,26 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-11 [snapshot guardian 防递归 + launchd K8 精确标签回归] — 收口
+
+**1. 本次修改内容**
+
+- **fix(snapshot)**: `check_quality_snapshot.py` 在 pytest 子进程中跳过 guardian probe，并向 live pytest 传递 probe 标记，杜绝 `make check-snapshot` 的嵌套 pytest 高扇出。
+- **test(launchd)**: 补回 K8 的 3 个 uninstall 精确标签场景；近似或后缀 label 不得触发 unload/bootout。
+- **docs(state)**: 当前入口基线同步为 **2946 passed / 1 skipped**；实测 coverage **89.12%**，按 <0.1pp 抖动规则保持快照 **89.10%**。
+
+**2. 风险点**
+
+- 未执行真实 launchctl、push、tag 或任何外部写入；启动前既有 `docs/ui/codex-style-dashboard.html` 改动仍独立保留。
+- 后续运行 `make check-snapshot` 应避免与另一份完整 pytest 并发，以免不必要的资源竞争。
+
+**3. 当前项目整体总结**
+
+- 质量门：`make test` **2946 passed / 1 skipped**（89.12%）；`MYAI_EMPLOYEE_SNAPSHOT_SKIP_LIVE_PYTEST=1 make check-snapshot`、`make lint`、mypy、alembic SQL、ruff、`uv build` 全绿。完整 `make check-snapshot` 的重复全量 pytest 在终端环境被 SIGTERM 中断，未见断言失败。
+- 下一棒：保持本地提交边界；P0-4 的 24h 观察不在本自动化中自动启动。
+
+---
 
 ### 2026-06-30 [项目检查 · coverage 同步 + 下一棒 stale 修正] — 收口
 

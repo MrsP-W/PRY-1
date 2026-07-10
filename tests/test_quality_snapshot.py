@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 from unittest.mock import patch
@@ -19,6 +20,7 @@ from scripts.check_quality_snapshot import (
     check_snapshot,
     count_baseline_guardian_failures,
     count_collected_tests,
+    count_live_pytest_outcomes,
     count_tracked_md_files,
     parse_lint_file_count,
     parse_pytest_counts,
@@ -51,6 +53,16 @@ def test_collected_test_count_matches_snapshot_pytest() -> None:
         f"collected ({collected}) != passed+skipped+guardian_failures "
         f"({passed}+{skipped}+{guardian_failures}={expected})"
     )
+
+
+def test_guardian_failure_probe_does_not_spawn_inside_pytest(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """pytest 内调用快照检查时，guardian 探测不得递归启动子 pytest。"""
+    monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_quality_snapshot.py::guardian (call)")
+    with patch("scripts.check_quality_snapshot.subprocess.run") as run:
+        assert count_baseline_guardian_failures(root=PROJECT_ROOT) == 0
+    run.assert_not_called()
 
 
 def test_dashboard_api_status_quality_gates_match_default() -> None:
@@ -135,6 +147,38 @@ def test_live_pytest_outcomes_match_snapshot_when_mocked() -> None:
     ):
         errors = check_snapshot(root=PROJECT_ROOT)
     assert any("outcome drift" in err for err in errors)
+
+    captured_env: dict[str, str] = {}
+
+    def run_with_captured_env(*_args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        raw_env = kwargs.get("env")
+        assert isinstance(raw_env, dict)
+        captured_env.update({str(key): str(value) for key, value in raw_env.items()})
+        return subprocess.CompletedProcess(
+            args=["uv", "run", "pytest"],
+            returncode=0,
+            stdout=f"{passed} passed / {skipped} skipped",
+            stderr="",
+        )
+
+    with (
+        patch.dict(
+            os.environ,
+            {
+                "MYAI_EMPLOYEE_SNAPSHOT_SKIP_LIVE_PYTEST": "",
+                "PYTEST_CURRENT_TEST": "",
+            },
+        ),
+        patch(
+            "scripts.check_quality_snapshot.subprocess.run",
+            side_effect=run_with_captured_env,
+        ),
+    ):
+        outcomes = count_live_pytest_outcomes(root=PROJECT_ROOT)
+
+    assert outcomes == (passed, 0, skipped)
+    assert captured_env["MYAI_EMPLOYEE_SNAPSHOT_SKIP_LIVE_PYTEST"] == "1"
+    assert captured_env["MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE"] == "1"
 
 
 def test_check_state_entries_script_exits_zero() -> None:
