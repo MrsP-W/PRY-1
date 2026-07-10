@@ -66,7 +66,9 @@ def parse_mypy_files_count(mypy_files: str) -> int:
     return int(match.group(1))
 
 
-def build_entry_checks(*, gates: QualityGateSnapshot = DEFAULT_QUALITY_GATES) -> list[EntryLineCheck]:
+def build_entry_checks(
+    *, gates: QualityGateSnapshot = DEFAULT_QUALITY_GATES
+) -> list[EntryLineCheck]:
     """根据 quality_snapshot 生成入口行校验规则."""
     md_count = parse_lint_file_count(gates.lint)
     passed, _skipped = parse_pytest_counts(gates.pytest)

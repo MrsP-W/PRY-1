@@ -121,7 +121,7 @@ def _seed_plaintext_note(
             folder="Notes",
             title=title,
             body=body,
-            is_private=0,  # noqa: INT - 直接 SQLAlchemy 写入,不经过 _validate_is_private 守卫
+            is_private=0,  # 直接 SQLAlchemy 写入,不经过 _validate_is_private 守卫
             tags=None,
             synced_at_ms=synced_at_ms,
             updated_at_ms=synced_at_ms,
@@ -186,7 +186,10 @@ def _run_spike(args: argparse.Namespace) -> int:
             return 1
         cipher = build_notes_cipher(loaded_key)
         if not isinstance(cipher, NotesCipherImpl):
-            print(f"[FAIL] build_notes_cipher 返回 Stub 而非 Impl: {type(cipher).__name__}", file=sys.stderr)
+            print(
+                f"[FAIL] build_notes_cipher 返回 Stub 而非 Impl: {type(cipher).__name__}",
+                file=sys.stderr,
+            )
             return 1
         print(f"[OK] opt-in 链路就绪: cipher={type(cipher).__name__}, key_len={len(loaded_key)}")
 
@@ -221,23 +224,26 @@ def _run_spike(args: argparse.Namespace) -> int:
             from my_ai_employee.db.notes import Note
 
             with session_factory() as session:
-                legacy_row = session.execute(
-                    select(Note).where(Note.id == legacy_id)
-                ).scalar_one()
+                legacy_row = session.execute(select(Note).where(Note.id == legacy_id)).scalar_one()
                 encrypted_row = session.execute(
                     select(Note).where(Note.id == encrypted_id)
                 ).scalar_one()
 
             if legacy_row.title.startswith("enc:v1:") or legacy_row.body.startswith("enc:v1:"):
-                print(f"[FAIL] legacy note 不应该有 enc:v1: 前缀: title={legacy_row.title[:20]!r}", file=sys.stderr)
+                print(
+                    f"[FAIL] legacy note 不应该有 enc:v1: 前缀: title={legacy_row.title[:20]!r}",
+                    file=sys.stderr,
+                )
                 return 2
-            if not encrypted_row.title.startswith("enc:v1:") or not encrypted_row.body.startswith("enc:v1:"):
+            if not encrypted_row.title.startswith("enc:v1:") or not encrypted_row.body.startswith(
+                "enc:v1:"
+            ):
                 print(
                     f"[FAIL] 新加密 note 应该有 enc:v1: 前缀: title={encrypted_row.title[:20]!r}",
                     file=sys.stderr,
                 )
                 return 2
-            print(f"[OK] 库内前缀严判: legacy=plaintext, encrypted=enc:v1: 前缀")
+            print("[OK] 库内前缀严判: legacy=plaintext, encrypted=enc:v1: 前缀")
 
             # ---- 5. NoteStore.list_all + get_by_id 验证解密(沿 Phase 1.2 test_impl_cipher_mixed_plaintext_and_encrypted 范本)----
             # 注意:NoteStore.insert 新 note 无指纹冲突 → needs_confirm=0,
@@ -252,10 +258,16 @@ def _run_spike(args: argparse.Namespace) -> int:
                 return 2
             legacy_loaded = all_by_id[legacy_id]
             encrypted_loaded = all_by_id[encrypted_id]
-            if legacy_loaded.title != "历史明文标题" or legacy_loaded.body != "历史明文正文,无 enc:v1: 前缀":
+            if (
+                legacy_loaded.title != "历史明文标题"
+                or legacy_loaded.body != "历史明文正文,无 enc:v1: 前缀"
+            ):
                 print(f"[FAIL] legacy 解密错: title={legacy_loaded.title!r}", file=sys.stderr)
                 return 2
-            if encrypted_loaded.title != "新加密标题" or encrypted_loaded.body != "新加密正文,应自动落 enc:v1: 前缀":
+            if (
+                encrypted_loaded.title != "新加密标题"
+                or encrypted_loaded.body != "新加密正文,应自动落 enc:v1: 前缀"
+            ):
                 print(f"[FAIL] encrypted 解密错: title={encrypted_loaded.title!r}", file=sys.stderr)
                 return 2
 
@@ -268,7 +280,9 @@ def _run_spike(args: argparse.Namespace) -> int:
                 )
                 return 2
             # 严判无 enc:v1: 前缀泄露
-            if legacy_loaded.title.startswith("enc:v1:") or encrypted_loaded.title.startswith("enc:v1:"):
+            if legacy_loaded.title.startswith("enc:v1:") or encrypted_loaded.title.startswith(
+                "enc:v1:"
+            ):
                 print(
                     f"[FAIL] 解密后仍含 enc:v1: 前缀: legacy={legacy_loaded.title[:20]!r}, "
                     f"encrypted={encrypted_loaded.title[:20]!r}",
@@ -276,8 +290,8 @@ def _run_spike(args: argparse.Namespace) -> int:
                 )
                 return 2
             print(
-                f"[OK] list_all + get_by_id 解密: 2 条全部明文返回 "
-                f"(legacy 明文 + encrypted 解密,无 enc:v1: 前缀泄露)"
+                "[OK] list_all + get_by_id 解密: 2 条全部明文返回 "
+                "(legacy 明文 + encrypted 解密,无 enc:v1: 前缀泄露)"
             )
 
             # ---- 6. 菜单栏 NoteConfirmServiceImpl.list_pending_confirm 验证(仅 legacy,因为 encrypted 无 needs_confirm=1)----
@@ -287,7 +301,10 @@ def _run_spike(args: argparse.Namespace) -> int:
             confirm_items = svc.list_pending_confirm(limit=10)
             confirm_titles = {item.get("title") for item in confirm_items if isinstance(item, dict)}
             if "历史明文标题" not in confirm_titles:
-                print(f"[FAIL] 菜单栏 list_pending_confirm 未包含历史明文标题: {confirm_titles}", file=sys.stderr)
+                print(
+                    f"[FAIL] 菜单栏 list_pending_confirm 未包含历史明文标题: {confirm_titles}",
+                    file=sys.stderr,
+                )
                 return 2
             # encrypted 不在 list_pending_confirm 因 needs_confirm=0,但其解密路径在步骤 5 已验证
             # 严判无 enc:v1: 前缀泄露
@@ -322,7 +339,10 @@ def _run_spike(args: argparse.Namespace) -> int:
             payload_items = payload.get("items", [])
             payload_titles = {item.get("title") for item in payload_items if isinstance(item, dict)}
             if "历史明文标题" not in payload_titles:
-                print(f"[FAIL] Dashboard payload 未包含历史明文标题: {payload_titles}", file=sys.stderr)
+                print(
+                    f"[FAIL] Dashboard payload 未包含历史明文标题: {payload_titles}",
+                    file=sys.stderr,
+                )
                 return 2
             # 严判字段白名单 + 无密文泄露
             expected_keys = {
@@ -338,7 +358,9 @@ def _run_spike(args: argparse.Namespace) -> int:
                     continue
                 title = item.get("title", "")
                 if title.startswith("enc:v1:"):
-                    print(f"[FAIL] Dashboard payload 泄露密文: title={title[:20]!r}", file=sys.stderr)
+                    print(
+                        f"[FAIL] Dashboard payload 泄露密文: title={title[:20]!r}", file=sys.stderr
+                    )
                     return 2
                 keys = set(item.keys())
                 if keys != expected_keys:
@@ -360,16 +382,18 @@ def _run_spike(args: argparse.Namespace) -> int:
             print("=" * 60)
             print("Day 10 Phase 3.5 Notes 真加密 dry-run spike — 全绿")
             print("=" * 60)
-            print(f"  opt-in: ENABLE_NOTES_ENCRYPTION=1 (进程内)")
+            print("  opt-in: ENABLE_NOTES_ENCRYPTION=1 (进程内)")
             print(f"  master key: {len(loaded_key)} bytes (mock,run-end 自动销毁)")
-            print(f"  cipher: NotesCipherImpl (Phase 1.1 P1 默认)")
+            print("  cipher: NotesCipherImpl (Phase 1.1 P1 默认)")
             print(f"  DB: 临时 SQLite file (跑完{'保留' if args.keep_db else '删除'})")
-            print(f"  notes: 2 (1 legacy plaintext + 1 new enc:v1:)")
-            print(f"  NoteStore.list_all + get_by_id 解密: 2 条明文")
-            print(f"  NoteConfirmServiceImpl.list_pending_confirm: 1 条明文 (legacy 为主,encrypted needs_confirm=0)")
-            print(f"  Dashboard /api/notes/pending payload: 1 条明文 + 6 字段白名单")
-            print(f"  生产主库未触碰 ~/Library/Application Support/my-ai-employee/data.db")
-            print(f"  shell profile 未写 ENABLE_NOTES_ENCRYPTION=1")
+            print("  notes: 2 (1 legacy plaintext + 1 new enc:v1:)")
+            print("  NoteStore.list_all + get_by_id 解密: 2 条明文")
+            print(
+                "  NoteConfirmServiceImpl.list_pending_confirm: 1 条明文 (legacy 为主,encrypted needs_confirm=0)"
+            )
+            print("  Dashboard /api/notes/pending payload: 1 条明文 + 6 字段白名单")
+            print("  生产主库未触碰 ~/Library/Application Support/my-ai-employee/data.db")
+            print("  shell profile 未写 ENABLE_NOTES_ENCRYPTION=1")
             print()
             return 0
         finally:

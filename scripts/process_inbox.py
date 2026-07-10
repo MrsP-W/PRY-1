@@ -46,8 +46,8 @@ from my_ai_employee.ai.drafter import (  # noqa: E402
     EmailDrafter,
     SpamBlockedError,
 )
-from my_ai_employee.ai.safety import is_system_sender  # 撞坑 #85 Layer 2 短路
 from my_ai_employee.ai.providers import LLMError  # noqa: E402
+from my_ai_employee.ai.safety import is_system_sender  # noqa: E402  # 撞坑 #85 Layer 2 短路
 from my_ai_employee.core.config import load_env  # noqa: E402
 from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.models import Email  # noqa: E402

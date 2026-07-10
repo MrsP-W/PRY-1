@@ -27,7 +27,6 @@ from __future__ import annotations
 
 import argparse
 import getpass
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -36,8 +35,8 @@ from typing import NamedTuple
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from my_ai_employee.core.config import load_env  # noqa: E402
 from my_ai_employee.core import keychain  # noqa: E402
+from my_ai_employee.core.config import load_env  # noqa: E402
 
 
 class SetupStatus(NamedTuple):
@@ -229,7 +228,9 @@ def step_notes_master_key(skip: bool) -> SetupStatus:
         print()
         return SetupStatus(name="notes_master_key", ok=True, detail="skipped", skipped=True)
 
-    master_key = getpass.getpass("  请输入 64 位 hex master key(输入隐藏 · 生成:openssl rand -hex 32): ").strip()
+    master_key = getpass.getpass(
+        "  请输入 64 位 hex master key(输入隐藏 · 生成:openssl rand -hex 32): "
+    ).strip()
     if len(master_key) != 64:
         print(f"  ❌ master key 长度必须 64 hex chars(实际 {len(master_key)} chars)")
         return SetupStatus(name="notes_master_key", ok=False, detail="bad_length")
@@ -312,8 +313,12 @@ def step_tcc_guide() -> SetupStatus:
     print()
     print("  💡 授权完成后:")
     print("     - 菜单栏:bash ops/start-menubar.sh start")
-    print("     - IMAP 同步:uv run python scripts/sync_imap.py sync --provider qq --email <your-email>")
-    print("     - 账单导入:BILLS_REAL_IMPORT=1 uv run python scripts/import_all.py --no-dry-run --confirm ...")
+    print(
+        "     - IMAP 同步:uv run python scripts/sync_imap.py sync --provider qq --email <your-email>"
+    )
+    print(
+        "     - 账单导入:BILLS_REAL_IMPORT=1 uv run python scripts/import_all.py --no-dry-run --confirm ..."
+    )
     print("     - Notes 同步:NOTES_REAL_NETWORK=1 uv run python scripts/sync_notes.py sync")
     print()
     return SetupStatus(name="tcc_guide", ok=True, detail="printed")
@@ -380,6 +385,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # 静默 loguru(setup wizard 是 CLI,INFO 日志污染 stdout)
     import loguru
+
     loguru.logger.remove()
     loguru.logger.add(sys.stderr, level="WARNING")
 

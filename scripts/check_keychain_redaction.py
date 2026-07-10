@@ -148,15 +148,21 @@ def check_keychain_round_trip_pattern() -> dict[str, Any]:
 def check_oauth_token_json_redaction() -> dict[str, Any]:
     """OAuth token JSON 序列化脱敏(沿 v0.2.2 #5 commit 5/5 范本)。"""
     result = {"check": "OAuth token JSON 序列化脱敏", "passes": [], "fails": []}
-    token_json = json.dumps({
-        "access_token": "ya29.aBcDeF1234567890XYZ",
-        "refresh_token": "1//0gH_iJ-1234567890abcdef",
-        "expires_in": 3600,
-        "token_type": "Bearer",
-    })
+    token_json = json.dumps(
+        {
+            "access_token": "ya29.aBcDeF1234567890XYZ",
+            "refresh_token": "1//0gH_iJ-1234567890abcdef",
+            "expires_in": 3600,
+            "token_type": "Bearer",
+        }
+    )
     # 序列化后日志输出应脱敏
-    safe_log = token_json.replace("ya29.aBcDeF1234567890XYZ", redact_token("ya29.aBcDeF1234567890XYZ"))
-    safe_log = safe_log.replace("1//0gH_iJ-1234567890abcdef", redact_token("1//0gH_iJ-1234567890abcdef"))
+    safe_log = token_json.replace(
+        "ya29.aBcDeF1234567890XYZ", redact_token("ya29.aBcDeF1234567890XYZ")
+    )
+    safe_log = safe_log.replace(
+        "1//0gH_iJ-1234567890abcdef", redact_token("1//0gH_iJ-1234567890abcdef")
+    )
     if "ya29.aBcDeF1234567890XYZ" in safe_log or "1//0gH_iJ-1234567890abcdef" in safe_log:
         result["fails"].append(f"token JSON 序列化未脱敏: {safe_log}")
     else:
