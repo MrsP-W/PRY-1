@@ -757,8 +757,8 @@ def test_k1_install_sh_has_legacy_retirement_step():
     assert "com.myaiemployee.digital-employee" in text, (
         "撞坑 #95 P1 补遗:install.sh LEGACY_LABEL 必为 com.myaiemployee.digital-employee"
     )
-    # 必含 unload + bootout 兜底
-    legacy_section_start = text.index("# ===== 5.5")
+    # 必含 unload + bootout 兜底(P1-3 修复后 legacy retirement 移到 5.6 段)
+    legacy_section_start = text.index("# ===== 5.6")
     legacy_section_end = text.index("# ===== 6.")
     legacy_section = text[legacy_section_start:legacy_section_end]
     assert "launchctl unload" in legacy_section, (
@@ -789,7 +789,7 @@ def test_k2_install_sh_legacy_retirement_runs_before_load():
 def test_k3_install_sh_legacy_retirement_is_idempotent():
     """K3. 撞坑 #95 P1 补遗:legacy retirement 必幂等(已 retire 跳过,不报错)."""
     text = INSTALL_SH.read_text(encoding="utf-8")
-    legacy_section_start = text.index("# ===== 5.5")
+    legacy_section_start = text.index("# ===== 5.6")
     legacy_section_end = text.index("# ===== 6.")
     legacy_section = text[legacy_section_start:legacy_section_end]
     # 必含 "未注册,跳过" 兜底
@@ -819,4 +819,47 @@ def test_k4_uninstall_sh_includes_legacy_retirement():
     # 必删 legacy wrapper
     assert "my-ai-employee-start" in uninstall_section, (
         "撞坑 #95 P1 补遗:uninstall 段必删 legacy ~/bin/my-ai-employee-start wrapper"
+    )
+
+
+def test_k5_deploy_only_does_not_trigger_legacy_retirement():
+    """K5. 撞坑 #98 P1-3 修复(2026-07-10):deploy-only/no-load 模式不应触发 legacy retirement.
+
+    安全语义:deploy-only 模式 = "只部署、不改变运行态"。
+    触发场景:用户先 deploy-only 升级 wrapper,预期旧 digital-employee 仍在运行
+    (可能用户在排查 dashboard,不想一次退役)。
+    若 deploy-only 触发 unload/bootout/rm,违反安全语义。
+    验证:deploy-only 早退 (5.5 段)必在 legacy retirement (5.6 段)之前。
+    """
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # 5.5 段是 deploy-only 早退(必含 DEPLOY_ONLY 判 + exit 0)
+    deploy_only_start = text.index("# ===== 5.5")
+    legacy_start = text.index("# ===== 5.6")
+    # 5.5 必在 5.6 之前 → deploy-only 退出后,install 模式才进入 legacy retirement
+    assert deploy_only_start < legacy_start, (
+        "撞坑 #98 P1-3 修复:deploy-only 早退(5.5 段)必在 legacy retirement(5.6 段)之前,"
+        "否则 deploy-only 会触发 unload/bootout/rm 旧 job,违反只部署不改变运行态的安全语义"
+    )
+    # 5.5 段必含 deploy-only 判 + exit 0
+    section_5_5_end = legacy_start
+    section_5_5 = text[deploy_only_start:section_5_5_end]
+    assert '${DEPLOY_ONLY}" == "true"' in section_5_5, (
+        "撞坑 #98 P1-3 修复:5.5 段必含 DEPLOY_ONLY 模式判"
+    )
+    assert "exit 0" in section_5_5, "撞坑 #98 P1-3 修复:5.5 段必含 exit 0 早退"
+    # 5.5 段必不含 legacy retirement 操作(launchctl unload/bootout/rm legacy)
+    # 排除注释行(注释里说明问题可以提)
+    code_lines_5_5 = [
+        line for line in section_5_5.splitlines() if not line.lstrip().startswith("#")
+    ]
+    code_5_5 = "\n".join(code_lines_5_5)
+    assert "launchctl unload" not in code_5_5, (
+        "撞坑 #98 P1-3 修复:5.5 段代码(deploy-only)禁 launchctl unload 旧 legacy"
+    )
+    assert "launchctl bootout" not in code_5_5, (
+        "撞坑 #98 P1-3 修复:5.5 段代码(deploy-only)禁 launchctl bootout 旧 legacy"
+    )
+    # 5.5 段可含 "rm -f" 但不能含 my-ai-employee-start(legacy wrapper)
+    assert "my-ai-employee-start" not in code_5_5, (
+        "撞坑 #98 P1-3 修复:5.5 段代码(deploy-only)禁删 ~/bin/my-ai-employee-start legacy wrapper"
     )

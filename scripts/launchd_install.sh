@@ -347,7 +347,26 @@ touch "${LOG_DIR}/menu-bar.out.log" "${LOG_DIR}/menu-bar.err.log"
 touch "${LOG_DIR}/dashboard.out.log" "${LOG_DIR}/dashboard.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
 
-# ===== 5.5 Day 14 撞坑 #95 修复补遗(2026-07-10 P1-2):legacy retirement =====
+# ===== 5.5 deploy-only 早退(2026-07-10 P1-3 修复):legacy retirement 必须在 install 模式执行 =====
+#   撞坑 #98 修复补遗:deploy-only/no-load 语义是"只部署、不改变运行态"。
+#   若 legacy retirement 放在这里,deploy-only 会触发 launchctl unload/bootout/rm,
+#   违反安全语义(撞坑 #98 P1 审查发现)。
+#   此处仅 deploy-only 早退;legacy retirement 移到 deploy-only 退出之后、
+#   launchctl load 之前(仅 install 模式执行)。
+if [[ "${DEPLOY_ONLY}" == "true" ]]; then
+    echo ""
+    echo "🎉 deploy-only 完成(未调用 launchctl load -w · 撞坑 #95 修复:4 job 部署 · 撞坑 #98 P1-3 修复:不退役 legacy)"
+    echo "  已更新 wrapper:${TARGET_MENUBAR_WRAPPER}"
+    echo "  已更新 wrapper:${TARGET_DASHBOARD_WRAPPER}"
+    echo "  已更新 plist:${TARGET_PLIST_MENUBAR}"
+    echo "  已更新 plist:${TARGET_PLIST_DASHBOARD}"
+    echo "  下一步如需真实加载,需用户单独授权 launchctl load -w"
+    echo "  ⚠️  deploy-only 不 retire 旧 digital-employee(仅 install 模式才 retire)"
+    exit 0
+fi
+
+# ===== 5.6 Day 14 撞坑 #95 修复补遗(2026-07-10 P1-2 + P1-3 修复位置):legacy retirement =====
+#   仅 install 模式执行(2026-07-10 P1-3 修复:从 5.5 移到此处,deploy-only 不再触发)
 #   升级场景:旧版 com.myaiemployee.digital-employee(父子进程 + ProcessType=Background)
 #   已部署但撞坑 #95 50s 内被 launchd 强制回收。Day 14 #95 修复后拆为 menu-bar + dashboard
 #   两个独立 LaunchAgent,但旧 plist/wrapper 若仍残留会导致:
@@ -360,7 +379,7 @@ LEGACY_WRAPPER="${HOME_BIN}/my-ai-employee-start"
 LEGACY_LOG_OUT="${LOG_DIR}/digital-employee.out.log"
 LEGACY_LOG_ERR="${LOG_DIR}/digital-employee.err.log"
 
-echo "📋 legacy retirement:${LEGACY_LABEL}(撞坑 #95 修复补遗)"
+echo "📋 legacy retirement:${LEGACY_LABEL}(撞坑 #95 修复补遗 · P1-3 修复位置)"
 LC_OUT_LEGACY="$(mktemp -t launchctl_legacy.XXXXXX)"
 trap 'rm -f "${LC_OUT_LEGACY:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
 launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
@@ -397,17 +416,6 @@ if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
     exit 4
 fi
 echo "✅ legacy retirement 完成(无残留)"
-
-if [[ "${DEPLOY_ONLY}" == "true" ]]; then
-    echo ""
-    echo "🎉 deploy-only 完成(未调用 launchctl load -w · 撞坑 #95 修复:4 job 部署)"
-    echo "  已更新 wrapper:${TARGET_MENUBAR_WRAPPER}"
-    echo "  已更新 wrapper:${TARGET_DASHBOARD_WRAPPER}"
-    echo "  已更新 plist:${TARGET_PLIST_MENUBAR}"
-    echo "  已更新 plist:${TARGET_PLIST_DASHBOARD}"
-    echo "  下一步如需真实加载,需用户单独授权 launchctl load -w"
-    exit 0
-fi
 
 # ===== 6. launchctl load(4 job · 撞坑 #95 修复:menu-bar + dashboard 独立) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"
