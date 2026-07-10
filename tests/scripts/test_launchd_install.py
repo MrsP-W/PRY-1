@@ -464,3 +464,96 @@ def test_h4_install_sh_imap_wrapper_uses_absolute_uv_path():
     assert "exec /opt/homebrew/bin/uv run --project" in imap_block, (
         f"撞坑 #93 修复:imap-sync wrapper 必用绝对路径,实际 block:\n{imap_block}"
     )
+
+
+# ===== I. 撞坑 #96 修复 — IMAP wrapper 用绝对路径(2026-07-10) =====
+# 历史沿革:
+#   - 原实现 `python scripts/sync_imap.py` 相对路径 → launchd CWD=$HOME 解析为
+#     /Users/wei/scripts/sync_imap.py(报错 No such file or directory)
+#   - 第一次尝试 `python -m scripts.sync_imap` 模块形式 → Python sys.path 不含
+#     ${PROJECT_ROOT},ModuleNotFoundError: No module named 'scripts'
+#   - 最终方案:`python "${PROJECT_ROOT}/scripts/sync_imap.py"` 绝对路径,
+#     与 uv --project 协同工作(uv 设 venv + 设 PYTHONPATH 含 ${PROJECT_ROOT}/src)
+#     与 CWD 无关。已实测 launchd 上下文(env -i HOME=$HOME PATH=minimal)通过
+#     干净测试:IMAP 拉取 14 封,0 failed,err.log 空
+
+
+def test_i1_install_sh_imap_wrapper_uses_absolute_script_path():
+    """I1. 撞坑 #96 修复:IMAP wrapper exec 行必用 ${PROJECT_ROOT}/scripts/sync_imap.py 绝对路径.
+
+    取代原 `python scripts/sync_imap.py` 相对路径(launchd CWD=$HOME 解析错误)。
+    也取代 `python -m scripts.sync_imap` 模块形式(Python sys.path 不含 PROJECT_ROOT)。
+    """
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
+    imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
+    imap_block = text[imap_block_start:imap_block_end]
+    # 必含绝对路径形式
+    assert 'python "${PROJECT_ROOT}/scripts/sync_imap.py"' in imap_block, (
+        f"撞坑 #96 修复:IMAP wrapper exec 行必用绝对路径 ${{PROJECT_ROOT}}/scripts/sync_imap.py,"
+        f"实际 block:\n{imap_block}"
+    )
+    # 禁绝 exec 行的相对路径形式(注释行不在此列)
+    exec_lines = [line for line in imap_block.splitlines() if line.strip().startswith("exec ")]
+    assert exec_lines, "IMAP wrapper 必含至少 1 行 exec 起始的命令"
+    for line in exec_lines:
+        # 禁相对路径(无 PROJECT_ROOT 前缀 + scripts/sync_imap.py)
+        assert "python scripts/sync_imap.py" not in line, (
+            f"撞坑 #96 修复:exec 行禁止用相对路径 {line!r}"
+        )
+        # 禁 python -m 形式(sys.path 不含 PROJECT_ROOT)
+        assert "python -m scripts.sync_imap" not in line, (
+            f"撞坑 #96 修复:exec 行禁止用 python -m 形式(sys.path 不含 PROJECT_ROOT) {line!r}"
+        )
+        # 必含绝对路径
+        assert "${PROJECT_ROOT}/scripts/sync_imap.py" in line, (
+            f"撞坑 #96 修复:exec 行必用绝对路径 ${{PROJECT_ROOT}}/scripts/sync_imap.py {line!r}"
+        )
+
+
+def test_i2_install_sh_imap_wrapper_comment_documents_pitfall_96():
+    """I2. 撞坑 #96 修复:IMAP wrapper heredoc 必含 #96 标记注释(防回归)."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
+    imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
+    imap_block = text[imap_block_start:imap_block_end]
+    assert "撞坑 #96 修复" in imap_block, (
+        f"撞坑 #96 修复:IMAP wrapper heredoc 必含 #96 注释(防回归),实际 block:\n{imap_block}"
+    )
+    # 必含 launchd CWD 根因解释
+    assert "WorkingDirectory" in imap_block or "CWD" in imap_block, (
+        f"撞坑 #96 修复:IMAP wrapper 注释必含 CWD/WorkingDirectory 根因解释,实际 block:\n{imap_block}"
+    )
+
+
+def test_i3_sync_imap_script_exists_at_absolute_path():
+    """I3. 撞坑 #96 修复:scripts/sync_imap.py 必存在(绝对路径调用的前提)."""
+    sync_imap = PROJECT_ROOT / "scripts" / "sync_imap.py"
+    assert sync_imap.exists(), f"scripts/sync_imap.py 必存在: {sync_imap}"
+    text = sync_imap.read_text(encoding="utf-8")
+    # 必含 entry point(uv run 也会用)
+    assert '__name__ == "__main__"' in text, (
+        "scripts/sync_imap.py 必含 if __name__ == '__main__' 入口"
+    )
+
+
+def test_i4_deploy_only_imap_wrapper_also_uses_absolute_path():
+    """I4. 撞坑 #96 修复:deploy-only / install 模式生成的 IMAP wrapper 都必用绝对路径.
+
+    install.sh deploy-only 与 install 共用同一段 IMAP wrapper heredoc(行 240-258),
+    本测试交叉确认 deploy-only 模式下生成的 wrapper 也用绝对路径。
+    """
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # 全文只有一处 IMAP wrapper heredoc
+    imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
+    imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
+    # 该段在 install flow 内(在 # ===== 6. launchctl load 之前)
+    load_section_start = text.index("# ===== 6. launchctl load(3 job) =====")
+    deploy_only_check = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
+    # imap_block 必在 load_section 之前(沿 deploy-only 退出前)
+    assert imap_block_start < load_section_start
+    # imap_block 必在 deploy_only 检查之前(但 deploy_only 检查之后 wrapper 已部署好)
+    assert imap_block_end < deploy_only_check, (
+        f"撞坑 #96 修复:deploy-only 必须在 IMAP wrapper 部署之后才能退出,"
+        f"imap_block_end={imap_block_end} 但 deploy_only_check={deploy_only_check}"
+    )

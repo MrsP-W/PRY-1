@@ -244,6 +244,11 @@ cat << EOF > "${TARGET_IMAP_SCRIPT}"
 #!/usr/bin/env bash
 # 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
 # 撞坑 #92 修复(2026-07-09):ENV_FILE 路径从 PROJECT_ROOT/.env → APP_SUPPORT/.env
+# 撞坑 #96 修复(2026-07-10):用 \${PROJECT_ROOT}/scripts/sync_imap.py 绝对路径,
+#   取代 python scripts/sync_imap.py 相对路径。
+#   launchd plist WorkingDirectory=\$HOME 下,相对路径会被解析成 /Users/wei/scripts/sync_imap.py
+#   python -m scripts.sync_imap 也失败:Python sys.path 不含 \${PROJECT_ROOT},ModuleNotFoundError
+#   → 实测绝对路径是唯一稳妥方案,已用 \$HOME=/Users/wei + PATH minimal 验证通过
 ENV_FILE="${APP_SUPPORT_ENV}"
 IMAP_USER=""
 if [[ -f "\${ENV_FILE}" ]]; then
@@ -253,7 +258,7 @@ if [[ -z "\${IMAP_USER}" ]]; then
   echo 'IMAP_USER not set in .env' >&2
   exit 2
 fi
-exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python scripts/sync_imap.py sync --provider qq --email "\${IMAP_USER}"
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/sync_imap.py" sync --provider qq --email "\${IMAP_USER}"
 EOF
 chmod +x "${TARGET_IMAP_SCRIPT}"
 echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"
