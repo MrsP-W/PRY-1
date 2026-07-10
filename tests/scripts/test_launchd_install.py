@@ -21,6 +21,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PLIST_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.agent.plist"
 PLIST_IMAP_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.imap-sync.plist"
 PLIST_START_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.digital-employee.plist"
+PLIST_MENUBAR_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.menu-bar.plist"
+PLIST_DASHBOARD_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.dashboard.plist"
 INSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_install.sh"
 UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
 KICKSTART_SEAL_SH = PROJECT_ROOT / "scripts" / "launchd_kickstart_and_seal.sh"
@@ -317,39 +319,68 @@ def test_f3_start_plist_run_at_load():
     assert "my-ai-employee-start" in args[0]
 
 
-def test_f4_install_sh_deploys_digital_runner_to_home_bin():
-    """F4. 数字员工 runner 必部署到 ~/bin,避免 launchd 执行 Documents 下的 sh."""
+def test_f4_install_sh_deploys_menu_bar_and_dashboard_runners_to_home_bin():
+    """F4. 撞坑 #95 修复(2026-07-10):menu-bar + dashboard runner 必部署到 ~/bin,避免 launchd 执行 Documents 下的 sh."""
     text = INSTALL_SH.read_text(encoding="utf-8")
-    assert 'TARGET_START_RUNNER="${HOME_BIN}/my-ai-employee-digital-runner"' in text
-    assert 'cp "${SOURCE_START_SH}" "${TARGET_START_RUNNER}"' in text
-    assert 'chmod +x "${TARGET_START_RUNNER}"' in text
-    assert '"${HOME_BIN}/my-ai-employee-digital-runner"' in text
+    # 取代原 TARGET_START_RUNNER(digital-runner) — 现拆 2 独立 wrapper
+    assert 'TARGET_MENUBAR_WRAPPER="${HOME_BIN}/my-ai-employee-menu-bar-runner"' in text
+    assert 'TARGET_DASHBOARD_WRAPPER="${HOME_BIN}/my-ai-employee-dashboard-runner"' in text
+    # 必 heredoc 写入(不 cp SOURCE_START_SH)
+    assert 'cat << EOF > "${TARGET_MENUBAR_WRAPPER}"' in text
+    assert 'cat << EOF > "${TARGET_DASHBOARD_WRAPPER}"' in text
+    assert 'chmod +x "${TARGET_MENUBAR_WRAPPER}"' in text
+    assert 'chmod +x "${TARGET_DASHBOARD_WRAPPER}"' in text
+    # 禁原 launcher 父子链(已废弃)
+    assert "TARGET_START_RUNNER" not in text, (
+        "撞坑 #95 修复:install.sh 禁 TARGET_START_RUNNER launcher 变量(已拆 menu-bar + dashboard 独立)"
+    )
+    assert "my-ai-employee-digital-runner" not in text, (
+        "撞坑 #95 修复:install.sh 禁部署 digital-runner launcher(已拆 2 独立 wrapper)"
+    )
 
 
-def test_f5_install_start_wrapper_avoids_documents_ops_exec():
-    """F5. start wrapper 不得再 exec 项目 Documents 目录下的 ops 脚本."""
+def test_f5_install_menu_bar_dashboard_wrappers_avoid_documents_ops_exec():
+    """F5. 撞坑 #95 修复:menu-bar + dashboard wrapper 不得 exec 项目 Documents 目录下的 ops 脚本."""
     text = INSTALL_SH.read_text(encoding="utf-8")
+    # 禁原 launcher 形式
     forbidden = 'exec bash \\"${PROJECT_ROOT}/ops/start-digital-employee.sh\\" start'
     assert forbidden not in text
-    # heredoc 格式(无 \\" 转义,2026-07-09 撞坑 #92 修复 B 后)
+    # heredoc 必 export 3 个环境变量(撞坑 #92 修复 B 范本)
     assert 'export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"' in text
-    assert 'exec "${TARGET_START_RUNNER}" start' in text
+    assert 'export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"' in text
+    assert 'export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"' in text
+    # 2 wrapper heredoc 必都含 env 导出
+    menubar_block_start = text.index('cat << EOF > "${TARGET_MENUBAR_WRAPPER}"')
+    menubar_block_end = text.index('chmod +x "${TARGET_MENUBAR_WRAPPER}"')
+    menubar_block = text[menubar_block_start:menubar_block_end]
+    assert "export MY_AI_EMPLOYEE_PROJECT_ROOT=" in menubar_block
+    assert "scripts/run_menu_bar.py" in menubar_block, (
+        "撞坑 #95 修复:menu-bar wrapper 必调 scripts/run_menu_bar.py(独立 wrapper)"
+    )
+    dashboard_block_start = text.index('cat << EOF > "${TARGET_DASHBOARD_WRAPPER}"')
+    dashboard_block_end = text.index('chmod +x "${TARGET_DASHBOARD_WRAPPER}"')
+    dashboard_block = text[dashboard_block_start:dashboard_block_end]
+    assert "export MY_AI_EMPLOYEE_PROJECT_ROOT=" in dashboard_block
+    assert "my_ai_employee.dashboard.server" in dashboard_block, (
+        "撞坑 #95 修复:dashboard wrapper 必调 my_ai_employee.dashboard.server(独立 wrapper)"
+    )
 
 
 def test_f6_start_script_accepts_explicit_project_root_override():
-    """F6. 被复制到 ~/bin 的 runner 必能用显式项目根路径定位资源."""
+    """F6. 被复制到 ~/bin 的 runner 必能用显式项目根路径定位资源(沿 P0-1 范本,适用于 ops/start-digital-employee.sh 仍存在 · 撞坑 #95 后退役)."""
     text = START_DIGITAL_EMPLOYEE_SH.read_text(encoding="utf-8")
     assert "MY_AI_EMPLOYEE_PROJECT_ROOT" in text
     assert 'PROJECT_ROOT="${MY_AI_EMPLOYEE_PROJECT_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"' in text
 
 
 def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
-    """F7. deploy-only/no-load 必只部署文件,不进入 launchctl load 段."""
+    """F7. deploy-only/no-load 必只部署文件,不进入 launchctl load 段(撞坑 #95 修复后 4 job)."""
     text = INSTALL_SH.read_text(encoding="utf-8")
     assert "deploy-only | no-load)" in text
     assert "DEPLOY_ONLY=true" in text
     deploy_exit = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
-    load_section = text.index("# ===== 6. launchctl load(3 job) =====")
+    # 撞坑 #95 修复:launchctl load 段从 3 job → 4 job(menu-bar + dashboard 独立)
+    load_section = text.index("# ===== 6. launchctl load(4 job")
     assert deploy_exit < load_section
     deploy_block = text[deploy_exit:load_section]
     assert "launchctl load -w" in deploy_block
@@ -547,8 +578,8 @@ def test_i4_deploy_only_imap_wrapper_also_uses_absolute_path():
     # 全文只有一处 IMAP wrapper heredoc
     imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
     imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
-    # 该段在 install flow 内(在 # ===== 6. launchctl load 之前)
-    load_section_start = text.index("# ===== 6. launchctl load(3 job) =====")
+    # 该段在 install flow 内(在 # ===== 6. launchctl load 之前 · 撞坑 #95 修复后 4 job)
+    load_section_start = text.index("# ===== 6. launchctl load(4 job")
     deploy_only_check = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
     # imap_block 必在 load_section 之前(沿 deploy-only 退出前)
     assert imap_block_start < load_section_start
@@ -556,4 +587,155 @@ def test_i4_deploy_only_imap_wrapper_also_uses_absolute_path():
     assert imap_block_end < deploy_only_check, (
         f"撞坑 #96 修复:deploy-only 必须在 IMAP wrapper 部署之后才能退出,"
         f"imap_block_end={imap_block_end} 但 deploy_only_check={deploy_only_check}"
+    )
+
+
+# ===== J. 撞坑 #95 修复 — menu-bar + Dashboard 拆 2 个独立 LaunchAgent(2026-07-10) =====
+# 根因:原 com.myaiemployee.digital-employee.plist 父子进程 + ProcessType=Background
+#   - launcher (start-digital-employee.sh) 启动 menubar + dashboard 子进程
+#   - 子进程成孤儿,launchd 50s 内强制 kill
+# 修复:拆 2 个独立 LaunchAgent
+#   - com.myaiemployee.menu-bar.plist (ProcessType=Standard, KeepAlive=true)
+#   - com.myaiemployee.dashboard.plist (ProcessType=Standard, KeepAlive=true, DASHBOARD_PORT=8765)
+#   - 各自独立 wrapper 调对应服务(menubar→run_menu_bar.py / dashboard→dashboard.server)
+# 验证维度:
+#   J1:2 plist 必存 + ProcessType=Standard(禁 Background)+ KeepAlive=true
+#   J2:2 plist 都用 $USER 占位符 + 独立 wrapper 路径
+#   J3:install.sh deploy-only 部署 2 独立 wrapper + 2 独立 plist,删 digital-employee launcher
+#   J4:install.sh install 模式 4 job launchctl load(agent + imap-sync + menu-bar + dashboard)
+
+
+def test_j1_menu_bar_plist_process_type_standard_keepalive():
+    """J1a. 撞坑 #95 修复:menu-bar plist 必用 ProcessType=Standard(非 Background)+ KeepAlive=true."""
+    assert PLIST_MENUBAR_PATH.exists(), f"menu-bar plist 必存: {PLIST_MENUBAR_PATH}"
+    text = PLIST_MENUBAR_PATH.read_text(encoding="utf-8")
+    # 必含 ProcessType=Standard(禁 Background)
+    assert "<string>Standard</string>" in text, (
+        f"撞坑 #95 修复:menu-bar plist 必用 ProcessType=Standard,实际:\n{text}"
+    )
+    assert "<string>Background</string>" not in text, (
+        f"撞坑 #95 修复:menu-bar plist 禁 ProcessType=Background(50s 强制回收),实际:\n{text}"
+    )
+    # 必含 KeepAlive=true(崩了自动重启,user 可分别 launchctl unload)
+    assert "<key>KeepAlive</key>" in text and "<true/>" in text, (
+        f"撞坑 #95 修复:menu-bar plist 必含 KeepAlive=true,实际:\n{text}"
+    )
+
+
+def test_j1b_dashboard_plist_process_type_standard_keepalive():
+    """J1b. 撞坑 #95 修复:dashboard plist 必用 ProcessType=Standard + KeepAlive=true + DASHBOARD_PORT=8765."""
+    assert PLIST_DASHBOARD_PATH.exists(), f"dashboard plist 必存: {PLIST_DASHBOARD_PATH}"
+    text = PLIST_DASHBOARD_PATH.read_text(encoding="utf-8")
+    # 必含 ProcessType=Standard
+    assert "<string>Standard</string>" in text, (
+        f"撞坑 #95 修复:dashboard plist 必用 ProcessType=Standard,实际:\n{text}"
+    )
+    assert "<string>Background</string>" not in text, (
+        f"撞坑 #95 修复:dashboard plist 禁 ProcessType=Background,实际:\n{text}"
+    )
+    # 必含 KeepAlive=true
+    assert "<key>KeepAlive</key>" in text and "<true/>" in text, (
+        f"撞坑 #95 修复:dashboard plist 必含 KeepAlive=true,实际:\n{text}"
+    )
+    # Dashboard 特有:DASHBOARD_PORT=8765(127.0.0.1 默认)
+    assert "<key>DASHBOARD_PORT</key>" in text and "8765" in text, (
+        f"撞坑 #95 修复:dashboard plist 必含 DASHBOARD_PORT=8765,实际:\n{text}"
+    )
+    assert "<key>DASHBOARD_REAL_DB</key>" in text and "<string>1</string>" in text, (
+        f"撞坑 #95 修复:dashboard plist 必含 DASHBOARD_REAL_DB=1,实际:\n{text}"
+    )
+
+
+def test_j2_menu_bar_plist_uses_user_placeholder_and_independent_wrapper():
+    """J2a. 撞坑 #95 修复:menu-bar plist 必用 $USER 占位符 + 独立 ~/bin wrapper 路径."""
+    text = PLIST_MENUBAR_PATH.read_text(encoding="utf-8")
+    # 必用 $USER 占位符(沿 imap-sync 范本,install.sh sed 替换)
+    assert "$USER" in text, (
+        f"撞坑 #95 修复:menu-bar plist 必用 $USER 占位符(沿 imap-sync 范本),实际:\n{text}"
+    )
+    # 必指独立 wrapper(非 launcher 父子链)
+    assert "/Users/$USER/bin/my-ai-employee-menu-bar-runner" in text, (
+        f"撞坑 #95 修复:menu-bar plist 必指 ~/bin/my-ai-employee-menu-bar-runner,实际:\n{text}"
+    )
+    # 禁指 launcher(撞坑 #95 根因)
+    assert "my-ai-employee-start" not in text, (
+        f"撞坑 #95 修复:menu-bar plist 禁指 launcher(my-ai-employee-start),实际:\n{text}"
+    )
+    assert "my-ai-employee-digital-runner" not in text, (
+        f"撞坑 #95 修复:menu-bar plist 禁指 digital-runner(launcher),实际:\n{text}"
+    )
+
+
+def test_j2b_dashboard_plist_uses_user_placeholder_and_independent_wrapper():
+    """J2b. 撞坑 #95 修复:dashboard plist 必用 $USER 占位符 + 独立 ~/bin wrapper 路径."""
+    text = PLIST_DASHBOARD_PATH.read_text(encoding="utf-8")
+    assert "$USER" in text, f"撞坑 #95 修复:dashboard plist 必用 $USER 占位符,实际:\n{text}"
+    assert "/Users/$USER/bin/my-ai-employee-dashboard-runner" in text, (
+        f"撞坑 #95 修复:dashboard plist 必指 ~/bin/my-ai-employee-dashboard-runner,实际:\n{text}"
+    )
+    assert "my-ai-employee-start" not in text, (
+        f"撞坑 #95 修复:dashboard plist 禁指 launcher,实际:\n{text}"
+    )
+    assert "my-ai-employee-digital-runner" not in text, (
+        f"撞坑 #95 修复:dashboard plist 禁指 digital-runner,实际:\n{text}"
+    )
+
+
+def test_j3_install_sh_uses_independent_menu_bar_and_dashboard_wrappers():
+    """J3. 撞坑 #95 修复:install.sh 必部署 2 独立 wrapper(menu-bar + dashboard),删 launcher 父子链."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # 必部署 menu-bar 独立 wrapper heredoc
+    assert "my-ai-employee-menu-bar-runner" in text, (
+        "撞坑 #95 修复:install.sh 必部署 ~/bin/my-ai-employee-menu-bar-runner 独立 wrapper"
+    )
+    assert "my-ai-employee-dashboard-runner" in text, (
+        "撞坑 #95 修复:install.sh 必部署 ~/bin/my-ai-employee-dashboard-runner 独立 wrapper"
+    )
+    # 必含 #95 修复注释(防回退)
+    assert "撞坑 #95 修复" in text, "撞坑 #95 修复:install.sh 必含 #95 注释(防回归)"
+    # 删原 launcher 父子链
+    assert "TARGET_START_SCRIPT" not in text, (
+        "撞坑 #95 修复:install.sh 禁 TARGET_START_SCRIPT 父子链变量(已拆 menu-bar + dashboard 独立)"
+    )
+    assert "TARGET_START_RUNNER" not in text, (
+        "撞坑 #95 修复:install.sh 禁 TARGET_START_RUNNER launcher 变量"
+    )
+    assert "SOURCE_PLIST_START" not in text, (
+        "撞坑 #95 修复:install.sh 禁 SOURCE_PLIST_START digital-employee 源 plist 变量"
+    )
+    # 必含 4 job LAUNCHD_LABELS(取代 3 job)
+    assert '"com.myaiemployee.menu-bar"' in text, (
+        "撞坑 #95 修复:install.sh LAUNCHD_LABELS 必含 com.myaiemployee.menu-bar"
+    )
+    assert '"com.myaiemployee.dashboard"' in text, (
+        "撞坑 #95 修复:install.sh LAUNCHD_LABELS 必含 com.myaiemployee.dashboard"
+    )
+
+
+def test_j4_install_sh_deploy_only_loads_4_jobs():
+    """J4. 撞坑 #95 修复:install.sh deploy-only 部署 4 plist + install 模式 launchctl load 4 job."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # 4 plist 必都被 install.sh 部署(deploy-only 模式输出含 menu-bar + dashboard plist 路径)
+    assert "TARGET_PLIST_MENUBAR" in text, (
+        "撞坑 #95 修复:install.sh 必含 TARGET_PLIST_MENUBAR 部署目标"
+    )
+    assert "TARGET_PLIST_DASHBOARD" in text, (
+        "撞坑 #95 修复:install.sh 必含 TARGET_PLIST_DASHBOARD 部署目标"
+    )
+    # 4 wrapper 必都被 install.sh 部署
+    assert "TARGET_MENUBAR_WRAPPER" in text, (
+        "撞坑 #95 修复:install.sh 必含 TARGET_MENUBAR_WRAPPER 部署目标"
+    )
+    assert "TARGET_DASHBOARD_WRAPPER" in text, (
+        "撞坑 #95 修复:install.sh 必含 TARGET_DASHBOARD_WRAPPER 部署目标"
+    )
+    # launchctl load 段必含 menu-bar + dashboard plist
+    load_section_start = text.index("# ===== 6. launchctl load")
+    load_section_end = text.index("# ===== 7. 5 源验证")
+    load_section = text[load_section_start:load_section_end]
+    assert "TARGET_PLIST_MENUBAR" in load_section, (
+        "撞坑 #95 修复:launchctl load 段必加载 menu-bar plist"
+    )
+    assert "TARGET_PLIST_DASHBOARD" in load_section, (
+        "撞坑 #95 修复:launchctl load 段必加载 dashboard plist"
     )

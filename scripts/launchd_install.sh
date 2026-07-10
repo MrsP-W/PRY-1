@@ -67,39 +67,46 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 SOURCE_SCRIPT="${PROJECT_ROOT}/scripts/monthly_report.py"
 SOURCE_PLIST="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.agent.plist"
 SOURCE_PLIST_IMAP="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.imap-sync.plist"
-SOURCE_PLIST_START="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.digital-employee.plist"
+SOURCE_PLIST_MENUBAR="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.menu-bar.plist"
+SOURCE_PLIST_DASHBOARD="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.dashboard.plist"
 SOURCE_SYNC_IMAP="${PROJECT_ROOT}/scripts/sync_imap.py"
-SOURCE_START_SH="${PROJECT_ROOT}/ops/start-digital-employee.sh"
 
 HOME_BIN="${HOME}/bin"
 TARGET_SCRIPT="${HOME_BIN}/my-ai-employee-monthly-report"
 TARGET_IMAP_SCRIPT="${HOME_BIN}/my-ai-employee-imap-sync"
-TARGET_START_SCRIPT="${HOME_BIN}/my-ai-employee-start"
-TARGET_START_RUNNER="${HOME_BIN}/my-ai-employee-digital-runner"
+TARGET_MENUBAR_WRAPPER="${HOME_BIN}/my-ai-employee-menu-bar-runner"
+TARGET_DASHBOARD_WRAPPER="${HOME_BIN}/my-ai-employee-dashboard-runner"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 TARGET_PLIST="${LAUNCH_AGENTS_DIR}/com.myaiemployee.agent.plist"
 TARGET_PLIST_IMAP="${LAUNCH_AGENTS_DIR}/com.myaiemployee.imap-sync.plist"
-TARGET_PLIST_START="${LAUNCH_AGENTS_DIR}/com.myaiemployee.digital-employee.plist"
+TARGET_PLIST_MENUBAR="${LAUNCH_AGENTS_DIR}/com.myaiemployee.menu-bar.plist"
+TARGET_PLIST_DASHBOARD="${LAUNCH_AGENTS_DIR}/com.myaiemployee.dashboard.plist"
 LOG_DIR="${HOME}/Library/Logs/MyAIEmployee"
 
 # 撞坑 #92 修复(2026-07-09):runtime .env / data/ 路径迁出 ~/Documents/ iCloud 同步目录
 APP_SUPPORT_DIR="${HOME}/Library/Application Support/MyAIEmployee"
 APP_SUPPORT_ENV="${APP_SUPPORT_DIR}/.env"
 
-# Day 2: 全部 launchd job label(月报 / IMAP 每日同步 / 数字员工开机自启)
+# Day 14 (撞坑 #95 修复 2026-07-10):4 job label(月报 / IMAP 同步 / 菜单栏 / Dashboard 独立)
+#   取代原 3 job 模式:com.myaiemployee.digital-employee(父子进程 + ProcessType=Background)被拆
 LAUNCHD_LABELS=(
     "com.myaiemployee.agent"
     "com.myaiemployee.imap-sync"
-    "com.myaiemployee.digital-employee"
+    "com.myaiemployee.menu-bar"
+    "com.myaiemployee.dashboard"
 )
 
 # ===== uninstall 流程(2026-06-15 D10.5.3 新增,沿 Spike A 手动 cleanup 4 步范本) =====
 if [[ "${MODE}" == "uninstall" ]]; then
     echo "===== uninstall 流程 ====="
-    # 1. launchctl unload(3 job)
+    # 1. launchctl unload(4 job — Day 14 #95 修复后:menu-bar + dashboard 独立)
     LC_OUT_UNINSTALL="$(mktemp -t launchctl_list_uninstall.XXXXXX)"
     trap 'rm -f "${LC_OUT_UNINSTALL:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
-    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+    for label in \
+        com.myaiemployee.agent \
+        com.myaiemployee.imap-sync \
+        com.myaiemployee.menu-bar \
+        com.myaiemployee.dashboard; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
         if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
@@ -116,8 +123,12 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  ${label} 未注册,跳过 unload"
         fi
     done
-    # 2. 删 plist(3 job)
-    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+    # 2. 删 plist(4 job)
+    for label in \
+        com.myaiemployee.agent \
+        com.myaiemployee.imap-sync \
+        com.myaiemployee.menu-bar \
+        com.myaiemployee.dashboard; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         if [[ -f "${target_plist}" ]]; then
             rm -f "${target_plist}"
@@ -126,12 +137,12 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  plist 不存在,跳过: ${target_plist}"
         fi
     done
-    # 3. 删 ~/bin/ 脚本(3 wrapper)
+    # 3. 删 ~/bin/ 脚本(4 wrapper — 撞坑 #95 修复:拆 menu-bar + dashboard 独立 runner)
     for script in \
         "${HOME_BIN}/my-ai-employee-monthly-report" \
         "${HOME_BIN}/my-ai-employee-imap-sync" \
-        "${HOME_BIN}/my-ai-employee-start" \
-        "${HOME_BIN}/my-ai-employee-digital-runner"; do
+        "${HOME_BIN}/my-ai-employee-menu-bar-runner" \
+        "${HOME_BIN}/my-ai-employee-dashboard-runner"; do
         if [[ -f "${script}" ]]; then
             rm -f "${script}"
             echo "✅ 删除脚本: ${script}"
@@ -146,9 +157,13 @@ if [[ "${MODE}" == "uninstall" ]]; then
     else
         echo "ℹ️  日志目录不存在,跳过"
     fi
-    # 5. 验证无残留(3 job)
+    # 5. 验证无残留(4 job)
     launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-    for label in com.myaiemployee.agent com.myaiemployee.imap-sync com.myaiemployee.digital-employee; do
+    for label in \
+        com.myaiemployee.agent \
+        com.myaiemployee.imap-sync \
+        com.myaiemployee.menu-bar \
+        com.myaiemployee.dashboard; do
         if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
             echo "❌ 验证失败:launchctl list 仍见 ${label}" >&2
             exit 3
@@ -175,16 +190,17 @@ if [[ ! -f "${SOURCE_PLIST_IMAP}" ]]; then
     echo "❌ 源 plist 不存在: ${SOURCE_PLIST_IMAP}" >&2
     exit 1
 fi
-if [[ ! -f "${SOURCE_PLIST_START}" ]]; then
-    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_START}" >&2
+# 撞坑 #95 修复(2026-07-10):菜单栏 + Dashboard 拆 2 个独立 LaunchAgent
+if [[ ! -f "${SOURCE_PLIST_MENUBAR}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_MENUBAR}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_PLIST_DASHBOARD}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_DASHBOARD}" >&2
     exit 1
 fi
 if [[ ! -f "${SOURCE_SYNC_IMAP}" ]]; then
     echo "❌ 源脚本不存在: ${SOURCE_SYNC_IMAP}" >&2
-    exit 1
-fi
-if [[ ! -f "${SOURCE_START_SH}" ]]; then
-    echo "❌ 源脚本不存在: ${SOURCE_START_SH}" >&2
     exit 1
 fi
 
@@ -263,28 +279,54 @@ EOF
 chmod +x "${TARGET_IMAP_SCRIPT}"
 echo "✅ ${TARGET_IMAP_SCRIPT} 部署完成"
 
-echo "📋 部署 ${TARGET_START_SCRIPT}(数字员工开机自启)"
-echo "📋 部署 ${TARGET_START_RUNNER}(数字员工 runner · 非 Documents 执行)"
-cp "${SOURCE_START_SH}" "${TARGET_START_RUNNER}"
-chmod +x "${TARGET_START_RUNNER}"
-echo "✅ ${TARGET_START_RUNNER} 部署完成"
-
-# 撞坑 #92 修复:用 heredoc 写 wrapper(F9 易校验)
-cat << EOF > "${TARGET_START_SCRIPT}"
+echo "📋 部署 ${TARGET_MENUBAR_WRAPPER}(撞坑 #95 修复 · 菜单栏独立 LaunchAgent runner)"
+# 撞坑 #95 修复(2026-07-10):用 heredoc 直接写 wrapper(沿 P0-1 #96 范本,绝对路径 + set -euo pipefail)
+cat << EOF > "${TARGET_MENUBAR_WRAPPER}"
 #!/usr/bin/env bash
 # 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+# 撞坑 #95 修复(2026-07-10):菜单栏独立 LaunchAgent runner
+#   取代原 com.myaiemployee.digital-employee(父子进程 + ProcessType=Background 禁 fork)
+#   现 com.myaiemployee.menu-bar 用 ProcessType=Standard + KeepAlive=true
+# 撞坑 #92 修复(2026-07-09):runtime APP_SUPPORT_DIR / ENV_FILE 显式导出
+# 撞坑 #96 修复(2026-07-10):用绝对路径 \${PROJECT_ROOT}/scripts/run_menu_bar.py,
+#   launchd plist WorkingDirectory=\$HOME 下相对路径解析错误
 set -euo pipefail
 export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
-# 撞坑 #92 修复(2026-07-09):runtime APP_SUPPORT_DIR / ENV_FILE 显式导出(避免 ops 默认 fallback 到 Documents 路径)
 export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
 export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
-exec "${TARGET_START_RUNNER}" start
+# 撞坑 #93 修复(2026-07-09):launchd 子进程 PATH 不含 /opt/homebrew/bin(uv 安装位置),用绝对路径
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/run_menu_bar.py"
 EOF
-chmod +x "${TARGET_START_SCRIPT}"
-echo "✅ ${TARGET_START_SCRIPT} 部署完成"
+chmod +x "${TARGET_MENUBAR_WRAPPER}"
+echo "✅ ${TARGET_MENUBAR_WRAPPER} 部署完成"
 
-# ===== 4. 复制 plist(替换 $USER 占位符) =====
-for src_plist in "${SOURCE_PLIST}" "${SOURCE_PLIST_IMAP}" "${SOURCE_PLIST_START}"; do
+echo "📋 部署 ${TARGET_DASHBOARD_WRAPPER}(撞坑 #95 修复 · Dashboard 独立 LaunchAgent runner)"
+# 撞坑 #95 修复(2026-07-10):Dashboard 独立 LaunchAgent runner
+cat << EOF > "${TARGET_DASHBOARD_WRAPPER}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+# 撞坑 #95 修复(2026-07-10):Dashboard 独立 LaunchAgent runner
+#   取代原 com.myaiemployee.digital-employee(父子进程 + ProcessType=Background 禁 fork)
+#   现 com.myaiemployee.dashboard 用 ProcessType=Standard + KeepAlive=true
+# 撞坑 #92 修复(2026-07-09):runtime APP_SUPPORT_DIR / ENV_FILE 显式导出
+# 撞坑 #96 修复(2026-07-10):用绝对路径 \${PROJECT_ROOT} + python -m 形式调 my_ai_employee.dashboard.server
+set -euo pipefail
+export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
+export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
+export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
+# DASHBOARD_REAL_DB=1 + DASHBOARD_PORT=8765 已在 plist EnvironmentVariables 注入
+# 撞坑 #93 修复(2026-07-09):launchd 子进程 PATH 不含 /opt/homebrew/bin,用绝对路径
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python -m my_ai_employee.dashboard.server
+EOF
+chmod +x "${TARGET_DASHBOARD_WRAPPER}"
+echo "✅ ${TARGET_DASHBOARD_WRAPPER} 部署完成"
+
+# ===== 4. 复制 plist(替换 $USER 占位符 · 撞坑 #95 修复:4 job) =====
+for src_plist in \
+    "${SOURCE_PLIST}" \
+    "${SOURCE_PLIST_IMAP}" \
+    "${SOURCE_PLIST_MENUBAR}" \
+    "${SOURCE_PLIST_DASHBOARD}"; do
     base_name="$(basename "${src_plist}")"
     target_plist="${LAUNCH_AGENTS_DIR}/${base_name}"
     echo "📋 复制 ${src_plist} → ${target_plist}"
@@ -293,27 +335,33 @@ for src_plist in "${SOURCE_PLIST}" "${SOURCE_PLIST_IMAP}" "${SOURCE_PLIST_START}
     echo "✅ ${target_plist} 部署完成"
 done
 
-# ===== 5. 确保日志目录存在 =====
+# ===== 5. 确保日志目录存在(撞坑 #95 修复:4 job 日志) =====
 mkdir -p "${LOG_DIR}"
 touch "${LOG_DIR}/agent.out.log" "${LOG_DIR}/agent.err.log"
 touch "${LOG_DIR}/imap-sync.out.log" "${LOG_DIR}/imap-sync.err.log"
-touch "${LOG_DIR}/digital-employee.out.log" "${LOG_DIR}/digital-employee.err.log"
+touch "${LOG_DIR}/menu-bar.out.log" "${LOG_DIR}/menu-bar.err.log"
+touch "${LOG_DIR}/dashboard.out.log" "${LOG_DIR}/dashboard.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
 
 if [[ "${DEPLOY_ONLY}" == "true" ]]; then
     echo ""
-    echo "🎉 deploy-only 完成(未调用 launchctl load -w)"
-    echo "  已更新 wrapper:${TARGET_START_SCRIPT}"
-    echo "  已更新 runner:${TARGET_START_RUNNER}"
-    echo "  已更新 plist:${TARGET_PLIST_START}"
+    echo "🎉 deploy-only 完成(未调用 launchctl load -w · 撞坑 #95 修复:4 job 部署)"
+    echo "  已更新 wrapper:${TARGET_MENUBAR_WRAPPER}"
+    echo "  已更新 wrapper:${TARGET_DASHBOARD_WRAPPER}"
+    echo "  已更新 plist:${TARGET_PLIST_MENUBAR}"
+    echo "  已更新 plist:${TARGET_PLIST_DASHBOARD}"
     echo "  下一步如需真实加载,需用户单独授权 launchctl load -w"
     exit 0
 fi
 
-# ===== 6. launchctl load(3 job) =====
+# ===== 6. launchctl load(4 job · 撞坑 #95 修复:menu-bar + dashboard 独立) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"
 trap 'rm -f "${LC_OUT_LOAD}" "${LC_OUT:-}"' EXIT
-for target_plist in "${TARGET_PLIST}" "${TARGET_PLIST_IMAP}" "${TARGET_PLIST_START}"; do
+for target_plist in \
+    "${TARGET_PLIST}" \
+    "${TARGET_PLIST_IMAP}" \
+    "${TARGET_PLIST_MENUBAR}" \
+    "${TARGET_PLIST_DASHBOARD}"; do
     label="$(basename "${target_plist}" .plist)"
     launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
     if grep -q "${label}" "${LC_OUT_LOAD}"; then
@@ -333,7 +381,7 @@ for target_plist in "${TARGET_PLIST}" "${TARGET_PLIST_IMAP}" "${TARGET_PLIST_STA
     fi
 done
 
-# ===== 7. 5 源验证(3 job) =====
+# ===== 7. 5 源验证(4 job · 撞坑 #95 修复) =====
 echo ""
 echo "===== 5 源验证 ====="
 [[ -d "${HOME_BIN}" ]] && echo "✅ 源 1(目录): ${HOME_BIN}/ 存在" || echo "❌ 源 1: 缺失"
@@ -353,22 +401,23 @@ for i in 1 2 3 4 5; do
     done
     if [[ "${missing}" -eq 0 ]]; then
         LAUNCHCTL_OK=1
-        echo "✅ 源 4(launchctl list): 3 job 已注册(retry ${i}/5)"
+        echo "✅ 源 4(launchctl list): 4 job 已注册(retry ${i}/5)"
         break
     fi
 done
 if [[ "${LAUNCHCTL_OK}" -eq 0 ]]; then
-    echo "❌ 源 4: launchctl list 未见全部 3 job(retry 5 次)" >&2
+    echo "❌ 源 4: launchctl list 未见全部 4 job(retry 5 次)" >&2
     cat "${LC_OUT}" >&2 || true
     exit 3
 fi
 [[ -w "${LOG_DIR}/agent.out.log" ]] && echo "✅ 源 5(日志): ${LOG_DIR}/agent.out.log 可写" || echo "❌ 源 5: 日志不可写"
 
 echo ""
-echo "🎉 launchd 部署完成(3 job)!"
+echo "🎉 launchd 部署完成(4 job · 撞坑 #95 修复)!"
 echo "  月报:每月 1 号 09:00 · 动态月份 wrapper"
 echo "  IMAP:每日 07:00 · 读 .env IMAP_USER"
-echo "  数字员工:RunAtLoad · menubar + dashboard"
+echo "  菜单栏:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard)"
+echo "  Dashboard:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard · 127.0.0.1:8765)"
 
 # 显式 exit 0(供测试 grep 验证,也是 bash 严格模式的明确结束)
 exit 0

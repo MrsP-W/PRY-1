@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Day 14 launchd (撞坑 #95 修复) - 菜单栏 独立 LaunchAgent
+
+  撞坑 #95 修复(2026-07-10):菜单栏 + Dashboard 拆为 2 个独立 LaunchAgent
+  - 取代原 com.myaiemployee.digital-employee.plist(父子进程模型在 ProcessType=Background
+    下被 launchd 50s 内强制回收)
+  - 用 ProcessType=Standard(允许 fork)+ KeepAlive=true(持续常驻,崩了自动重启)
+  - wrapper ~/bin/my-ai-employee-menu-bar-runner 调 scripts/run_menu_bar.py
+  - RunAtLoad=true:登录后自动拉起(撞坑 #81:TCC 须先授权 Python.framework 3.12)
+
+  数字员工不自动 load,需用户单独授权 launchctl load -w
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.myaiemployee.menu-bar</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/$USER/bin/my-ai-employee-menu-bar-runner</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/$USER/bin:/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/$USER</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/menu-bar.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/menu-bar.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/$USER</string>
+
+    <key>ProcessType</key>
+    <string>Standard</string>
+</dict>
+</plist>
