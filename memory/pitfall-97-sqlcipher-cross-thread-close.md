@@ -41,24 +41,57 @@ and this is thread id 6248886272.
 
 ## 修复路径
 
-### 路径 A:`check_same_thread=False` + StaticPool(最快,~10 行)
+### 路径 A(已采用):`NullPool` — 每请求线程独立连接(代码已落地,2026-07-10 P1-1)
 
 ```python
+# src/my_ai_employee/core/sqlcipher_compat.py
+from sqlalchemy.pool import NullPool
+
+def make_sqlalchemy_engine(
+    db: Database | None = None,
+    *,
+    db_path: Path | None = None,
+) -> Engine:
+    creator = make_sqlalchemy_creator(db, db_path=db_path)
+    if db_path is not None:
+        # 长生命周期 Dashboard / Menu Bar:每请求线程独立连接
+        return create_engine("sqlite:///", creator=creator, poolclass=NullPool)
+    # 短生命周期脚本:同进程无并发,默认 pool 即可
+    return create_engine("sqlite:///", creator=creator)
+```
+
+- ✅ 改动小(单文件,~15 行,只影响 db_path 变体)
+- ✅ 零跨线程 close 风险:NullPool 每次 checkout 都让 creator 现建 sqlcipher3 connection,用完即关,close 一定在原 thread
+- ✅ 配合回归测试 `tests/core/test_sqlcipher_compat.py::test_concurrent_threads_no_sqlcipher_cross_thread_close`(10 thread × 5 次 checkout,验证 stderr 无 `check_same_thread` ProgrammingError)
+- ⚠️ 每次请求新建 sqlcipher3 connection,略增延迟(实测单 query <5ms,HTTP 404 仍 4ms,Dashboard 完全可接受)
+
+### ~~路径 B(放弃):`check_same_thread=False` + StaticPool~~ ⚠️ **不推荐**
+
+```python
+# 不要这样做!
 engine = create_engine(
-    f"sqlite:///{db_path}?check_same_thread=False",
+    "sqlite:///", creator=creator,
     connect_args={"check_same_thread": False},
     poolclass=StaticPool,
 )
 ```
 
-### 路径 B:`scoped_session`(thread-local,推荐,~30 行)
+- ❌ **StaticPool 让多个 HTTP 请求线程共享同一条 SQLCipher connection**
+- ❌ SQLCipher 写入并发可能破坏 WAL/finalize 顺序,把 close-time 异常升级为并发读写风险
+- ❌ 与 P1-1 修复同样"快速"但安全性差得多,代码审查已警告
+
+### 路径 C:`scoped_session`(thread-local,可选,~30 行)
 
 ```python
 from sqlalchemy.orm import scoped_session, sessionmaker
 Session = scoped_session(sessionmaker(bind=engine))
 ```
 
-### 路径 C:`event.listens_for(engine, "connect")` PRAGMA(不直接修,需配合 A 或 B)
+- ✅ 范本最标准(SQLAlchemy 官方推荐)
+- ⚠️ 改动中等(~30 行,需重写所有 DB 调用点)
+- ⚠️ 需小心 session lifecycle(避免 leak)
+
+### 路径 D:`event.listens_for(engine, "connect")` PRAGMA(不直接修,需配合 A 或 C)
 
 ## 关联
 
@@ -79,4 +112,4 @@ tail -10 ~/Library/Logs/MyAIEmployee/dashboard.err.log
 ```
 
 **Why**:P0-3 caffeinate 1h 观察暴露出 SQLCipher + SQLAlchemy pool 跨 thread close 报错。
-**How to apply**:P0-4 24h 观察前修复(路径 A 推荐),避免 24h 累积数千行 traceback 影响日志可读性。
+**How to apply**:路径 A NullPool 已落地(`commit` 待 push · `sqlcipher_compat.py` 长生命周期 db_path 自动用 NullPool · `test_engine_from_db_path_uses_nullpool` + `test_concurrent_threads_no_sqlcipher_cross_thread_close` 回归测试已加)。后续 Dashboard / Menu Bar 任何长生命周期服务接 SQLAlchemy 都应走 `make_sqlalchemy_engine(db_path=...)` 让其自动 NullPool,**不要直接拼 `create_engine("sqlite:///", creator=...)`**。

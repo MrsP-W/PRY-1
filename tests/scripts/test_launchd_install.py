@@ -739,3 +739,84 @@ def test_j4_install_sh_deploy_only_loads_4_jobs():
     assert "TARGET_PLIST_DASHBOARD" in load_section, (
         "撞坑 #95 修复:launchctl load 段必加载 dashboard plist"
     )
+
+
+# ===== K. 撞坑 #95 P1 修复补遗(2026-07-10):legacy digital-employee retirement =====
+#   升级场景:旧版 com.myaiemployee.digital-employee(父子进程 + ProcessType=Background)
+#   若仍残留,会和新 Dashboard 抢 port 8765 或产生双实例。
+#   K1-K4 验证 install.sh + uninstall.sh 都包含 legacy retirement 步骤(幂等)。
+
+
+def test_k1_install_sh_has_legacy_retirement_step():
+    """K1. 撞坑 #95 P1 补遗:install.sh 必含 legacy digital-employee retirement 段."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # 必含 legacy retirement 标题段
+    assert "legacy retirement" in text, "撞坑 #95 P1 补遗:install.sh 必含 legacy retirement 段"
+    # 必含 LEGACY_LABEL 引用
+    assert "LEGACY_LABEL=" in text, "撞坑 #95 P1 补遗:install.sh 必定义 LEGACY_LABEL"
+    assert "com.myaiemployee.digital-employee" in text, (
+        "撞坑 #95 P1 补遗:install.sh LEGACY_LABEL 必为 com.myaiemployee.digital-employee"
+    )
+    # 必含 unload + bootout 兜底
+    legacy_section_start = text.index("# ===== 5.5")
+    legacy_section_end = text.index("# ===== 6.")
+    legacy_section = text[legacy_section_start:legacy_section_end]
+    assert "launchctl unload" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 段必含 launchctl unload"
+    )
+    assert "launchctl bootout" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 段必含 launchctl bootout 兜底"
+    )
+    # 必含 rm legacy plist + wrapper
+    assert "rm -f" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 段必含 rm -f 清 plist/wrapper"
+    )
+    assert "my-ai-employee-start" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 段必删 ~/bin/my-ai-employee-start"
+    )
+
+
+def test_k2_install_sh_legacy_retirement_runs_before_load():
+    """K2. 撞坑 #95 P1 补遗:legacy retirement 段必在 launchctl load 新 job 之前."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    legacy_pos = text.index("legacy retirement")
+    load_pos = text.index("# ===== 6. launchctl load")
+    assert legacy_pos < load_pos, (
+        "撞坑 #95 P1 补遗:legacy retirement 必在 launchctl load 之前(否则旧实例仍在 8765)"
+    )
+
+
+def test_k3_install_sh_legacy_retirement_is_idempotent():
+    """K3. 撞坑 #95 P1 补遗:legacy retirement 必幂等(已 retire 跳过,不报错)."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    legacy_section_start = text.index("# ===== 5.5")
+    legacy_section_end = text.index("# ===== 6.")
+    legacy_section = text[legacy_section_start:legacy_section_end]
+    # 必含 "未注册,跳过" 兜底
+    assert "未注册" in legacy_section, "撞坑 #95 P1 补遗:legacy retirement 必含未注册跳过分支(幂等)"
+    # 必含 grep -q 检测(list 命中再 unload)
+    assert "grep -q" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 必用 grep -q 探测注册状态"
+    )
+    # 必含 "legacy 不存在,跳过" 兜底
+    assert "legacy 不存在,跳过" in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 必含 legacy 文件不存在跳过分支(幂等)"
+    )
+
+
+def test_k4_uninstall_sh_includes_legacy_retirement():
+    """K4. 撞坑 #95 P1 补遗:uninstall 模式必把 legacy digital-employee 一并 retire."""
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    # uninstall 段必含 com.myaiemployee.digital-employee(在 5 个 label 中)
+    uninstall_section_start = text.index('if [[ "${MODE}" == "uninstall" ]]')
+    uninstall_section_end = text.index("exit 0\nfi", uninstall_section_start)
+    uninstall_section = text[uninstall_section_start:uninstall_section_end]
+    digital_count = uninstall_section.count("com.myaiemployee.digital-employee")
+    assert digital_count >= 3, (
+        f"撞坑 #95 P1 补遗:uninstall 段必含 legacy digital-employee (unload + plist + verify ≥ 3 处),"
+        f"实测 {digital_count} 处"
+    )
+    # 必删 legacy wrapper
+    assert "my-ai-employee-start" in uninstall_section, (
+        "撞坑 #95 P1 补遗:uninstall 段必删 legacy ~/bin/my-ai-employee-start wrapper"
+    )

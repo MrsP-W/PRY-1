@@ -33,6 +33,7 @@ from pathlib import Path
 import sqlcipher3.dbapi2 as _dbapi2
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
+from sqlalchemy.pool import NullPool
 
 from my_ai_employee.core.db import Database
 
@@ -95,6 +96,20 @@ def make_sqlalchemy_engine(
 
     但更明确（明确走 SQLCipher，不让用户疑惑 sqlite:/// 含义）。
 
+    **撞坑 #97 修复（2026-07-10）**：当传入 `db_path`（即长生命周期服务，如
+    Dashboard / Menu Bar 长期 server）时，强制使用 `NullPool` —— **不** 用
+    SA 默认的连接池（默认池会让 connection 在 thread A 创建、thread B 关闭，
+    触发 `sqlcipher3.check_same_thread=True` 抛 `ProgrammingError`）。
+
+    `NullPool` 每次 checkout 都让 creator 现建一条 sqlcipher3 connection,
+    用完即关,close 一定在原 thread,**零跨线程 close 风险**。
+
+    **不** 改用 `check_same_thread=False + StaticPool`：那会让多个 HTTP
+    请求线程共享同一条 connection,SQLCipher 写入并发可能破坏 WAL/finalize
+    顺序,把 close-time 异常升级为并发读写风险。
+
+    `db` 短生命周期脚本保持默认 pool(同进程内不会跨线程)。
+
     Args:
         db: 已 open 的 Database 实例(短生命周期脚本/测试用)
         db_path: DB 路径(长生命周期进程用;每次连接独立 Database.open)
@@ -103,4 +118,8 @@ def make_sqlalchemy_engine(
         SQLAlchemy Engine，creator 走 SQLCipher Database.open()
     """
     creator = make_sqlalchemy_creator(db, db_path=db_path)
+    if db_path is not None:
+        # 长生命周期 Dashboard / Menu Bar:每请求线程独立连接
+        return create_engine("sqlite:///", creator=creator, poolclass=NullPool)
+    # 短生命周期脚本:同进程无并发,默认 pool 即可
     return create_engine("sqlite:///", creator=creator)

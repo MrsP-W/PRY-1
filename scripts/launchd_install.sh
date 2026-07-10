@@ -99,14 +99,15 @@ LAUNCHD_LABELS=(
 # ===== uninstall 流程(2026-06-15 D10.5.3 新增,沿 Spike A 手动 cleanup 4 步范本) =====
 if [[ "${MODE}" == "uninstall" ]]; then
     echo "===== uninstall 流程 ====="
-    # 1. launchctl unload(4 job — Day 14 #95 修复后:menu-bar + dashboard 独立)
+    # 1. launchctl unload(5 label — Day 14 #95 修复后:menu-bar + dashboard 独立 + legacy digital-employee)
     LC_OUT_UNINSTALL="$(mktemp -t launchctl_list_uninstall.XXXXXX)"
     trap 'rm -f "${LC_OUT_UNINSTALL:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
     for label in \
         com.myaiemployee.agent \
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
-        com.myaiemployee.dashboard; do
+        com.myaiemployee.dashboard \
+        com.myaiemployee.digital-employee; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
         if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
@@ -123,12 +124,13 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  ${label} 未注册,跳过 unload"
         fi
     done
-    # 2. 删 plist(4 job)
+    # 2. 删 plist(5 label · 含 legacy digital-employee)
     for label in \
         com.myaiemployee.agent \
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
-        com.myaiemployee.dashboard; do
+        com.myaiemployee.dashboard \
+        com.myaiemployee.digital-employee; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         if [[ -f "${target_plist}" ]]; then
             rm -f "${target_plist}"
@@ -137,12 +139,13 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  plist 不存在,跳过: ${target_plist}"
         fi
     done
-    # 3. 删 ~/bin/ 脚本(4 wrapper — 撞坑 #95 修复:拆 menu-bar + dashboard 独立 runner)
+    # 3. 删 ~/bin/ 脚本(5 wrapper — 撞坑 #95 修复:拆 menu-bar + dashboard 独立 runner + legacy start)
     for script in \
         "${HOME_BIN}/my-ai-employee-monthly-report" \
         "${HOME_BIN}/my-ai-employee-imap-sync" \
         "${HOME_BIN}/my-ai-employee-menu-bar-runner" \
-        "${HOME_BIN}/my-ai-employee-dashboard-runner"; do
+        "${HOME_BIN}/my-ai-employee-dashboard-runner" \
+        "${HOME_BIN}/my-ai-employee-start"; do
         if [[ -f "${script}" ]]; then
             rm -f "${script}"
             echo "✅ 删除脚本: ${script}"
@@ -157,20 +160,21 @@ if [[ "${MODE}" == "uninstall" ]]; then
     else
         echo "ℹ️  日志目录不存在,跳过"
     fi
-    # 5. 验证无残留(4 job)
+    # 5. 验证无残留(5 label · 含 legacy digital-employee)
     launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
     for label in \
         com.myaiemployee.agent \
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
-        com.myaiemployee.dashboard; do
+        com.myaiemployee.dashboard \
+        com.myaiemployee.digital-employee; do
         if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
             echo "❌ 验证失败:launchctl list 仍见 ${label}" >&2
             exit 3
         fi
     done
     echo ""
-    echo "🎉 uninstall 完成(无残留)"
+    echo "🎉 uninstall 完成(无残留 · 含 legacy retirement)"
     exit 0
 fi
 
@@ -342,6 +346,57 @@ touch "${LOG_DIR}/imap-sync.out.log" "${LOG_DIR}/imap-sync.err.log"
 touch "${LOG_DIR}/menu-bar.out.log" "${LOG_DIR}/menu-bar.err.log"
 touch "${LOG_DIR}/dashboard.out.log" "${LOG_DIR}/dashboard.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
+
+# ===== 5.5 Day 14 撞坑 #95 修复补遗(2026-07-10 P1-2):legacy retirement =====
+#   升级场景:旧版 com.myaiemployee.digital-employee(父子进程 + ProcessType=Background)
+#   已部署但撞坑 #95 50s 内被 launchd 强制回收。Day 14 #95 修复后拆为 menu-bar + dashboard
+#   两个独立 LaunchAgent,但旧 plist/wrapper 若仍残留会导致:
+#     - 旧 Dashboard 可能继续占用 port 8765 → 新 Dashboard 加载失败
+#     - 双实例同时监听 8765 → 行为不确定
+#   此步在加载新 job 前强制 retire legacy,幂等(已 retire 直接跳过)。
+LEGACY_LABEL="com.myaiemployee.digital-employee"
+LEGACY_PLIST="${LAUNCH_AGENTS_DIR}/${LEGACY_LABEL}.plist"
+LEGACY_WRAPPER="${HOME_BIN}/my-ai-employee-start"
+LEGACY_LOG_OUT="${LOG_DIR}/digital-employee.out.log"
+LEGACY_LOG_ERR="${LOG_DIR}/digital-employee.err.log"
+
+echo "📋 legacy retirement:${LEGACY_LABEL}(撞坑 #95 修复补遗)"
+LC_OUT_LEGACY="$(mktemp -t launchctl_legacy.XXXXXX)"
+trap 'rm -f "${LC_OUT_LEGACY:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
+launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
+if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+    echo "🔻 legacy 仍注册,launchctl unload"
+    launchctl unload "${LEGACY_PLIST}" 2>/dev/null || true
+    sleep 1
+    launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
+    if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+        echo "⚠️  unload 后 list 仍见 ${LEGACY_LABEL},尝试 bootout"
+        launchctl bootout "gui/$(id -u)/${LEGACY_LABEL}" 2>/dev/null || true
+        sleep 1
+    fi
+else
+    echo "ℹ️  ${LEGACY_LABEL} 未注册,跳过 unload"
+fi
+# 删 legacy plist / wrapper / 日志(幂等,文件不存在则跳过)
+for legacy_path in \
+    "${LEGACY_PLIST}" \
+    "${LEGACY_WRAPPER}" \
+    "${LEGACY_LOG_OUT}" \
+    "${LEGACY_LOG_ERR}"; do
+    if [[ -f "${legacy_path}" || -L "${legacy_path}" ]]; then
+        rm -f "${legacy_path}"
+        echo "✅ 删除 legacy: ${legacy_path}"
+    else
+        echo "ℹ️  legacy 不存在,跳过: ${legacy_path}"
+    fi
+done
+# 验证 legacy 已彻底清除
+launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
+if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+    echo "❌ legacy retirement 失败:launchctl list 仍见 ${LEGACY_LABEL}" >&2
+    exit 4
+fi
+echo "✅ legacy retirement 完成(无残留)"
 
 if [[ "${DEPLOY_ONLY}" == "true" ]]; then
     echo ""

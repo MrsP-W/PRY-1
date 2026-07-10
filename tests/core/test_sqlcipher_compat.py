@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
 import pytest
 from sqlalchemy import text
+from sqlalchemy.pool import NullPool
 
 from my_ai_employee.core import keychain
 from my_ai_employee.core.db import Database
@@ -71,3 +73,69 @@ def test_engine_from_closed_database_still_fails_fast(
 
     with pytest.raises(RuntimeError, match="DB 已关闭"), engine.connect():
         pass
+
+
+# ===== 撞坑 #97 回归测试(2026-07-10):db_path 长生命周期必须用 NullPool =====
+
+
+def test_engine_from_db_path_uses_nullpool(
+    tmp_db_path: Path,
+    fake_keychain: dict[tuple[str, str], str],
+) -> None:
+    """db_path 长生命周期 engine 必须配 NullPool(防 SQLCipher 跨线程 close)."""
+    with Database.open(db_path=tmp_db_path) as db:
+        db.init_schema()
+
+    engine = make_sqlalchemy_engine(db_path=tmp_db_path)
+
+    assert isinstance(engine.pool, NullPool), (
+        f"撞坑 #97 修复:db_path 长生命周期 engine 必须用 NullPool,实测 {type(engine.pool).__name__}"
+    )
+
+
+def test_concurrent_threads_no_sqlcipher_cross_thread_close(
+    tmp_db_path: Path,
+    fake_keychain: dict[tuple[str, str], str],
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """#97 修复回归:N 个 thread 并发查询,stderr 无 ProgrammingError.
+
+    模拟 Dashboard 的 ThreadingHTTPServer 多请求场景:
+    - 10 个 thread × 每 thread 5 次 checkout/query/close
+    - 全部完成后,caplog 中不应出现 `check_same_thread` ProgrammingError
+    """
+    import logging
+
+    with Database.open(db_path=tmp_db_path) as db:
+        db.init_schema()
+
+    engine = make_sqlalchemy_engine(db_path=tmp_db_path)
+
+    errors: list[str] = []
+
+    def worker(thread_id: int) -> None:
+        try:
+            for i in range(5):
+                with engine.connect() as conn:
+                    result = conn.execute(
+                        text("SELECT :tid * 100 + :i"),
+                        {"tid": thread_id, "i": i},
+                    ).scalar_one()
+                    assert isinstance(result, int)
+        except Exception as exc:  # noqa: BLE001 — 收集线程内异常
+            errors.append(f"thread {thread_id}: {exc!r}")
+
+    threads = [threading.Thread(target=worker, args=(t,)) for t in range(10)]
+    # 把 SQLAlchemy / sqlcipher 日志捕获进 caplog
+    with caplog.at_level(logging.WARNING, logger="sqlalchemy.pool"):
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+    # 1. worker 内不应抛异常
+    assert not errors, f"worker 异常:{errors}"
+
+    # 2. caplog 应无 check_same_thread ProgrammingError
+    bad = [r for r in caplog.records if "check_same_thread" in r.getMessage()]
+    assert not bad, f"撞坑 #97 仍存在:stderr 出现跨线程 close 报错:{[r.getMessage() for r in bad]}"
