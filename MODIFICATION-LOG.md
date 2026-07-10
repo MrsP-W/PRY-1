@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2920 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **257 files** / MD lint **285 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 285) |
+| **质量基线** | **2920 passed / 1 skipped** / **89.12%** / mypy --strict 0 / **257 files** / MD lint **288 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94 → 288) |
 | **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
@@ -5791,7 +5791,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 完全实战验证 + 撞坑 #94 B 路径代码修复候选)· commit ahead 1 待 push + 本轮代码修复待 commit
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **288 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #93 完全实战验证 + 撞坑 #94 B 路径代码修复候选)· commit ahead 1 待 push + 本轮代码修复待 commit
 - **当前阶段**:P3-A T3 L4 launchctl 真实 load -w 撞坑 #93 完全验证 ✅ + 撞坑 #94 B 路径代码修复候选 ⚠️ · 数字员工 bootout 维持 · 待 user 授权 #94 真实 load 复验
 - **完成度**:项目约 **95%**· 可无人值守生产运行约 **88%**(待 menu_bar 真实 load 复验 + 撞坑 #90 持久化未实施)· v1.0 发布就绪约 **89%**
 - **下一棒**:授权 launchctl load -w 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
@@ -5808,7 +5808,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   - `src/my_ai_employee/core/sqlcipher_compat.py`: `make_sqlalchemy_creator` / `make_sqlalchemy_engine` 支持 `db_path`
   - `src/my_ai_employee/dashboard/context.py`:真实 session factory 改为 `make_sqlalchemy_engine(db_path=db_path)`
   - `tests/core/test_sqlcipher_compat.py`:新增 3 个回归测试,覆盖 db_path 模式和关闭 DB 失败快路径
-  - `quality_snapshot.py` + README / CLAUDE / SESSION-STATE / launch-plan 同步 `2920/1/89.12%/285/257`
+  - `quality_snapshot.py` + README / CLAUDE / SESSION-STATE / launch-plan 同步 `2920/1/89.12%/288/257`
 
 ### 2. 风险点
 
@@ -5818,7 +5818,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **288 files / 0 errors**
 - **当前阶段**:#94 B 路径代码修复候选已落地;数字员工仍 bootout,待 user 授权真实 load 复验
 - **完成度**:项目约 **95%**;可无人值守生产运行约 **88%**;v1.0 发布就绪约 **89%**
 - **下一棒**:授权 `launchctl load -w` 重试验证 → 1h 观察窗 → 24h 观察 → v1.0 tag 评估(默认不打)
@@ -5835,10 +5835,10 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
   - `docs/v0.2.77-p3-a-t3-l4-94-b-verify-95-expose-2026-07-09.md`(新增):#94 B 路径实战验证 + #95 NEW 暴露 docs
   - `memory/pitfall-95-launchd-background-process-type-no-fork.md`(新增):撞坑 #95 沉淀 + 4 修复路径候选
   - `memory/checkpoint-2026-07-09-p3-a-t3-l4-94-b-verify.md`(新增):T3 L4 #94 复验 + #95 checkpoint
-  - `README.md` / `CLAUDE.md` / `SESSION-STATE.md` / `MODIFICATION-LOG.md` / `docs/v0.2-launch-plan.md`(5 件套 sync 285 · 撞坑 #87 self-drift 校准)
+  - `README.md` / `CLAUDE.md` / `SESSION-STATE.md` / `MODIFICATION-LOG.md` / `docs/v0.2-launch-plan.md`(5 件套 sync 288 · 撞坑 #87 self-drift 校准)
 - **核心验证执行**(撞坑 #94 B 路径实战通过):
   - HEAD `74dc9db` = `fix(launchd): #94 menu_bar db_path sqlalchemy engine` · 已 push
-  - 9/9 质量门 全绿(mypy 257/0 + lint 285/0 + check-snapshot 双门 OK 2920/1/285md)
+  - 9/9 质量门 全绿(mypy 257/0 + lint 288/0 + check-snapshot 双门 OK 2920/1/288md)
   - 备份+清干 log → `cp /tmp/digital-employee.{err,out}.log.bak2` + `cp /tmp/menu_bar.log.bak2` + `: > log`
   - `launchctl load -w com.myaiemployee.digital-employee.plist` → load OK · RunAtLoad 触发
   - 10 秒后 `launchctl list` 3/3 注册 + 数字员工 exit 0(从 c8049ec 时 exit 1 → 0)
@@ -5868,7 +5868,7 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ### 3. 当前项目整体总结
 
-- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **285 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #94 B 路径代码修复 + 撞坑 #95 NEW 暴露待决策)· commit ahead 1 待 push
+- **进度数字**:**2920 passed / 1 skipped / 89.12%** / mypy **257 files / 0 errors** / MD lint **288 files / 0 errors**(撞坑 #87 self-drift 校准 + 撞坑 #94 B 路径代码修复 + 撞坑 #95 NEW 暴露待决策)· commit ahead 1 待 push
 - **当前阶段**:P3-A T3 L4 撞坑 #94 B 路径实战验证 ✅ + 撞坑 #95 NEW 暴露 ⚠️ · 1h 观察窗启动中 · 等 user 决策 #95 修复路径(A/B/C/D)
 - **完成度**:项目约 **94%**(不变)· 可无人值守生产运行约 **82%**(↓ 3pp · #95 限制 menu_bar/dashboard 常驻)· v1.0 发布就绪约 **87%**(不变 · #94 修复 +0% v1.0)
 - **下一棒**:user 决策 #95(推荐 A 立即 + B/C 后续 D-step)→ docs/v0.2.78 #95 修复 D-step → 24h 完整观察窗(锚 3/3 launchd job)→ v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。

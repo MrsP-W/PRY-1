@@ -14,7 +14,8 @@ T3 L4 复验 #94 B 路径修复(2026-07-09 21:27)成功:数字员工 launcher ex
 
 **How to apply:**
 
-### 触发链路(实测栈)
+## 触发链路(实测栈)
+
 ```
 launchctl load -w com.myaiemployee.digital-employee.plist
   ↓ RunAtLoad 触发
@@ -31,29 +32,34 @@ launchd 回收 menu_bar/dashboard subprocess(50s 内)
 state=not running · active count=0 · port 8765 未监听
 ```
 
-### 与之前撞坑的关联
+## 与之前撞坑的关联
+
 - 沿 #91(Documents exec)+ #92(代码路径 Documents 沙箱)+ #93(launchd uv PATH 缺失)+ #94(menu_bar DB context manager)的 launchd 实战第五坑
 - #91-#94 全部修复通过 ✅
 - #95 是 launchd 进程模型的固有限制(Background 模式 strict),而非代码 bug
 
-### 撞坑 #95 与撞坑 #90 launchd session-bound 的关系
+## 撞坑 #95 与撞坑 #90 launchd session-bound 的关系
+
 - #90:9.5h 内 active → inactive 衰减 · reboot/logout 后失效(持久化方案 D-step)
 - #95:launcher fork 立即被回收 · menu_bar/dashboard 不能作为 launchd 子进程常驻
 - 两个问题互补:#95 解决"如何让 menu_bar/dashboard 在 launchd 下存活",#90 解决"如何让 launchd job 跨 session 持久化"
 
-### 修复路径候选(待 D-step 决策)
+## 修复路径候选(待 D-step 决策)
+
 - **A · docs-only 接受当前 launcher 一次性 RunAtLoad 模式**:launcher 每次 load 启动 → 9/9 预检 → fork menu_bar/dashboard(被回收)→ exit 0 · 数字员工 plist 实际变成"启动检查器"而非"数字员工常驻守护" · 1h/24h 观察锚 agent + imap-sync · 0 改动
 - **B · 改 plist `ProcessType=Interactive`**:允许 fork · 但需要 GUI session + 用户登入(撞坑 #90 仍生效)· 1 D-step
 - **C · 拆守护进程:launcher fork + plist `KeepAlive=true` + `nohup setsid` 强 detach**:launcher 用 `nohup setsid` 强制让子进程脱离 launchd 控制组 · 1 D-step
 - **D · 不走 launchd,数字员工用 tmux/screen daemon**:launchd 只管 agent + imap-sync · 数字员工手动 `nohup my-ai-employee-start` 启动 · launchctl bootout 数字员工 plist · 0.5 D-step
 
-### 红线维持
+## 红线维持
+
 - 不动 `plist` 直到明确决策 → 撞坑 #71 docs-only 边界
 - 不写 `.env` 凭据 → 撞坑 #1
 - 撞坑 #94 B 路径修复实战通过(`make_sqlalchemy_engine(db_path=...)` 长生命周期连接重开)
 - 9/9 质量门 全绿(2920/1/89.12/285/257)
 
-### 推荐路径
+## 推荐路径
+
 **A → B/C 后续 D-step**
 - 现在:接受 launcher 一次性 RunAtLoad 模式 · 1h 观察以 agent + imap-sync 为锚
 - 后续:决策 B/C/D 修复 #95 · 24h 观察走完整数字员工
