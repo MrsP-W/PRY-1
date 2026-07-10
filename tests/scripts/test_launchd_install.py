@@ -797,9 +797,9 @@ def test_k3_install_sh_legacy_retirement_is_idempotent():
     legacy_section = text[legacy_section_start:legacy_section_end]
     # 必含 "未注册,跳过" 兜底
     assert "未注册" in legacy_section, "撞坑 #95 P1 补遗:legacy retirement 必含未注册跳过分支(幂等)"
-    # 必含 grep -q 检测(list 命中再 unload)
-    assert "grep -q" in legacy_section, (
-        "撞坑 #95 P1 补遗:legacy retirement 必用 grep -q 探测注册状态"
+    # 必含精确标签检测(list 命中再 unload，不能用 grep 正则/子串误匹配)
+    assert 'launchctl_list_has_label "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"' in legacy_section, (
+        "撞坑 #95 P1 补遗:legacy retirement 必精确探测注册标签"
     )
     # 必含 "legacy 不存在,跳过" 兜底
     assert "legacy 不存在,跳过" in legacy_section, (
@@ -943,3 +943,119 @@ def test_k6_deploy_only_modes_leave_legacy_files_and_launchctl_untouched(
     assert not re.search(r"^(?:unload|bootout|load)\b", calls, re.MULTILINE), (
         f"撞坑 #98 P1-3 修复:{mode} 不得改变 launchd 运行态,实际调用={calls}"
     )
+
+
+@pytest.mark.parametrize(
+    ("registered_label", "expects_retirement"),
+    (
+        ("com.myaiemployee.digital-employee", True),
+        ("comXmyaiemployeeYdigital-employee", False),
+        ("com.myaiemployee.digital-employee-backup", False),
+    ),
+)
+def test_k7_install_retires_only_exact_legacy_label_and_cleans_temp_files(
+    tmp_path: Path, registered_label: str, expects_retirement: bool
+) -> None:
+    """K7. install 只 retire 精确 legacy 标签，并在退出时清理全部临时文件."""
+    home = tmp_path / "home"
+    legacy_files = {
+        home / "Library/LaunchAgents/com.myaiemployee.digital-employee.plist": "legacy plist\n",
+        home / "bin/my-ai-employee-start": "legacy wrapper\n",
+        home / "Library/Logs/MyAIEmployee/digital-employee.out.log": "legacy stdout\n",
+        home / "Library/Logs/MyAIEmployee/digital-employee.err.log": "legacy stderr\n",
+    }
+    for path, contents in legacy_files.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents, encoding="utf-8")
+    app_support_env = home / "Library/Application Support/MyAIEmployee/.env"
+    app_support_env.parent.mkdir(parents=True, exist_ok=True)
+    app_support_env.write_text("# test-only environment\n", encoding="utf-8")
+
+    fake_bin = tmp_path / "fake-bin"
+    fake_bin.mkdir()
+    launchctl_state = tmp_path / "launchctl-state"
+    launchctl_state.write_text(f"123 0 {registered_label}\n", encoding="utf-8")
+    launchctl_calls = tmp_path / "launchctl.calls"
+    fake_tmp_dir = tmp_path / "fake-tmp"
+    fake_tmp_dir.mkdir()
+    mktemp_counter = tmp_path / "mktemp-counter"
+
+    fake_launchctl = fake_bin / "launchctl"
+    fake_launchctl.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        'case "${1:-}" in\n'
+        "  list)\n"
+        '    cat "${FAKE_LAUNCHCTL_STATE:?}"\n'
+        "    ;;\n"
+        "  unload | bootout)\n"
+        '    printf \'%s\\n\' "$*" >> "${FAKE_LAUNCHCTL_LOG:?}"\n'
+        '    : > "${FAKE_LAUNCHCTL_STATE:?}"\n'
+        "    ;;\n"
+        "  load)\n"
+        '    printf \'%s\\n\' "$*" >> "${FAKE_LAUNCHCTL_LOG:?}"\n'
+        '    label="$(basename "${3:?}" .plist)"\n'
+        '    printf \'%s\\n\' "${label}" >> "${FAKE_LAUNCHCTL_STATE:?}"\n'
+        "    ;;\n"
+        "  *)\n"
+        "    printf 'unexpected launchctl: %s\\n' \"$*\" >&2\n"
+        "    exit 1\n"
+        "    ;;\n"
+        "esac\n",
+        encoding="utf-8",
+    )
+    fake_launchctl.chmod(0o755)
+    fake_mktemp = fake_bin / "mktemp"
+    fake_mktemp.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "counter=0\n"
+        'if [[ -f "${FAKE_MKTEMP_COUNTER:?}" ]]; then\n'
+        '  counter=$(cat "${FAKE_MKTEMP_COUNTER}")\n'
+        "fi\n"
+        "counter=$((counter + 1))\n"
+        'printf \'%s\\n\' "${counter}" > "${FAKE_MKTEMP_COUNTER}"\n'
+        'path="${FAKE_TMP_DIR:?}/launchctl-${counter}"\n'
+        ': > "${path}"\n'
+        "printf '%s\\n' \"${path}\"\n",
+        encoding="utf-8",
+    )
+    fake_mktemp.chmod(0o755)
+    env = os.environ.copy()
+    env.update(
+        {
+            "HOME": str(home),
+            "PATH": f"{fake_bin}{os.pathsep}{env['PATH']}",
+            "FAKE_LAUNCHCTL_STATE": str(launchctl_state),
+            "FAKE_LAUNCHCTL_LOG": str(launchctl_calls),
+            "FAKE_MKTEMP_COUNTER": str(mktemp_counter),
+            "FAKE_TMP_DIR": str(fake_tmp_dir),
+        }
+    )
+
+    result = subprocess.run(
+        ["bash", str(INSTALL_SH), "install"],
+        cwd=PROJECT_ROOT,
+        env=env,
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=20,
+    )
+
+    assert result.returncode == 0, (
+        f"撞坑 #98:{registered_label} 场景的 install 必成功,"
+        f"stdout={result.stdout}\nstderr={result.stderr}"
+    )
+    calls = launchctl_calls.read_text(encoding="utf-8") if launchctl_calls.exists() else ""
+    if expects_retirement:
+        assert "unload" in calls, "精确 legacy 标签必先 unload"
+        assert "bootout" not in calls, "fake unload 已清理精确标签，不应再 bootout"
+        assert calls.index("unload") < calls.index("load"), "legacy retirement 必在新 job load 前"
+    else:
+        assert "unload" not in calls and "bootout" not in calls, (
+            f"近似标签 {registered_label} 不得触发 legacy retirement，实际={calls}"
+        )
+    for path in legacy_files:
+        assert not path.exists(), f"install 必清理 legacy 文件 {path}"
+    assert not list(fake_tmp_dir.iterdir()), "EXIT trap 必清理 legacy/load/verify 临时文件"

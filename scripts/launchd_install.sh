@@ -96,6 +96,13 @@ LAUNCHD_LABELS=(
     "com.myaiemployee.dashboard"
 )
 
+# launchctl list 每行格式为 PID Status Label；仅精确匹配末列，避免 label 中的点号被 grep 当作正则。
+launchctl_list_has_label() {
+    local expected_label="$1"
+    local list_output="$2"
+    awk -v label="${expected_label}" '$NF == label { found = 1; exit } END { exit !found }' "${list_output}"
+}
+
 # ===== uninstall 流程(2026-06-15 D10.5.3 新增,沿 Spike A 手动 cleanup 4 步范本) =====
 if [[ "${MODE}" == "uninstall" ]]; then
     echo "===== uninstall 流程 ====="
@@ -110,12 +117,12 @@ if [[ "${MODE}" == "uninstall" ]]; then
         com.myaiemployee.digital-employee; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-        if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+        if launchctl_list_has_label "${label}" "${LC_OUT_UNINSTALL}"; then
             echo "🔻 launchctl unload ${target_plist}"
             launchctl unload "${target_plist}" 2>/dev/null || true
             sleep 1
             launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
-            if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+            if launchctl_list_has_label "${label}" "${LC_OUT_UNINSTALL}"; then
                 echo "⚠️  unload 后 list 仍见 ${label},尝试 bootout"
                 launchctl bootout "gui/$(id -u)/${label}" 2>/dev/null || true
                 sleep 1
@@ -168,7 +175,7 @@ if [[ "${MODE}" == "uninstall" ]]; then
         com.myaiemployee.menu-bar \
         com.myaiemployee.dashboard \
         com.myaiemployee.digital-employee; do
-        if grep -q "${label}" "${LC_OUT_UNINSTALL}"; then
+        if launchctl_list_has_label "${label}" "${LC_OUT_UNINSTALL}"; then
             echo "❌ 验证失败:launchctl list 仍见 ${label}" >&2
             exit 3
         fi
@@ -383,12 +390,12 @@ echo "📋 legacy retirement:${LEGACY_LABEL}(撞坑 #95 修复补遗 · P1-3 修
 LC_OUT_LEGACY="$(mktemp -t launchctl_legacy.XXXXXX)"
 trap 'rm -f "${LC_OUT_LEGACY:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
 launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
-if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+if launchctl_list_has_label "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
     echo "🔻 legacy 仍注册,launchctl unload"
     launchctl unload "${LEGACY_PLIST}" 2>/dev/null || true
     sleep 1
     launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
-    if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+    if launchctl_list_has_label "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
         echo "⚠️  unload 后 list 仍见 ${LEGACY_LABEL},尝试 bootout"
         launchctl bootout "gui/$(id -u)/${LEGACY_LABEL}" 2>/dev/null || true
         sleep 1
@@ -411,7 +418,7 @@ for legacy_path in \
 done
 # 验证 legacy 已彻底清除
 launchctl list > "${LC_OUT_LEGACY}" 2>&1 || true
-if grep -q "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
+if launchctl_list_has_label "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
     echo "❌ legacy retirement 失败:launchctl list 仍见 ${LEGACY_LABEL}" >&2
     exit 4
 fi
@@ -419,7 +426,7 @@ echo "✅ legacy retirement 完成(无残留)"
 
 # ===== 6. launchctl load(4 job · 撞坑 #95 修复:menu-bar + dashboard 独立) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"
-trap 'rm -f "${LC_OUT_LOAD}" "${LC_OUT:-}"' EXIT
+trap 'rm -f "${LC_OUT_LEGACY:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
 for target_plist in \
     "${TARGET_PLIST}" \
     "${TARGET_PLIST_IMAP}" \
@@ -427,7 +434,7 @@ for target_plist in \
     "${TARGET_PLIST_DASHBOARD}"; do
     label="$(basename "${target_plist}" .plist)"
     launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
-    if grep -q "${label}" "${LC_OUT_LOAD}"; then
+    if launchctl_list_has_label "${label}" "${LC_OUT_LOAD}"; then
         echo "ℹ️  已注册(${label}),先 unload 再 reload"
         launchctl unload "${target_plist}" 2>/dev/null || true
         sleep 1
@@ -436,7 +443,7 @@ for target_plist in \
     if ! launchctl load -w "${target_plist}" 2>/dev/null; then
         sleep 1
         launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
-        if ! grep -q "${label}" "${LC_OUT_LOAD}"; then
+        if ! launchctl_list_has_label "${label}" "${LC_OUT_LOAD}"; then
             echo "❌ launchctl load 失败且 list 未见 ${label}" >&2
             exit 3
         fi
@@ -457,7 +464,7 @@ for i in 1 2 3 4 5; do
     launchctl list > "${LC_OUT}" 2>&1 || true
     missing=0
     for label in "${LAUNCHD_LABELS[@]}"; do
-        if ! grep -q "${label}" "${LC_OUT}"; then
+        if ! launchctl_list_has_label "${label}" "${LC_OUT}"; then
             missing=1
             break
         fi
