@@ -75,7 +75,7 @@
 
 ---
 
-## 📊 当前项目整体状态(最新快照 · 2026-07-08 实测)
+## 📊 当前项目整体状态(最新快照 · 2026-07-10 实测)
 
 | 维度 | 状态 |
 |------|------|
@@ -120,6 +120,7 @@
 | **P1-3 #98 修复(本次 commit `f188d13`)** | `fix(launchd): #98 P1-3 修复 legacy retirement 仅 install 模式执行 + K5 回归测试`(2026-07-10 · 8 files / +78 -27 · **撞坑 #98 P1 审查发现**:原 5.5 段顺序有 bug,deploy-only 早退前 legacy retirement 会被执行,违反"只部署、不改变运行态"安全语义;**修复**:`launchd_install.sh` deploy-only 退出从 5.6 移到 5.5(NEW 段号),legacy retirement 移到 5.6(后置)· **K5 回归测试**:`tests/scripts/test_launchd_install.py` 新增 `test_k5_deploy_only_does_not_trigger_legacy_retirement`(5.5 段代码必不含 launchctl unload/bootout/my-ai-employee-start;5.5 必在 5.6 之前 → deploy-only 不退役 legacy)· K1/K3 段号 5.5→5.6 同步修正 · 5件套 baseline 同步 2936/1/89.12/290 → 2937/1/89.10/291(K5 +1 test, ruff format +0 MD)· 9/9 质量门全绿 2937 passed / 1 skipped / 89.10% / 291 MD / mypy 257 files · 默认不 push · 等 push 授权后启动 P0-4 24h 观察) |
 | **P1-4 #98 行为回归补强(commit `c5b4238`)** | `test(launchd): 覆盖 deploy-only/no-load 的 legacy 保留语义`(2026-07-10 · 仅测试与当前状态快照 · 新增参数化 K6:临时 HOME 预置 legacy plist/wrapper/两份日志、fake launchctl；两模式均断言成功早退、四个 legacy 文件内容不变、四个当前 wrapper 与四个 plist 已部署、无 unload/bootout/load 调用 · 同时修正 F7 的 echo 误判与 K2 的段落定位 · 定向 64 passed / 全量 2939 passed, 1 skipped / 89.10% / MD 291 / mypy 257 files · 未执行真实 launchctl、push、tag 或外部写入) |
 | **P1-5 #98 install 可靠性修复(本次)** | `fix(launchd): 精确匹配 launchctl label 并保留全部 EXIT cleanup`(2026-07-10 · `launchctl_list_has_label()` 用 awk 精确匹配末列，替换 install/uninstall/load/验证共 10 处 list 判断；后续 trap 继续清理 `LC_OUT_LEGACY`，不再泄漏临时文件 · K7 参数化 3 场景覆盖精确 legacy、点号变体、后缀 label；先复现 3/3 失败，修复后 K7 3 passed、launchd 定向 67 passed · 全量 2942 passed / 1 skipped / 实测 coverage 89.12%；按 <0.1pp 抖动规则，snapshot 保持 89.10% / MD 291 / mypy 257 files · 不执行真实 launchctl、push、tag 或外部写入) |
+| **2026-07-11 当前状态纠正** | **优先于上方旧 Day 13/P3-A 下一棒表述**：#95 已完成 P0-3 1h 验证；#97 已以 `NullPool` 修复，#98 legacy retirement 已收口；下一项为 P0-4 24h 完整观察（menu-bar / dashboard 零重启，stderr 无 #97 traceback）。本自动化不 push、不打 tag、不做真实外部写入。 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
 
