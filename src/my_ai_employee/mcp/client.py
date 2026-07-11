@@ -15,6 +15,7 @@ D3.3.3 + D4.1 教训应用:
 from __future__ import annotations
 
 import time
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -67,7 +68,7 @@ class MCPClient:
             self.transport.start()
         except Exception:
             # 不转换编程异常；但 start() 可能已分配子进程或连接，必须回收。
-            self.transport.close()
+            self._close_after_connect_failure()
             raise
         # initialize 协议(JSON-RPC initialize) + 校验
         # send + validate 包在同一个 try 里, 任何异常都关闭 transport
@@ -82,7 +83,7 @@ class MCPClient:
             )
             self._validate_response(init_resp, method="initialize")
         except Exception:
-            self.transport.close()
+            self._close_after_connect_failure()
             raise
         # tools/list + 校验(同上)
         try:
@@ -92,8 +93,13 @@ class MCPClient:
             self._validate_response(tools_resp, method="tools/list")
             self.tools = self._parse_tools_list(tools_resp)
         except Exception:
-            self.transport.close()
+            self._close_after_connect_failure()
             raise
+
+    def _close_after_connect_failure(self) -> None:
+        """尽力回收半启动 transport，不覆盖原始连接错误。"""
+        with suppress(Exception):
+            self.transport.close()
 
     def disconnect(self) -> None:
         """断开连接(幂等)."""

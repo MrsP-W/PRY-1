@@ -81,6 +81,18 @@ def _make_working_factory(server_name: str, tools: list[str]) -> Callable[[], Mo
     return factory
 
 
+class _CloseFailingTransport(MockTransport):
+    """模拟已连接 client 在 cleanup 时抛编程异常。"""
+
+    def __init__(self, server_name: str, tools: list[str]) -> None:
+        super().__init__(server_name=server_name, tools=tools)
+        self.close_attempted = False
+
+    def close(self) -> None:
+        self.close_attempted = True
+        raise RuntimeError("cleanup programming failure")
+
+
 class TestDiscoverAllSuccess:
     def test_all_servers_connected(self) -> None:
         """全成功: 所有 server connected, report.is_healthy=True."""
@@ -203,30 +215,41 @@ class TestDiscoverRequiredFailure:
         # (此处无法直接验证, 因为 clients 字典在内部被清理)
         # 但 report 没机会返回, 抛错就是抛错
 
-    def test_required_factory_failure_disconnects_prior_clients(self) -> None:
-        """必填 factory 直接失败时，也要关闭此前已连接的 client。"""
-        healthy_transport = MockTransport(
-            server_name="fs_optional_ok",
+    def test_required_factory_failure_cleanup_is_best_effort(self) -> None:
+        """cleanup 异常不掩盖必填失败，且仍继续关闭其余 client。"""
+        close_failing_transport = _CloseFailingTransport(
+            server_name="first_optional",
             tools=["read_file"],
         )
+        healthy_transport = MockTransport(
+            server_name="second_optional",
+            tools=["write_file"],
+        )
         discovery.DEFAULT_SERVERS = {
-            "fs_optional_ok": ServerConfig(
-                name="fs_optional_ok",
+            "first_optional": ServerConfig(
+                name="first_optional",
                 required=False,
-                transport_factory=lambda: healthy_transport,
+                transport_factory=lambda: close_failing_transport,
                 expected_tools=["read_file"],
             ),
-            "cal_required_factory_failing": ServerConfig(
-                name="cal_required_factory_failing",
+            "second_optional": ServerConfig(
+                name="second_optional",
+                required=False,
+                transport_factory=lambda: healthy_transport,
+                expected_tools=["write_file"],
+            ),
+            "required_failing": ServerConfig(
+                name="required_failing",
                 required=True,
-                transport_factory=_make_raising_factory(MCPConnectionError("cal factory down")),
+                transport_factory=_make_raising_factory(MCPConnectionError("required down")),
                 expected_tools=["create_event"],
             ),
         }
 
-        with pytest.raises(MCPConnectionError, match="cal factory down"):
+        with pytest.raises(MCPConnectionError, match="required down"):
             discover_servers()
 
+        assert close_failing_transport.close_attempted is True
         assert healthy_transport.connected is False
 
 

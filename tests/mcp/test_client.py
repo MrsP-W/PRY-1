@@ -61,6 +61,18 @@ class _PartialStartFailureTransport(MockTransport):
         raise self._failure
 
 
+class _CloseFailingPartialStartTransport(_PartialStartFailureTransport):
+    """模拟 start() 失败后 cleanup 也失败的 transport。"""
+
+    def __init__(self, failure: Exception) -> None:
+        super().__init__(failure)
+        self.close_attempted = False
+
+    def close(self) -> None:
+        self.close_attempted = True
+        raise RuntimeError("cleanup programming failure")
+
+
 class _PartialSendFailureTransport(MockTransport):
     """模拟已连接后 initialize 或 tools/list 抛普通异常。"""
 
@@ -114,6 +126,16 @@ class TestConnect:
             programming_client.connect()
 
         assert programming_failure.connected is False
+
+        close_failing_transport = _CloseFailingPartialStartTransport(
+            MCPConnectionError("partial start connection failure")
+        )
+        close_failing_client = MCPClient(server_name="fs", transport=close_failing_transport)
+
+        with pytest.raises(MCPConnectionError, match="partial start connection failure"):
+            close_failing_client.connect()
+
+        assert close_failing_transport.close_attempted is True
 
     def test_connect_protocol_error_closes_transport(self) -> None:
         """protocol error 在 initialize 时 → 关闭 transport + 抛."""

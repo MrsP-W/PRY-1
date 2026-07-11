@@ -133,9 +133,13 @@ def discover_servers(
                 missing_tools.update(cfg.expected_tools)
             # 关键决策: 必填失败 → abort
             if cfg.required:
-                # 关闭已连的所有 client
+                # 尽力关闭已连的所有 client。清理本身不能掩盖启动失败，
+                # 也不能让一个 close 异常阻断其余 client 的回收。
                 for c in clients.values():
-                    c.disconnect()
+                    try:
+                        c.disconnect()
+                    except Exception:
+                        continue
                 raise
             # 可选失败 → 继续
             continue
