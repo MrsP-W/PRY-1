@@ -203,6 +203,32 @@ class TestDiscoverRequiredFailure:
         # (此处无法直接验证, 因为 clients 字典在内部被清理)
         # 但 report 没机会返回, 抛错就是抛错
 
+    def test_required_factory_failure_disconnects_prior_clients(self) -> None:
+        """必填 factory 直接失败时，也要关闭此前已连接的 client。"""
+        healthy_transport = MockTransport(
+            server_name="fs_optional_ok",
+            tools=["read_file"],
+        )
+        discovery.DEFAULT_SERVERS = {
+            "fs_optional_ok": ServerConfig(
+                name="fs_optional_ok",
+                required=False,
+                transport_factory=lambda: healthy_transport,
+                expected_tools=["read_file"],
+            ),
+            "cal_required_factory_failing": ServerConfig(
+                name="cal_required_factory_failing",
+                required=True,
+                transport_factory=_make_raising_factory(MCPConnectionError("cal factory down")),
+                expected_tools=["create_event"],
+            ),
+        }
+
+        with pytest.raises(MCPConnectionError, match="cal factory down"):
+            discover_servers()
+
+        assert healthy_transport.connected is False
+
 
 class TestDiscoverErrorSurface:
     """失败 server 的 MCPError → McpErrorSurface(5 字段)."""
