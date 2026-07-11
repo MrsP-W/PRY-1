@@ -66,6 +66,8 @@ class MCPClient:
         try:
             self.transport.start()
         except MCPError:
+            # start() 可能在报错前已分配子进程或连接，失败路径也必须回收。
+            self.transport.close()
             raise  # 透传业务异常
         # initialize 协议(JSON-RPC initialize) + 校验
         # send + validate 包在同一个 try 里, 任何异常都关闭 transport

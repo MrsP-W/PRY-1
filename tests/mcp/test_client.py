@@ -49,6 +49,14 @@ class _ToolsListPayloadTransport(MockTransport):
         return response
 
 
+class _PartialStartFailureTransport(MockTransport):
+    """模拟 start() 已占用连接后才报告业务异常。"""
+
+    def start(self) -> None:
+        self.connected = True
+        raise MCPConnectionError("partial start failed")
+
+
 class TestConnect:
     def test_connect_success(self) -> None:
         t = MockTransport(server_name="fs", tools=["read_file", "write_file"])
@@ -67,13 +75,20 @@ class TestConnect:
         # initialize 和 tools/list 都被 send 了 1 次
         assert len(t.send_log) == 2
 
-    def test_connect_start_failure_propagates(self) -> None:
+    def test_connect_start_failure_closes_transport(self) -> None:
         t = MockTransport(server_name="fs")
         t.start_failure = MCPConnectionError("process spawn failed")
         client = MCPClient(server_name="fs", transport=t)
         with pytest.raises(MCPConnectionError, match="process spawn failed"):
             client.connect()
         assert t.connected is False
+
+        # start() 半启动后失败也不能遗留连接。
+        partial_start = _PartialStartFailureTransport(server_name="fs")
+        partial_client = MCPClient(server_name="fs", transport=partial_start)
+        with pytest.raises(MCPConnectionError, match="partial start failed"):
+            partial_client.connect()
+        assert partial_start.connected is False
 
     def test_connect_protocol_error_closes_transport(self) -> None:
         """protocol error 在 initialize 时 → 关闭 transport + 抛."""
