@@ -50,11 +50,28 @@ class _ToolsListPayloadTransport(MockTransport):
 
 
 class _PartialStartFailureTransport(MockTransport):
-    """模拟 start() 已占用连接后才报告业务异常。"""
+    """模拟 start() 已占用连接后才报告异常。"""
+
+    def __init__(self, failure: Exception) -> None:
+        super().__init__(server_name="fs")
+        self._failure = failure
 
     def start(self) -> None:
         self.connected = True
-        raise MCPConnectionError("partial start failed")
+        raise self._failure
+
+
+class _PartialSendFailureTransport(MockTransport):
+    """模拟已连接后 initialize 或 tools/list 抛普通异常。"""
+
+    def __init__(self, failure_method: str) -> None:
+        super().__init__(server_name="fs")
+        self._failure_method = failure_method
+
+    def send(self, request: dict[str, Any]) -> dict[str, Any]:
+        if request.get("method") == self._failure_method:
+            raise ValueError(f"{self._failure_method} programming failure")
+        return super().send(request)
 
 
 class TestConnect:
@@ -84,11 +101,19 @@ class TestConnect:
         assert t.connected is False
 
         # start() 半启动后失败也不能遗留连接。
-        partial_start = _PartialStartFailureTransport(server_name="fs")
+        partial_start = _PartialStartFailureTransport(MCPConnectionError("partial start failed"))
         partial_client = MCPClient(server_name="fs", transport=partial_start)
         with pytest.raises(MCPConnectionError, match="partial start failed"):
             partial_client.connect()
         assert partial_start.connected is False
+
+        programming_failure = _PartialStartFailureTransport(ValueError("partial start bug"))
+        programming_client = MCPClient(server_name="fs", transport=programming_failure)
+
+        with pytest.raises(ValueError, match="partial start bug"):
+            programming_client.connect()
+
+        assert programming_failure.connected is False
 
     def test_connect_protocol_error_closes_transport(self) -> None:
         """protocol error 在 initialize 时 → 关闭 transport + 抛."""
@@ -124,6 +149,12 @@ class TestConnect:
             client.connect()
         # 关键: 校验失败后 transport 仍被关闭
         assert t.connected is False
+
+        programming_failure = _PartialSendFailureTransport("initialize")
+        programming_client = MCPClient(server_name="fs", transport=programming_failure)
+        with pytest.raises(ValueError, match="initialize programming failure"):
+            programming_client.connect()
+        assert programming_failure.connected is False
 
     def test_connect_initialize_malformed_missing_result_closes_transport(self) -> None:
         """D4.2.1 修复 regression: initialize 返回 dict 但缺 result
@@ -174,6 +205,12 @@ class TestConnect:
                 "initialize",
                 "tools/list",
             ]
+
+        programming_failure = _PartialSendFailureTransport("tools/list")
+        programming_client = MCPClient(server_name="fs", transport=programming_failure)
+        with pytest.raises(ValueError, match="tools/list programming failure"):
+            programming_client.connect()
+        assert programming_failure.connected is False
 
 
 class TestDisconnect:

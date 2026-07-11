@@ -58,17 +58,17 @@ class MCPClient:
           2. send initialize — MCP 协议握手
           3. send tools/list — 拉工具清单
 
-        异常: 4 类业务异常透传(由调用方决定 degraded vs abort)
-        失败时: 任何阶段抛 MCPError → 关闭 transport(D4.2.1 修复)
+        异常: 4 类业务异常透传(由调用方决定 degraded vs abort)，编程异常也原样透传。
+        失败时: 任一阶段抛 Exception 都关闭 transport，避免半启动资源泄漏。
         """
         if self.transport.connected:
             return  # 幂等
         try:
             self.transport.start()
-        except MCPError:
-            # start() 可能在报错前已分配子进程或连接，失败路径也必须回收。
+        except Exception:
+            # 不转换编程异常；但 start() 可能已分配子进程或连接，必须回收。
             self.transport.close()
-            raise  # 透传业务异常
+            raise
         # initialize 协议(JSON-RPC initialize) + 校验
         # send + validate 包在同一个 try 里, 任何异常都关闭 transport
         try:
@@ -81,7 +81,7 @@ class MCPClient:
                 }
             )
             self._validate_response(init_resp, method="initialize")
-        except MCPError:
+        except Exception:
             self.transport.close()
             raise
         # tools/list + 校验(同上)
@@ -91,7 +91,7 @@ class MCPClient:
             )
             self._validate_response(tools_resp, method="tools/list")
             self.tools = self._parse_tools_list(tools_resp)
-        except MCPError:
+        except Exception:
             self.transport.close()
             raise
 
