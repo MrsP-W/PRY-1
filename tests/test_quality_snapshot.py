@@ -124,20 +124,24 @@ def test_check_snapshot_rejects_underreported_passed_count() -> None:
     ]
 
 
-def test_check_quality_snapshot_script_exits_zero() -> None:
-    """scripts/check_quality_snapshot.py CLI 与 pytest 断言一致."""
-    import os
+def test_check_quality_snapshot_script_exits_zero(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """CLI 成功与错误退出码在进程内校验，避免 pytest 子进程嵌套。"""
+    from scripts import check_quality_snapshot as snapshot_script
 
-    result = subprocess.run(
-        ["uv", "run", "python", "scripts/check_quality_snapshot.py"],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-        env={**os.environ, "MYAI_EMPLOYEE_SNAPSHOT_SKIP_LIVE_PYTEST": "1"},
-    )
-    assert result.returncode == 0, result.stderr or result.stdout
-    assert "state entry docs match quality_snapshot" in result.stdout
+    with (
+        patch.object(snapshot_script, "check_snapshot", return_value=[]),
+        patch.object(snapshot_script, "count_tracked_md_files", return_value=291),
+        patch.object(snapshot_script, "parse_pytest_counts", return_value=(2953, 1)),
+        patch("scripts.check_state_entries.check_state_entries", return_value=[]),
+    ):
+        assert snapshot_script.main() == 0
+    assert "state entry docs match quality_snapshot" in capsys.readouterr().out
+
+    with patch.object(snapshot_script, "check_snapshot", return_value=["pytest drift"]):
+        assert snapshot_script.main() == 1
+    assert "ERROR: pytest drift" in capsys.readouterr().err
 
 
 def test_live_pytest_outcomes_match_snapshot_when_mocked() -> None:
@@ -199,13 +203,16 @@ def test_live_pytest_outcomes_match_snapshot_when_mocked() -> None:
     assert captured_env["MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE"] == "1"
 
 
-def test_check_state_entries_script_exits_zero() -> None:
-    """scripts/check_state_entries.py CLI 与入口文档一致."""
-    result = subprocess.run(
-        ["uv", "run", "python", "scripts/check_state_entries.py"],
-        cwd=PROJECT_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stderr or result.stdout
+def test_check_state_entries_script_exits_zero(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """状态入口 CLI 成功与错误退出码不再通过外部子进程复验。"""
+    from scripts import check_state_entries as state_script
+
+    with patch.object(state_script, "check_state_entries", return_value=[]):
+        assert state_script.main() == 0
+    assert "state entry docs match quality_snapshot" in capsys.readouterr().out
+
+    with patch.object(state_script, "check_state_entries", return_value=["entry drift"]):
+        assert state_script.main() == 1
+    assert "ERROR: entry drift" in capsys.readouterr().err
