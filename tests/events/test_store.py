@@ -13,7 +13,6 @@
 from __future__ import annotations
 
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -67,8 +66,8 @@ class TestInsert:
             )
         assert store.count() == 0
 
-    def test_insert_negative_seq_raises_value_error(self, store: EventStore) -> None:
-        """seq < 0 → ValueError(编程错误透传)."""
+    def test_insert_programming_errors_raise_before_writing(self, store: EventStore) -> None:
+        """非法 seq / on_conflict 都是编程错误，且不能写入 DB。"""
         with pytest.raises(ValueError, match="seq 必须 >= 0"):
             store.insert(
                 event=EventType.LLM_CALL_STARTED,
@@ -76,33 +75,62 @@ class TestInsert:
                 source="minimax",
                 seq=-1,
             )
+        with pytest.raises(ValueError, match="on_conflict"):
+            store.insert(
+                event=EventType.LLM_CALL_STARTED,
+                status=EventStatus.STARTED,
+                source="minimax",
+                on_conflict="ignroe",
+            )
+        assert store.count() == 0
 
 
 class TestDedupe:
-    def test_dedupe_same_identity_returns_original(self, store: EventStore) -> None:
-        """同身份 fingerprint 再插 → 静默返回原 Event(ignore 模式)."""
-        e1 = store.insert(
-            event=EventType.LLM_CALL_STARTED,
-            status=EventStatus.STARTED,
-            source="minimax",
-            subject_id="req-1",
-            seq=1,
-            session_id="sess-A",
-            extra={"tokens": 100, "model": "M3"},
-        )
-        # 等几毫秒, 模拟真实重试
-        time.sleep(0.01)
-        e2 = store.insert(
-            event=EventType.LLM_CALL_STARTED,
-            status=EventStatus.STARTED,
-            source="minimax",
-            subject_id="req-1",
-            seq=1,
-            session_id="sess-A",
-            extra={"tokens": 100, "model": "M3"},
-        )
-        assert e2.id == e1.id  # 同一 Event
-        assert store.count() == 1  # 实际只插了 1 行
+    def test_dedupe_same_identity_returns_original(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """生产 SQLCipher 直抛 DBAPI IntegrityError 时仍保持两种去重契约。"""
+        from sqlalchemy.orm import sessionmaker
+
+        from my_ai_employee.core import keychain
+        from my_ai_employee.core.db import Database
+        from my_ai_employee.core.models import Base
+        from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine
+        from my_ai_employee.events.models import Event
+
+        def fake_get() -> keychain.KeychainResult:
+            return keychain.KeychainResult(ok=True, value="test-password")
+
+        monkeypatch.setattr(keychain, "get_db_password", fake_get)
+        db = Database.open(db_path=tmp_path / "events.db")
+        try:
+            engine = make_sqlalchemy_engine(db)
+            Base.metadata.create_all(engine)
+            sqlcipher_store = EventStore(sessionmaker(bind=engine))
+
+            def insert_duplicate(on_conflict: str = "ignore") -> Event:
+                return sqlcipher_store.insert(
+                    event=EventType.LLM_CALL_STARTED,
+                    status=EventStatus.STARTED,
+                    source="minimax",
+                    subject_id="req-sqlcipher",
+                    seq=1,
+                    session_id="sess-sqlcipher",
+                    timestamp_ms=1_780_000_000_000,
+                    on_conflict=on_conflict,
+                )
+
+            first = insert_duplicate()
+            duplicate = insert_duplicate()
+
+            assert duplicate.id == first.id
+            assert sqlcipher_store.count() == 1
+            with pytest.raises(EventFingerprintConflictError, match="UNIQUE 冲突"):
+                insert_duplicate(on_conflict="raise")
+        finally:
+            db.close()
 
     def test_dedupe_across_different_time_stays_same(self, store: EventStore) -> None:
         """同身份 + 不同 timestamp_ms/seq 仍 dedupe(运行时字段不参与 fingerprint)."""

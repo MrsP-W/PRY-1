@@ -7,7 +7,7 @@
   - 不接业务层 (D4.4+ LLM/MCP/分类/草稿才用), D4.3 是契约层
 
 参考 D3.3.3 教训:
-  - except 范围窄化: 只接 sqlalchemy.exc.IntegrityError, 不接 SQLAlchemyError 基类
+  - except 范围窄化: 只接 SQLAlchemy / SQLCipher 的 IntegrityError, 不接 SQLAlchemyError 基类
   - 失败状态透明化: dedupe 命中是正常业务, 用 upsert 模式(返回已有 Event)
 """
 
@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import sqlcipher3.dbapi2 as _sqlcipher_dbapi
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
@@ -96,6 +97,8 @@ class EventStore:
             EventFingerprintConflictError: on_conflict="raise" 时 UNIQUE 冲突
             ValueError / TypeError: 编程错误(透传)
         """
+        if on_conflict not in ("ignore", "raise"):
+            raise ValueError(f"on_conflict 只能为 'ignore' 或 'raise',实际 {on_conflict!r}")
         # 1. 构造 metadata (6 必含字段)
         metadata = build_event_metadata(
             seq=seq,
@@ -139,8 +142,9 @@ class EventStore:
                 session.commit()
                 session.refresh(row)
                 return row
-            except IntegrityError as err:
+            except (IntegrityError, _sqlcipher_dbapi.IntegrityError) as err:
                 session.rollback()
+                # SQLCipher dialect 可能直抛原始 dbapi IntegrityError，不经过 SA 包装。
                 if on_conflict == "raise":
                     raise EventFingerprintConflictError(
                         f"UNIQUE 冲突: fingerprint={fingerprint[:16]}... "
