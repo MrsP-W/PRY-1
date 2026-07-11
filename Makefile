@@ -306,7 +306,7 @@ check-snapshot: ## 校验 quality_snapshot + 状态入口文档与 live baseline
 .PHONY: ci
 ci: ## 9 质量门 — 一键跑 9 质量门全链(沿 v0.1.0-preseal-runbook 范本)
 	@echo "$(BOLD)🚀 9 质量门一键跑$(RESET)"
-	@$(MAKE) test
+	@# coverage 已执行全量 pytest；ci 不重复调用 test，保留其作为独立入口。
 	@$(MAKE) mypy
 	@$(MAKE) ruff
 	@$(MAKE) format
