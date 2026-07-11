@@ -58,11 +58,18 @@ def test_collected_test_count_matches_snapshot_pytest() -> None:
 def test_guardian_failure_probe_does_not_spawn_inside_pytest(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """pytest 内调用快照检查时，guardian 探测不得递归启动子 pytest。"""
-    monkeypatch.setenv("PYTEST_CURRENT_TEST", "test_quality_snapshot.py::guardian (call)")
-    with patch("scripts.check_quality_snapshot.subprocess.run") as run:
-        assert count_baseline_guardian_failures(root=PROJECT_ROOT) == 0
-    run.assert_not_called()
+    """两种 pytest/guardian 标记均不得递归启动子 pytest。"""
+    for env_name, value in (
+        ("PYTEST_CURRENT_TEST", "test_quality_snapshot.py::guardian (call)"),
+        ("MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE", "1"),
+    ):
+        with monkeypatch.context() as scoped_monkeypatch:
+            scoped_monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+            scoped_monkeypatch.delenv("MY_AI_EMPLOYEE_SNAPSHOT_GUARDIAN_PROBE", raising=False)
+            scoped_monkeypatch.setenv(env_name, value)
+            with patch("scripts.check_quality_snapshot.subprocess.run") as run:
+                assert count_baseline_guardian_failures(root=PROJECT_ROOT) == 0
+            run.assert_not_called()
 
 
 def test_dashboard_api_status_quality_gates_match_default() -> None:
