@@ -92,25 +92,36 @@ def test_menu_bar_system_health_body_matches_default() -> None:
 
 
 def test_check_snapshot_rejects_underreported_passed_count() -> None:
-    """snapshot 少记测试时不应被固定 guardian 上限误放行."""
-    passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
-    collected = count_collected_tests(PROJECT_ROOT)
-    guardian_failures = count_baseline_guardian_failures(root=PROJECT_ROOT)
-    if collected != passed + skipped + guardian_failures:
-        pytest.skip("当前 snapshot 已漂移,跳过模拟 under-report 用例")
-    with patch(
-        "scripts.check_quality_snapshot.DEFAULT_QUALITY_GATES",
-        QualityGateSnapshot(
-            pytest=f"{passed - 6} passed / {skipped} skipped",
-            coverage=DEFAULT_QUALITY_GATES.coverage,
-            mypy=DEFAULT_QUALITY_GATES.mypy,
-            mypy_files=DEFAULT_QUALITY_GATES.mypy_files,
-            lint=DEFAULT_QUALITY_GATES.lint,
+    """snapshot 少记测试时必须拒绝，且不依赖当前工作树基线。"""
+    with (
+        patch(
+            "scripts.check_quality_snapshot.DEFAULT_QUALITY_GATES",
+            QualityGateSnapshot(
+                pytest="9 passed / 1 skipped",
+                coverage=DEFAULT_QUALITY_GATES.coverage,
+                mypy=DEFAULT_QUALITY_GATES.mypy,
+                mypy_files=DEFAULT_QUALITY_GATES.mypy_files,
+                lint="1 files 0 errors",
+            ),
         ),
+        patch("scripts.check_quality_snapshot.count_tracked_md_files", return_value=1),
+        patch("scripts.check_quality_snapshot.count_collected_tests", return_value=11),
+        patch(
+            "scripts.check_quality_snapshot.count_baseline_guardian_failures",
+            return_value=0,
+        ),
+        patch(
+            "scripts.check_quality_snapshot.count_baseline_guardian_tests",
+            return_value=1,
+        ),
+        patch("scripts.check_quality_snapshot.count_live_pytest_outcomes", return_value=None),
     ):
         errors = check_snapshot(root=PROJECT_ROOT)
-    assert errors
-    assert any("pytest drift" in err for err in errors)
+    assert errors == [
+        "pytest drift: quality_snapshot claims 9 passed / 1 skipped, "
+        "pytest --collect-only has 11, expected 10 "
+        "(passed+skipped=10 + baseline guardian failures=0)"
+    ]
 
 
 def test_check_quality_snapshot_script_exits_zero() -> None:
