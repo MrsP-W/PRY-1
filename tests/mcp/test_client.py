@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -32,6 +33,20 @@ from my_ai_employee.mcp.exceptions import (  # noqa: E402
 )
 from my_ai_employee.mcp.report import LifecyclePhase  # noqa: E402
 from my_ai_employee.mcp.transport import MockTransport  # noqa: E402
+
+
+class _ToolsListPayloadTransport(MockTransport):
+    """仅在 tools/list 阶段返回指定 payload 的测试 transport。"""
+
+    def __init__(self, tools_payload: object) -> None:
+        super().__init__(server_name="fs")
+        self._tools_payload = tools_payload
+
+    def send(self, request: dict[str, Any]) -> dict[str, Any]:
+        response = super().send(request)
+        if request.get("method") == "tools/list":
+            response["result"] = {"tools": self._tools_payload}
+        return response
 
 
 class TestConnect:
@@ -124,6 +139,26 @@ class TestConnect:
         # 验证 send_log 含 1 次 initialize (成功) + 1 次 tools/list (失败)
         methods = [r.get("method") for r in t._send_log]
         assert methods == ["initialize", "tools/list"]
+        # result.tools 必须是具备非空字符串 name 的对象列表。
+        for tools_payload in (
+            None,
+            {"name": "read_file"},
+            ["read_file"],
+            [{"description": "missing name"}],
+            [{"name": ""}],
+            [{"name": 1}],
+        ):
+            malformed_transport = _ToolsListPayloadTransport(tools_payload)
+            malformed_client = MCPClient(server_name="fs", transport=malformed_transport)
+
+            with pytest.raises(MCPResponseError):
+                malformed_client.connect()
+
+            assert malformed_transport.connected is False
+            assert [request.get("method") for request in malformed_transport.send_log] == [
+                "initialize",
+                "tools/list",
+            ]
 
 
 class TestDisconnect:

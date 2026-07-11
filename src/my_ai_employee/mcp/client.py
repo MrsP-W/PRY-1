@@ -88,11 +88,10 @@ class MCPClient:
                 {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
             )
             self._validate_response(tools_resp, method="tools/list")
+            self.tools = self._parse_tools_list(tools_resp)
         except MCPError:
             self.transport.close()
             raise
-        # 解析工具列表
-        self.tools = [t.get("name", "") for t in tools_resp.get("result", {}).get("tools", [])]
 
     def disconnect(self) -> None:
         """断开连接(幂等)."""
@@ -171,6 +170,35 @@ class MCPClient:
                 raise MCPResponseError(
                     f"result 不是 dict(method={method}, type={type(result).__name__})"
                 )
+
+    def _parse_tools_list(self, resp: dict[str, Any]) -> list[str]:
+        """校验并提取 tools/list 的工具名。"""
+        result = resp.get("result")
+        if not isinstance(result, dict):
+            raise MCPResponseError(
+                f"result 不是 dict(method=tools/list, type={type(result).__name__})"
+            )
+        tools = result.get("tools")
+        if not isinstance(tools, list):
+            raise MCPResponseError(
+                f"result.tools 不是 list(method=tools/list, type={type(tools).__name__})"
+            )
+
+        names: list[str] = []
+        for index, tool in enumerate(tools):
+            if not isinstance(tool, dict):
+                raise MCPResponseError(
+                    "result.tools["
+                    f"{index}] 不是 dict(method=tools/list, type={type(tool).__name__})"
+                )
+            name = tool.get("name")
+            if not isinstance(name, str) or not name:
+                raise MCPResponseError(
+                    "result.tools["
+                    f"{index}].name 不是非空 str(method=tools/list, type={type(name).__name__})"
+                )
+            names.append(name)
+        return names
 
     def error_surface(self, phase: LifecyclePhase, exc: MCPError) -> McpErrorSurface:
         """把业务异常转 McpErrorSurface(给 discovery 聚合)."""
