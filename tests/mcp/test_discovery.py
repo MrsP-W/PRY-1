@@ -65,6 +65,15 @@ def _make_failing_factory(failure: Exception) -> Callable[[], MockTransport]:
     return factory
 
 
+def _make_raising_factory(failure: MCPConnectionError) -> Callable[[], MockTransport]:
+    """构造一个在创建 transport 时直接抛业务异常的 factory."""
+
+    def factory() -> MockTransport:
+        raise failure
+
+    return factory
+
+
 def _make_working_factory(server_name: str, tools: list[str]) -> Callable[[], MockTransport]:
     def factory() -> MockTransport:
         return MockTransport(server_name=server_name, tools=tools)
@@ -105,12 +114,12 @@ class TestDiscoverOptionalFailure:
     """关键 regression: 1 个可选 server 失败, 其他 server 仍 connected."""
 
     def test_keeps_healthy_servers_when_optional_fails(self) -> None:
-        """这是 g007 关键 regression 的 Python 版."""
+        """factory 创建失败也不阻断健康 server（g007 关键 regression Python 版）."""
         discovery.DEFAULT_SERVERS = {
             "fs_optional_failing": ServerConfig(
                 name="fs_optional_failing",
                 required=False,  # 可选
-                transport_factory=_make_failing_factory(MCPConnectionError("fs broken")),
+                transport_factory=_make_raising_factory(MCPConnectionError("fs broken")),
                 expected_tools=["read_file"],
             ),
             "cal_working": ServerConfig(
@@ -133,7 +142,7 @@ class TestDiscoverOptionalFailure:
         # 至少 1 个 error surface
         assert len(report.errors) == 1
         assert report.errors[0].server == "fs_optional_failing"
-        assert report.errors[0].phase == LifecyclePhase.CONNECT
+        assert report.errors[0].phase == LifecyclePhase.DISCOVERY
         # 清理
         for c in clients.values():
             c.disconnect()

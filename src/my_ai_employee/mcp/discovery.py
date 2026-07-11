@@ -23,8 +23,8 @@ from dataclasses import dataclass
 from typing import Any
 
 from .client import MCPClient
-from .exceptions import MCPError
-from .report import LifecyclePhase, McpDegradedReport
+from .exceptions import MCPConnectionError, MCPError, MCPTimeoutError
+from .report import LifecyclePhase, McpDegradedReport, McpErrorSurface
 from .transport import Transport
 
 
@@ -108,13 +108,24 @@ def discover_servers(
     errors: list[Any] = []
 
     for name, cfg in configs.items():
-        transport = cfg.transport_factory()
-        client = MCPClient(server_name=name, transport=transport)
+        client: MCPClient | None = None
         try:
+            transport = cfg.transport_factory()
+            client = MCPClient(server_name=name, transport=transport)
             client.connect()
         except MCPError as e:
-            # 业务异常 → 降级路径
-            error_surface = client.error_surface(LifecyclePhase.CONNECT, e)
+            # factory 失败时尚未创建 client，按 discovery 阶段记录；其余为 connect 失败。
+            error_surface = (
+                client.error_surface(LifecyclePhase.CONNECT, e)
+                if client is not None
+                else McpErrorSurface(
+                    phase=LifecyclePhase.DISCOVERY,
+                    server=name,
+                    message=str(e),
+                    context={"exc_type": type(e).__name__},
+                    recoverable=isinstance(e, (MCPTimeoutError, MCPConnectionError)),
+                )
+            )
             errors.append(error_surface)
             failed.append(name)
             # 期望的工具标记为 missing
