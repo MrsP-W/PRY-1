@@ -156,6 +156,8 @@ def discover_servers(
         clients[name] = client
         working.append(name)
         available_tools.update(client.tools)
+        if cfg.expected_tools:
+            missing_tools.update(set(cfg.expected_tools) - set(client.tools))
 
     report = McpDegradedReport(
         working=working,

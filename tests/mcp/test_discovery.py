@@ -94,8 +94,8 @@ class _CloseFailingTransport(MockTransport):
 
 
 class TestDiscoverAllSuccess:
-    def test_all_servers_connected(self) -> None:
-        """全成功: 所有 server connected, report.is_healthy=True."""
+    def test_connected_servers_track_available_and_missing_tools(self) -> None:
+        """全成功保持健康，连接成功但缺工具会如实标为不健康。"""
         discovery.DEFAULT_SERVERS = {
             "fs": ServerConfig(
                 name="fs",
@@ -118,6 +118,24 @@ class TestDiscoverAllSuccess:
         assert report.is_degraded is False
         assert report.available_tools == {"read_file", "create_event"}
         # 清理
+        for c in clients.values():
+            c.disconnect()
+
+        discovery.DEFAULT_SERVERS = {
+            "partial": ServerConfig(
+                name="partial",
+                required=False,
+                transport_factory=_make_working_factory("partial", ["read_file"]),
+                expected_tools=["read_file", "write_file"],
+            ),
+        }
+        clients, report = discover_servers()
+        assert report.working == ["partial"]
+        assert report.failed == []
+        assert report.available_tools == {"read_file"}
+        assert report.missing_tools == {"write_file"}
+        assert report.is_healthy is False
+        assert report.is_degraded is False
         for c in clients.values():
             c.disconnect()
 

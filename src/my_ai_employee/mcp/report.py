@@ -80,7 +80,7 @@ class McpDegradedReport:
         working: 已成功连接的 server 名列表
         failed: 失败的 server 名列表
         available_tools: 所有 working server 提供的工具名集合
-        missing_tools: 用户期望但因 server 失败而缺失的工具名
+        missing_tools: 用户期望但因 server 失败或未暴露能力而缺失的工具名
         errors: 失败 server 的结构化错误面
     """
 
