@@ -122,6 +122,16 @@ def _sniff_source(csv_path: Path) -> str | None:
         return None
 
 
+def _recognized_csv_files(csv_files: list[Path]) -> list[tuple[Path, str]]:
+    """返回可导入的 CSV 与来源，供真实导入在开库前做总批次数门控。"""
+    recognized: list[tuple[Path, str]] = []
+    for csv_path in csv_files:
+        source = _sniff_source(csv_path)
+        if source is not None:
+            recognized.append((csv_path, source))
+    return recognized
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     if not args.csv_dir.exists():
@@ -162,6 +172,18 @@ def main(argv: list[str] | None = None) -> int:
         print("\n汇总: files=0 parsed=0 inserted=0 failed=0")
         return 0
 
+    # ``--count=1`` 必须限制整次真实写入，而非仅限制每个 CSV 的行数。
+    # 先只读嗅探并拒绝多文件批次，保证失败路径绝不打开 SQLCipher 数据库。
+    recognized_csv_files = _recognized_csv_files(csv_files)
+    if len(csv_files) != args.count or len(recognized_csv_files) != args.count:
+        print(
+            "❌ BILLS_REAL_IMPORT=1 时 "
+            f"--count={args.count} 要求目录恰好包含 {args.count} 个可识别 CSV(防误触发),"
+            f"实际 CSV 文件 {len(csv_files)} 个、可识别 {len(recognized_csv_files)} 个",
+            file=sys.stderr,
+        )
+        return 1
+
     # 仅真实导入通过全部门控后才允许触碰数据库。
     db = Database.open(db_path=args.db_path)
     try:
@@ -181,11 +203,7 @@ def main(argv: list[str] | None = None) -> int:
         total_failed = 0
         results: list[tuple[Path, str, TransactionImportResult]] = []
         try:
-            for csv_path in csv_files:
-                source = _sniff_source(csv_path)
-                if source is None:
-                    print(f"[SKIP] 无法识别来源: {csv_path}", file=sys.stderr)
-                    continue
+            for csv_path, source in recognized_csv_files:
                 print(f"[{source}] {csv_path.name}")
                 if source == "wechat":
                     result = adapter.import_wechat_csv(csv_path, max_rows=args.max_rows)

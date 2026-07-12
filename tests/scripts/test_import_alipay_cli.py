@@ -282,12 +282,19 @@ def test_import_all_dry_run_no_real_env(tmp_path: Path, monkeypatch: pytest.Monk
 
 
 @pytest.mark.parametrize(
-    ("set_real_import_env", "confirm", "max_rows", "count", "expected_error"),
+    (
+        "set_real_import_env",
+        "confirm",
+        "max_rows",
+        "count",
+        "expected_error",
+        "verify_total_batch_limit",
+    ),
     [
-        (False, "yes-i-understand-this-imports-real-bill", 1, 1, "BILLS_REAL_IMPORT=1"),
-        (True, "wrong-confirm", 1, 1, "--confirm"),
-        (True, "yes-i-understand-this-imports-real-bill", None, 1, "--max-rows 必须为 1"),
-        (True, "yes-i-understand-this-imports-real-bill", 1, 2, "--count 必须为 1"),
+        (False, "yes-i-understand-this-imports-real-bill", 1, 1, "BILLS_REAL_IMPORT=1", False),
+        (True, "wrong-confirm", 1, 1, "--confirm", False),
+        (True, "yes-i-understand-this-imports-real-bill", None, 1, "--max-rows 必须为 1", False),
+        (True, "yes-i-understand-this-imports-real-bill", 1, 2, "--count 必须为 1", True),
     ],
 )
 def test_import_all_real_import_gate_rejects_before_database(
@@ -299,6 +306,7 @@ def test_import_all_real_import_gate_rejects_before_database(
     max_rows: int | None,
     count: int,
     expected_error: str,
+    verify_total_batch_limit: bool,
 ) -> None:
     """批量入口四重门控任一失败时，绝不打开数据库。"""
     csv_dir = tmp_path / "bills"
@@ -334,6 +342,40 @@ def test_import_all_real_import_gate_rejects_before_database(
     assert rc == 1
     assert expected_error in captured.err
     mock_open.assert_not_called()
+
+    if not verify_total_batch_limit:
+        return
+
+    # ``--count=1`` 的目录级门控同时拒绝第二个可识别 CSV 和未知 CSV，
+    # 且二者都必须发生在 Database.open() 之前。
+    fixture = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
+    shutil.copy(fixture, csv_dir / "alipay-second.csv")
+    (csv_dir / "unknown.csv").write_text("not a supported bill", encoding="utf-8")
+    with patch.object(
+        import_all.Database,
+        "open",
+        side_effect=AssertionError("多 CSV 门控失败时不应打开数据库"),
+    ) as batch_open:
+        batch_rc = import_all.main(
+            [
+                "--csv-dir",
+                str(csv_dir),
+                "--db-path",
+                str(tmp_path / "new.db"),
+                "--no-dry-run",
+                "--confirm",
+                "yes-i-understand-this-imports-real-bill",
+                "--max-rows",
+                "1",
+                "--count",
+                "1",
+            ]
+        )
+
+    batch_captured = capsys.readouterr()
+    assert batch_rc == 1
+    assert "--count=1 要求目录恰好包含 1 个可识别 CSV" in batch_captured.err
+    batch_open.assert_not_called()
 
 
 def test_import_all_real_import_limits_each_adapter_to_one_row(
