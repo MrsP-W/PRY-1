@@ -132,7 +132,25 @@ def main(argv: list[str] | None = None) -> int:
             )
             return 1
 
-    # Alembic 校验
+    # 遍历 csv_dir 下所有 .csv 文件。dry-run 只允许到嗅探为止，不能打开
+    # SQLCipher：Database.open() 可能创建目录、写入 Keychain/WAL。
+    csv_files = sorted(args.csv_dir.glob("*.csv"))
+    if not csv_files:
+        print(f"未发现任何 .csv 文件: {args.csv_dir}", file=sys.stderr)
+        return 1
+
+    if not real_import:
+        for csv_path in csv_files:
+            source = _sniff_source(csv_path)
+            if source is None:
+                print(f"[SKIP] 无法识别来源: {csv_path}", file=sys.stderr)
+                continue
+            print(f"[{source}] {csv_path.name}")
+            print("  [DRY-RUN] 跳过实际导入")
+        print("\n汇总: files=0 parsed=0 inserted=0 failed=0")
+        return 0
+
+    # 仅真实导入通过全部门控后才允许触碰数据库。
     db = Database.open(db_path=args.db_path)
     try:
         engine = make_sqlalchemy_engine(db)
@@ -146,12 +164,6 @@ def main(argv: list[str] | None = None) -> int:
         Base.metadata.create_all(engine)
         adapter = TransactionAdapter(sessionmaker(bind=engine))
 
-        # 遍历 csv_dir 下所有 .csv 文件
-        csv_files = sorted(args.csv_dir.glob("*.csv"))
-        if not csv_files:
-            print(f"未发现任何 .csv 文件: {args.csv_dir}", file=sys.stderr)
-            return 1
-
         total_parsed = 0
         total_inserted = 0
         total_failed = 0
@@ -163,19 +175,16 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"[SKIP] 无法识别来源: {csv_path}", file=sys.stderr)
                     continue
                 print(f"[{source}] {csv_path.name}")
-                if real_import:
-                    if source == "wechat":
-                        result = adapter.import_wechat_csv(csv_path)
-                    elif source == "alipay":
-                        result = adapter.import_alipay_csv(csv_path)
-                    else:
-                        continue
-                    results.append((csv_path, source, result))
-                    total_parsed += result.parsed
-                    total_inserted += result.inserted
-                    total_failed += result.failed
+                if source == "wechat":
+                    result = adapter.import_wechat_csv(csv_path)
+                elif source == "alipay":
+                    result = adapter.import_alipay_csv(csv_path)
                 else:
-                    print("  [DRY-RUN] 跳过实际导入")
+                    continue
+                results.append((csv_path, source, result))
+                total_parsed += result.parsed
+                total_inserted += result.inserted
+                total_failed += result.failed
         except OperationalError as e:
             print(f"数据库技术失败(DB 锁或连接错误): {e}", file=sys.stderr)
             return 3

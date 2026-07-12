@@ -251,12 +251,8 @@ def test_alipay_cli_exits_1_with_env_missing_confirm(
 # ===== C6. import_all 默认 dry-run + 4 重防误发 =====
 
 
-def test_import_all_dry_run_no_real_env(tmp_path: Path) -> None:
+def test_import_all_dry_run_no_real_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """D7.6 4 重防误发:默认 dry-run,真实导入需 BILLS_REAL_IMPORT=1 + --confirm."""
-    import os
-
-    db = tmp_path / "pretend.db"
-    _make_pretend_alembic_db(db)
     csv_dir = tmp_path / "bills"
     csv_dir.mkdir()
     # 复制支付宝 2024 样本到 csv_dir
@@ -264,22 +260,21 @@ def test_import_all_dry_run_no_real_env(tmp_path: Path) -> None:
 
     shutil.copy(ALIPAY_FIXTURES / "alipay_2024_sample.csv", csv_dir / "alipay_2024_sample.csv")
 
-    # 确保 env 未设
-    env = os.environ.copy()
-    env.pop("BILLS_REAL_IMPORT", None)
+    monkeypatch.delenv("BILLS_REAL_IMPORT", raising=False)
 
     from scripts import import_all  # noqa: PLC0415
 
-    fake_db = _FakeDatabase(db)
-    from sqlalchemy import create_engine
-
-    plain_engine = create_engine(f"sqlite:///{db}")
     with (
-        patch.object(import_all, "Database") as mock_db_class,
-        patch.object(import_all, "make_sqlalchemy_engine", return_value=plain_engine),
+        patch.object(import_all.Database, "open") as mock_open,
+        patch.object(import_all, "make_sqlalchemy_engine") as mock_make_engine,
+        patch.object(import_all.Base.metadata, "create_all") as mock_create_all,
+        patch.object(import_all, "TransactionAdapter") as mock_adapter,
     ):
-        mock_db_class.open.return_value = fake_db
         # 默认 dry-run,只嗅探不导入
-        rc = import_all.main(["--csv-dir", str(csv_dir), "--db-path", str(db)])
+        rc = import_all.main(["--csv-dir", str(csv_dir), "--db-path", str(tmp_path / "new.db")])
 
     assert rc == 0, f"import_all dry-run 应 exit 0,实际 {rc}"
+    mock_open.assert_not_called()
+    mock_make_engine.assert_not_called()
+    mock_create_all.assert_not_called()
+    mock_adapter.assert_not_called()
