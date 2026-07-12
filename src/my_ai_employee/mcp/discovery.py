@@ -143,6 +143,15 @@ def discover_servers(
                 raise
             # 可选失败 → 继续
             continue
+        except Exception:
+            # 编程异常保持原样透传，但仍须回收此前已连的 client，
+            # 避免配置/工厂错误在启动中止时遗留连接。
+            for c in clients.values():
+                try:
+                    c.disconnect()
+                except Exception:
+                    continue
+            raise
         # 成功
         clients[name] = client
         working.append(name)

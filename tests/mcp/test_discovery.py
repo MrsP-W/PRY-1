@@ -65,8 +65,8 @@ def _make_failing_factory(failure: Exception) -> Callable[[], MockTransport]:
     return factory
 
 
-def _make_raising_factory(failure: MCPConnectionError) -> Callable[[], MockTransport]:
-    """构造一个在创建 transport 时直接抛业务异常的 factory."""
+def _make_raising_factory(failure: Exception) -> Callable[[], MockTransport]:
+    """构造一个在创建 transport 时直接抛指定异常的 factory."""
 
     def factory() -> MockTransport:
         raise failure
@@ -216,7 +216,7 @@ class TestDiscoverRequiredFailure:
         # 但 report 没机会返回, 抛错就是抛错
 
     def test_required_factory_failure_cleanup_is_best_effort(self) -> None:
-        """cleanup 异常不掩盖必填失败，且仍继续关闭其余 client。"""
+        """业务或编程 factory 异常都不掩盖原错，且继续关闭其余 client。"""
         close_failing_transport = _CloseFailingTransport(
             server_name="first_optional",
             tools=["read_file"],
@@ -251,6 +251,41 @@ class TestDiscoverRequiredFailure:
 
         assert close_failing_transport.close_attempted is True
         assert healthy_transport.connected is False
+
+        programming_close_failing_transport = _CloseFailingTransport(
+            server_name="programming_first_optional",
+            tools=["read_file"],
+        )
+        programming_healthy_transport = MockTransport(
+            server_name="programming_second_optional",
+            tools=["write_file"],
+        )
+        discovery.DEFAULT_SERVERS = {
+            "programming_first_optional": ServerConfig(
+                name="programming_first_optional",
+                required=False,
+                transport_factory=lambda: programming_close_failing_transport,
+                expected_tools=["read_file"],
+            ),
+            "programming_second_optional": ServerConfig(
+                name="programming_second_optional",
+                required=False,
+                transport_factory=lambda: programming_healthy_transport,
+                expected_tools=["write_file"],
+            ),
+            "required_programming_failure": ServerConfig(
+                name="required_programming_failure",
+                required=True,
+                transport_factory=_make_raising_factory(ValueError("factory config invalid")),
+                expected_tools=["create_event"],
+            ),
+        }
+
+        with pytest.raises(ValueError, match="factory config invalid"):
+            discover_servers()
+
+        assert programming_close_failing_transport.close_attempted is True
+        assert programming_healthy_transport.connected is False
 
 
 class TestDiscoverErrorSurface:
