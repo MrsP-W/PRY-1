@@ -169,6 +169,16 @@ def test_check_quality_snapshot_script_exits_zero(
             assert snapshot_script.main() == 1
         assert "ERROR: quality snapshot check failed:" in capsys.readouterr().err
 
+        with patch.object(
+            snapshot_script,
+            "check_snapshot",
+            side_effect=ValueError("quality_snapshot pytest format invalid"),
+        ):
+            assert snapshot_script.main() == 1
+        assert "ERROR: quality snapshot check failed: quality_snapshot pytest format invalid" in (
+            capsys.readouterr().err
+        )
+
     operations: list[int] = []
 
     def record_flock(_fd: int, operation: int) -> None:
