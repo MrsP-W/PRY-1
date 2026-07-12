@@ -149,7 +149,25 @@ def test_check_quality_snapshot_script_exits_zero(
 
         with patch.object(snapshot_script, "check_snapshot", return_value=["pytest drift"]):
             assert snapshot_script.main() == 1
-    assert "ERROR: pytest drift" in capsys.readouterr().err
+        assert "ERROR: pytest drift" in capsys.readouterr().err
+
+        with patch.object(
+            snapshot_script,
+            "check_snapshot",
+            side_effect=RuntimeError("pytest output unavailable"),
+        ):
+            assert snapshot_script.main() == 1
+        assert "ERROR: quality snapshot check failed: pytest output unavailable" in (
+            capsys.readouterr().err
+        )
+
+        with patch.object(
+            snapshot_script,
+            "check_snapshot",
+            side_effect=subprocess.CalledProcessError(1, ["uv", "run", "pytest"]),
+        ):
+            assert snapshot_script.main() == 1
+        assert "ERROR: quality snapshot check failed:" in capsys.readouterr().err
 
     operations: list[int] = []
 

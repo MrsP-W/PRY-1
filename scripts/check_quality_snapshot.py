@@ -326,6 +326,9 @@ def main() -> int:
     except SnapshotLockBusyError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return os.EX_TEMPFAIL
+    except (subprocess.CalledProcessError, RuntimeError) as exc:
+        print(f"ERROR: quality snapshot check failed: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":
