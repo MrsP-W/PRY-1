@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import errno
+import fcntl
 import os
 import subprocess
+from contextlib import nullcontext
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,6 +20,8 @@ from my_ai_employee.quality_snapshot import (
     format_system_health_body,
 )
 from scripts.check_quality_snapshot import (
+    SnapshotLockBusyError,
+    acquire_snapshot_lock,
     check_snapshot,
     count_baseline_guardian_failures,
     count_collected_tests,
@@ -126,22 +131,64 @@ def test_check_snapshot_rejects_underreported_passed_count() -> None:
 
 def test_check_quality_snapshot_script_exits_zero(
     capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
-    """CLI 成功与错误退出码在进程内校验，避免 pytest 子进程嵌套。"""
+    """CLI 成功、失败与单实例锁均在进程内校验，避免 pytest 子进程嵌套。"""
     from scripts import check_quality_snapshot as snapshot_script
 
-    with (
-        patch.object(snapshot_script, "check_snapshot", return_value=[]),
-        patch.object(snapshot_script, "count_tracked_md_files", return_value=291),
-        patch.object(snapshot_script, "parse_pytest_counts", return_value=(2953, 1)),
-        patch("scripts.check_state_entries.check_state_entries", return_value=[]),
-    ):
-        assert snapshot_script.main() == 0
-    assert "state entry docs match quality_snapshot" in capsys.readouterr().out
+    with patch.object(snapshot_script, "acquire_snapshot_lock", return_value=nullcontext()):
+        with (
+            patch.object(snapshot_script, "check_snapshot", return_value=[]),
+            patch.object(snapshot_script, "count_tracked_md_files", return_value=291),
+            patch.object(snapshot_script, "parse_pytest_counts", return_value=(2953, 1)),
+            patch("scripts.check_state_entries.check_state_entries", return_value=[]),
+        ):
+            assert snapshot_script.main() == 0
+        assert "state entry docs match quality_snapshot" in capsys.readouterr().out
 
-    with patch.object(snapshot_script, "check_snapshot", return_value=["pytest drift"]):
-        assert snapshot_script.main() == 1
+        with patch.object(snapshot_script, "check_snapshot", return_value=["pytest drift"]):
+            assert snapshot_script.main() == 1
     assert "ERROR: pytest drift" in capsys.readouterr().err
+
+    operations: list[int] = []
+
+    def record_flock(_fd: int, operation: int) -> None:
+        operations.append(operation)
+
+    monkeypatch.setattr(fcntl, "flock", record_flock)
+
+    with acquire_snapshot_lock(root=tmp_path):
+        pass
+
+    assert operations == [
+        fcntl.LOCK_EX | fcntl.LOCK_NB,
+        fcntl.LOCK_UN,
+    ]
+
+    def raise_busy_lock(_fd: int, _operation: int) -> None:
+        raise BlockingIOError(errno.EAGAIN, "Resource temporarily unavailable")
+
+    monkeypatch.setattr(fcntl, "flock", raise_busy_lock)
+
+    with (
+        pytest.raises(SnapshotLockBusyError, match="already running"),
+        acquire_snapshot_lock(root=tmp_path),
+    ):
+        pass
+
+    with (
+        patch.object(
+            snapshot_script,
+            "acquire_snapshot_lock",
+            side_effect=SnapshotLockBusyError("check-snapshot already running"),
+        ),
+        patch.object(snapshot_script, "check_snapshot") as check,
+    ):
+        assert snapshot_script.main() == os.EX_TEMPFAIL
+
+    check.assert_not_called()
+    assert "ERROR: check-snapshot already running" in capsys.readouterr().err
 
 
 def test_live_pytest_outcomes_match_snapshot_when_mocked() -> None:

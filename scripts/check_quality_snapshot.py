@@ -7,9 +7,16 @@
 
 from __future__ import annotations
 
+import errno
+import fcntl
+import hashlib
+import os
 import re
 import subprocess
 import sys
+import tempfile
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +32,42 @@ _LINT_RE = re.compile(r"^(\d+) files\b")
 _PYTEST_RE = re.compile(r"^(\d+) passed(?:\s*/\s*(\d+) skipped)?")
 _BASELINE_GUARDIAN_REL = Path("tests/test_quality_snapshot.py")
 _TEST_DEF_RE = re.compile(r"^\s*def test_", re.MULTILINE)
+
+
+class SnapshotLockBusyError(RuntimeError):
+    """已有同一工作区的 quality snapshot 检查在运行。"""
+
+
+def snapshot_lock_path(root: Path = ROOT) -> Path:
+    """返回按工作区隔离的临时锁路径，避免污染 Git 工作树。"""
+    workspace_digest = hashlib.sha256(str(root.resolve()).encode()).hexdigest()[:16]
+    return Path(tempfile.gettempdir()) / (f"my-ai-employee-check-snapshot-{workspace_digest}.lock")
+
+
+@contextmanager
+def acquire_snapshot_lock(*, root: Path = ROOT) -> Iterator[None]:
+    """以非阻塞 POSIX 文件锁确保一次仅有一个完整 snapshot 检查链。"""
+    lock_file = snapshot_lock_path(root).open("a+", encoding="utf-8")
+    try:
+        try:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            if exc.errno not in (errno.EACCES, errno.EAGAIN):
+                raise
+            raise SnapshotLockBusyError(
+                "check-snapshot already running for this workspace; wait for it to finish"
+            ) from exc
+
+        try:
+            lock_file.seek(0)
+            lock_file.truncate()
+            lock_file.write(f"{os.getpid()}\n")
+            lock_file.flush()
+            yield
+        finally:
+            fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+    finally:
+        lock_file.close()
 
 
 def count_tracked_md_files(root: Path = ROOT) -> int:
@@ -248,36 +291,41 @@ def check_snapshot(*, root: Path = ROOT) -> list[str]:
 
 
 def main() -> int:
-    errors = check_snapshot()
-    if errors:
-        for err in errors:
-            print(f"ERROR: {err}", file=sys.stderr)
-        print(
-            "Fix: update src/my_ai_employee/quality_snapshot.py "
-            "and current-entry docs (README / CLAUDE / SESSION-STATE / MODIFICATION-LOG).",
-            file=sys.stderr,
-        )
-        return 1
-    tracked = count_tracked_md_files()
-    passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
-    print(
-        "OK: quality_snapshot matches live baseline "
-        f"({passed} passed / {skipped} skipped · {tracked} md files)"
-    )
+    try:
+        with acquire_snapshot_lock():
+            errors = check_snapshot()
+            if errors:
+                for err in errors:
+                    print(f"ERROR: {err}", file=sys.stderr)
+                print(
+                    "Fix: update src/my_ai_employee/quality_snapshot.py "
+                    "and current-entry docs (README / CLAUDE / SESSION-STATE / MODIFICATION-LOG).",
+                    file=sys.stderr,
+                )
+                return 1
+            tracked = count_tracked_md_files()
+            passed, skipped = parse_pytest_counts(DEFAULT_QUALITY_GATES.pytest)
+            print(
+                "OK: quality_snapshot matches live baseline "
+                f"({passed} passed / {skipped} skipped · {tracked} md files)"
+            )
 
-    from scripts.check_state_entries import check_state_entries  # noqa: PLC0415
+            from scripts.check_state_entries import check_state_entries  # noqa: PLC0415
 
-    entry_errors = check_state_entries()
-    if entry_errors:
-        for err in entry_errors:
-            print(f"ERROR: {err}", file=sys.stderr)
-        print(
-            "Fix: sync current-entry docs with quality_snapshot.py.",
-            file=sys.stderr,
-        )
-        return 1
-    print("OK: state entry docs match quality_snapshot")
-    return 0
+            entry_errors = check_state_entries()
+            if entry_errors:
+                for err in entry_errors:
+                    print(f"ERROR: {err}", file=sys.stderr)
+                print(
+                    "Fix: sync current-entry docs with quality_snapshot.py.",
+                    file=sys.stderr,
+                )
+                return 1
+            print("OK: state entry docs match quality_snapshot")
+            return 0
+    except SnapshotLockBusyError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return os.EX_TEMPFAIL
 
 
 if __name__ == "__main__":
