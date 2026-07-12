@@ -23,6 +23,7 @@ from __future__ import annotations
 import sqlite3
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
@@ -278,3 +279,104 @@ def test_import_all_dry_run_no_real_env(tmp_path: Path, monkeypatch: pytest.Monk
     mock_make_engine.assert_not_called()
     mock_create_all.assert_not_called()
     mock_adapter.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("set_real_import_env", "confirm", "max_rows", "count", "expected_error"),
+    [
+        (False, "yes-i-understand-this-imports-real-bill", 1, 1, "BILLS_REAL_IMPORT=1"),
+        (True, "wrong-confirm", 1, 1, "--confirm"),
+        (True, "yes-i-understand-this-imports-real-bill", None, 1, "--max-rows 必须为 1"),
+        (True, "yes-i-understand-this-imports-real-bill", 1, 2, "--count 必须为 1"),
+    ],
+)
+def test_import_all_real_import_gate_rejects_before_database(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    set_real_import_env: bool,
+    confirm: str,
+    max_rows: int | None,
+    count: int,
+    expected_error: str,
+) -> None:
+    """批量入口四重门控任一失败时，绝不打开数据库。"""
+    csv_dir = tmp_path / "bills"
+    csv_dir.mkdir()
+    import shutil
+
+    shutil.copy(ALIPAY_FIXTURES / "alipay_2024_sample.csv", csv_dir / "alipay_2024_sample.csv")
+    if set_real_import_env:
+        monkeypatch.setenv("BILLS_REAL_IMPORT", "1")
+    else:
+        monkeypatch.delenv("BILLS_REAL_IMPORT", raising=False)
+
+    from scripts import import_all  # noqa: PLC0415
+
+    args = [
+        "--csv-dir",
+        str(csv_dir),
+        "--db-path",
+        str(tmp_path / "new.db"),
+        "--no-dry-run",
+        "--confirm",
+        confirm,
+        "--count",
+        str(count),
+    ]
+    if max_rows is not None:
+        args += ["--max-rows", str(max_rows)]
+
+    with patch.object(import_all.Database, "open") as mock_open:
+        rc = import_all.main(args)
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert expected_error in captured.err
+    mock_open.assert_not_called()
+
+
+def test_import_all_real_import_limits_each_adapter_to_one_row(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """四重门控通过后，批量入口仍向 adapter 显式透传 ``max_rows=1``。"""
+    from scripts.import_real_gate import REQUIRED_CONFIRM
+
+    csv_dir = tmp_path / "bills"
+    csv_dir.mkdir()
+    import shutil
+
+    alipay_csv = csv_dir / "alipay_2024_sample.csv"
+    shutil.copy(ALIPAY_FIXTURES / "alipay_2024_sample.csv", alipay_csv)
+    monkeypatch.setenv("BILLS_REAL_IMPORT", "1")
+
+    from scripts import import_all  # noqa: PLC0415
+
+    result = SimpleNamespace(parsed=1, inserted=1, failed=0)
+    with (
+        patch.object(import_all.Database, "open") as mock_open,
+        patch.object(import_all, "make_sqlalchemy_engine"),
+        patch.object(import_all, "assert_min_revision"),
+        patch.object(import_all.Base.metadata, "create_all"),
+        patch.object(import_all, "TransactionAdapter") as mock_adapter,
+    ):
+        mock_adapter.return_value.import_alipay_csv.return_value = result
+        rc = import_all.main(
+            [
+                "--csv-dir",
+                str(csv_dir),
+                "--db-path",
+                str(tmp_path / "new.db"),
+                "--no-dry-run",
+                "--confirm",
+                REQUIRED_CONFIRM,
+                "--max-rows",
+                "1",
+                "--count",
+                "1",
+            ]
+        )
+
+    assert rc == 0
+    mock_open.assert_called_once()
+    mock_adapter.return_value.import_alipay_csv.assert_called_once_with(alipay_csv, max_rows=1)

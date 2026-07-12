@@ -24,12 +24,12 @@
 from __future__ import annotations
 
 import argparse
-import os
 import sys
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
+sys.path.insert(0, str(PROJECT_ROOT))
 
 from sqlalchemy.exc import OperationalError  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
@@ -54,9 +54,12 @@ from my_ai_employee.core.transaction_adapter import (  # noqa: E402
     TransactionAdapter,
     TransactionImportResult,
 )
+from scripts.import_real_gate import (  # noqa: E402
+    REQUIRED_CONFIRM,
+    validate_real_import_gate,
+)
 
 _MIN_ALEMBIC_REVISION: str = "0007_transactions"
-_CONFIRM_TEXT: str = "yes-i-understand-this-imports-real-bills"
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -73,8 +76,20 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--confirm",
         type=str,
+        default="",
+        help=f"真实导入确认(必须传 {REQUIRED_CONFIRM!r})",
+    )
+    parser.add_argument(
+        "--max-rows",
+        type=int,
         default=None,
-        help=f"真实导入确认(必须传 {_CONFIRM_TEXT!r})",
+        help="限制单次每个 CSV 的导入行数(真实导入必须为 1)",
+    )
+    parser.add_argument(
+        "--count",
+        type=int,
+        default=1,
+        help="限制总批次数(真实导入必须为 1)",
     )
     parser.add_argument(
         "--dry-run",
@@ -116,20 +131,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"csv-dir 不是目录: {args.csv_dir}", file=sys.stderr)
         return 1
 
-    # 4 重防误发(沿 D5.6.5 范本)
+    # 4 重防误发：真实导入必须复用单源入口的统一 fail-closed 契约。
     real_import = not args.dry_run
     if real_import:
-        if os.environ.get("BILLS_REAL_IMPORT") != "1":
-            print(
-                "真实导入需 BILLS_REAL_IMPORT=1 env 门控,默认拒绝(沿 D5.6.5 4 重防误发)",
-                file=sys.stderr,
-            )
-            return 1
-        if args.confirm != _CONFIRM_TEXT:
-            print(
-                f"真实导入需 --confirm {_CONFIRM_TEXT!r},实际 {args.confirm!r}",
-                file=sys.stderr,
-            )
+        gate_error = validate_real_import_gate(
+            env_name="BILLS_REAL_IMPORT",
+            confirm=args.confirm,
+            count=args.count,
+            max_rows=args.max_rows,
+        )
+        if gate_error:
+            print(gate_error, file=sys.stderr)
             return 1
 
     # 遍历 csv_dir 下所有 .csv 文件。dry-run 只允许到嗅探为止，不能打开
@@ -176,9 +188,9 @@ def main(argv: list[str] | None = None) -> int:
                     continue
                 print(f"[{source}] {csv_path.name}")
                 if source == "wechat":
-                    result = adapter.import_wechat_csv(csv_path)
+                    result = adapter.import_wechat_csv(csv_path, max_rows=args.max_rows)
                 elif source == "alipay":
-                    result = adapter.import_alipay_csv(csv_path)
+                    result = adapter.import_alipay_csv(csv_path, max_rows=args.max_rows)
                 else:
                     continue
                 results.append((csv_path, source, result))
