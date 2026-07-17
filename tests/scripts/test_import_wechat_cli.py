@@ -30,6 +30,7 @@ D6.5 收口后,检查员驳回 4 缺陷:
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -98,6 +99,7 @@ def _run_cli_with_mock_db(
     max_rows: int | None = None,
     confirm: str = "",
     count: int = 1,
+    enable_real_import_gate: bool = False,
 ) -> int:
     """跑 import_wechat.main,Database.open + make_sqlalchemy_engine 都用 mock(走 plain sqlite)。
 
@@ -105,6 +107,7 @@ def _run_cli_with_mock_db(
         csv_path: 微信账单 CSV 路径
         db_path: 临时 sqlite 路径
         max_rows: 透传 CLI --max-rows(默认 None = 全量)
+        enable_real_import_gate: 为行为测试显式通过真实导入门控(仍使用 mock DB)
 
     Returns:
         退出码(0/1/2/3)
@@ -112,15 +115,18 @@ def _run_cli_with_mock_db(
     from sqlalchemy import create_engine
 
     from scripts import import_wechat  # noqa: PLC0415
+    from scripts.import_real_gate import REQUIRED_CONFIRM  # noqa: PLC0415
 
     fake_db = _FakeDatabase(db_path)
     plain_engine = create_engine(f"sqlite:///{db_path}")
+    effective_max_rows = 1 if enable_real_import_gate and max_rows is None else max_rows
+    effective_confirm = REQUIRED_CONFIRM if enable_real_import_gate and not confirm else confirm
 
     args = ["--csv-path", str(csv_path), "--db-path", str(db_path)]
-    if max_rows is not None:
-        args += ["--max-rows", str(max_rows)]
-    if confirm:
-        args += ["--confirm", confirm]
+    if effective_max_rows is not None:
+        args += ["--max-rows", str(effective_max_rows)]
+    if effective_confirm:
+        args += ["--confirm", effective_confirm]
     args += ["--count", str(count)]
 
     with (
@@ -128,6 +134,9 @@ def _run_cli_with_mock_db(
         patch.object(import_wechat, "make_sqlalchemy_engine", return_value=plain_engine),
     ):
         mock_db_class.open.return_value = fake_db
+        if enable_real_import_gate:
+            with patch.dict(os.environ, {"WECHAT_REAL_IMPORT": "1"}):
+                return import_wechat.main(args)
         return import_wechat.main(args)
 
 
@@ -139,7 +148,7 @@ def test_cli_exits_1_on_missing_csv(tmp_path: Path) -> None:
     db = tmp_path / "pretend.db"
     _make_pretend_alembic_db(db)
     missing_csv = tmp_path / "does_not_exist.csv"
-    rc = _run_cli_with_mock_db(missing_csv, db)
+    rc = _run_cli_with_mock_db(missing_csv, db, enable_real_import_gate=True)
     assert rc == 1, f"D6.6 P1:missing CSV 应 exit 1,实际 {rc}"
 
 
@@ -152,8 +161,46 @@ def test_cli_exits_1_on_empty_file(tmp_path: Path) -> None:
     _make_pretend_alembic_db(db)
     empty_csv = tmp_path / "empty.csv"
     empty_csv.write_text("")  # 0 字节
-    rc = _run_cli_with_mock_db(empty_csv, db)
+    rc = _run_cli_with_mock_db(empty_csv, db, enable_real_import_gate=True)
     assert rc == 1, f"D6.6 P1:空文件应 exit 1,实际 {rc}"
+
+
+def test_cli_rejects_empty_csv_before_opening_database(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """有效门控下，嗅探失败仍不得触碰 SQLCipher/Keychain/WAL。"""
+    from scripts import import_wechat
+    from scripts.import_real_gate import REQUIRED_CONFIRM
+
+    empty_csv = tmp_path / "empty.csv"
+    empty_csv.write_text("")
+    monkeypatch.setenv("WECHAT_REAL_IMPORT", "1")
+    args = [
+        "--csv-path",
+        str(empty_csv),
+        "--db-path",
+        str(tmp_path / "must-not-open.db"),
+        "--max-rows",
+        "1",
+        "--confirm",
+        REQUIRED_CONFIRM,
+        "--count",
+        "1",
+    ]
+
+    with (
+        patch.object(import_wechat.Database, "open") as mock_open,
+        patch.object(import_wechat, "make_sqlalchemy_engine") as mock_engine,
+        patch.object(import_wechat, "assert_min_revision") as mock_revision,
+    ):
+        rc = import_wechat.main(args)
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "无法嗅探微信账单 CSV 版本" in captured.err
+    mock_open.assert_not_called()
+    mock_engine.assert_not_called()
+    mock_revision.assert_not_called()
 
 
 # ===== C3. 不支持的 header =====
@@ -168,7 +215,7 @@ def test_cli_exits_1_on_unsupported_header(tmp_path: Path) -> None:
         "some,random,columns,that,wechat,doesnt,have\n1,2,3,4,5,6,7\n",
         encoding="utf-8",
     )
-    rc = _run_cli_with_mock_db(bad_csv, db)
+    rc = _run_cli_with_mock_db(bad_csv, db, enable_real_import_gate=True)
     assert rc == 1, f"D6.6 P1:unsupported header 应 exit 1,实际 {rc}"
 
 
@@ -185,7 +232,7 @@ def test_cli_exits_1_on_corrupt_csv(tmp_path: Path) -> None:
         "交易时间,交易类型,收/付,金额,支付方式,交易对方,交易号\n",
         encoding="utf-8",
     )
-    rc = _run_cli_with_mock_db(corrupt_csv, db)
+    rc = _run_cli_with_mock_db(corrupt_csv, db, enable_real_import_gate=True)
     assert rc == 1, f"D6.6 P1:corrupt CSV(header 对但 0 数据)应 exit 1,实际 {rc}"
 
 
@@ -197,7 +244,7 @@ def test_cli_exits_1_on_alembic_revision_too_old(tmp_path: Path) -> None:
     db = tmp_path / "old_alembic.db"
     _make_pretend_alembic_db(db, revision="0006_outbox_approval_provenance")
     valid_csv = WECHAT_FIXTURES / "wechat_2024_sample.csv"
-    rc = _run_cli_with_mock_db(valid_csv, db)
+    rc = _run_cli_with_mock_db(valid_csv, db, enable_real_import_gate=True)
     assert rc == 1, f"D6.6 P2:alembic revision 过旧应 exit 1,实际 {rc}"
 
 

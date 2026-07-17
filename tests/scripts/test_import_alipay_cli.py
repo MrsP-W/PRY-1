@@ -20,6 +20,7 @@
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -83,6 +84,7 @@ def _run_alipay_cli(
     max_rows: int | None = None,
     confirm: str = "",
     count: int = 1,
+    enable_real_import_gate: bool = False,
 ) -> int:
     """跑 import_alipay.main,mock Database + make_sqlalchemy_engine。
 
@@ -90,19 +92,23 @@ def _run_alipay_cli(
         csv_path: 支付宝账单 CSV 路径
         db_path: 临时 sqlite 路径
         max_rows: 透传 CLI --max-rows(默认 None = 全量)
+        enable_real_import_gate: 为行为测试显式通过真实导入门控(仍使用 mock DB)
     """
     from sqlalchemy import create_engine
 
     from scripts import import_alipay  # noqa: PLC0415
+    from scripts.import_real_gate import REQUIRED_CONFIRM  # noqa: PLC0415
 
     fake_db = _FakeDatabase(db_path)
     plain_engine = create_engine(f"sqlite:///{db_path}")
+    effective_max_rows = 1 if enable_real_import_gate and max_rows is None else max_rows
+    effective_confirm = REQUIRED_CONFIRM if enable_real_import_gate and not confirm else confirm
 
     args = ["--csv-path", str(csv_path), "--db-path", str(db_path)]
-    if max_rows is not None:
-        args += ["--max-rows", str(max_rows)]
-    if confirm:
-        args += ["--confirm", confirm]
+    if effective_max_rows is not None:
+        args += ["--max-rows", str(effective_max_rows)]
+    if effective_confirm:
+        args += ["--confirm", effective_confirm]
     args += ["--count", str(count)]
 
     with (
@@ -110,6 +116,9 @@ def _run_alipay_cli(
         patch.object(import_alipay, "make_sqlalchemy_engine", return_value=plain_engine),
     ):
         mock_db_class.open.return_value = fake_db
+        if enable_real_import_gate:
+            with patch.dict(os.environ, {"ALIPAY_REAL_IMPORT": "1"}):
+                return import_alipay.main(args)
         return import_alipay.main(args)
 
 
@@ -121,7 +130,7 @@ def test_alipay_cli_exits_1_on_missing_csv(tmp_path: Path) -> None:
     db = tmp_path / "pretend.db"
     _make_pretend_alembic_db(db)
     missing_csv = tmp_path / "does_not_exist.csv"
-    rc = _run_alipay_cli(missing_csv, db)
+    rc = _run_alipay_cli(missing_csv, db, enable_real_import_gate=True)
     assert rc == 1
 
 
@@ -134,8 +143,46 @@ def test_alipay_cli_exits_1_on_empty_file(tmp_path: Path) -> None:
     _make_pretend_alembic_db(db)
     empty_csv = tmp_path / "empty.csv"
     empty_csv.write_text("")
-    rc = _run_alipay_cli(empty_csv, db)
+    rc = _run_alipay_cli(empty_csv, db, enable_real_import_gate=True)
     assert rc == 1
+
+
+def test_alipay_cli_rejects_empty_csv_before_opening_database(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """有效门控下，嗅探失败仍不得触碰 SQLCipher/Keychain/WAL。"""
+    from scripts import import_alipay
+    from scripts.import_real_gate import REQUIRED_CONFIRM
+
+    empty_csv = tmp_path / "empty.csv"
+    empty_csv.write_text("")
+    monkeypatch.setenv("ALIPAY_REAL_IMPORT", "1")
+    args = [
+        "--csv-path",
+        str(empty_csv),
+        "--db-path",
+        str(tmp_path / "must-not-open.db"),
+        "--max-rows",
+        "1",
+        "--confirm",
+        REQUIRED_CONFIRM,
+        "--count",
+        "1",
+    ]
+
+    with (
+        patch.object(import_alipay.Database, "open") as mock_open,
+        patch.object(import_alipay, "make_sqlalchemy_engine") as mock_engine,
+        patch.object(import_alipay, "assert_min_revision") as mock_revision,
+    ):
+        rc = import_alipay.main(args)
+
+    captured = capsys.readouterr()
+    assert rc == 1
+    assert "无法嗅探支付宝账单 CSV 版本" in captured.err
+    mock_open.assert_not_called()
+    mock_engine.assert_not_called()
+    mock_revision.assert_not_called()
 
 
 # ===== C3. 不支持的 header =====
@@ -150,7 +197,7 @@ def test_alipay_cli_exits_1_on_unsupported_header(tmp_path: Path) -> None:
         "some,random,columns,that,alipay,doesnt,have\n1,2,3,4,5,6,7\n",
         encoding="utf-8",
     )
-    rc = _run_alipay_cli(bad_csv, db)
+    rc = _run_alipay_cli(bad_csv, db, enable_real_import_gate=True)
     assert rc == 1
 
 
@@ -162,7 +209,7 @@ def test_alipay_cli_exits_1_on_alembic_too_old(tmp_path: Path) -> None:
     db = tmp_path / "old_alembic.db"
     _make_pretend_alembic_db(db, revision="0006_outbox_approval_provenance")
     valid_csv = ALIPAY_FIXTURES / "alipay_2024_sample.csv"
-    rc = _run_alipay_cli(valid_csv, db)
+    rc = _run_alipay_cli(valid_csv, db, enable_real_import_gate=True)
     assert rc == 1
 
 

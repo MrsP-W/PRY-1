@@ -91,6 +91,17 @@ def main(argv: list[str] | None = None) -> int:
         print(f"csv-path 不是文件: {args.csv_path}", file=sys.stderr)
         return 1
 
+    # D6.6 P1 修复:先做只读 pre-flight 嗅探，失败时绝不打开 SQLCipher。
+    # Database.open() 可能创建目录、写入 Keychain/WAL；无效 CSV 不应触发这些副作用。
+    try:
+        version = detect_version(args.csv_path)
+    except UnsupportedCSVVersionError as e:
+        print(f"无法嗅探微信账单 CSV 版本: {e}", file=sys.stderr)
+        return 1
+    except (FileNotFoundError, ValueError, OSError) as e:
+        print(f"CSV 读取失败: {e}", file=sys.stderr)
+        return 1
+
     db = Database.open(db_path=args.db_path)
     try:
         engine = make_sqlalchemy_engine(db)
@@ -101,17 +112,6 @@ def main(argv: list[str] | None = None) -> int:
         except RuntimeError as e:
             print(f"Alembic version 校验失败: {e}", file=sys.stderr)
             print("请先跑: alembic upgrade head", file=sys.stderr)
-            return 1
-
-        # D6.6 P1 修复:pre-flight detect_version 嗅探(防 silent success)
-        # 如果嗅探失败 → 立即 exit 1,不再让 safe_parse 静默返回空
-        try:
-            version = detect_version(args.csv_path)
-        except UnsupportedCSVVersionError as e:
-            print(f"无法嗅探微信账单 CSV 版本: {e}", file=sys.stderr)
-            return 1
-        except (FileNotFoundError, ValueError, OSError) as e:
-            print(f"CSV 读取失败: {e}", file=sys.stderr)
             return 1
 
         # create_all 仍保留(D6.4 兼容 — 走 alembic 后,这里是 no-op)
