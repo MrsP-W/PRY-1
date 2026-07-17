@@ -1,44 +1,103 @@
 #!/usr/bin/env bash
-# D10.3 — launchd 卸载脚本
+# D10.3 / Day 14 — standalone launchd 卸载脚本
 #
 # 退出码(沿 D5.6.5 范本):
 #   0 = 成功卸载
-#   1 = plist 不存在(已卸载)
-#   3 = launchctl unload 失败
+#   1 = 所有受管 job 均未注册且 plist 均不存在(已卸载)
+#   3 = launchctl 无法卸载 / bootout，或最终仍有受管 job 注册
 
 set -euo pipefail
 
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
-TARGET_PLIST="${LAUNCH_AGENTS_DIR}/com.myaiemployee.agent.plist"
 HOME_BIN="${HOME}/bin"
-TARGET_SCRIPT="${HOME_BIN}/my-ai-employee-monthly-report"
 
-# ===== 1. plist 存在性 =====
-if [[ ! -f "${TARGET_PLIST}" ]]; then
-    echo "ℹ️  plist 不存在(${TARGET_PLIST}),已卸载"
+# Day 14 撞坑 #95 后，菜单栏与 Dashboard 已拆为独立 LaunchAgent；
+# legacy digital-employee 仍须在独立卸载入口中退役，避免 standalone 脚本
+# 因 agent plist 缺失而提前返回、遗留常驻进程。
+LAUNCHD_LABELS=(
+    "com.myaiemployee.agent"
+    "com.myaiemployee.imap-sync"
+    "com.myaiemployee.menu-bar"
+    "com.myaiemployee.dashboard"
+    "com.myaiemployee.digital-employee"
+)
+TARGET_WRAPPERS=(
+    "${HOME_BIN}/my-ai-employee-monthly-report"
+    "${HOME_BIN}/my-ai-employee-imap-sync"
+    "${HOME_BIN}/my-ai-employee-menu-bar-runner"
+    "${HOME_BIN}/my-ai-employee-dashboard-runner"
+    "${HOME_BIN}/my-ai-employee-start"
+)
+
+launchctl_list_has_label() {
+    local expected_label="$1"
+    local list_output="$2"
+    awk -v label="${expected_label}" '$NF == label { found = 1; exit } END { exit !found }' "${list_output}"
+}
+
+LAUNCHCTL_LIST="$(mktemp -t myaiemployee_launchd_uninstall.XXXXXX)"
+trap 'rm -f "${LAUNCHCTL_LIST}"' EXIT
+
+refresh_launchctl_list() {
+    if ! launchctl list > "${LAUNCHCTL_LIST}" 2>/dev/null; then
+        echo "❌ launchctl list 失败" >&2
+        exit 3
+    fi
+}
+
+had_managed_state=false
+refresh_launchctl_list
+
+# ===== 1. 卸载所有当前与 legacy label =====
+for label in "${LAUNCHD_LABELS[@]}"; do
+    target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
+    if [[ -f "${target_plist}" || -L "${target_plist}" ]]; then
+        had_managed_state=true
+        echo "🛑 launchctl unload ${target_plist}"
+        if ! launchctl unload "${target_plist}" 2>/dev/null; then
+            echo "⚠️  launchctl unload 失败，尝试 bootout ${label}" >&2
+        fi
+        rm -f "${target_plist}"
+        echo "🗑️  已删除 ${target_plist}"
+    else
+        echo "ℹ️  plist 不存在，跳过: ${target_plist}"
+    fi
+
+    refresh_launchctl_list
+    if launchctl_list_has_label "${label}" "${LAUNCHCTL_LIST}"; then
+        had_managed_state=true
+        echo "🛑 launchctl bootout gui/$(id -u)/${label}"
+        if ! launchctl bootout "gui/$(id -u)/${label}" 2>/dev/null; then
+            echo "❌ launchctl 无法退役 ${label}" >&2
+            exit 3
+        fi
+    fi
+done
+
+# ===== 2. 精确验证所有受管 label 已退役 =====
+refresh_launchctl_list
+for label in "${LAUNCHD_LABELS[@]}"; do
+    if launchctl_list_has_label "${label}" "${LAUNCHCTL_LIST}"; then
+        echo "❌ 验证失败：launchctl list 仍见 ${label}" >&2
+        exit 3
+    fi
+done
+
+if [[ "${had_managed_state}" != true ]]; then
+    echo "ℹ️  所有受管 plist 均不存在且 job 未注册，已卸载"
     exit 1
 fi
 
-# ===== 2. launchctl unload =====
-echo "🛑 launchctl unload ${TARGET_PLIST}"
-if ! launchctl unload "${TARGET_PLIST}" 2>/dev/null; then
-    echo "❌ launchctl unload 失败" >&2
-    exit 3
-fi
-echo "✅ launchctl unload 完成"
-
-# ===== 3. 删除 plist =====
-rm -f "${TARGET_PLIST}"
-echo "🗑️  已删除 ${TARGET_PLIST}"
-
-# ===== 4. 删除 ~/bin/ 脚本(可选,默认保留) =====
+# ===== 3. 删除 ~/bin/ wrapper(可选，默认保留) =====
 if [[ "${1:-}" == "--purge-bin" ]]; then
-    if [[ -f "${TARGET_SCRIPT}" ]]; then
-        rm -f "${TARGET_SCRIPT}"
-        echo "🗑️  已删除 ${TARGET_SCRIPT}(--purge-bin)"
-    fi
+    for target_wrapper in "${TARGET_WRAPPERS[@]}"; do
+        if [[ -f "${target_wrapper}" || -L "${target_wrapper}" ]]; then
+            rm -f "${target_wrapper}"
+            echo "🗑️  已删除 ${target_wrapper}(--purge-bin)"
+        fi
+    done
 else
-    echo "ℹ️  保留 ${TARGET_SCRIPT}(用 --purge-bin 删)"
+    echo "ℹ️  保留 ${#TARGET_WRAPPERS[@]} 个 ~/bin/ wrapper(用 --purge-bin 删除)"
 fi
 
 echo ""
