@@ -3,7 +3,7 @@
 
 目的(用户 2026-07-02 路径 A Phase 3.5 授权):
     - 端到端验证:mock Keychain master key + 临时 SQLite DB + `ENABLE_NOTES_ENCRYPTION=1`
-      → NoteStore insert Impl cipher → 库内 `enc:v1:` 前缀
+      → NoteStore insert Impl cipher → 库内认证 `enc:v2:` 前缀
       → /api/notes/pending 解密展示明文
       → 菜单栏 NoteConfirmServiceImpl.list_pending_confirm 解密返回明文
     - 不写 shell profile · 不写 `ENABLE_NOTES_ENCRYPTION=1` 到环境
@@ -18,7 +18,7 @@
 4 退出码契约(沿 `scripts/spike_d8_1000.py` D8 spike 范本):
     0 = 成功(spike 跑通 + 统计输出)
     1 = 准备失败(env / 路径错)
-    2 = 业务失败(库内未发现 `enc:v1:` 前缀 或 UI 仍返回密文)
+    2 = 业务失败(库内未发现 `enc:v2:` 前缀 或 UI 仍返回密文)
     3 = 技术失败(SQLAlchemy / 密钥长度不够 / cipher 初始化失败)
 
 用法:
@@ -142,7 +142,7 @@ def _seed_encrypted_note(
     body: str,
     synced_at_ms: int = 1_700_000_000_001,
 ) -> int:
-    """NoteStore.insert 走 Impl cipher(库内落 `enc:v1:` 前缀)."""
+    """NoteStore.insert 走 Impl cipher(库内落认证 `enc:v2:` 前缀)."""
     result = store.insert(
         apple_note_id=apple_note_id,
         folder="Notes",
@@ -208,17 +208,17 @@ def _run_spike(args: argparse.Namespace) -> int:
                 session_factory,
                 apple_note_id="x-coredata://ICNote/LEGACY-DRYRUN",
                 title="历史明文标题",
-                body="历史明文正文,无 enc:v1: 前缀",
+                body="历史明文正文,无 enc: 前缀",
             )
 
             encrypted_id = _seed_encrypted_note(
                 store,
                 apple_note_id="x-coredata://ICNote/ENCRYPTED-DRYRUN",
                 title="新加密标题",
-                body="新加密正文,应自动落 enc:v1: 前缀",
+                body="新加密正文,应自动落 enc:v2: 前缀",
             )
 
-            # ---- 4. 库内直查:验证 legacy 是明文,encrypted 是 enc:v1: 前缀 ----
+            # ---- 4. 库内直查:验证 legacy 是明文,encrypted 是 enc:v2: 前缀 ----
             from sqlalchemy import select
 
             from my_ai_employee.db.notes import Note
@@ -229,21 +229,21 @@ def _run_spike(args: argparse.Namespace) -> int:
                     select(Note).where(Note.id == encrypted_id)
                 ).scalar_one()
 
-            if legacy_row.title.startswith("enc:v1:") or legacy_row.body.startswith("enc:v1:"):
+            if legacy_row.title.startswith("enc:v2:") or legacy_row.body.startswith("enc:v2:"):
                 print(
-                    f"[FAIL] legacy note 不应该有 enc:v1: 前缀: title={legacy_row.title[:20]!r}",
+                    f"[FAIL] legacy note 不应该有 enc:v2: 前缀: title={legacy_row.title[:20]!r}",
                     file=sys.stderr,
                 )
                 return 2
-            if not encrypted_row.title.startswith("enc:v1:") or not encrypted_row.body.startswith(
-                "enc:v1:"
+            if not encrypted_row.title.startswith("enc:v2:") or not encrypted_row.body.startswith(
+                "enc:v2:"
             ):
                 print(
-                    f"[FAIL] 新加密 note 应该有 enc:v1: 前缀: title={encrypted_row.title[:20]!r}",
+                    f"[FAIL] 新加密 note 应该有 enc:v2: 前缀: title={encrypted_row.title[:20]!r}",
                     file=sys.stderr,
                 )
                 return 2
-            print("[OK] 库内前缀严判: legacy=plaintext, encrypted=enc:v1: 前缀")
+            print("[OK] 库内前缀严判: legacy=plaintext, encrypted=enc:v2: 前缀")
 
             # ---- 5. NoteStore.list_all + get_by_id 验证解密(沿 Phase 1.2 test_impl_cipher_mixed_plaintext_and_encrypted 范本)----
             # 注意:NoteStore.insert 新 note 无指纹冲突 → needs_confirm=0,
@@ -260,13 +260,13 @@ def _run_spike(args: argparse.Namespace) -> int:
             encrypted_loaded = all_by_id[encrypted_id]
             if (
                 legacy_loaded.title != "历史明文标题"
-                or legacy_loaded.body != "历史明文正文,无 enc:v1: 前缀"
+                or legacy_loaded.body != "历史明文正文,无 enc: 前缀"
             ):
                 print(f"[FAIL] legacy 解密错: title={legacy_loaded.title!r}", file=sys.stderr)
                 return 2
             if (
                 encrypted_loaded.title != "新加密标题"
-                or encrypted_loaded.body != "新加密正文,应自动落 enc:v1: 前缀"
+                or encrypted_loaded.body != "新加密正文,应自动落 enc:v2: 前缀"
             ):
                 print(f"[FAIL] encrypted 解密错: title={encrypted_loaded.title!r}", file=sys.stderr)
                 return 2
@@ -279,19 +279,19 @@ def _run_spike(args: argparse.Namespace) -> int:
                     file=sys.stderr,
                 )
                 return 2
-            # 严判无 enc:v1: 前缀泄露
-            if legacy_loaded.title.startswith("enc:v1:") or encrypted_loaded.title.startswith(
-                "enc:v1:"
+            # 严判无 enc:v2: 前缀泄露
+            if legacy_loaded.title.startswith("enc:v2:") or encrypted_loaded.title.startswith(
+                "enc:v2:"
             ):
                 print(
-                    f"[FAIL] 解密后仍含 enc:v1: 前缀: legacy={legacy_loaded.title[:20]!r}, "
+                    f"[FAIL] 解密后仍含 enc:v2: 前缀: legacy={legacy_loaded.title[:20]!r}, "
                     f"encrypted={encrypted_loaded.title[:20]!r}",
                     file=sys.stderr,
                 )
                 return 2
             print(
                 "[OK] list_all + get_by_id 解密: 2 条全部明文返回 "
-                "(legacy 明文 + encrypted 解密,无 enc:v1: 前缀泄露)"
+                "(legacy 明文 + encrypted 解密,无 enc:v2: 前缀泄露)"
             )
 
             # ---- 6. 菜单栏 NoteConfirmServiceImpl.list_pending_confirm 验证(仅 legacy,因为 encrypted 无 needs_confirm=1)----
@@ -307,10 +307,10 @@ def _run_spike(args: argparse.Namespace) -> int:
                 )
                 return 2
             # encrypted 不在 list_pending_confirm 因 needs_confirm=0,但其解密路径在步骤 5 已验证
-            # 严判无 enc:v1: 前缀泄露
+            # 严判无 enc:v2: 前缀泄露
             for item in confirm_items:
                 title = item.get("title", "") if isinstance(item, dict) else ""
-                if title.startswith("enc:v1:"):
+                if title.startswith("enc:v2:"):
                     print(f"[FAIL] 菜单栏泄露密文: title={title[:20]!r}", file=sys.stderr)
                     return 2
             print(
@@ -357,7 +357,7 @@ def _run_spike(args: argparse.Namespace) -> int:
                 if not isinstance(item, dict):
                     continue
                 title = item.get("title", "")
-                if title.startswith("enc:v1:"):
+                if title.startswith("enc:v2:"):
                     print(
                         f"[FAIL] Dashboard payload 泄露密文: title={title[:20]!r}", file=sys.stderr
                     )
@@ -386,7 +386,7 @@ def _run_spike(args: argparse.Namespace) -> int:
             print(f"  master key: {len(loaded_key)} bytes (mock,run-end 自动销毁)")
             print("  cipher: NotesCipherImpl (Phase 1.1 P1 默认)")
             print(f"  DB: 临时 SQLite file (跑完{'保留' if args.keep_db else '删除'})")
-            print("  notes: 2 (1 legacy plaintext + 1 new enc:v1:)")
+            print("  notes: 2 (1 legacy plaintext + 1 new authenticated enc:v2:)")
             print("  NoteStore.list_all + get_by_id 解密: 2 条明文")
             print(
                 "  NoteConfirmServiceImpl.list_pending_confirm: 1 条明文 (legacy 为主,encrypted needs_confirm=0)"

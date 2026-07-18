@@ -151,6 +151,28 @@
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
 
+### 2026-07-18 [NotesCipher v2 认证完整性与 fail-closed 读取] — 收口
+
+**1. 本次修改内容**
+
+- `src/my_ai_employee/core/notes_encryption.py`：新写入从未认证 `enc:v1:` 升为
+  `enc:v2:` Encrypt-then-MAC；HMAC 绑定字段名、salt、IV 与 ciphertext，验签失败、错字段、错密钥、未知版本或畸形输入均返回 `None`，且严格 UTF-8 解码。
+- `src/my_ai_employee/db/notes.py`：读取层不再把认证失败的原始 `enc:` 值回传给 UI，统一显示 `[加密内容不可用]`；Stub 同样拒绝把密文伪装成明文。
+- 同步 dry-run、Dashboard、菜单栏与 NoteStore 回归到 `enc:v2:`；既有测试内补齐 salt/IV/ciphertext/tag 篡改、错字段、错密钥和真实读取层 fail-closed 断言，pytest 收集数不变。
+- `docs/day11-notes-encryption-production-runbook.md` 已改为 v2 启用、回滚与 v1 受信迁移边界。
+
+**2. 风险点**
+
+- 旧 `enc:v1:` 没有认证标签，现按 fail-closed 拒读，不自动迁移或降级为明文；当前生产真加密仍未启用，若未来发现 v1 数据，只能从受信明文源按单条流程重写。
+- 本次补的是完整性边界；现有 XOR 流实现仍不是 AEAD，生产启用前保留 P1：评估 AES-GCM 或 ChaCha20-Poly1305。
+- 未读写 Keychain、生产 Notes/数据库、launchd 或任何外部服务；开局已有 `docs/ui/codex-style-dashboard.html` WIP 独立保留，不纳入本轮。
+
+**3. 当前项目整体总结**
+
+- 安全 PoC 已从“篡改/错字段/错密钥返回伪明文”变为三者均 `None`；正常 round-trip 与临时 DB dry-run 均通过。
+- `make test` 为 **3032 passed / 1 skipped**，定向受影响链路 **128 passed**；严格 mypy、Ruff、Alembic SQL 与构建通过，质量快照计数保持不变。
+- 下一棒：保持 P0-4 24h 观察只读边界；Notes 真加密仍默认关闭，只有用户单独授权后才进入 v2 生产启用与 AEAD 评估。
+
 ### 2026-07-18 [NotesCipher 最小主密钥边界回归] — 收口
 
 **1. 本次修改内容**

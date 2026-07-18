@@ -57,7 +57,7 @@ def test_default_store_encrypts_when_env_and_keychain_ok(
 ) -> None:
     """默认 NoteStore:env=1 + Keychain OK 时应加密落库(不经手动注入 cipher)."""
     from my_ai_employee.core.keychain import KeychainResult
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
     from my_ai_employee.db.notes import Note, NoteStore
 
     monkeypatch.setenv("ENABLE_NOTES_ENCRYPTION", "1")
@@ -80,8 +80,8 @@ def test_default_store_encrypts_when_env_and_keychain_ok(
     with session_factory() as session:
         raw = session.get(Note, note.id)
         assert raw is not None
-        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V1)
-        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V1)
+        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V2)
+        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V2)
 
 
 def test_insert_stub_cipher_stores_plaintext_at_rest(
@@ -113,7 +113,7 @@ def test_insert_impl_cipher_encrypts_at_rest_and_decrypts_on_read(
 ) -> None:
     """Impl:指纹用明文计算,库内 title/body 加密,读出解密."""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
     from my_ai_employee.db.notes import Note
 
     title = "加密标题"
@@ -139,13 +139,25 @@ def test_insert_impl_cipher_encrypts_at_rest_and_decrypts_on_read(
     with session_factory() as session:
         raw = session.get(Note, note.id)
         assert raw is not None
-        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V1)
-        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V1)
+        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V2)
+        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V2)
 
     reloaded = store_encrypted.get_by_id(note.id)
     assert reloaded is not None
     assert reloaded.title == title
     assert reloaded.body == body
+
+    with session_factory() as session:
+        raw = session.get(Note, note.id)
+        assert raw is not None
+        # 认证失败不能把原始密文回传到 UI/业务层。
+        raw.title = raw.title[:-2] + ("00" if raw.title[-2:] != "00" else "01")
+        session.commit()
+
+    tampered = store_encrypted.get_by_id(note.id)
+    assert tampered is not None
+    assert tampered.title == "[加密内容不可用]"
+    assert tampered.body == body
 
 
 def test_list_all_returns_decrypted_titles(store_encrypted: NoteStore) -> None:
@@ -207,7 +219,7 @@ def _seed_plaintext_note(
 def test_stub_cipher_reads_legacy_plaintext_fallback(
     session_factory: Any,
 ) -> None:
-    """撞坑 #65:库内历史明文(无 enc:v1: 前缀)经 Stub cipher 读出应透传原值.
+    """撞坑 #65:库内历史明文(无 enc: 前缀)经 Stub cipher 读出应透传原值.
 
     场景:历史 NoteStore 写入时未启用加密,库内 title/body 仍是明文。
     新 store 实例(默认 Stub cipher)读取时不应误把明文当密文处理。
@@ -236,9 +248,9 @@ def test_stub_cipher_reads_legacy_plaintext_fallback(
 def test_impl_cipher_reads_legacy_plaintext_fallback(
     session_factory: Any,
 ) -> None:
-    """撞坑 #65:Impl cipher 读库内明文(无 enc:v1: 前缀)应透传原值.
+    """撞坑 #65:Impl cipher 读库内明文(无 enc: 前缀)应透传原值.
 
-    关键回归:NotesCipherImpl.decrypt 显式 `startswith("enc:v1:")` 判定
+    关键回归:NotesCipherImpl.decrypt 显式 `startswith("enc:")` 判定
     缺前缀时 return ciphertext(notes_encryption.py:242-244)。此契约被破坏
     则历史数据(明文落库)会被新 store 读坏。
     """

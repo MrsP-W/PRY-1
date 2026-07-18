@@ -11,14 +11,13 @@
       `created_at` 不加密(便于查询)
     - **密钥管理**:沿 Keychain 取密码派生 key;无 Keychain 时降级
       SHA-256 指纹(不加密,只生成密文指纹供审计)
-    - **格式可识别**:加密密文前缀 `enc:v1:`(版本化,沿 v0.2.55
-      contract_version 范本)
+    - **格式可识别**:加密密文前缀 `enc:v2:`(版本化 + Encrypt-then-MAC)
     - **零依赖**:不依赖 cryptography 第三方库,纯 hashlib + os.urandom
 
 边界(沿撞坑 #1 + 撞坑 #64 + 撞坑 #65):
     - 加密失败 → 返回明文 + warning 标记(不阻塞业务,沿 v0.2.53.7
       opt-in 4 阶段范本)
-    - 解密失败 → 返回 None(便于上层 fallback 到明文)
+    - 密文认证或解密失败 → 返回 None(上层必须 fail-closed,不能回传密文)
     - 同一字段 + 同一 key + 同一明文 → 每次密文不同(随机 IV)
     - 同一字段 + 同一 key + 同一密文 → 解密必得到原明文(确定)
 
@@ -41,7 +40,9 @@ from dataclasses import dataclass
 from typing import Final, Protocol
 
 # 加密密文前缀(版本化,便于向后兼容;沿 v0.2.55 contract_version 范本)
+_CIPHERTEXT_PREFIX: Final = "enc:"
 _CIPHERTEXT_PREFIX_V1: Final = "enc:v1:"
+_CIPHERTEXT_PREFIX_V2: Final = "enc:v2:"
 
 # 指纹长度(沿 core/fingerprint.py:_FINGERPRINT_LENGTH=32 chars = 128 bit)
 _FINGERPRINT_LENGTH: Final = 32
@@ -55,6 +56,11 @@ _MIN_MASTER_KEY_LENGTH: Final = 16
 # 加密 IV 长度(16 字节 = 128 bit,AES block size)
 _IV_LENGTH: Final = 16
 
+# Encrypt-then-MAC 认证标签长度(SHA-256 full digest)
+_AUTH_TAG_LENGTH: Final = hashlib.sha256().digest_size
+_AUTH_KEY_CONTEXT: Final = b"my-ai-employee.notes/v2/auth-key\x00"
+_AUTH_TAG_CONTEXT: Final = b"my-ai-employee.notes/v2/auth-tag\x00"
+
 # Keychain 服务名(沿撞坑 #64 公共 API 一致性)
 KEYCHAIN_SERVICE_NOTES: Final = "com.myaiemployee.notes"
 
@@ -64,6 +70,11 @@ ENABLE_NOTES_ENCRYPTION_ENV: Final = "ENABLE_NOTES_ENCRYPTION"
 # 默认 Stub 标识(沿撞坑 #65 opt-in 4 阶段范本)
 _STUB_NAME: Final = "stub"
 _IMPL_NAME: Final = "aes-xor-256"
+
+
+def is_notes_ciphertext(value: object) -> bool:
+    """判断值是否声明为 Notes 密文，供读取层避免把失效密文当作明文。"""
+    return isinstance(value, str) and value.startswith(_CIPHERTEXT_PREFIX)
 
 
 # ===== 字段配置 dataclass =====
@@ -99,10 +110,10 @@ class NotesCipher(Protocol):
 
     3 方法契约:
         - encrypt(plaintext, field) -> str
-            - plaintext 为明文 → 返回密文(前缀 `enc:v1:`)或明文(Stub 模式)
-            - field 描述字段名 / max_length(超长抛 ValueError)
+        - plaintext 为明文 → 返回认证密文(前缀 `enc:v2:`)或明文(Stub 模式)
+        - field 描述字段名 / max_length(超长抛 ValueError)
         - decrypt(ciphertext, field) -> str | None
-            - ciphertext 含前缀 → 解密;失败返回 None(不抛异常)
+            - ciphertext 含前缀 → 验签后解密;失败返回 None(不抛异常)
             - ciphertext 不含前缀 → 直接返回(明文 fallback)
         - fingerprint(plaintext) -> str
             - plaintext → SHA-256 截 32 chars(128 bit)
@@ -128,8 +139,8 @@ class NotesCipherStub:
 
     边界(沿撞坑 #65 opt-in 4 阶段):
         - 默认启用(测试零依赖)
-        - encrypt 直接返回明文(无 `enc:v1:` 前缀)
-        - decrypt 直接返回 ciphertext(无前缀判定)
+        - encrypt 直接返回明文(无 `enc:` 前缀)
+        - decrypt 只透传普通明文;声明为密文时返回 None,避免密文泄露到 UI
         - fingerprint 走 SHA-256(沿 core/fingerprint.py 范本)
         - is_runtime_impl = False(沿 v0.2.53.30 严判)
     """
@@ -148,8 +159,10 @@ class NotesCipherStub:
         return plaintext
 
     def decrypt(self, ciphertext: str, field: NotesFieldCipher) -> str | None:
-        """默认无加密 — 直接返回 ciphertext(明文)."""
+        """默认无加密 — 仅透传普通明文，不将密文伪装成明文。"""
         if not isinstance(ciphertext, str):
+            return None
+        if is_notes_ciphertext(ciphertext):
             return None
         return ciphertext
 
@@ -169,7 +182,8 @@ class NotesCipherImpl:
         - 仅在 `ENABLE_NOTES_ENCRYPTION=1` 时注入
         - key 派生:PBKDF2-like(HMAC-SHA256 链,迭代 10000 次)
         - 加密:key ⊕ IV ⊕ plaintext(简单 XOR 流密码,演示用)
-        - 密文格式:`enc:v1:{iv_hex}{ciphertext_hex}`
+        - 完整性:Encrypt-then-MAC，认证字段名 + salt + IV + ciphertext
+        - 密文格式:`enc:v2:{salt|iv|ciphertext|tag}`(均为 hex)
         - 随机 IV:每次 encrypt 用 `os.urandom(16)` 生成新 IV
         - 解密:从密文抽取 IV,与 key XOR 还原明文
         - fingerprint:SHA-256 截 32 chars(与 Stub 一致)
@@ -202,15 +216,26 @@ class NotesCipherImpl:
             h = hmac.new(self.master_key, h.digest(), hashlib.sha256)
         return h.digest()[:_DERIVED_KEY_LENGTH]
 
+    def _authentication_tag(self, field_name: str, payload: bytes) -> bytes:
+        """计算 v2 Encrypt-then-MAC 标签，绑定字段与完整密文载荷。"""
+        field_bytes = field_name.encode("utf-8")
+        auth_key = hmac.new(
+            self.master_key,
+            _AUTH_KEY_CONTEXT + field_bytes,
+            hashlib.sha256,
+        ).digest()
+        tag_input = _AUTH_TAG_CONTEXT + len(field_bytes).to_bytes(4, "big") + field_bytes + payload
+        return hmac.new(auth_key, tag_input, hashlib.sha256).digest()
+
     def encrypt(self, plaintext: str, field: NotesFieldCipher) -> str:
-        """加密明文 → 密文 `enc:v1:{iv_hex}{ciphertext_hex}`.
+        """加密明文 → 认证密文 `enc:v2:{salt|iv|ciphertext|tag}`.
 
         Args:
             plaintext: 明文(必须 str)
             field: 字段配置(encrypt=False 时直接返回明文)
 
         Returns:
-            密文字符串(前缀 `enc:v1:`)或明文(Stub 路径)
+            密文字符串(前缀 `enc:v2:`)或明文(Stub 路径)
 
         Raises:
             ValueError: plaintext 非 str 或超长
@@ -234,14 +259,16 @@ class NotesCipherImpl:
             b ^ field_key[i % _DERIVED_KEY_LENGTH] ^ iv[i % _IV_LENGTH]
             for i, b in enumerate(plaintext_bytes)
         )
-        # 4. 拼接 IV + ciphertext(IV 用于解密时还原 key stream)
-        return _CIPHERTEXT_PREFIX_V1 + (salt + iv + ciphertext_bytes).hex()
+        # 4. 认证完整载荷，字段名也纳入 MAC，防 title/body 交换。
+        payload = salt + iv + ciphertext_bytes
+        tag = self._authentication_tag(field.field_name, payload)
+        return _CIPHERTEXT_PREFIX_V2 + (payload + tag).hex()
 
     def decrypt(self, ciphertext: str, field: NotesFieldCipher) -> str | None:
         """解密密文 → 明文;失败返回 None(不抛异常,沿撞坑 #65 范本).
 
         Args:
-            ciphertext: 密文(可能含/不含 `enc:v1:` 前缀)
+            ciphertext: 密文(可能含/不含 `enc:v2:` 前缀)
             field: 字段配置(用于派生 key)
 
         Returns:
@@ -249,23 +276,32 @@ class NotesCipherImpl:
         """
         if not isinstance(ciphertext, str):
             return None
-        # 不含前缀 → 视为明文 fallback(沿撞坑 #65 兼容旧数据)
-        if not ciphertext.startswith(_CIPHERTEXT_PREFIX_V1):
+        # 不含 enc: 前缀 → 视为 legacy 明文 fallback(沿撞坑 #65 兼容旧数据)。
+        if not is_notes_ciphertext(ciphertext):
             return ciphertext
+        # v1 缺少认证标签；生产真加密尚未启用，必须 fail-closed，不能将
+        # 未认证字节解码为伪明文。未知版本同样拒绝，避免版本降级。
+        if not ciphertext.startswith(_CIPHERTEXT_PREFIX_V2):
+            return None
         try:
-            raw = bytes.fromhex(ciphertext[len(_CIPHERTEXT_PREFIX_V1) :])
-            if len(raw) < _IV_LENGTH * 2:
+            raw = bytes.fromhex(ciphertext[len(_CIPHERTEXT_PREFIX_V2) :])
+            if len(raw) < _IV_LENGTH * 2 + _AUTH_TAG_LENGTH:
                 return None  # 格式错
-            salt = raw[:_IV_LENGTH]
-            iv = raw[_IV_LENGTH : _IV_LENGTH * 2]
-            ciphertext_bytes = raw[_IV_LENGTH * 2 :]
+            payload = raw[:-_AUTH_TAG_LENGTH]
+            tag = raw[-_AUTH_TAG_LENGTH:]
+            expected_tag = self._authentication_tag(field.field_name, payload)
+            if not hmac.compare_digest(tag, expected_tag):
+                return None
+            salt = payload[:_IV_LENGTH]
+            iv = payload[_IV_LENGTH : _IV_LENGTH * 2]
+            ciphertext_bytes = payload[_IV_LENGTH * 2 :]
             field_key = self._derive_field_key(field.field_name, salt)
             plaintext_bytes = bytes(
                 b ^ field_key[i % _DERIVED_KEY_LENGTH] ^ iv[i % _IV_LENGTH]
                 for i, b in enumerate(ciphertext_bytes)
             )
-            return plaintext_bytes.decode("utf-8", errors="replace")
-        except (ValueError, UnicodeDecodeError):
+            return plaintext_bytes.decode("utf-8")
+        except (OverflowError, ValueError, UnicodeDecodeError):
             return None
 
     def fingerprint(self, plaintext: str) -> str:
@@ -389,6 +425,7 @@ __all__ = [
     "build_notes_cipher",
     "get_default_stub",
     "is_notes_encryption_enabled",
+    "is_notes_ciphertext",
     # Day 10 / Phase 1.1 — Keychain 接线工厂
     "load_notes_master_key",
 ]

@@ -64,6 +64,7 @@ from my_ai_employee.core.notes_encryption import (
     NotesCipher,
     NotesFieldCipher,
     build_notes_cipher,
+    is_notes_ciphertext,
     load_notes_master_key,
 )
 
@@ -288,12 +289,14 @@ class NoteStore:
         return self._cipher.encrypt(plaintext, self._field_cipher(field_name))
 
     def _decrypt_note(self, note: Note) -> Note:
-        """读出后解密 title/body 供 UI/业务层使用(库内仍可为 enc:v1:)."""
+        """读出后解密 title/body；认证失败时不向 UI 暴露原始密文。"""
         for field_name in ("title", "body"):
             raw = getattr(note, field_name)
             decrypted = self._cipher.decrypt(raw, self._field_cipher(field_name))
             if decrypted is not None:
                 setattr(note, field_name, decrypted)
+            elif is_notes_ciphertext(raw):
+                setattr(note, field_name, "[加密内容不可用]")
         return note
 
     def _decrypt_notes(self, notes: list[Note]) -> list[Note]:

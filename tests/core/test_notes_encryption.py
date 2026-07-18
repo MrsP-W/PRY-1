@@ -1,8 +1,8 @@
 """v0.2.57 / Day 8 候选 D — Notes 加密增强测试.
 
 本测试覆盖:
-    - NotesCipherStub 默认明文透传(无 `enc:v1:` 前缀)
-    - NotesCipherImpl 加密 + 解密 round-trip(密文前缀 `enc:v1:`)
+    - NotesCipherStub 默认明文透传(无 `enc:` 前缀)
+    - NotesCipherImpl 加密 + 解密 round-trip(认证密文前缀 `enc:v2:`)
     - 同一字段 + 同一 key + 同一明文 → 密文每次不同(随机 IV)
     - 同一字段 + 同一 key + 同一密文 → 解密必得到原明文
     - 解密失败 → 返回 None(不抛异常)
@@ -24,6 +24,7 @@ import pytest
 
 from my_ai_employee.core.notes_encryption import (
     _CIPHERTEXT_PREFIX_V1,
+    _CIPHERTEXT_PREFIX_V2,
     _FINGERPRINT_LENGTH,
     DEFAULT_NOTES_FIELDS,
     ENABLE_NOTES_ENCRYPTION_ENV,
@@ -53,14 +54,15 @@ class TestNotesCipherStub:
         field = NotesFieldCipher(field_name="body")
         result = stub.encrypt("hello world", field)
         assert result == "hello world"
-        assert not result.startswith(_CIPHERTEXT_PREFIX_V1)
+        assert not result.startswith("enc:")
 
     def test_stub_decrypt_returns_ciphertext(self) -> None:
-        """Stub 解密 = ciphertext 透传(明文 fallback)."""
+        """Stub 只透传明文；声明为密文的值必须 fail-closed。"""
         stub = get_default_stub()
         field = NotesFieldCipher(field_name="body")
         result = stub.decrypt("hello world", field)
         assert result == "hello world"
+        assert stub.decrypt(_CIPHERTEXT_PREFIX_V2 + "00", field) is None
 
     def test_stub_fingerprint_32_chars(self) -> None:
         """Stub 指纹 = SHA-256 截 32 chars(沿 core/fingerprint.py 范本)."""
@@ -118,10 +120,10 @@ class TestNotesCipherImpl:
         assert minimum_key_impl.decrypt(ciphertext, field) == "minimum-key-boundary"
 
     def test_impl_encrypt_has_prefix(self, impl: NotesCipherImpl) -> None:
-        """Impl 加密结果必须含 `enc:v1:` 前缀(版本化)."""
+        """Impl 加密结果必须含认证的 `enc:v2:` 前缀(版本化)."""
         field = NotesFieldCipher(field_name="body")
         result = impl.encrypt("hello world", field)
-        assert result.startswith(_CIPHERTEXT_PREFIX_V1)
+        assert result.startswith(_CIPHERTEXT_PREFIX_V2)
 
     def test_impl_decrypt_round_trip(self, impl: NotesCipherImpl) -> None:
         """加密 → 解密 = 原文(round-trip 不变)."""
@@ -143,20 +145,37 @@ class TestNotesCipherImpl:
         assert impl.decrypt(c2, field) == plaintext
 
     def test_impl_decrypt_plaintext_fallback(self, impl: NotesCipherImpl) -> None:
-        """不含 `enc:v1:` 前缀 → 视为明文 fallback(撞坑 #65 兼容旧数据)."""
+        """不含 `enc:` 前缀 → 视为明文 fallback(撞坑 #65 兼容旧数据)."""
         field = NotesFieldCipher(field_name="body")
         # 旧数据:无前缀,直接返回
         assert impl.decrypt("旧数据明文", field) == "旧数据明文"
 
-    def test_impl_decrypt_invalid_returns_none(self, impl: NotesCipherImpl) -> None:
-        """解密失败(格式错)→ 返回 None,不抛异常."""
+    def test_impl_decrypt_invalid_or_unauthenticated_returns_none(
+        self, impl: NotesCipherImpl
+    ) -> None:
+        """格式错、篡改、错字段或错密钥均不得返回伪明文。"""
         field = NotesFieldCipher(field_name="body")
         # 前缀对,但 hex 长度不够
-        result = impl.decrypt(_CIPHERTEXT_PREFIX_V1 + "abcd", field)
+        result = impl.decrypt(_CIPHERTEXT_PREFIX_V2 + "abcd", field)
         assert result is None
         # 非法 hex
-        result = impl.decrypt(_CIPHERTEXT_PREFIX_V1 + "zzzz", field)
+        result = impl.decrypt(_CIPHERTEXT_PREFIX_V2 + "zzzz", field)
         assert result is None
+        # 未认证 v1 与未知版本均不能被降级为明文。
+        assert impl.decrypt(_CIPHERTEXT_PREFIX_V1 + "00" * 64, field) is None
+        assert impl.decrypt("enc:v3:" + "00" * 64, field) is None
+
+        ciphertext = impl.encrypt("authenticated payload", field)
+        raw = bytearray(bytes.fromhex(ciphertext[len(_CIPHERTEXT_PREFIX_V2) :]))
+        # 覆盖 salt、IV、ciphertext 与 tag 四类篡改位置。
+        for index in (0, 16, 32, len(raw) - 1):
+            tampered = bytearray(raw)
+            tampered[index] ^= 1
+            assert impl.decrypt(_CIPHERTEXT_PREFIX_V2 + tampered.hex(), field) is None
+
+        assert impl.decrypt(ciphertext, NotesFieldCipher(field_name="title")) is None
+        wrong_key_impl = NotesCipherImpl(master_key=b"y" * 32)
+        assert wrong_key_impl.decrypt(ciphertext, field) is None
 
     def test_impl_field_key_isolation(self, impl: NotesCipherImpl) -> None:
         """不同字段的密文相互独立(派生 key 不同)."""
@@ -165,9 +184,9 @@ class TestNotesCipherImpl:
         c_body = impl.encrypt(plaintext, NotesFieldCipher(field_name="body"))
         c_title = impl.encrypt(plaintext, NotesFieldCipher(field_name="title"))
         assert c_body != c_title
-        # 用错误字段解密失败
-        assert impl.decrypt(c_body, NotesFieldCipher(field_name="title")) != plaintext
-        assert impl.decrypt(c_title, NotesFieldCipher(field_name="body")) != plaintext
+        # 用错误字段解密必须认证失败，而非返回伪明文。
+        assert impl.decrypt(c_body, NotesFieldCipher(field_name="title")) is None
+        assert impl.decrypt(c_title, NotesFieldCipher(field_name="body")) is None
         # 用正确字段解密成功
         assert impl.decrypt(c_body, NotesFieldCipher(field_name="body")) == plaintext
         assert impl.decrypt(c_title, NotesFieldCipher(field_name="title")) == plaintext

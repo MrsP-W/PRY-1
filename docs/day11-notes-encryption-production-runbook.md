@@ -1,8 +1,9 @@
-# Day 11 — Notes 真加密生产启用 runbook (docs-only · 2026-07-02)
+# Day 11 — Notes 真加密生产启用 runbook (docs-only · v2 认证格式)
 
-> **状态**:**docs-only · 不启用生产**。本文档是 8/1 后用户明确同意启用 Notes 真加密生产链路前的必备 checklist。
+> **状态**:**docs-only · 不启用生产**。本文档是用户明确同意启用 Notes 真加密生产链路前的必备 checklist。
 > **承接**:Day 10 Phase 1.1 Keychain 接线(`4b678f6`)+ Phase 1.2 fallback 集成测试(`0143717`)+ Phase 3.5 spike(`3c9515b`)+ Phase 4 9 门全绿(`429a7a1`)。
 > **红线全维持**:`ENABLE_NOTES_ENCRYPTION=1` 默认 UNSET · 不写 shell profile · 不动生产主库 · 90 封 SMTP 跳过 · tag 不动。
+> **2026-07-18 安全校正**:新写入统一为认证 `enc:v2:`；旧 `enc:v1:` 无认证标签，读取层 fail-closed，不自动迁移或降级为明文。
 
 ---
 
@@ -11,7 +12,7 @@
 | # | 门 | 验证命令 | 期望输出 |
 |---|----|---------|---------|
 | **1.1** | Keychain 已有 notes master key | `security find-generic-password -s "com.my-ai-employee.notes-encryption" -a "notes_master_key" -w` | 输出 64 字符 hex(32 字节随机) |
-| **1.2** | 当前生产主库全部为 legacy 明文或已知混合 | `sqlite3 ~/Library/Application\ Support/my-ai-employee/data.db "SELECT COUNT(*) FROM notes WHERE title NOT LIKE 'enc:v1:%' AND body NOT LIKE 'enc:v1:%'"` | 输出 = 笔记总数(全部明文) |
+| **1.2** | 当前生产主库无 `enc:v1:` / `enc:v2:` 密文，或已完成受信单条迁移 | `sqlite3 ~/Library/Application\ Support/my-ai-employee/data.db "SELECT COUNT(*) FROM notes WHERE title LIKE 'enc:v1:%' OR body LIKE 'enc:v1:%' OR title LIKE 'enc:v2:%' OR body LIKE 'enc:v2:%'"` | 新启用前输出 `0` |
 | **1.3** | `ENABLE_NOTES_ENCRYPTION=1` 未写 shell profile | `grep -r "ENABLE_NOTES_ENCRYPTION" ~/.zshrc ~/.bash_profile ~/.zprofile 2>/dev/null` | 无输出 |
 | **1.4** | `ENABLE_PATH_4_WRITE=1` 未设置 | `echo "ENABLE_PATH_4_WRITE=${ENABLE_PATH_4_WRITE:-UNSET}"` | 输出 `UNSET` |
 | **1.5** | 9/9 质量门全绿 | `make ci` | 全部绿 · 沿用 Day 11+12 baseline 2791 / 1 skipped / 89.09% / 248 mypy / **254 MD**(2026-07-03 Day 12 checkpoint 补齐后 baseline 升 253→254) |
@@ -54,13 +55,13 @@ make dashboard    # Dashboard(若已实现启动入口)
 echo "Day 11 opt-in 验证笔记 $(date)" | pbcopy
 ```
 
-期望:菜单栏 → Notes → 新笔记入库,title/body 以 `enc:v1:` 开头(SELECT 库内前缀验证)。
+期望:菜单栏 → Notes → 新笔记入库,title/body 以认证 `enc:v2:` 开头(SELECT 库内前缀验证)。
 
 ### Step 5 · 旧笔记读取验证(混合模式)
 
 - 打开菜单栏 → 笔记 → 待确认列表
 - 期望:legacy 明文笔记正常显示(明文存储,不需要解密)
-- 期望:新写入的加密笔记正常显示(透明解密,撞坑 #65 短路 fallback 沿用)
+- 期望:新写入的认证密文正常显示(透明验签后解密)
 
 ---
 
@@ -68,23 +69,26 @@ echo "Day 11 opt-in 验证笔记 $(date)" | pbcopy
 
 ### 3.1 读取层透明解密
 
-`NotesCipherImpl.decrypt` 严判 `startswith("enc:v1:")`:
+`NotesCipherImpl.decrypt` 严判 `startswith("enc:v2:")`:
 
-- ✅ `enc:v1:<hex>` → AES-GCM 解密 + 验签 → 返回明文
+- ✅ `enc:v2:<hex>` → HMAC-SHA256 验签通过后才解密 → 返回明文
 - ✅ 任意 legacy 明文 → 短路返回(不报错,不二次加密)
+- ❌ `enc:v1:`、未知 `enc:vN:`、短包、畸形 hex、错误字段/密钥或任意篡改 → 返回 `None`；`NoteStore` 显示 `[加密内容不可用]`，绝不回传原始密文
+
+> 当前 v2 解决完整性与错误解码问题；底层仍为既有 XOR 流实现，**不是 AEAD**。生产启用前仍需完成独立的 AES-GCM/ChaCha20-Poly1305 评估。
 
 ### 3.2 写入层 opt-in 门控
 
 `NoteStore.insert(..., encrypted=False)` 默认值 + opt-in 时 `NoteStore(cipher=NotesCipherImpl)`:
 
 - ✅ opt-in UNSET → `encrypted=False`(明文写入,沿用历史)
-- ✅ opt-in SET → `cipher.encrypt()` 透明加密(沿 `enc:v1:` 前缀)
+- ✅ opt-in SET → `cipher.encrypt()` 透明生成认证 `enc:v2:` 密文
 
 ### 3.3 库内混合状态可观测
 
 ```sql
 SELECT
-  CASE WHEN title LIKE 'enc:v1:%' THEN 'encrypted' ELSE 'plaintext' END AS status,
+  CASE WHEN title LIKE 'enc:v2:%' THEN 'encrypted' ELSE 'plaintext' END AS status,
   COUNT(*) AS cnt
 FROM notes
 GROUP BY status;
@@ -110,7 +114,7 @@ GROUP BY status;
 # 步骤:
 # 1) SELECT 当前 note(明文)
 # 2) UPDATE title/body = cipher.encrypt(title/body)
-# 3) SELECT 验证前缀 enc:v1:
+# 3) SELECT 验证前缀 enc:v2:
 # 4) SELECT 验证解密 round-trip
 # 5) AuditRecord 落档(撞坑 #82 沿用)
 ```
@@ -138,15 +142,16 @@ unset ENABLE_NOTES_ENCRYPTION
 make dev
 ```
 
-### Step 3 · 验证 legacy 仍可读
+### Step 3 · 验证 legacy 仍可读且认证密文不降级
 
 - 打开菜单栏 → 笔记 → 列表正常显示
 - 打开 Dashboard → /api/notes/pending 正常响应
-- 新写入的 `enc:v1:` 笔记通过 `startswith` 短路返回(明文视图)
+- 旧明文笔记仍正常显示
+- 已写入的 `enc:v2:` 密文在缺 Keychain/关闭 opt-in 时显示 `[加密内容不可用]`，不会被误作明文；恢复正确 Keychain + 临时 opt-in 后才可解密
 
 **回滚后状态**:
 - opt-in 关闭 → 新写入明文(legacy 模式)
-- 已写入的 `enc:v1:` 笔记 → 通过短路 fallback 仍可读(撞坑 #65 沿用)
+- 已写入的 `enc:v2:` 笔记 → 维持密文，需正确 Keychain + 临时 opt-in 才可读
 - Keychain 密钥不动(下次 opt-in 仍可复用)
 
 ---
@@ -180,7 +185,7 @@ make dev
 |------------|-----------|
 | `scripts/spike_day10_notes_encryption_dryrun.py` | ✅ 复用为 §2 Step 2 dry-run 复核 |
 | `ops/day10-notes-encryption-dryrun-closure.md` | ✅ 引用为「前置链路收口证据」 |
-| `core/notes_encryption.py` `ENABLE_NOTES_ENCRYPTION_ENV` | ✅ 沿用 §2 Step 1 环境变量名 |
+| `core/notes_encryption.py` `ENABLE_NOTES_ENCRYPTION_ENV` | ✅ 沿用 §2 Step 1 环境变量名 + `enc:v2:` 认证格式 |
 | `core/keychain.py` `KEYCHAIN_SERVICE_NOTES` | ✅ 沿用 §1.1 Keychain 服务名 |
 | 撞坑 #65 短路 fallback | ✅ 沿用 §3.1 读取层透明解密 |
 | 撞坑 #50 baseline 漂移防御 | ✅ 沿用 §1.5 质量门验证 |
@@ -208,6 +213,6 @@ make dev
 
 ---
 
-**最后更新**:2026-07-02(Day 10 收口后 docs-only 启动)
-**状态**:📘 docs-only · 不启用生产 · 等待用户决策
+**最后更新**:2026-07-18(认证格式 v2 安全校正)
+**状态**:📘 docs-only · 不启用生产 · 等待用户决策与 AEAD 评估
 **维护者**:Mr-PRY

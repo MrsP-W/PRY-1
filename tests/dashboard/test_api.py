@@ -578,7 +578,7 @@ def dashboard_ctx_with_real_note_confirm() -> Any:
     # 直接 SQLAlchemy 写入 needs_confirm=1 的 note(模拟上游 sync 已就位)
     master = b"z" * 32
     with sf() as session:
-        # 写 2 条全明文 + 1 条手动 enc:v1: 密文,验证混合场景
+        # 写 2 条全明文 + 1 条手动 enc:v2: 密文,验证混合场景
         session.add(
             Note(
                 apple_note_id="x-coredata://ICNote/DASH-LEGACY1",
@@ -594,13 +594,13 @@ def dashboard_ctx_with_real_note_confirm() -> Any:
                 candidate_match_id=None,
             )
         )
-        # 手动预加密(用相同 master_key + NotesCipherImpl 写 enc:v1: ... 形式)
+        # 手动预加密(用相同 master_key + NotesCipherImpl 写 enc:v2: ... 形式)
         from my_ai_employee.core.notes_encryption import DEFAULT_NOTES_FIELDS
 
         impl_for_seed = NotesCipherImpl(master_key=master)
         title_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "title")
         body_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "body")
-        # impl.encrypt 返回的密文**已带 enc:v1: 前缀**(notes_encryption.py:196)
+        # impl.encrypt 返回的密文**已带 enc:v2: 前缀**。
         enc_title = impl_for_seed.encrypt("密文标题 B", title_field)
         enc_body = impl_for_seed.encrypt("密文正文 B", body_field)
         session.add(
@@ -649,8 +649,8 @@ def test_build_notes_pending_payload_decrypts_real_encrypted_notes(
     dashboard_ctx_with_real_note_confirm: Any,
 ) -> None:
     """真实 NoteStore(Impl)→ NoteConfirmServiceImpl → build_notes_pending_payload:
-    库内密文(enc:v1:)和明文混存,items[].title 全部出库为明文(撞坑 #65 兼容)."""
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V1
+    库内密文(enc:v2:)和明文混存,items[].title 全部出库为明文(撞坑 #65 兼容)."""
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
     from my_ai_employee.dashboard.responses import build_notes_pending_payload
 
     ctx, store, _master = dashboard_ctx_with_real_note_confirm
@@ -676,11 +676,11 @@ def test_build_notes_pending_payload_decrypts_real_encrypted_notes(
         assert "cipher_prefix" not in item
         assert "encrypted_title" not in item
 
-    # 3) 全部 title 是明文(无 enc:v1: 前缀)
+    # 3) 全部 title 是明文(无 enc:v2: 前缀)
     titles = {item["title"] for item in payload["items"]}
     assert titles == {"明文标题 A", "密文标题 B", "明文标题 C"}
     for item in payload["items"]:
-        assert not item["title"].startswith(_CIPHERTEXT_PREFIX_V1)
+        assert not item["title"].startswith(_CIPHERTEXT_PREFIX_V2)
 
     # 4) folder 字段同样按密文回退(明文 A/C=Notes,密文 B=Work)
     folders = {item["folder"] for item in payload["items"]}

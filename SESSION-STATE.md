@@ -31,6 +31,7 @@
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
 | 核心质量门 | **3032 passed / 1 skipped** · **90.23%** coverage · mypy --strict 0 errors(**263 files**) · MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 → 290) |
+| 2026-07-18 NotesCipher 安全收口 | 新密文为认证 `enc:v2:`，字段/密钥错误或任意篡改均 fail-closed；读取层不再回传原始密文。真加密生产仍关闭，旧未认证 `enc:v1:` 必须从受信明文按单条流程重写；XOR 方案的 AEAD 替换保留为 P1。 |
 | 2026-07-11 状态纠正 | **优先于文首“#97 NEW”历史表述**：#97 已采用 `NullPool` 修复并补真实 HTTP 并发回归，#98 legacy retirement 已收口；只读核验发现 menu-bar 于 07:23 重启，P0-4 的 24h 零重启观察需重新计时。本自动化不 push、不打 tag、不做真实外部写入。 |
 | v0.2.1 release tag | ✅ **已落地(`71b4602` annotated · 撞坑 #60 反转 · 2026-07-01)** |
 | 真账单 spike | ✅ **W3 真账单全量 49 笔 spike 跑通**(2026-06-24 · `parsed=49 inserted=24 categorized=24 duplicates=25 needs_confirm=0 failed=0 candidate_count=0 version=2027` · 5 重防误发全过 · 选项 B 路径 · 阶梯 5 阶段范本 1→5→10→25→49 全部收口 · 撞坑 #53 v2.0 累计公式 + #54 选项 B 范本)|
