@@ -1,7 +1,7 @@
 """D9.3+D9.5 — NotesMenuBarApp(rumps 菜单栏 UI + ⌥⌘N 全局快捷键).
 
 承接 docs/v0.1-launch-plan.md §D9.3 + §D9.5 + v0.2.53 P1 Codex 信息架构:
-    - 菜单栏 title: 🧑‍💼 我的AI员工 (N),N = 今日待处理合计(邮件草稿 + Notes待确认 + 财务异常)
+    - 菜单栏 title: ◈ / ◈ N,N = 今日待处理合计(邮件草稿 + Notes待确认 + 财务异常)
     - P1 菜单结构(沿 docs/v0.2.53-codex-style-ui-design-2026-06-25.md §8.2):
         今日待处理 / 邮件草稿 / Notes待确认 / 财务异常 / 快捷捕获 / 打开工作台 / 系统健康
     - 保留 D9.3 能力项: 立即同步 / 打开 Notes / 授权引导 / 退出 / 📥 确认第 1 条
@@ -81,8 +81,8 @@ _SYNC_TIMEOUT_SECONDS: int = 120
 # macOS 隐私与安全性 URL scheme(打开 系统设置→自动化 授权)
 _PRIVACY_URL: str = "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
 
-# 菜单栏 title 模板(v0.2.53 P1: 今日待处理合计)
-_TITLE_TEMPLATE: str = "🧑‍💼 我的AI员工 ({count})"
+# 菜单栏紧凑标记:无待办只显示单色图标,有待办时追加数字
+_TITLE_ICON: str = "◈"
 
 # P1 菜单 badge 前缀(沿 _update_menu_badge 范本,decorator 绑前缀不含计数)
 _MENU_TODAY_PENDING: str = "📋 今日待处理"
@@ -370,15 +370,15 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         return self._capture_service
 
     def _format_title(self, count: int) -> str:
-        """格式化菜单栏 title(今日待处理合计 → 表情 + 数字).
+        """格式化紧凑菜单栏 title(无待办隐藏数字,有待办保留提醒).
 
         Args:
             count: 今日待处理合计(邮件草稿 + Notes待确认 + 财务异常)
 
         Returns:
-            "🧑‍💼 我的AI员工 (N)" 格式字符串
+            "◈" 或 "◈ N" 格式字符串
         """
-        return _TITLE_TEMPLATE.format(count=count)
+        return _TITLE_ICON if count <= 0 else f"{_TITLE_ICON} {count}"
 
     def _safe_pending_count(self, getter: Any) -> int:
         """单项待办计数(失败 → 0,不崩菜单栏)."""

@@ -235,11 +235,11 @@ def test_app_invalid_service_raises(fake_rumps: None) -> None:
 
 
 def test_app_title_format_initial(fake_rumps: None) -> None:
-    """D9.3:T4 / v0.2.53 P1 title 格式 "🧑‍💼 我的AI员工 (N)"."""
+    """D9.3:T4 / v0.2.53 P1 无待办时只显示紧凑单色图标."""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
-    assert app.title == "🧑‍💼 我的AI员工 (0)"
+    assert app.title == "◈"
 
 
 # ===== T5. 4 菜单项注册 =====
@@ -835,7 +835,7 @@ def test_app_title_reflects_pending_total(fake_rumps: None) -> None:
         note_confirm_service=_ConfirmSvc(),
         outbox_draft_service=_DraftSvc(),
     )
-    assert app.title == "🧑‍💼 我的AI员工 (6)"
+    assert app.title == "◈ 6"
 
 
 def test_on_open_dashboard_subprocess(
