@@ -110,6 +110,13 @@ class TestNotesCipherImpl:
         assert impl.is_runtime_impl is True
         assert impl.name == "aes-xor-256"
 
+    def test_impl_accepts_minimum_length_master_key(self) -> None:
+        """恰好 16 bytes 的合法主密钥可直构并完成加解密回环。"""
+        minimum_key_impl = NotesCipherImpl(master_key=b"k" * 16)
+        field = NotesFieldCipher(field_name="body")
+        ciphertext = minimum_key_impl.encrypt("minimum-key-boundary", field)
+        assert minimum_key_impl.decrypt(ciphertext, field) == "minimum-key-boundary"
+
     def test_impl_encrypt_has_prefix(self, impl: NotesCipherImpl) -> None:
         """Impl 加密结果必须含 `enc:v1:` 前缀(版本化)."""
         field = NotesFieldCipher(field_name="body")
