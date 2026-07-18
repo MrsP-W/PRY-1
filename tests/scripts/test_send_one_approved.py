@@ -13,6 +13,8 @@
     - 设白名单 + recipient domain 不在内 → 拒
     - 设空白白名单(env="" 或 "  ,  ")→ 视为未设,拒
     - 大小写不敏感(recipient "A@QQ.COM" 匹配白名单 "qq.com")
+    - `--recipient` 只能是一个 envelope 地址；逗号/分号/多 @/换行等
+      多收件人或 header 注入形态必须 fail-closed
 
   P0 审批顺序(撞坑 #85):
     - 收件人不匹配时拒批,不写 APPROVED
@@ -140,6 +142,28 @@ class TestPitfall85Layer3DomainWhitelist:
         err = _validate_gate(confirm=_CONFIRM_PHRASE, recipient="alice@qq.com")
         assert err is None
 
+    @pytest.mark.parametrize(
+        "recipient",
+        [
+            "alice@qq.com,evil@qq.com",
+            "alice@qq.com;evil@qq.com",
+            "alice@@qq.com",
+            "@qq.com",
+            "alice@",
+            "alice @qq.com",
+            "alice@qq.com\r\nBcc: evil@qq.com",
+        ],
+    )
+    def test_gate_rejects_non_single_envelope_recipient(
+        self, monkeypatch: pytest.MonkeyPatch, recipient: str
+    ) -> None:
+        """真实外发门控只接受一个无注入字符的 envelope 地址。"""
+        monkeypatch.setenv("SMTP_REAL_NETWORK", "1")
+        monkeypatch.setenv("SEND_REAL_NETWORK_RECIPIENT_DOMAINS", "qq.com")
+        err = _validate_gate(confirm=_CONFIRM_PHRASE, recipient=recipient)
+        assert err is not None
+        assert "单一" in err
+
     def test_subdomain_not_matched(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """子域名不匹配(mail.qq.com 不在 "qq.com" 白名单).
 
@@ -158,6 +182,21 @@ class TestPitfall85Layer3DomainWhitelist:
 def test_recipient_matches_case_insensitive() -> None:
     assert _recipient_matches("Alice@QQ.COM", "alice@qq.com")
     assert not _recipient_matches("root@systemmail.yunwu.ai", "you@qq.com")
+
+
+@pytest.mark.parametrize(
+    ("outbox_recipient", "whitelist_recipient"),
+    [
+        ("alice@qq.com,evil@qq.com", "alice@qq.com,evil@qq.com"),
+        ("alice@qq.com", "alice@qq.com;evil@qq.com"),
+        ("alice@qq.com\r\nBcc: evil@qq.com", "alice@qq.com"),
+    ],
+)
+def test_recipient_matches_rejects_non_single_envelope_addresses(
+    outbox_recipient: str, whitelist_recipient: str
+) -> None:
+    """审批前的精确匹配也不得接受多收件人或 header 注入形态。"""
+    assert not _recipient_matches(outbox_recipient, whitelist_recipient)
 
 
 def _make_pending_entry(*, recipient: str) -> MagicMock:
@@ -242,3 +281,15 @@ def test_main_approves_only_after_recipient_match(monkeypatch: pytest.MonkeyPatc
     assert kwargs["new_status"] == OutboxStatus.APPROVED.value
     assert kwargs["from_status"] == OutboxStatus.PENDING_SEND.value
     assert kwargs["last_approved_at_ms"] is not None
+
+
+def test_main_rejects_multi_recipient_before_approve(monkeypatch: pytest.MonkeyPatch) -> None:
+    """真实 CLI 边界：多收件人即使尾域白名单命中也不得进入审批。"""
+    pending = _make_pending_entry(recipient="you@qq.com,evil@qq.com")
+    rc, store = _run_main_with_mock_store(
+        monkeypatch,
+        pending=pending,
+        whitelist_recipient="you@qq.com,evil@qq.com",
+    )
+    assert rc == 1
+    store.update_status.assert_not_called()

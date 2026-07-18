@@ -67,9 +67,39 @@ def _parse_whitelist_domains(env_value: str) -> set[str]:
     return {d.strip().lower() for d in env_value.split(",") if d.strip()}
 
 
+def _normalize_single_envelope_recipient(value: object) -> str | None:
+    """规范化一个可安全用于 SMTP envelope 的单一地址。
+
+    真实发信门控不接受 RFC 邮箱列表、显示名或 header 片段；这些形态一旦
+    被 SMTP 客户端再次解析，可能把一个经白名单核验的字符串扩展成多个收件人。
+    仅保留既有的单地址、大小写不敏感和首尾空白兼容语义。
+    """
+    if not isinstance(value, str):
+        return None
+    recipient = value.strip()
+    if not recipient:
+        return None
+    if any(char in recipient for char in (",", ";", "\r", "\n")):
+        return None
+    if any(char.isspace() or not char.isprintable() for char in recipient):
+        return None
+    if recipient.count("@") != 1:
+        return None
+    local_part, domain = recipient.rsplit("@", 1)
+    if not local_part or not domain:
+        return None
+    return recipient.lower()
+
+
 def _recipient_matches(outbox_recipient: str, whitelist_recipient: str) -> bool:
-    """outbox 收件人与 --recipient 白名单是否一致(大小写不敏感)."""
-    return outbox_recipient.strip().lower() == whitelist_recipient.strip().lower()
+    """两个单一 SMTP envelope 地址是否一致(大小写不敏感)。"""
+    normalized_outbox = _normalize_single_envelope_recipient(outbox_recipient)
+    normalized_whitelist = _normalize_single_envelope_recipient(whitelist_recipient)
+    return (
+        normalized_outbox is not None
+        and normalized_whitelist is not None
+        and normalized_outbox == normalized_whitelist
+    )
 
 
 def _validate_gate(*, confirm: str, recipient: str) -> str | None:
@@ -77,8 +107,9 @@ def _validate_gate(*, confirm: str, recipient: str) -> str | None:
         return "须设置 SMTP_REAL_NETWORK=1 才允许真实 SMTP 外发"
     if confirm != _CONFIRM_PHRASE:
         return f"--confirm 必须为 {_CONFIRM_PHRASE!r}"
-    if not recipient or "@" not in recipient:
-        return "--recipient 必填且须含 @"
+    normalized_recipient = _normalize_single_envelope_recipient(recipient)
+    if normalized_recipient is None:
+        return "--recipient 必须是单一有效地址(恰好一个 @，且不能含逗号、分号、换行或内部空白)"
     # D13.x P3 修复(撞坑 #85 Layer 3):domain 白名单 env 门控
     # 默认空 = 拒所有外发(撞坑 #85 暴露后,防 LLM 幻觉陌生 domain)
     whitelist_raw = os.environ.get(_ENV_RECIPIENT_DOMAINS, "")
@@ -90,7 +121,7 @@ def _validate_gate(*, confirm: str, recipient: str) -> str | None:
             f"否则拒所有外发"
         )
     # 提取 recipient 的 domain 并比对
-    recipient_domain = recipient.rsplit("@", 1)[-1].strip().lower()
+    recipient_domain = normalized_recipient.rsplit("@", 1)[1]
     if recipient_domain not in whitelist:
         return (
             f"撞坑 #85 Layer 3 门控: recipient domain {recipient_domain!r} "
