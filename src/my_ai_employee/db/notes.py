@@ -953,10 +953,14 @@ class NoteStore:
         ).fetchall()
 
         # 3. 内存过滤:title 归一化相等(防"星巴克" vs "星巴克咖啡" 误匹配)
+        #    库内 title 可能是 NotesCipherImpl 的认证密文；必须先解密再比较。
+        #    认证失败/不可用密文返回 None 时直接跳过，不能将密文误当作候选标题。
         matched: list[int] = []
         for row in rows:
             row_id = int(row[0])
-            row_title = str(row[1])
+            row_title = self._cipher.decrypt(row[1], self._field_cipher("title"))
+            if row_title is None:
+                continue
             try:
                 row_normalized = _normalize_l3_title(row_title)
             except (ValueError, TypeError):

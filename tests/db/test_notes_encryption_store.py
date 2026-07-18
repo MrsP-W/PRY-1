@@ -175,6 +175,67 @@ def test_list_all_returns_decrypted_titles(store_encrypted: NoteStore) -> None:
     assert notes[0].body == "正文"
 
 
+def test_l3_fuzzy_match_decrypts_encrypted_titles(store_encrypted: NoteStore) -> None:
+    """真实密文 title 在 L3 ±1 天候选查询中须先解密再归一化。"""
+    from datetime import UTC, datetime
+
+    base_ms = int(datetime(2026, 6, 14, 10, tzinfo=UTC).timestamp() * 1000)
+    existing = store_encrypted.insert(
+        apple_note_id="x-coredata://ICNote/ENC-L3-001",
+        folder="Notes",
+        title="星巴克*",
+        body="旧笔记",
+        updated_at_ms=base_ms,
+    )
+
+    candidate = store_encrypted.insert(
+        apple_note_id="x-coredata://ICNote/ENC-L3-002",
+        folder="Notes",
+        title="星巴克",
+        body="新笔记",
+        updated_at_ms=int(datetime(2026, 6, 15, 10, tzinfo=UTC).timestamp() * 1000),
+    )
+
+    assert candidate.needs_confirm == 1
+    assert candidate.candidate_match_id == existing.id
+
+
+def test_l3_fuzzy_match_skips_tampered_encrypted_title(
+    store_encrypted: NoteStore,
+    session_factory: Any,
+) -> None:
+    """认证失败的加密 title 不得参与 L3 候选，保持 fail-closed。"""
+    from datetime import UTC, datetime
+
+    from my_ai_employee.db.notes import Note
+
+    base_ms = int(datetime(2026, 6, 14, 10, tzinfo=UTC).timestamp() * 1000)
+    existing = store_encrypted.insert(
+        apple_note_id="x-coredata://ICNote/ENC-L3-TAMPER-001",
+        folder="Notes",
+        title="篡改候选",
+        body="旧笔记",
+        updated_at_ms=base_ms,
+    )
+    with session_factory() as session:
+        raw = session.get(Note, existing.id)
+        assert raw is not None
+        raw.title = raw.title[:-2] + ("00" if raw.title[-2:] != "00" else "01")
+        tampered_title = raw.title
+        session.commit()
+
+    candidate = store_encrypted.insert(
+        apple_note_id="x-coredata://ICNote/ENC-L3-TAMPER-002",
+        folder="Notes",
+        title=tampered_title,
+        body="新笔记",
+        updated_at_ms=int(datetime(2026, 6, 15, 10, tzinfo=UTC).timestamp() * 1000),
+    )
+
+    assert candidate.needs_confirm == 0
+    assert candidate.candidate_match_id is None
+
+
 # ============================================================
 # Day 10 Phase 1.2 — 旧明文 fallback 集成测试(撞坑 #65 兼容旧数据)
 # 沿 [src/my_ai_employee/core/notes_encryption.py:240-244] Impl.decrypt 注释
@@ -276,6 +337,37 @@ def test_impl_cipher_reads_legacy_plaintext_fallback(
     assert len(matched) == 1
     assert matched[0].title == "Impl 读旧明文"
     assert matched[0].body == "Impl 应透传"
+
+
+def test_l3_fuzzy_match_keeps_legacy_plaintext_title_compatibility(
+    session_factory: Any,
+) -> None:
+    """Impl cipher 的 L3 查询仍须匹配直接落库的旧明文 title。"""
+    from datetime import UTC, datetime
+
+    from my_ai_employee.core.notes_encryption import NotesCipherImpl
+    from my_ai_employee.db.notes import NoteStore
+
+    base_ms = int(datetime(2026, 6, 14, 10, tzinfo=UTC).timestamp() * 1000)
+    legacy_id = _seed_plaintext_note(
+        session_factory,
+        apple_note_id="x-coredata://ICNote/LEGACY-L3-001",
+        title="旧明文候选",
+        body="旧笔记",
+        synced_at_ms=base_ms,
+    )
+    impl_store = NoteStore(session_factory, cipher=NotesCipherImpl(master_key=b"x" * 32))
+
+    candidate = impl_store.insert(
+        apple_note_id="x-coredata://ICNote/LEGACY-L3-002",
+        folder="Notes",
+        title="旧明文候选",
+        body="新笔记",
+        updated_at_ms=int(datetime(2026, 6, 15, 10, tzinfo=UTC).timestamp() * 1000),
+    )
+
+    assert candidate.needs_confirm == 1
+    assert candidate.candidate_match_id == legacy_id
 
 
 def test_impl_cipher_mixed_plaintext_and_encrypted(
