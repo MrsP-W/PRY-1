@@ -290,7 +290,7 @@ class TestEndToEndIntegration:
             cipher = build_notes_cipher(load_notes_master_key())
         assert isinstance(cipher, NotesCipherImpl)
         assert cipher.is_runtime_impl is True
-        assert cipher.name == "aes-xor-256"
+        assert cipher.name == "aes-gcm-256"
 
     def test_env_unset_yields_stub_cipher_without_keychain_call(self) -> None:
         """env UNSET → build_notes_cipher 直接 Stub,不调 Keychain(降级短路)."""

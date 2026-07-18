@@ -2,8 +2,9 @@
 
 本测试覆盖:
     - NotesCipherStub 默认明文透传(无 `enc:` 前缀)
-    - NotesCipherImpl 加密 + 解密 round-trip(认证密文前缀 `enc:v2:`)
-    - 同一字段 + 同一 key + 同一明文 → 密文每次不同(随机 IV)
+    - NotesCipherImpl 加密 + 解密 round-trip(AES-GCM 密文前缀 `enc:v3:`)
+    - 已认证 `enc:v2:` 历史密文只读兼容；所有新写入固定为 `enc:v3:`
+    - 同一字段 + 同一 key + 同一明文 → 密文每次不同(随机 nonce)
     - 同一字段 + 同一 key + 同一密文 → 解密必得到原明文
     - 解密失败 → 返回 None(不抛异常)
     - 不含前缀的 ciphertext → 视为明文 fallback
@@ -25,6 +26,7 @@ import pytest
 from my_ai_employee.core.notes_encryption import (
     _CIPHERTEXT_PREFIX_V1,
     _CIPHERTEXT_PREFIX_V2,
+    _CIPHERTEXT_PREFIX_V3,
     _FINGERPRINT_LENGTH,
     DEFAULT_NOTES_FIELDS,
     ENABLE_NOTES_ENCRYPTION_ENV,
@@ -34,6 +36,11 @@ from my_ai_employee.core.notes_encryption import (
     build_notes_cipher,
     get_default_stub,
     is_notes_encryption_enabled,
+)
+
+_V2_LEGACY_CIPHERTEXT = (
+    "enc:v2:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    "2c349a481a088009c2321ec366b5a9e311ae714f1dfa702119f647453af82049eed412a9f9c5b0ede18147eba2556f9ecc"
 )
 
 # ===== 单元: NotesCipherStub =====
@@ -110,7 +117,7 @@ class TestNotesCipherImpl:
         """Impl.is_runtime_impl = True(沿 v0.2.53.30 严判)."""
         impl = NotesCipherImpl(master_key=b"x" * 32)
         assert impl.is_runtime_impl is True
-        assert impl.name == "aes-xor-256"
+        assert impl.name == "aes-gcm-256"
 
     def test_impl_accepts_minimum_length_master_key(self) -> None:
         """恰好 16 bytes 的合法主密钥可直构并完成加解密回环。"""
@@ -120,10 +127,15 @@ class TestNotesCipherImpl:
         assert minimum_key_impl.decrypt(ciphertext, field) == "minimum-key-boundary"
 
     def test_impl_encrypt_has_prefix(self, impl: NotesCipherImpl) -> None:
-        """Impl 加密结果必须含认证的 `enc:v2:` 前缀(版本化)."""
+        """Impl 新写入必须使用认证的 AES-GCM `enc:v3:` 格式。"""
         field = NotesFieldCipher(field_name="body")
         result = impl.encrypt("hello world", field)
-        assert result.startswith(_CIPHERTEXT_PREFIX_V2)
+        assert result.startswith(_CIPHERTEXT_PREFIX_V3)
+
+    def test_impl_decrypts_authenticated_v2_legacy_vector(self, impl: NotesCipherImpl) -> None:
+        """历史 v2 XOR+HMAC 密文可只读解密，避免升级时丢失既有数据。"""
+        field = NotesFieldCipher(field_name="body")
+        assert impl.decrypt(_V2_LEGACY_CIPHERTEXT, field) == "legacy v2 payload"
 
     def test_impl_decrypt_round_trip(self, impl: NotesCipherImpl) -> None:
         """加密 → 解密 = 原文(round-trip 不变)."""
@@ -133,8 +145,8 @@ class TestNotesCipherImpl:
         decrypted = impl.decrypt(ciphertext, field)
         assert decrypted == plaintext
 
-    def test_impl_encrypt_random_iv(self, impl: NotesCipherImpl) -> None:
-        """同一明文 + 同一 key → 密文每次不同(随机 IV)."""
+    def test_impl_encrypt_random_nonce(self, impl: NotesCipherImpl) -> None:
+        """同一明文 + 同一 key → 密文每次不同(随机 nonce)."""
         field = NotesFieldCipher(field_name="body")
         plaintext = "相同明文"
         c1 = impl.encrypt(plaintext, field)
@@ -156,22 +168,25 @@ class TestNotesCipherImpl:
         """格式错、篡改、错字段或错密钥均不得返回伪明文。"""
         field = NotesFieldCipher(field_name="body")
         # 前缀对,但 hex 长度不够
-        result = impl.decrypt(_CIPHERTEXT_PREFIX_V2 + "abcd", field)
+        result = impl.decrypt(_CIPHERTEXT_PREFIX_V3 + "abcd", field)
         assert result is None
         # 非法 hex
-        result = impl.decrypt(_CIPHERTEXT_PREFIX_V2 + "zzzz", field)
+        result = impl.decrypt(_CIPHERTEXT_PREFIX_V3 + "zzzz", field)
         assert result is None
         # 未认证 v1 与未知版本均不能被降级为明文。
         assert impl.decrypt(_CIPHERTEXT_PREFIX_V1 + "00" * 64, field) is None
-        assert impl.decrypt("enc:v3:" + "00" * 64, field) is None
+        assert impl.decrypt("enc:v4:" + "00" * 64, field) is None
 
         ciphertext = impl.encrypt("authenticated payload", field)
-        raw = bytearray(bytes.fromhex(ciphertext[len(_CIPHERTEXT_PREFIX_V2) :]))
-        # 覆盖 salt、IV、ciphertext 与 tag 四类篡改位置。
-        for index in (0, 16, 32, len(raw) - 1):
+        raw = bytearray(bytes.fromhex(ciphertext[len(_CIPHERTEXT_PREFIX_V3) :]))
+        # 覆盖 salt、nonce、ciphertext 与 tag 四类篡改位置。
+        for index in (0, 16, 28, len(raw) - 1):
             tampered = bytearray(raw)
             tampered[index] ^= 1
-            assert impl.decrypt(_CIPHERTEXT_PREFIX_V2 + tampered.hex(), field) is None
+            assert impl.decrypt(_CIPHERTEXT_PREFIX_V3 + tampered.hex(), field) is None
+
+        legacy_tampered = _V2_LEGACY_CIPHERTEXT[:-2] + "00"
+        assert impl.decrypt(legacy_tampered, field) is None
 
         assert impl.decrypt(ciphertext, NotesFieldCipher(field_name="title")) is None
         wrong_key_impl = NotesCipherImpl(master_key=b"y" * 32)

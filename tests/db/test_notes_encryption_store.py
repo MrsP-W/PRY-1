@@ -57,7 +57,7 @@ def test_default_store_encrypts_when_env_and_keychain_ok(
 ) -> None:
     """默认 NoteStore:env=1 + Keychain OK 时应加密落库(不经手动注入 cipher)."""
     from my_ai_employee.core.keychain import KeychainResult
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V3
     from my_ai_employee.db.notes import Note, NoteStore
 
     monkeypatch.setenv("ENABLE_NOTES_ENCRYPTION", "1")
@@ -80,8 +80,8 @@ def test_default_store_encrypts_when_env_and_keychain_ok(
     with session_factory() as session:
         raw = session.get(Note, note.id)
         assert raw is not None
-        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V2)
-        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V2)
+        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V3)
+        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V3)
 
 
 def test_insert_stub_cipher_stores_plaintext_at_rest(
@@ -113,7 +113,7 @@ def test_insert_impl_cipher_encrypts_at_rest_and_decrypts_on_read(
 ) -> None:
     """Impl:指纹用明文计算,库内 title/body 加密,读出解密."""
     from my_ai_employee.core.fingerprint import normalize_note_fingerprint
-    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
+    from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V3
     from my_ai_employee.db.notes import Note
 
     title = "加密标题"
@@ -139,8 +139,8 @@ def test_insert_impl_cipher_encrypts_at_rest_and_decrypts_on_read(
     with session_factory() as session:
         raw = session.get(Note, note.id)
         assert raw is not None
-        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V2)
-        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V2)
+        assert raw.title.startswith(_CIPHERTEXT_PREFIX_V3)
+        assert raw.body.startswith(_CIPHERTEXT_PREFIX_V3)
 
     reloaded = store_encrypted.get_by_id(note.id)
     assert reloaded is not None
@@ -275,6 +275,47 @@ def _seed_plaintext_note(
         session.add(note)
         session.commit()
         return int(note.id)
+
+
+_V2_LEGACY_TITLE_CIPHERTEXT = (
+    "enc:v2:000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f"
+    "c50139450d502f52ba123b087082f2383dd9738c6c6200a247b691381e45b9e02045b5f8a779d7867d52ae6098bf25"
+)
+
+
+def test_impl_cipher_reads_v2_legacy_ciphertext_from_store(
+    session_factory: Any,
+) -> None:
+    """升级后 NoteStore 仍须从实际库行解密认证通过的 v2 title。"""
+    from my_ai_employee.core.notes_encryption import NotesCipherImpl
+    from my_ai_employee.db.notes import Note, NoteStore
+
+    with session_factory() as session:
+        legacy = Note(
+            apple_note_id="x-coredata://ICNote/LEGACY-V2-CIPHER",
+            folder="Notes",
+            title=_V2_LEGACY_TITLE_CIPHERTEXT,
+            body="legacy v2 plaintext body",
+            is_private=0,
+            tags=None,
+            synced_at_ms=1_700_000_000_003,
+            updated_at_ms=1_700_000_000_003,
+            sync_status="NEW",
+            needs_confirm=1,
+            candidate_match_id=None,
+        )
+        session.add(legacy)
+        session.commit()
+        legacy_id = int(legacy.id)
+
+    impl_store = NoteStore(session_factory, cipher=NotesCipherImpl(master_key=b"x" * 32))
+    loaded = impl_store.get_by_id(legacy_id)
+    assert loaded is not None
+    assert loaded.title == "legacy v2 title"
+    assert loaded.body == "legacy v2 plaintext body"
+
+    pending = impl_store.list_by_needs_confirm(limit=10)
+    assert any(note.id == legacy_id and note.title == "legacy v2 title" for note in pending)
 
 
 def test_stub_cipher_reads_legacy_plaintext_fallback(

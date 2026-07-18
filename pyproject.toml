@@ -40,6 +40,8 @@ dependencies = [
     "click>=8.1.7",               # CLI 框架
     "pydantic>=2.10.3",           # 数据校验
     "loguru>=0.7.3",              # 日志
+    # NotesCipher v3 - AES-GCM AEAD（新写入；v2 仅保留只读兼容）
+    "cryptography>=48.0.0",
     # macOS 原生
     "pyobjc-framework-Cocoa>=10.3",  # macOS Cocoa 绑定（菜单栏用 rumps 间接）
     "pyobjc-framework-Quartz>=10.3", # v0.2 B-5 — CGEvent tap 全局快捷键监听（替代 pynput 1.7.7 + macOS Sequoia 不接收 bug 修复,沿 docs/b-5-pynput-evaluation.md 方案 B）

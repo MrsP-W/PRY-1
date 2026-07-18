@@ -443,7 +443,10 @@ class TestNoteConfirmServiceImplRealCipher:
         body_field = next(f for f in DEFAULT_NOTES_FIELDS if f.field_name == "body")
 
         # 1 条全密文 + 1 条全明文(混合场景)
-        from my_ai_employee.core.notes_encryption import _CIPHERTEXT_PREFIX_V2
+        from my_ai_employee.core.notes_encryption import (
+            _CIPHERTEXT_PREFIX_V3,
+            is_notes_ciphertext,
+        )
 
         with sf() as session:
             session.add(
@@ -463,7 +466,7 @@ class TestNoteConfirmServiceImplRealCipher:
             )
             enc_title = impl_seed.encrypt("菜单密文标题", title_field)
             enc_body = impl_seed.encrypt("菜单密文正文", body_field)
-            assert enc_title.startswith(_CIPHERTEXT_PREFIX_V2)
+            assert enc_title.startswith(_CIPHERTEXT_PREFIX_V3)
             session.add(
                 Note(
                     apple_note_id="x-coredata://ICNote/MENU-ENC",
@@ -509,7 +512,7 @@ class TestNoteConfirmServiceImplRealCipher:
         titles = {item["title"] for item in items}
         assert titles == {"菜单明文标题", "菜单密文标题"}
         for item in items:
-            assert not item["title"].startswith(_CIPHERTEXT_PREFIX_V2)
+            assert not is_notes_ciphertext(item["title"])
             # 字段白名单 6 个,无 body/cipher_prefix 泄漏
             assert set(item.keys()) == {
                 "apple_note_id",
