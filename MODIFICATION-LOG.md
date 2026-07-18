@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3035 passed / 1 skipped** / **90.24%** / mypy --strict 0 / **263 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 3031/1) |
+| **质量基线** | **3046 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **263 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 3031/1) |
 | **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -150,6 +150,27 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-18 [SMTP 单收件人白名单门控 fail-closed] — 收口
+
+**1. 本次修改内容**
+
+- `e51df6a fix(smtp): reject multi-recipient envelope inputs`：
+  `scripts/send_one_approved.py` 新增单一 SMTP envelope 地址规范化，
+  同时用于 `--recipient` 的域白名单门和 outbox 审批前精确匹配。
+- 拒绝逗号/分号、多 `@`、空本地或域、内部空白、控制字符和 CR/LF；保留既有首尾空白与大小写不敏感的单地址兼容语义。
+- `tests/scripts/test_send_one_approved.py` 新增 11 个回归，覆盖多收件人、header 注入、错误地址、匹配侧绕过和真实 CLI 审批前拒绝。
+
+**2. 风险点**
+
+- 此门控故意不接受 RFC 邮箱列表、显示名或带逗号的 quoted local-part；真实发信必须每次传入一个纯单地址，这是 fail-closed 的安全边界。
+- 未读取 Keychain、未打开真实 SMTP、未修改 outbox 数据；开局已有 `docs/ui/codex-style-dashboard.html` WIP 保持隔离且不纳入提交。
+
+**3. 当前项目整体总结**
+
+- 原始 PoC `alice@qq.com,evil@qq.com` 在 `qq.com` 白名单下修复前返回 `None`，修复后返回单一地址拒绝错误；`Alice@QQ.COM` 仍通过。
+- `make test`：**3046 passed / 1 skipped / 90.26%**；Markdown lint、Ruff/format、mypy、Alembic SQL 与 `uv build` 均通过。
+- 下一棒：保持 P0-4 仅只读观察；NotesCipher 的 AES-GCM 替换仍为独立 P1，不与本次 SMTP 修复混合。
 
 ### 2026-07-18 [NotesCipher 加密 L3 候选回归] — 收口
 
