@@ -411,6 +411,47 @@ def test_l3_fuzzy_match_keeps_legacy_plaintext_title_compatibility(
     assert candidate.candidate_match_id == legacy_id
 
 
+def test_l3_fuzzy_match_reads_authenticated_v2_title(
+    session_factory: Any,
+) -> None:
+    """L3 直接读取库内 title 时仍须先解密认证通过的 v2 历史密文。"""
+    from datetime import UTC, datetime
+
+    from my_ai_employee.core.notes_encryption import NotesCipherImpl
+    from my_ai_employee.db.notes import Note, NoteStore
+
+    base_ms = int(datetime(2026, 6, 14, 10, tzinfo=UTC).timestamp() * 1000)
+    with session_factory() as session:
+        legacy = Note(
+            apple_note_id="x-coredata://ICNote/LEGACY-V2-L3-001",
+            folder="Notes",
+            title=_V2_LEGACY_TITLE_CIPHERTEXT,
+            body="legacy v2 body",
+            is_private=0,
+            tags=None,
+            synced_at_ms=base_ms,
+            updated_at_ms=base_ms,
+            sync_status="NEW",
+            needs_confirm=0,
+            candidate_match_id=None,
+        )
+        session.add(legacy)
+        session.commit()
+        legacy_id = int(legacy.id)
+
+    impl_store = NoteStore(session_factory, cipher=NotesCipherImpl(master_key=b"x" * 32))
+    candidate = impl_store.insert(
+        apple_note_id="x-coredata://ICNote/LEGACY-V2-L3-002",
+        folder="Notes",
+        title="legacy v2 title*",
+        body="new body",
+        updated_at_ms=int(datetime(2026, 6, 15, 10, tzinfo=UTC).timestamp() * 1000),
+    )
+
+    assert candidate.needs_confirm == 1
+    assert candidate.candidate_match_id == legacy_id
+
+
 def test_impl_cipher_mixed_plaintext_and_encrypted(
     session_factory: Any,
 ) -> None:
