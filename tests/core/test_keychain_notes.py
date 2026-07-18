@@ -1,7 +1,7 @@
 """Day 10 / Phase 1.1 — Notes master key Keychain 接线测试.
 
 本测试覆盖:
-    - `core/keychain.set_notes_master_key` 严判白名单(非 str / 空 / 非 hex / 过短)
+    - `core/keychain.set_notes_master_key` 严判白名单(非 str / 空 / 非 hex / 奇数位 / 过短)
     - `core/keychain.get_notes_master_key` 沿 get_password 范本(返回 KeychainResult)
     - `core/keychain.delete_notes_master_key` 不存在算成功
     - `notes_encryption._hex_to_bytes` 内部 helper 严判 hex + 长度
@@ -69,6 +69,15 @@ class TestKeychainNotesMasterKeySet:
         """长度 < 32 hex chars(16 bytes)→ ValueError."""
         with pytest.raises(ValueError, match="至少需 32 hex chars"):
             set_notes_master_key("deadbeef")  # 8 chars < 32
+
+    def test_set_rejects_odd_length_hex_without_writing_keychain(self) -> None:
+        """奇数位 hex 会在读取时失效，写入前必须拒绝，避免静默降级。"""
+        with (
+            patch("my_ai_employee.core.keychain.set_password") as mock_set,
+            pytest.raises(ValueError, match="必须包含偶数个 hex 字符"),
+        ):
+            set_notes_master_key("a" * 33)
+        mock_set.assert_not_called()
 
     def test_set_calls_security_add_generic_password(self) -> None:
         """合法 hex → 委托给底层 set_password,KeychainResult 透传."""

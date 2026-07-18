@@ -377,7 +377,7 @@ def set_notes_master_key(master_key_hex: str) -> KeychainResult:
         KeychainResult(ok=True) 成功 / KeychainResult(ok=False, error=...) 失败
 
     Raises:
-        ValueError: 非 str / 非 hex / 长度 < 16 bytes(32 hex chars)
+        ValueError: 非 str / 非 hex / 奇数位 hex / 长度 < 16 bytes(32 hex chars)
 
     设计原则:
         - 撞坑 #1 隐私铁律:本函数不打印 value / 不 log 密钥原文
@@ -391,6 +391,8 @@ def set_notes_master_key(master_key_hex: str) -> KeychainResult:
         raise ValueError("master_key_hex 必填且必须非空字符串")
     if not all(c in "0123456789abcdefABCDEF" for c in stripped):
         raise ValueError("master_key_hex 必须只含 [0-9a-fA-F] hex 字符")
+    if len(stripped) % 2 != 0:
+        raise ValueError("master_key_hex 必须包含偶数个 hex 字符")
     if len(stripped) < _NOTES_MASTER_KEY_MIN_LEN * 2:
         raise ValueError(
             f"master_key_hex 至少需 {_NOTES_MASTER_KEY_MIN_LEN * 2} hex chars "
