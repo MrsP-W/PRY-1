@@ -151,6 +151,25 @@
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
 
+### 2026-07-18 [NotesCipherImpl 直构密钥门控与 50% 节点核验] — 收口
+
+**1. 本次修改内容**
+
+- `fdfc01d fix(notes): validate direct cipher keys`：`NotesCipherImpl.__post_init__` 严格拒绝非 `bytes` 或少于 16 bytes 的主密钥，防止绕过 `build_notes_cipher()` 的降级边界直接启用弱/空密钥。
+- 工厂对运行时非 `bytes` 输入保守降级为 Stub；既有用例扩展为直构短密钥与错误类型密钥回归，不增加 pytest 收集数。
+- 依据本轮全量实测把当前 coverage 快照和五个状态入口由 90.23% 校准到 **90.22%**。
+
+**2. 风险点**
+
+- 未启用 `ENABLE_NOTES_ENCRYPTION=1`，未写 Keychain、生产数据库或外部服务；本修复只收紧本地构造边界。
+- P0-4 仍在连续观察期，不能因单次采样健康而提前标记 24h 完成。
+
+**3. 当前项目整体总结**
+
+- 质量门：`make test` **3031 passed / 1 skipped / 90.22%**；lint、严格 mypy、Alembic SQL、构建与 `make check-snapshot` 均通过。
+- 7/18 只读 health：4 个目标 job 均已注册、Dashboard loopback `127.0.0.1:8765` 正常；menu-bar/Dashboard 已约 20h15m 未重启。
+- 下一棒：保持不干预，满 24h 后重新只读采样；若仍健康，再记录 P0-4 观察证据。
+
 ### 2026-07-17 [报告扫描边界与 E2E Keychain fixture 隔离] — 收口
 
 - **fix(dashboard)**：报告扫描统一解析候选文件真实路径；仅接受项目根内、常规且不超过只读上限的文件，避免 `docs/`、`reports/` 或 `output/` 内的外部 symlink 暴露根外元数据。
