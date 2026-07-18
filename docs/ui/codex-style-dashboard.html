@@ -1890,14 +1890,1168 @@
         box-shadow: 0 8px 20px rgb(41 53 69 / 5%), inset 0 1px 0 #fff;
       }
 
+      /* Quiet Sci‑Fi：在 Apple 低彩度基础上增加精密网格、HUD 边角与数据微光。 */
+      :root {
+        --tech-cyan: #6f9eb3;
+        --tech-blue: #788fae;
+        --tech-glow: rgb(91 153 180 / 46%);
+        --tech-line: rgb(88 137 159 / 15%);
+        --font-mono: "SFMono-Regular", "Roboto Mono", Consolas, monospace;
+      }
+
+      .shell {
+        position: relative;
+        isolation: isolate;
+        background:
+          radial-gradient(circle at 78% 6%, rgb(230 247 255 / 46%), transparent 27rem),
+          radial-gradient(circle at 18% 92%, rgb(220 231 246 / 38%), transparent 30rem),
+          linear-gradient(150deg, #f8fafc 0%, #edf2f6 58%, #e6ecf2 100%);
+      }
+
+      .shell::before,
+      .shell::after {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        content: "";
+        pointer-events: none;
+      }
+
+      .shell::before {
+        background-image:
+          linear-gradient(var(--tech-line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--tech-line) 1px, transparent 1px),
+          linear-gradient(rgb(78 126 150 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(78 126 150 / 8%) 1px, transparent 1px);
+        background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+        mask-image: radial-gradient(ellipse at 62% 42%, #000 0%, rgb(0 0 0 / 54%) 48%, transparent 88%);
+        opacity: 0.52;
+      }
+
+      .shell::after {
+        width: 32%;
+        background: linear-gradient(90deg, transparent, rgb(190 232 247 / 20%), transparent);
+        filter: blur(2px);
+        transform: translateX(-145%);
+        animation: ambient-scan 14s ease-in-out infinite;
+      }
+
+      .shell > header,
+      .shell > .workspace,
+      .shell > footer {
+        position: relative;
+        z-index: 1;
+      }
+
+      @keyframes ambient-scan {
+        0%,
+        18% {
+          transform: translateX(-145%);
+        }
+        78%,
+        100% {
+          transform: translateX(410%);
+        }
+      }
+
+      header {
+        overflow: hidden;
+        border-color: rgb(169 206 220 / 38%);
+        background: linear-gradient(110deg, rgb(255 255 255 / 76%), rgb(241 248 251 / 62%));
+        box-shadow:
+          0 12px 30px rgb(39 65 82 / 9%),
+          inset 0 1px 0 rgb(255 255 255 / 96%),
+          inset 0 -1px 0 rgb(91 153 180 / 9%);
+      }
+
+      header::before {
+        position: absolute;
+        top: 0;
+        left: 24px;
+        width: min(38vw, 420px);
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--tech-glow), transparent);
+        box-shadow: 0 0 12px rgb(91 153 180 / 26%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .avatar {
+        position: relative;
+        overflow: hidden;
+        border-color: rgb(176 220 235 / 44%);
+        background:
+          radial-gradient(circle at 50% 48%, rgb(165 222 240 / 22%) 0 17%, transparent 18%),
+          conic-gradient(from 30deg, #17212a, #526b78, #131b23, #405968, #17212a);
+        box-shadow:
+          0 0 0 1px rgb(101 163 187 / 12%),
+          0 8px 22px rgb(32 65 82 / 22%),
+          inset 0 0 16px rgb(151 219 240 / 16%);
+        font-family: var(--font-mono);
+        letter-spacing: -0.06em;
+      }
+
+      .avatar::before {
+        position: absolute;
+        inset: 5px;
+        border: 1px solid rgb(188 229 241 / 34%);
+        border-radius: 8px;
+        content: "";
+        transform: rotate(45deg);
+      }
+
+      .avatar::after {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #c6edf7;
+        box-shadow: 0 0 8px #a7dfee;
+        content: "";
+        animation: signal-pulse 2.8s ease-in-out infinite;
+      }
+
+      @keyframes signal-pulse {
+        0%,
+        100% {
+          opacity: 0.45;
+          transform: scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.35);
+        }
+      }
+
+      .brand-subtitle,
+      .pill,
+      .hud-clock,
+      .section-kicker,
+      footer .log {
+        font-family: var(--font-mono);
+      }
+
+      .brand-subtitle {
+        color: #718b98;
+        font-size: 9px;
+        letter-spacing: 0.075em;
+      }
+
+      .pill {
+        position: relative;
+        border-color: rgb(104 151 171 / 15%);
+        background: rgb(248 253 255 / 48%);
+        letter-spacing: -0.02em;
+      }
+
+      .pill::after {
+        position: absolute;
+        right: 5px;
+        bottom: 3px;
+        width: 8px;
+        height: 1px;
+        background: rgb(88 145 169 / 28%);
+        content: "";
+      }
+
+      .pill.live {
+        border-color: rgb(94 158 184 / 28%);
+        background: linear-gradient(145deg, rgb(248 254 255 / 78%), rgb(225 240 247 / 62%));
+        box-shadow: 0 0 18px rgb(83 151 179 / 10%), inset 0 1px 0 #fff;
+      }
+
+      .header-actions {
+        gap: 9px;
+      }
+
+      .hud-clock {
+        display: grid;
+        min-width: 70px;
+        gap: 1px;
+        padding-right: 10px;
+        border-right: 1px solid rgb(86 138 160 / 18%);
+        color: #7c919c;
+        font-size: 8px;
+        letter-spacing: 0.08em;
+        line-height: 1.1;
+        text-align: right;
+      }
+
+      .hud-clock strong {
+        color: #455e6b;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 560;
+        letter-spacing: 0.04em;
+      }
+
+      aside {
+        border-color: rgb(163 204 220 / 34%);
+        background:
+          radial-gradient(circle at 22% 8%, rgb(188 231 245 / 20%), transparent 11rem),
+          linear-gradient(180deg, rgb(250 254 255 / 64%), rgb(222 234 243 / 36%));
+        box-shadow:
+          0 20px 42px rgb(35 62 79 / 12%),
+          inset 0 1px 0 rgb(255 255 255 / 96%),
+          inset -1px 0 0 rgb(89 151 176 / 7%);
+      }
+
+      aside::after {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgb(78 134 158 / 10%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(78 134 158 / 10%) 1px, transparent 1px);
+        background-size: 22px 22px;
+        content: "";
+        mask-image: linear-gradient(180deg, #000, transparent 72%);
+        opacity: 0.42;
+        pointer-events: none;
+      }
+
+      .nav button {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav button.active {
+        border-color: rgb(160 205 223 / 46%);
+        background:
+          linear-gradient(90deg, rgb(165 219 238 / 13%), transparent 42%),
+          linear-gradient(145deg, rgb(255 255 255 / 85%), rgb(221 234 241 / 72%));
+        box-shadow:
+          0 12px 24px rgb(39 73 91 / 14%),
+          inset 0 1px 0 #fff,
+          inset 3px 0 0 rgb(91 153 180 / 46%);
+      }
+
+      .nav button.active::after {
+        position: absolute;
+        top: 0;
+        left: 9px;
+        width: 34px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        box-shadow: 0 0 8px rgb(91 153 180 / 22%);
+        content: "";
+      }
+
+      .nav button.active .nav-icon {
+        background: linear-gradient(145deg, #668394, #344b58);
+        box-shadow:
+          0 7px 15px rgb(45 86 105 / 22%),
+          inset 0 0 9px rgb(186 232 246 / 12%);
+        font-family: var(--font-mono);
+      }
+
+      .card,
+      .thread,
+      .draft,
+      .flow-card,
+      .inspector {
+        border-color: rgb(162 202 218 / 30%);
+        box-shadow:
+          0 18px 38px rgb(34 61 78 / 9%),
+          0 2px 7px rgb(34 61 78 / 4%),
+          inset 0 1px 0 rgb(255 255 255 / 96%);
+      }
+
+      .card::after {
+        border-color: rgb(255 255 255 / 52%);
+        background:
+          linear-gradient(90deg, var(--tech-glow), transparent) top left / 28px 1px no-repeat,
+          linear-gradient(180deg, var(--tech-glow), transparent) top left / 1px 28px no-repeat,
+          linear-gradient(270deg, var(--tech-glow), transparent) right bottom / 28px 1px no-repeat,
+          linear-gradient(0deg, var(--tech-glow), transparent) right bottom / 1px 28px no-repeat;
+      }
+
+      .hero > .card:first-child {
+        background:
+          radial-gradient(circle at 9% 26%, rgb(175 222 238 / 18%), transparent 9rem),
+          linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(241 247 250 / 84%));
+      }
+
+      .hero > .card:first-child::before {
+        border-color: rgb(174 219 234 / 44%);
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 18%), transparent 45%),
+          conic-gradient(from 45deg, #7b9aaa, #3d5664, #6c8796, #293f4c, #7b9aaa);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 26px rgb(41 83 102 / 22%),
+          inset 0 0 15px rgb(196 235 246 / 16%);
+        content: "◈";
+        font-family: var(--font-mono);
+        font-size: 21px;
+        text-shadow: 0 0 10px rgb(202 241 251 / 44%);
+      }
+
+      .priority-eyebrow,
+      .section-kicker {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #718a96;
+        letter-spacing: 0.045em;
+      }
+
+      .priority-eyebrow::before,
+      .section-kicker::before {
+        width: 22px;
+        height: 1px;
+        flex: 0 0 22px;
+        background: linear-gradient(90deg, var(--tech-cyan), transparent);
+        box-shadow: 0 0 7px rgb(91 153 180 / 25%);
+        content: "";
+      }
+
+      .section-heading {
+        position: relative;
+        padding-left: 14px;
+      }
+
+      .section-heading::after {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        left: 0;
+        width: 2px;
+        border-radius: 99px;
+        background: linear-gradient(180deg, var(--tech-glow), rgb(91 153 180 / 4%));
+        box-shadow: 0 0 10px rgb(91 153 180 / 18%);
+        content: "";
+      }
+
+      .metric {
+        background:
+          linear-gradient(rgb(91 153 180 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 8%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(255 255 255 / 82%), rgb(237 245 248 / 72%));
+        background-size: 16px 16px, 16px 16px, 100% 100%;
+        box-shadow:
+          0 9px 20px rgb(35 69 87 / 7%),
+          inset 0 1px 0 #fff,
+          inset 0 -1px 0 rgb(91 153 180 / 8%);
+      }
+
+      .metric::before {
+        position: absolute;
+        top: 9px;
+        right: 11px;
+        color: rgb(68 116 137 / 42%);
+        content: "0";
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.08em;
+      }
+
+      .metric:nth-child(1)::before { content: "01"; }
+      .metric:nth-child(2)::before { content: "02"; }
+      .metric:nth-child(3)::before { content: "03"; }
+      .metric:nth-child(4)::before { content: "04"; }
+
+      .metric:hover {
+        transform: translateY(-3px);
+        box-shadow:
+          0 15px 28px rgb(35 73 92 / 11%),
+          0 0 0 1px rgb(105 172 198 / 12%),
+          inset 0 1px 0 #fff;
+      }
+
+      .metric-value {
+        color: #294451;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 18px rgb(93 160 188 / 14%);
+      }
+
+      .thread,
+      .flow-card {
+        position: relative;
+      }
+
+      .thread::before,
+      .flow-card::after {
+        position: absolute;
+        top: 0;
+        left: 22px;
+        width: 76px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        box-shadow: 0 0 10px rgb(91 153 180 / 18%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .step-icon {
+        border-color: rgb(126 176 196 / 24%);
+        background: linear-gradient(145deg, rgb(250 254 255 / 92%), rgb(222 236 242 / 76%));
+        color: #53717f;
+        font-family: var(--font-mono);
+        box-shadow: 0 5px 12px rgb(45 83 101 / 9%), inset 0 1px 0 #fff;
+      }
+
+      .queue-item {
+        position: relative;
+        transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .queue-item:hover {
+        background: linear-gradient(90deg, rgb(210 237 246 / 22%), rgb(255 255 255 / 26%));
+        box-shadow: inset 2px 0 0 rgb(91 153 180 / 34%);
+        transform: translateX(1px);
+      }
+
+      .flow-card {
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          radial-gradient(circle at 18% 112%, rgb(197 225 237 / 34%), transparent 11rem),
+          linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(239 247 250 / 82%));
+        background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%;
+      }
+
+      .flow-card h2::after {
+        margin-left: 8px;
+        color: rgb(73 124 146 / 52%);
+        content: "// PIPELINE";
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.08em;
+      }
+
+      .process-flow li:not(:last-child)::after {
+        height: 1px;
+        background: linear-gradient(90deg, rgb(92 150 174 / 55%), rgb(92 150 174 / 12%));
+        box-shadow: 0 0 6px rgb(91 153 180 / 14%);
+      }
+
+      .flow-stage {
+        border-color: rgb(144 192 210 / 32%);
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, #fff, #e6f0f4);
+        background-size: 12px 12px, 12px 12px, 100% 100%;
+        color: #466573;
+        font-family: var(--font-mono);
+      }
+
+      .process-flow li.active .flow-stage {
+        border-color: rgb(174 221 237 / 52%);
+        background:
+          radial-gradient(circle, rgb(166 220 238 / 18%), transparent 58%),
+          linear-gradient(145deg, #668695, #344e5c);
+        box-shadow:
+          0 14px 22px rgb(40 80 98 / 22%),
+          0 3px 0 #2d4653,
+          0 0 0 5px rgb(100 170 196 / 6%),
+          inset 0 0 15px rgb(197 237 248 / 13%);
+      }
+
+      .inspector {
+        position: relative;
+        background:
+          linear-gradient(90deg, rgb(174 222 238 / 9%), transparent 12%),
+          linear-gradient(160deg, rgb(251 254 255 / 80%), rgb(235 245 249 / 74%));
+      }
+
+      .inspector::before {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        width: 1px;
+        height: 110px;
+        background: linear-gradient(180deg, transparent, var(--tech-glow), transparent);
+        box-shadow: 0 0 10px rgb(91 153 180 / 22%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .inspector-section:first-child {
+        border-color: rgb(145 192 210 / 22%);
+        background:
+          linear-gradient(90deg, rgb(191 230 242 / 16%), transparent),
+          rgb(255 255 255 / 42%);
+      }
+
+      .inspector h3::before {
+        margin-right: 7px;
+        color: var(--tech-cyan);
+        content: "⌁";
+        font-family: var(--font-mono);
+        text-shadow: 0 0 8px rgb(91 153 180 / 24%);
+      }
+
+      footer {
+        overflow: hidden;
+        border-color: rgb(151 196 213 / 30%);
+        background: linear-gradient(90deg, rgb(248 253 255 / 72%), rgb(232 244 248 / 58%));
+      }
+
+      footer::before {
+        position: absolute;
+        top: 0;
+        left: 16px;
+        width: 120px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        content: "";
+      }
+
+      footer .log {
+        color: #657f8b;
+        font-size: 9px;
+        letter-spacing: 0.01em;
+      }
+
+      /* Animated Tech Icons：统一替代汉字方块与静态符号，保持离线可用。 */
+      .icon-sprite {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+
+      .tech-icon {
+        width: 18px;
+        height: 18px;
+        overflow: visible;
+        fill: none;
+        stroke: currentcolor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.55;
+        filter: drop-shadow(0 0 4px rgb(105 181 207 / 24%));
+        transform-origin: center;
+        animation:
+          tech-icon-float 2.6s ease-in-out infinite,
+          tech-icon-glow 1.9s ease-in-out infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .tech-icon use {
+        stroke-dasharray: 7 4;
+        stroke-dashoffset: 0;
+        animation: tech-icon-trace 1.8s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      @keyframes tech-icon-float {
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-3px) scale(1.06) rotate(1.5deg);
+        }
+      }
+
+      @keyframes tech-icon-trace {
+        from {
+          stroke-dashoffset: 0;
+          opacity: 0.76;
+        }
+        to {
+          stroke-dashoffset: -33;
+          opacity: 1;
+        }
+      }
+
+      @keyframes tech-icon-glow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 2px rgb(105 181 207 / 18%));
+        }
+        50% {
+          filter: drop-shadow(0 0 7px rgb(105 181 207 / 48%));
+        }
+      }
+
+      @keyframes tech-orbit-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes tech-beacon {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(143 210 231 / 0%);
+          opacity: 0.4;
+        }
+        50% {
+          box-shadow: 0 0 0 4px rgb(143 210 231 / 9%);
+          opacity: 1;
+        }
+      }
+
+      @keyframes tech-scan-y {
+        0% {
+          opacity: 0;
+          transform: translateY(-12px);
+        }
+        30%,
+        70% {
+          opacity: 0.75;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+      }
+
+      .avatar > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 21px;
+        height: 21px;
+        color: #d5f3fb;
+        stroke-width: 1.35;
+      }
+
+      .avatar::before {
+        animation: tech-orbit-spin 12s linear infinite;
+      }
+
+      .nav-icon {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-icon > .tech-icon {
+        width: 16px;
+        height: 16px;
+        color: #587584;
+      }
+
+      .nav-icon::after {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #83b8ca;
+        content: "";
+        animation: tech-beacon 2.8s ease-in-out infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .nav-icon::before {
+        position: absolute;
+        inset: 4px;
+        border: 1px dashed rgb(91 153 180 / 28%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 4.8s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .nav button:nth-child(1) { --icon-delay: -0.2s; }
+      .nav button:nth-child(2) { --icon-delay: -0.7s; }
+      .nav button:nth-child(3) { --icon-delay: -1.2s; }
+      .nav button:nth-child(4) { --icon-delay: -1.7s; }
+      .nav button:nth-child(5) { --icon-delay: -2.2s; }
+      .nav button:nth-child(6) { --icon-delay: -2.7s; }
+      .nav button:nth-child(7) { --icon-delay: -3.2s; }
+      .nav button:nth-child(8) { --icon-delay: -3.7s; }
+
+      .nav button.active .nav-icon > .tech-icon {
+        color: #e1f6fb;
+        filter: drop-shadow(0 0 6px rgb(177 229 243 / 40%));
+      }
+
+      .hero-core {
+        position: absolute;
+        top: 27px;
+        left: 24px;
+        z-index: 2;
+        display: grid;
+        width: 50px;
+        height: 50px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(174 219 234 / 44%);
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 18%), transparent 45%),
+          conic-gradient(from 45deg, #7b9aaa, #3d5664, #6c8796, #293f4c, #7b9aaa);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 26px rgb(41 83 102 / 22%),
+          inset 0 0 15px rgb(196 235 246 / 16%);
+      }
+
+      .hero-core::before {
+        position: absolute;
+        inset: 7px;
+        border: 1px dashed rgb(189 230 242 / 50%);
+        border-top-color: #d1f2fa;
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 9s linear infinite;
+      }
+
+      .hero-core::after {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #c6edf7;
+        box-shadow: 0 0 9px #a7dfee;
+        content: "";
+        transform: translateX(-50%);
+        animation: tech-beacon 2.4s ease-in-out infinite;
+      }
+
+      .hero-core > .tech-icon {
+        z-index: 1;
+        width: 24px;
+        height: 24px;
+        color: #e0f6fb;
+        stroke-width: 1.35;
+      }
+
+      .hero > .card:first-child::before {
+        display: none;
+      }
+
+      .panel-title,
+      .flow-card h2,
+      .btn-with-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel-title > .tech-icon,
+      .flow-card h2 > .tech-icon {
+        width: 17px;
+        height: 17px;
+        color: #668d9f;
+      }
+
+      .hero > .card:last-child h3::before {
+        display: none;
+      }
+
+      .button-icon {
+        width: 14px;
+        height: 14px;
+        color: #5f7f8e;
+      }
+
+      .motion-toggle {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgb(100 159 182 / 24%);
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: rgb(242 252 255 / 58%);
+        color: #537584;
+        cursor: pointer;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.035em;
+        white-space: nowrap;
+      }
+
+      .motion-toggle:hover {
+        border-color: rgb(91 153 180 / 42%);
+        background: rgb(238 251 255 / 84%);
+      }
+
+      .motion-signal {
+        position: relative;
+        width: 7px;
+        height: 7px;
+        border: 1px solid rgb(98 168 194 / 48%);
+        border-radius: 50%;
+      }
+
+      .motion-signal::after {
+        position: absolute;
+        inset: 1px;
+        border-radius: inherit;
+        background: #77b0c5;
+        box-shadow: 0 0 7px rgb(105 181 207 / 58%);
+        content: "";
+        animation: tech-beacon 1.5s ease-in-out infinite;
+      }
+
+      .step-icon > .tech-icon {
+        width: 17px;
+        height: 17px;
+        color: #547787;
+      }
+
+      .step-icon {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .step-icon::after {
+        position: absolute;
+        right: 3px;
+        left: 3px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgb(152 215 235 / 72%), transparent);
+        box-shadow: 0 0 6px rgb(105 181 207 / 32%);
+        content: "";
+        animation: tech-scan-y 2.7s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .step:nth-child(1) { --icon-delay: -0.4s; }
+      .step:nth-child(2) { --icon-delay: -1.2s; }
+      .step:nth-child(3) { --icon-delay: -2s; }
+
+      .flow-stage > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 22px;
+        height: 22px;
+        color: #4f7585;
+        stroke-width: 1.45;
+      }
+
+      .flow-stage {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .flow-stage::before {
+        position: absolute;
+        inset: 8px;
+        border: 1px dashed rgb(91 153 180 / 28%);
+        border-top-color: rgb(139 205 227 / 62%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 5.4s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .process-flow li:nth-child(1) { --icon-delay: -0.2s; }
+      .process-flow li:nth-child(2) { --icon-delay: -0.8s; }
+      .process-flow li:nth-child(3) { --icon-delay: -1.4s; }
+      .process-flow li:nth-child(4) { --icon-delay: -2s; }
+      .process-flow li:nth-child(5) { --icon-delay: -2.6s; }
+
+      .process-flow li.active .flow-stage > .tech-icon {
+        color: #d9f3f9;
+        filter: drop-shadow(0 0 7px rgb(181 229 242 / 45%));
+      }
+
+      .inspector h3::before {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-right: 8px;
+        border: 1px solid rgb(95 157 182 / 48%);
+        border-radius: 2px;
+        background: conic-gradient(from 45deg, transparent, rgb(109 181 207 / 42%), transparent 62%);
+        box-shadow: 0 0 8px rgb(91 153 180 / 18%);
+        content: "";
+        vertical-align: 1px;
+        animation: tech-orbit-spin 6s linear infinite;
+      }
+
+      body.motion-paused .tech-icon,
+      body.motion-paused .tech-icon use,
+      body.motion-paused .shell::after,
+      body.motion-paused .avatar::before,
+      body.motion-paused .avatar::after,
+      body.motion-paused .nav-icon::before,
+      body.motion-paused .nav-icon::after,
+      body.motion-paused .hero-core::before,
+      body.motion-paused .hero-core::after,
+      body.motion-paused .motion-signal::after,
+      body.motion-paused .step-icon::after,
+      body.motion-paused .flow-stage::before,
+      body.motion-paused .inspector h3::before {
+        animation-play-state: paused !important;
+      }
+
+      body.motion-paused .motion-toggle {
+        border-color: rgb(125 139 148 / 22%);
+        background: rgb(247 249 250 / 58%);
+        color: #89959b;
+      }
+
+      body.motion-paused .motion-signal::after {
+        background: #9aa6ab;
+        box-shadow: none;
+      }
+
+      /* Mail Action Rail：用单一冷灰蓝层级替代黄/蓝/绿/红按钮堆叠。 */
+      #mail-queue .queue-item {
+        grid-template-columns: minmax(0, 1fr) 188px;
+        gap: 20px;
+        padding: 14px 12px 14px 18px;
+      }
+
+      #mail-queue .queue-actions {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 188px;
+        align-items: stretch;
+        gap: 6px;
+        padding: 8px;
+        overflow: hidden;
+        border: 1px solid rgb(119 168 187 / 24%);
+        border-radius: 14px;
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(250 254 255 / 80%), rgb(226 238 244 / 54%));
+        background-size: 14px 14px, 14px 14px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 92%),
+          inset 2px 0 0 rgb(104 170 194 / 16%),
+          0 8px 18px rgb(43 76 91 / 7%);
+      }
+
+      #mail-queue .queue-actions::before {
+        grid-column: 1 / -1;
+        padding: 0 1px 5px;
+        border-bottom: 1px solid rgb(102 154 175 / 13%);
+        color: #7a929d;
+        content: "ACTION / CONTROL";
+        font: 7px/1 var(--font-mono);
+        letter-spacing: 0.11em;
+      }
+
+      #mail-queue .queue-actions::after {
+        position: absolute;
+        top: 7px;
+        right: 9px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #79aec1;
+        box-shadow: 0 0 7px rgb(105 181 207 / 46%);
+        content: "";
+        animation: tech-beacon 1.8s ease-in-out infinite;
+      }
+
+      #mail-queue .queue-actions .tag,
+      #mail-queue .queue-actions .tag.green {
+        display: flex;
+        min-height: 22px;
+        grid-column: 1 / -1;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        align-self: stretch;
+        border-color: rgb(104 154 174 / 18%);
+        border-radius: 7px;
+        padding: 3px 7px;
+        background: rgb(244 250 252 / 62%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 78%);
+        color: #617b87;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.04em;
+      }
+
+      .queue-status-signal {
+        width: 5px;
+        height: 5px;
+        flex: 0 0 5px;
+        border: 1px solid rgb(92 149 171 / 42%);
+        border-radius: 50%;
+        background: rgb(118 169 187 / 34%);
+        box-shadow: 0 0 6px rgb(105 181 207 / 26%);
+        animation: tech-beacon 2.2s ease-in-out infinite;
+      }
+
+      #mail-queue .queue-actions .btn {
+        display: inline-flex;
+        min-width: 0;
+        min-height: 30px;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-color: rgb(105 153 172 / 22%);
+        border-radius: 8px;
+        padding: 5px 7px;
+        background: rgb(249 253 254 / 64%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 86%);
+        color: #5d7783;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.01em;
+      }
+
+      #mail-queue .queue-actions .btn:hover:not(:disabled) {
+        border-color: rgb(93 159 184 / 40%);
+        background: rgb(241 251 254 / 86%);
+        box-shadow:
+          0 5px 12px rgb(47 84 100 / 10%),
+          inset 0 1px 0 #fff,
+          0 0 0 1px rgb(105 181 207 / 8%);
+        color: #3f6677;
+      }
+
+      #mail-queue .queue-actions .dry-run-btn {
+        grid-column: 1 / -1;
+        border-style: dashed;
+        background: linear-gradient(90deg, rgb(225 242 248 / 40%), rgb(250 253 254 / 66%));
+      }
+
+      #mail-queue .queue-actions .decide-btn {
+        border-color: rgb(99 151 171 / 28%);
+        background: linear-gradient(145deg, #657f8b, #435c68);
+        box-shadow:
+          0 6px 13px rgb(42 76 91 / 16%),
+          inset 0 1px 0 rgb(255 255 255 / 20%);
+        color: #edf9fc;
+      }
+
+      #mail-queue .queue-actions .decide-btn.reject {
+        border-color: rgb(112 139 150 / 26%);
+        border-style: dashed;
+        background: rgb(248 251 252 / 50%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+        color: #6d7e85;
+      }
+
+      #mail-queue .queue-actions .action-icon {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 12px;
+        filter: drop-shadow(0 0 3px rgb(105 181 207 / 24%));
+        stroke-width: 1.7;
+      }
+
+      body.motion-paused #mail-queue .queue-actions::after,
+      body.motion-paused .queue-status-signal {
+        animation-play-state: paused !important;
+      }
+
+      /* Page Title System：每个工作页统一为动态科技图标 + 文字标题。 */
+      .page-title {
+        display: flex;
+        width: fit-content;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .page-title-icon {
+        position: relative;
+        display: inline-grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(137 190 210 / 36%);
+        border-radius: 13px;
+        background:
+          radial-gradient(circle at 50% 46%, rgb(169 223 240 / 18%), transparent 48%),
+          linear-gradient(145deg, rgb(246 253 255 / 90%), rgb(216 233 240 / 72%));
+        box-shadow:
+          0 9px 20px rgb(38 78 96 / 13%),
+          inset 0 1px 0 rgb(255 255 255 / 94%),
+          inset 0 0 12px rgb(118 187 211 / 10%);
+        color: #4f7484;
+      }
+
+      .page-title-icon::before {
+        position: absolute;
+        inset: 6px;
+        border: 1px dashed rgb(98 165 191 / 34%);
+        border-top-color: rgb(118 195 219 / 74%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 6.4s linear infinite;
+      }
+
+      .page-title-icon::after {
+        position: absolute;
+        top: 5px;
+        right: 6px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #80b8ca;
+        box-shadow: 0 0 8px rgb(105 181 207 / 52%);
+        content: "";
+        animation: tech-beacon 1.9s ease-in-out infinite;
+      }
+
+      .page-title-icon > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 22px;
+        height: 22px;
+        color: inherit;
+        stroke-width: 1.55;
+      }
+
+      .page-title-text {
+        min-width: 0;
+        color: inherit !important;
+      }
+
+      .page-title-overview .page-title-icon {
+        width: 48px;
+        height: 48px;
+        flex-basis: 48px;
+        border-color: rgb(155 209 226 / 42%);
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 20%), transparent 46%),
+          linear-gradient(145deg, #668593, #344e5b);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 25px rgb(41 83 102 / 20%),
+          inset 0 0 14px rgb(196 235 246 / 14%);
+        color: #dff5fa;
+      }
+
+      .page-title-overview .page-title-icon > .tech-icon {
+        width: 24px;
+        height: 24px;
+      }
+
+      .hero > .card:first-child {
+        padding-left: 24px;
+      }
+
+      .priority-heading {
+        align-items: center;
+      }
+
+      body.motion-paused .page-title-icon::before,
+      body.motion-paused .page-title-icon::after {
+        animation-play-state: paused !important;
+      }
+
       @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
+        body:not(.motion-enabled) *,
+        body:not(.motion-enabled) *::before,
+        body:not(.motion-enabled) *::after {
           scroll-behavior: auto !important;
           transition-duration: 0.01ms !important;
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
+        }
+
+        body:not(.motion-enabled) .shell::after {
+          display: none;
+        }
+      }
+
+      @media (max-width: 1280px) and (min-width: 1161px) {
+        .workspace {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+
+        .inspector {
+          display: none;
         }
       }
 
@@ -1955,6 +3109,26 @@
       }
 
       @media (max-width: 600px) {
+        #mail-queue .queue-item {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        #mail-queue .queue-actions {
+          width: 100%;
+        }
+
+        .page-title {
+          gap: 10px;
+        }
+
+        .page-title-icon,
+        .page-title-overview .page-title-icon {
+          width: 38px;
+          height: 38px;
+          flex-basis: 38px;
+          border-radius: 11px;
+        }
+
         .hero > .card:first-child {
           min-height: 0;
           padding-left: 22px;
@@ -1992,14 +3166,96 @@
       }
     </style>
   </head>
-  <body>
+  <body class="motion-enabled">
+    <svg class="icon-sprite" aria-hidden="true">
+      <defs>
+        <symbol id="ti-core" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path>
+          <path d="M5.5 5.5l2.8 2.8m7.4 7.4 2.8 2.8m0-13-2.8 2.8m-7.4 7.4-2.8 2.8"></path>
+        </symbol>
+        <symbol id="ti-overview" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+          <path d="M14 17.5h7M17.5 14v7"></path>
+        </symbol>
+        <symbol id="ti-mail" viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+          <path d="m4 7 8 6 8-6"></path>
+          <path d="m4 17 5-5m11 5-5-5"></path>
+        </symbol>
+        <symbol id="ti-note" viewBox="0 0 24 24">
+          <path d="M6 3h9l3 3v15H6z"></path>
+          <path d="M15 3v4h4M9 11h6m-6 4h6m-6 4h4"></path>
+        </symbol>
+        <symbol id="ti-finance" viewBox="0 0 24 24">
+          <path d="M4 4v16h17"></path>
+          <path d="m7 16 4-5 3 2 5-7"></path>
+          <circle cx="7" cy="16" r="1"></circle><circle cx="11" cy="11" r="1"></circle><circle cx="19" cy="6" r="1"></circle>
+        </symbol>
+        <symbol id="ti-calendar" viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+          <path d="M7 3v4m10-4v4M3 10h18M8 14h2m4 0h2m-8 4h2"></path>
+        </symbol>
+        <symbol id="ti-report" viewBox="0 0 24 24">
+          <path d="M4 19V5m0 14h16"></path>
+          <path d="M6 15h3l2-6 3 8 2-5h4"></path>
+        </symbol>
+        <symbol id="ti-system" viewBox="0 0 24 24">
+          <rect x="6" y="6" width="12" height="12" rx="3"></rect>
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4"></path>
+        </symbol>
+        <symbol id="ti-settings" viewBox="0 0 24 24">
+          <path d="m12 3 3 2 3.5-.2.7 3.4L21 11l-2 3 .2 3.5-3.4.7L13 21l-3-2-3.5.2-.7-3.4L3 13l2-3-.2-3.5 3.4-.7z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </symbol>
+        <symbol id="ti-user" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4.5 21c.8-4.2 3.3-6.5 7.5-6.5s6.7 2.3 7.5 6.5"></path>
+        </symbol>
+        <symbol id="ti-route" viewBox="0 0 24 24">
+          <circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle>
+          <path d="M7 6h5a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3H9a3 3 0 0 0-3 3v2h11"></path>
+        </symbol>
+        <symbol id="ti-check" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="m8 12 2.7 2.7L16.5 9"></path>
+        </symbol>
+        <symbol id="ti-inbox" viewBox="0 0 24 24">
+          <path d="M4 5h16l2 9v5H2v-5z"></path>
+          <path d="M3 14h5l2 3h4l2-3h5"></path>
+        </symbol>
+        <symbol id="ti-branch" viewBox="0 0 24 24">
+          <circle cx="6" cy="5" r="2"></circle><circle cx="18" cy="8" r="2"></circle><circle cx="18" cy="18" r="2"></circle>
+          <path d="M6 7v8a3 3 0 0 0 3 3h7M8 8h8M12 8v10"></path>
+        </symbol>
+        <symbol id="ti-sap" viewBox="0 0 24 24">
+          <path d="m12 2 8.5 5v10L12 22l-8.5-5V7z"></path>
+          <path d="M8 9h8M8 12h5m-5 3h8"></path>
+        </symbol>
+        <symbol id="ti-archive" viewBox="0 0 24 24">
+          <path d="M4 8h16v12H4zM3 4h18v4H3z"></path>
+          <path d="M9 12h6"></path>
+        </symbol>
+        <symbol id="ti-shield" viewBox="0 0 24 24">
+          <path d="M12 3 20 6v6c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6z"></path>
+          <path d="m8.5 12 2.2 2.2 4.8-5"></path>
+        </symbol>
+        <symbol id="ti-x" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="m8.5 8.5 7 7m0-7-7 7"></path>
+        </symbol>
+      </defs>
+    </svg>
     <div class="shell">
       <header>
         <div class="brand">
-          <div class="avatar" aria-hidden="true">AI</div>
+          <div class="avatar" aria-hidden="true"><svg class="tech-icon"><use href="#ti-core"></use></svg></div>
           <div>
             <div class="brand-title">我的AI员工</div>
-            <div class="brand-subtitle">本地运营控制台</div>
+            <div class="brand-subtitle">LOCAL INTELLIGENCE SYSTEM</div>
           </div>
         </div>
         <div class="status-strip" aria-label="系统状态">
@@ -2011,7 +3267,15 @@
           <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
         </div>
         <div class="header-actions">
-          <button class="btn" type="button" data-jump-view="system">系统状态</button>
+          <button class="motion-toggle" id="motion-toggle" type="button" aria-pressed="false" title="暂停科技图标动效">
+            <span class="motion-signal" aria-hidden="true"></span>
+            <span id="motion-toggle-label">动态 ON</span>
+          </button>
+          <div class="hud-clock" aria-label="本地系统时间">
+            <span>LOCAL / SYS</span>
+            <strong id="hud-clock">--:--:--</strong>
+          </div>
+          <button class="btn btn-with-icon" type="button" data-jump-view="system"><svg class="tech-icon button-icon" aria-hidden="true"><use href="#ti-system"></use></svg>系统状态</button>
         </div>
       </header>
 
@@ -2019,14 +3283,14 @@
         <aside>
           <div class="nav-title">工作区</div>
           <nav class="nav" aria-label="主导航">
-            <button class="active" data-view="today" aria-current="page"><span class="nav-label"><span class="nav-icon" aria-hidden="true">总</span>总览</span><span class="badge" id="badge-today">6</span></button>
-            <button data-view="mail"><span class="nav-label"><span class="nav-icon" aria-hidden="true">邮</span>邮件</span><span class="badge" id="badge-mail">3</span></button>
-            <button data-view="notes"><span class="nav-label"><span class="nav-icon" aria-hidden="true">笔</span>笔记</span><span class="badge" id="badge-notes">2</span></button>
-            <button data-view="finance"><span class="nav-label"><span class="nav-icon" aria-hidden="true">财</span>财务</span><span class="badge" id="badge-finance">1</span></button>
-            <button data-view="calendar"><span class="nav-label"><span class="nav-icon" aria-hidden="true">日</span>日程</span><span class="badge">0</span></button>
-            <button data-view="reports"><span class="nav-label"><span class="nav-icon" aria-hidden="true">报</span>报告</span><span class="badge" id="badge-reports">8</span></button>
-            <button data-view="system"><span class="nav-label"><span class="nav-icon" aria-hidden="true">系</span>系统</span><span class="badge">7/8</span></button>
-            <button data-view="settings"><span class="nav-label"><span class="nav-icon" aria-hidden="true">设</span>设置</span><span class="badge">安全</span></button>
+            <button class="active" data-view="today" aria-current="page"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span>总览</span><span class="badge" id="badge-today">6</span></button>
+            <button data-view="mail"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-mail"></use></svg></span>邮件</span><span class="badge" id="badge-mail">3</span></button>
+            <button data-view="notes"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>笔记</span><span class="badge" id="badge-notes">2</span></button>
+            <button data-view="finance"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-finance"></use></svg></span>财务</span><span class="badge" id="badge-finance">1</span></button>
+            <button data-view="calendar"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span>日程</span><span class="badge">0</span></button>
+            <button data-view="reports"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-report"></use></svg></span>报告</span><span class="badge" id="badge-reports">8</span></button>
+            <button data-view="system"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-system"></use></svg></span>系统</span><span class="badge">7/8</span></button>
+            <button data-view="settings"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-settings"></use></svg></span>设置</span><span class="badge">安全</span></button>
           </nav>
 
           <div class="side-card">
@@ -2050,7 +3314,7 @@
               <div class="card card-pad">
                 <p class="tiny priority-eyebrow" id="today-source">今日工作 · 正在连接本地 API</p>
                 <div class="priority-heading">
-                  <h1 class="headline"><span id="total-tasks">6</span><span class="headline-label">个待处理项</span></h1>
+                  <h1 class="headline page-title page-title-overview"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span><span class="page-title-text"><span id="total-tasks">6</span><span class="headline-label">个待处理项</span></span></h1>
                   <p class="priority-risk"><span aria-hidden="true"></span><span id="risk-summary">1 项需要优先复核</span></p>
                 </div>
                 <div class="summary-grid">
@@ -2073,7 +3337,7 @@
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>安全门控</h3>
+                <h3 class="panel-title"><svg class="tech-icon" aria-hidden="true"><use href="#ti-shield"></use></svg>安全门控</h3>
                 <div class="gate-list">
                   <div class="gate"><strong>真实 SMTP</strong><span class="tag red" id="gate-smtp">禁用</span></div>
                   <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="gate-approval">禁写</span></div>
@@ -2086,7 +3350,7 @@
             <div class="today-lower">
               <div class="thread">
                 <div class="step">
-                <div class="step-icon">你</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-user"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>用户指令</span>
@@ -2096,7 +3360,7 @@
                 </div>
                 </div>
                 <div class="step">
-                <div class="step-icon">计</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-route"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>计划</span>
@@ -2111,7 +3375,7 @@
                 </div>
                 </div>
                 <div class="step">
-                <div class="step-icon">结</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-check"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>当前结果</span>
@@ -2137,14 +3401,14 @@
                 </div>
               </div>
               <section class="flow-card" aria-labelledby="process-flow-title">
-                <h2 id="process-flow-title">处理流程</h2>
+                <h2 id="process-flow-title"><svg class="tech-icon" aria-hidden="true"><use href="#ti-route"></use></svg>处理流程</h2>
                 <p class="tiny">自动化只推进至安全边界，高风险动作始终等待确认。</p>
                 <ol class="process-flow">
-                  <li class="active"><span class="flow-stage" aria-hidden="true">收</span><span>收件箱</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">分</span><span>分类</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">SAP</span><span>SAP 处理</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">人</span><span>人工确认</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">档</span><span>归档</span></li>
+                  <li class="active"><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-inbox"></use></svg></span><span>收件箱</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-branch"></use></svg></span><span>分类</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-sap"></use></svg></span><span>SAP 处理</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-user"></use></svg></span><span>人工确认</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-archive"></use></svg></span><span>归档</span></li>
                 </ol>
               </section>
             </div>
@@ -2154,7 +3418,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="mail-source">邮件工作台 · 待审批队列</p>
-                <h1 class="headline">邮件草稿审批</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-mail"></use></svg></span><span class="page-title-text">邮件草稿审批</span></h1>
                 <p class="section-summary">草稿可保存；真实发送仍由审批、凭据与网络门控保护。</p>
               </div>
               <div class="queue" id="mail-queue" style="margin-top: 16px">
@@ -2197,7 +3461,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">运行状态 · 本地只读</p>
-                <h1 class="headline">系统健康</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-system"></use></svg></span><span class="page-title-text">系统健康</span></h1>
                 <p class="section-summary">核心服务可继续运行；外发和写入能力保持锁定。</p>
               </div>
             </div>
@@ -2278,7 +3542,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="notes-source">笔记工作台 · 待确认候选</p>
-                <h1 class="headline">笔记候选确认</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span><span class="page-title-text">笔记候选确认</span></h1>
                 <p class="section-summary">确认后才写入 L2；敏感内容继续留在本地。</p>
               </div>
               <div class="queue" id="notes-queue" style="margin-top: 16px">
@@ -2304,7 +3568,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="finance-source">财务工作台 · 异常复核</p>
-                <h1 class="headline">财务异常复核</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-finance"></use></svg></span><span class="page-title-text">财务异常复核</span></h1>
                 <p class="section-summary">异常可标记；真实账单导入仍受安全门控保护。</p>
               </div>
               <div class="queue" id="finance-queue" style="margin-top: 16px">
@@ -2323,7 +3587,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">日程工作台 · 本地摘要</p>
-                <h1 class="headline">今日日程</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span><span class="page-title-text">今日日程</span></h1>
                 <p class="section-summary">CalDAV 尚未接入，当前显示本地只读摘要。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
@@ -2339,7 +3603,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="reports-source">报告工作台 · 本地只读</p>
-                <h1 class="headline">报告与运行记录</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-report"></use></svg></span><span class="page-title-text">报告与运行记录</span></h1>
                 <p class="section-summary">集中查看质量门、运行证据与阶段产出。</p>
               </div>
 
@@ -2380,7 +3644,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">系统设置 · 连接状态</p>
-                <h1 class="headline">凭据与集成</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-settings"></use></svg></span><span class="page-title-text">凭据与集成</span></h1>
                 <p class="section-summary">只展示连接状态，不读取或显示凭据明文。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
@@ -2480,6 +3744,34 @@
       const API_BASE = "http://127.0.0.1:8765";
       const buttons = document.querySelectorAll(".nav button");
       const views = document.querySelectorAll(".view");
+      const hudClock = document.getElementById("hud-clock");
+      const motionToggle = document.getElementById("motion-toggle");
+      const motionToggleLabel = document.getElementById("motion-toggle-label");
+
+      const refreshHudClock = () => {
+        if (!hudClock) return;
+        hudClock.textContent = new Intl.DateTimeFormat("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).format(new Date());
+      };
+
+      refreshHudClock();
+      window.setInterval(refreshHudClock, 1000);
+
+      const setMotionPaused = (paused) => {
+        document.body.classList.toggle("motion-paused", paused);
+        if (!motionToggle || !motionToggleLabel) return;
+        motionToggle.setAttribute("aria-pressed", String(paused));
+        motionToggleLabel.textContent = paused ? "动态 OFF" : "动态 ON";
+        motionToggle.title = paused ? "开启科技图标动效" : "暂停科技图标动效";
+      };
+
+      motionToggle?.addEventListener("click", () => {
+        setMotionPaused(!document.body.classList.contains("motion-paused"));
+      });
 
       const fallbackTasks = {
         total: 6,
@@ -2774,7 +4066,7 @@
         const tagClass = status === "pending_send" ? "" : "green";
         const targetId = String(item.outbox_id ?? item.id ?? "");
         const action = status === "pending_send" ? "outbox.approve" : "outbox.cancel";
-        const btnLabel = status === "pending_send" ? "dry-run 审批" : "dry-run 取消";
+        const btnLabel = status === "pending_send" ? "审批预演" : "取消预演";
         const metaParts = [
           item.to ? `to: ${item.to}` : "",
           item.provider ? `provider: ${item.provider}` : "",
@@ -2782,7 +4074,7 @@
           status ? `status: ${status}` : "",
         ].filter(Boolean);
         const meta = metaParts.join(" · ") || "outbox 草稿";
-        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}">${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn">${escapeHtml(btnLabel)}</button><button type="button" class="btn btn-sm decide-btn" data-decision="approve">1-click 批准</button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject">1-click 拒绝</button></div></div>`;
+        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}"><span class="queue-status-signal" aria-hidden="true"></span>${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="${escapeHtml(btnLabel)}"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-route"></use></svg><span>${escapeHtml(btnLabel)}</span></button><button type="button" class="btn btn-sm decide-btn" data-decision="approve" aria-label="批准"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>批准</span></button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject" aria-label="拒绝"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-x"></use></svg><span>拒绝</span></button></div></div>`;
       }
 
       function renderNotesItem(item) {
