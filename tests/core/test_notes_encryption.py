@@ -248,11 +248,17 @@ class TestOptInAndFactory:
             os.environ.pop(ENABLE_NOTES_ENCRYPTION_ENV, None)
 
     def test_build_cipher_enabled_short_key_falls_back_stub(self) -> None:
-        """启用 opt-in + 短 master_key (<16 字节)→ 降级 Stub."""
+        """短密钥既不能经工厂启用，也不能绕过工厂直构 Impl。"""
         os.environ[ENABLE_NOTES_ENCRYPTION_ENV] = "1"
         try:
             cipher = build_notes_cipher(master_key=b"short")
             assert cipher.is_runtime_impl is False  # type: ignore[attr-defined]
+            with pytest.raises(ValueError, match="至少需 16 bytes"):
+                NotesCipherImpl(master_key=b"short")
+            non_bytes_cipher = build_notes_cipher(master_key="x" * 16)  # type: ignore[arg-type]
+            assert isinstance(non_bytes_cipher, NotesCipherStub)
+            with pytest.raises(ValueError, match="必须为 bytes"):
+                NotesCipherImpl(master_key="x" * 16)  # type: ignore[arg-type]
         finally:
             os.environ.pop(ENABLE_NOTES_ENCRYPTION_ENV, None)
 

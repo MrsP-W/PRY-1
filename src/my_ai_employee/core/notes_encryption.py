@@ -49,6 +49,9 @@ _FINGERPRINT_LENGTH: Final = 32
 # 派生 key 长度(32 字节 = 256 bit,AES-256 兼容)
 _DERIVED_KEY_LENGTH: Final = 32
 
+# 运行时 Impl 的主密钥最小长度(与 Keychain 写入/工厂降级口径一致)
+_MIN_MASTER_KEY_LENGTH: Final = 16
+
 # 加密 IV 长度(16 字节 = 128 bit,AES block size)
 _IV_LENGTH: Final = 16
 
@@ -177,6 +180,13 @@ class NotesCipherImpl:
     is_runtime_impl: bool = True
     name: str = _IMPL_NAME
 
+    def __post_init__(self) -> None:
+        """直构 Impl 也必须守住工厂的主密钥边界。"""
+        if not isinstance(self.master_key, bytes):
+            raise ValueError(f"master_key 必须为 bytes,实际 type={type(self.master_key).__name__}")
+        if len(self.master_key) < _MIN_MASTER_KEY_LENGTH:
+            raise ValueError(f"master_key 至少需 {_MIN_MASTER_KEY_LENGTH} bytes")
+
     def _derive_field_key(self, field_name: str, salt: bytes) -> bytes:
         """派生字段级 key — HMAC-SHA256 链迭代 10000 次.
 
@@ -293,8 +303,8 @@ def build_notes_cipher(master_key: bytes | None = None) -> NotesCipher:
     """
     if not is_notes_encryption_enabled():
         return get_default_stub()
-    if master_key is None or len(master_key) < 16:
-        # 主密钥缺失/过短 → 降级 Stub(沿撞坑 #65 opt-in 4 阶段)
+    if not isinstance(master_key, bytes) or len(master_key) < _MIN_MASTER_KEY_LENGTH:
+        # 主密钥缺失/类型不符/过短 → 降级 Stub(沿撞坑 #65 opt-in 4 阶段)
         return get_default_stub()
     return NotesCipherImpl(master_key=master_key)
 
