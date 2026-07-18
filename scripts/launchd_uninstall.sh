@@ -57,8 +57,6 @@ for label in "${LAUNCHD_LABELS[@]}"; do
         if ! launchctl unload "${target_plist}" 2>/dev/null; then
             echo "⚠️  launchctl unload 失败，尝试 bootout ${label}" >&2
         fi
-        rm -f "${target_plist}"
-        echo "🗑️  已删除 ${target_plist}"
     else
         echo "ℹ️  plist 不存在，跳过: ${target_plist}"
     fi
@@ -71,6 +69,18 @@ for label in "${LAUNCHD_LABELS[@]}"; do
             echo "❌ launchctl 无法退役 ${label}" >&2
             exit 3
         fi
+        refresh_launchctl_list
+        if launchctl_list_has_label "${label}" "${LAUNCHCTL_LIST}"; then
+            echo "❌ launchctl bootout 后仍见 ${label}，保留 plist 以便恢复" >&2
+            exit 3
+        fi
+    fi
+
+    # 仅在 launchctl list 已确认 label 不再注册后删除 plist；若 unload 与
+    # bootout 都失败，前面的 exit 3 会保留该文件，供人工恢复或重试。
+    if [[ -f "${target_plist}" || -L "${target_plist}" ]]; then
+        rm -f "${target_plist}"
+        echo "🗑️  已删除 ${target_plist}"
     fi
 done
 
@@ -83,9 +93,9 @@ for label in "${LAUNCHD_LABELS[@]}"; do
     fi
 done
 
+already_uninstalled=false
 if [[ "${had_managed_state}" != true ]]; then
-    echo "ℹ️  所有受管 plist 均不存在且 job 未注册，已卸载"
-    exit 1
+    already_uninstalled=true
 fi
 
 # ===== 3. 删除 ~/bin/ wrapper(可选，默认保留) =====
@@ -96,8 +106,13 @@ if [[ "${1:-}" == "--purge-bin" ]]; then
             echo "🗑️  已删除 ${target_wrapper}(--purge-bin)"
         fi
     done
-else
+elif [[ "${already_uninstalled}" != true ]]; then
     echo "ℹ️  保留 ${#TARGET_WRAPPERS[@]} 个 ~/bin/ wrapper(用 --purge-bin 删除)"
+fi
+
+if [[ "${already_uninstalled}" == true ]]; then
+    echo "ℹ️  所有受管 plist 均不存在且 job 未注册，已卸载"
+    exit 1
 fi
 
 echo ""

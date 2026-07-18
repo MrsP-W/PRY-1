@@ -150,9 +150,34 @@ class TestScanReports:
 
     def test_scan_finds_all_three_types(self, tmp_path: Path) -> None:
         self._setup_fake_tree(tmp_path)
+        oversized_paths = {
+            "docs/too-large.md",
+            "reports/too-large.md",
+            "output/2026-07-17/too-large.json",
+        }
+        for rel_path in oversized_paths:
+            path = tmp_path / rel_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text("x" * (256 * 1024 + 1), encoding="utf-8")
+
         entries = scan_reports(project_root=tmp_path, limit=20)
         types = {e.type for e in entries}
         assert types == {"doc", "phase_report", "spike", "agent_output"}
+        assert {entry.path for entry in entries}.isdisjoint(oversized_paths)
+
+    def test_scan_skips_symlink_target_outside_project_root(self, tmp_path: Path) -> None:
+        """报告扫描不得经 docs/ 内的 symlink 暴露项目根外元数据。"""
+        project_root = tmp_path / "project"
+        project_root.mkdir()
+        self._setup_fake_tree(project_root)
+        external_report = tmp_path / "outside.md"
+        external_report.write_text("# 项目外报告\n✅ 已完成\n", encoding="utf-8")
+        (project_root / "docs" / "outside-link.md").symlink_to(external_report)
+
+        paths = {entry.path for entry in scan_reports(project_root=project_root, limit=20)}
+
+        assert "docs/v0.2.53.9-test-2026-06-25.md" in paths
+        assert "docs/outside-link.md" not in paths
 
     def test_entries_have_required_fields(self, tmp_path: Path) -> None:
         self._setup_fake_tree(tmp_path)

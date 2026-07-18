@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import subprocess
 import sys
+import threading
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -123,6 +125,65 @@ def test_app_uses_default_stub(fake_rumps: None) -> None:
     app = NotesMenuBarApp()
     assert isinstance(app._service, ExpenseServiceStub)
     assert app._notes_count == 0  # Stub 默认 0
+
+
+# ===== 撞坑 #97 菜单栏默认捕获服务跨线程回归 =====
+
+
+def test_default_capture_service_uses_nullpool_across_hotkey_thread(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#97:懒加载 capture service 由 hotkey-poll 使用时不得复用 SQLCipher 连接."""
+    from sqlalchemy import text
+    from sqlalchemy.pool import NullPool
+
+    from my_ai_employee.core import keychain
+    from my_ai_employee.core.db import Database
+    from my_ai_employee.menu_bar import app as app_module
+
+    test_db_path = tmp_path / "menu-bar-capture-threading.db"
+    original_open = Database.open
+
+    def open_at_temp_path(db_path: Path | None = None) -> Database:
+        return original_open(db_path=test_db_path if db_path is None else db_path)
+
+    monkeypatch.setattr(Database, "open", staticmethod(open_at_temp_path))
+    monkeypatch.setattr(
+        keychain,
+        "get_db_password",
+        lambda: keychain.KeychainResult(ok=True, value="f" * 64),
+    )
+    monkeypatch.delenv("ENABLE_NOTES_ENCRYPTION", raising=False)
+
+    service = app_module._build_default_capture_service()
+    engine = service._store._sf.kw["bind"]
+    errors: list[BaseException] = []
+
+    try:
+        with service._store._sf() as session:
+            assert session.execute(text("SELECT 1")).scalar_one() == 1
+
+        def query_from_hotkey_poll() -> None:
+            try:
+                with service._store._sf() as session:
+                    assert session.execute(text("SELECT 1")).scalar_one() == 1
+            except BaseException as exc:  # noqa: BLE001 — 收集线程内 SQLCipher 异常
+                errors.append(exc)
+
+        worker = threading.Thread(
+            target=query_from_hotkey_poll,
+            name="hotkey-poll-test",
+            daemon=True,
+        )
+        worker.start()
+        worker.join(timeout=2)
+    finally:
+        engine.dispose()
+
+    assert isinstance(engine.pool, NullPool)
+    assert not worker.is_alive(), "撞坑 #97 热键线程查询超时，避免质量门无限等待"
+    assert not errors, f"撞坑 #97 菜单栏热键线程仍跨线程访问 SQLCipher: {errors!r}"
 
 
 # ===== T2. 自定义 expense_service 注入 =====

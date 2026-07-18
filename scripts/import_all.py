@@ -27,11 +27,13 @@ import argparse
 import sys
 from pathlib import Path
 
+import sqlcipher3
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from sqlalchemy.exc import OperationalError  # noqa: E402
+from sqlalchemy.exc import OperationalError, SQLAlchemyError  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from my_ai_employee.connectors.alipay_csv import (  # noqa: E402
@@ -46,7 +48,10 @@ from my_ai_employee.connectors.wechat_csv import (  # noqa: E402
 from my_ai_employee.connectors.wechat_csv import (  # noqa: E402
     detect_version as detect_wechat_version,
 )
-from my_ai_employee.core.alembic_helper import assert_min_revision  # noqa: E402
+from my_ai_employee.core.alembic_helper import (  # noqa: E402
+    AlembicTechnicalError,
+    assert_min_revision,
+)
 from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.models import Base  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
@@ -162,14 +167,19 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     if not real_import:
+        recognized_count = 0
         for csv_path in csv_files:
             source = _sniff_source(csv_path)
             if source is None:
                 print(f"[SKIP] 无法识别来源: {csv_path}", file=sys.stderr)
                 continue
+            recognized_count += 1
             print(f"[{source}] {csv_path.name}")
             print("  [DRY-RUN] 跳过实际导入")
-        print("\n汇总: files=0 parsed=0 inserted=0 failed=0")
+        if recognized_count == 0:
+            print(f"未发现可识别的账单 CSV: {args.csv_dir}", file=sys.stderr)
+            return 1
+        print(f"\n汇总: files={recognized_count} parsed=0 inserted=0 failed=0")
         return 0
 
     # ``--count=1`` 必须限制整次真实写入，而非仅限制每个 CSV 的行数。
@@ -185,11 +195,20 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # 仅真实导入通过全部门控后才允许触碰数据库。
-    db = Database.open(db_path=args.db_path)
+    # 单源入口已将 Database.open() 的 Keychain/SQLCipher/目录错误映射为
+    # exit 3；批量入口必须保持同一技术失败契约，且不得泄漏 traceback。
+    try:
+        db = Database.open(db_path=args.db_path)
+    except (OSError, sqlcipher3.DatabaseError) as e:
+        print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+        return 3
     try:
         engine = make_sqlalchemy_engine(db)
         try:
             assert_min_revision(engine, _MIN_ALEMBIC_REVISION)
+        except AlembicTechnicalError as e:
+            print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+            return 3
         except RuntimeError as e:
             print(f"Alembic version 校验失败: {e}", file=sys.stderr)
             print("请先跑: alembic upgrade head", file=sys.stderr)
@@ -218,6 +237,9 @@ def main(argv: list[str] | None = None) -> int:
         except OperationalError as e:
             print(f"数据库技术失败(DB 锁或连接错误): {e}", file=sys.stderr)
             return 3
+    except SQLAlchemyError as e:
+        print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+        return 3
     finally:
         db.close()
 

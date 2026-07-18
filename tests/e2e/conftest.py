@@ -28,9 +28,11 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 # ===== 临时 DB + Keychain monkeypatch 范本(沿 spike_outbox_100.py)=====
 
 _FAKE_KEYCHAIN: dict[tuple[str, str], str] = {}
+_S5_CLI_CONFIRM_ENV = "MYAI_EMPLOYEE_S5_CLI_CONFIRMED"
+_S5_CLI_CONFIRM_VALUE = "1"
 
 
-def _install_fake_keychain() -> None:
+def _install_fake_keychain(monkeypatch: pytest.MonkeyPatch) -> None:
     """in-memory dict 模拟 Keychain(e2e 不污染真实凭证)."""
     from my_ai_employee.core import keychain
 
@@ -44,16 +46,18 @@ def _install_fake_keychain() -> None:
         _FAKE_KEYCHAIN[(service, account)] = value
         return keychain.KeychainResult(ok=True, value=value)
 
-    # 透传原 keychain 行为(keychain 模块动态添加 .get/.set 属性,需 attr-defined 严判)
-    keychain.get = fake_get  # type: ignore[attr-defined]
-    keychain.set = fake_set  # type: ignore[attr-defined]
+    # get/set 是 e2e 专用的动态兼容接口；必须随 fixture 自动恢复，
+    # 以免同一 pytest 进程内的后续用例读取到 fake hook。
+    keychain_module: Any = keychain
+    monkeypatch.setattr(keychain_module, "get", fake_get, raising=False)
+    monkeypatch.setattr(keychain_module, "set", fake_set, raising=False)
 
 
 @pytest.fixture
-def fake_keychain(monkeypatch: Any) -> Iterator[None]:
+def fake_keychain(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     """装 fake keychain(逐 test 隔离)."""
     _FAKE_KEYCHAIN.clear()
-    _install_fake_keychain()
+    _install_fake_keychain(monkeypatch)
     yield
 
 
@@ -130,11 +134,12 @@ def pytest_collection_modifyitems(config: Any, items: Any) -> Any:
         - shell -n 语法验证(install.sh + uninstall.sh)
     """
     skip_real = pytest.mark.skip(
-        reason="S5 真实 SMTP 需 SMTP_REAL_NETWORK=1 env + 沿 D5.6.5 4 重防误发参数"
+        reason="S5 真实 SMTP 未设置 SMTP_REAL_NETWORK=1，默认不执行",
     )
 
     for item in items:
-        # S5:仅当 SMTP_REAL_NETWORK != "1" 时 skip
+        # S5:未显式开网络才 skip；已开网络但未获 CLI 确认时，测试体必须 fail-closed，
+        # 不能以 pytest 的 0 退出码伪装为成功。
         if "s5_real_smtp" in item.nodeid and os.environ.get("SMTP_REAL_NETWORK") != "1":
             item.add_marker(skip_real)
         # S8-S9:已实化(D10.4 commit 即将落),不再 skip

@@ -26,6 +26,7 @@ from my_ai_employee.quality_snapshot import (  # noqa: E402
 from scripts.check_quality_snapshot import parse_lint_file_count, parse_pytest_counts  # noqa: E402
 
 _MYPY_FILES_RE = re.compile(r"(\d+)\s+source files")
+P0_4_HEALTH_SAMPLE = "scripts/sample_launchd_health.py"
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,9 +40,9 @@ class EntryLineCheck:
 
 
 def count_mypy_source_files(root: Path = ROOT) -> int:
-    """mypy src tests 源文件计数(与 make mypy 一致)."""
+    """mypy src/tests 与 P0-4 采样器计数(与 make mypy 一致)."""
     result = subprocess.run(
-        ["uv", "run", "mypy", "--strict", "src", "tests"],
+        ["uv", "run", "mypy", "--strict", "src", "tests", P0_4_HEALTH_SAMPLE],
         cwd=root,
         capture_output=True,
         text=True,

@@ -30,6 +30,7 @@ import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
+from datetime import date
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
@@ -313,10 +314,7 @@ def _segment_c_cross_source_alipay_triggers_wechat_candidate(
     # 验证:支付宝 N 笔全 needs_confirm + candidate_match_id 指向微信
     alipay_needs_confirm = 0
     alipay_with_candidate = 0
-    for p in pairs:
-        tx = store.by_external_id("alipay", "alipay-xsrc-XXX")  # placeholder
-        # 用精确 ID
-        idx = pairs.index(p) + 1
+    for idx, _ in enumerate(pairs, 1):
         tx = store.by_external_id("alipay", f"alipay-xsrc-{idx:03d}-10")
         if tx is not None and tx.needs_confirm == 1:
             alipay_needs_confirm += 1
@@ -362,8 +360,7 @@ def _segment_d_cross_source_wechat_triggers_alipay_candidate(
 
     # 验证:微信 N 笔全 needs_confirm + candidate_match_id 指向支付宝
     wechat_needs_confirm = 0
-    for p in pairs:
-        idx = pairs.index(p) + 1
+    for idx, _ in enumerate(pairs, 1):
         tx = store.by_external_id("wechat", f"wechat-xsrc-{idx:03d}-20")
         if tx is not None and tx.needs_confirm == 1 and tx.candidate_match_id is not None:
             wechat_needs_confirm += 1
@@ -447,11 +444,27 @@ def _segment_e_5_extension_points(
     )
 
 
-def _date_today():
+def _date_today() -> date:
     """返回固定日期(测试可重复)."""
-    from datetime import date
-
     return date(2026, 6, 15)
+
+
+def _int_extra(segment: SegmentResult, key: str) -> int:
+    """从松散的报告扩展字段中安全读取整数计数。"""
+
+    value = segment.extra.get(key, 0)
+    return value if isinstance(value, int) else 0
+
+
+def _string_list_extra(segment: SegmentResult | None, key: str) -> tuple[str, ...]:
+    """从松散的报告扩展字段中安全读取字符串列表。"""
+
+    if segment is None:
+        return ()
+    value = segment.extra.get(key)
+    if not isinstance(value, list):
+        return ()
+    return tuple(item for item in value if isinstance(item, str))
 
 
 # ===== 4. 主流程 =====
@@ -592,18 +605,19 @@ def main(argv: list[str] | None = None) -> int:
     all_tx = store.list_by_source("wechat", limit=1000) + store.list_by_source("alipay", limit=1000)
     result.total_inserted = len(all_tx)
     result.total_duplicates = sum(
-        seg.extra.get("second_duplicates", 0) for seg in all_results if seg
+        _int_extra(seg, "second_duplicates") for seg in all_results if seg is not None
     )
     result.total_needs_confirm = sum(1 for tx in all_tx if tx.needs_confirm == 1)
 
     result.total_duration_seconds = time.perf_counter() - t0
 
     # 5 扩展点全过标志
-    if result.segment_e and "extensions" in result.segment_e.extra:
+    extensions = _string_list_extra(result.segment_e, "extensions")
+    if extensions:
         result.extension_points_passed = tuple(
-            e
-            for e in result.segment_e.extra["extensions"]
-            if "FAIL" not in e and "MISSING" not in e
+            extension
+            for extension in extensions
+            if "FAIL" not in extension and "MISSING" not in extension
         )
 
     # 报告
@@ -672,8 +686,9 @@ def _write_report(result: SpikeResult, report_dir: Path) -> Path:
     lines.append("")
     lines.append("| # | 扩展点 | 状态 |")
     lines.append("|---|--------|------|")
-    if result.segment_e and "extensions" in result.segment_e.extra:
-        for ext in result.segment_e.extra["extensions"]:
+    extensions = _string_list_extra(result.segment_e, "extensions")
+    if extensions:
+        for ext in extensions:
             ext_label = ext.split(".", 1)[1] if "." in ext else ext
             passed = "✅" if "FAIL" not in ext and "MISSING" not in ext else "❌"
             lines.append(f"| {ext.split('.')[0][2:]} | {ext_label} | {passed} |")

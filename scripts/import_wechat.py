@@ -14,7 +14,7 @@ D6.6 P1 修复(检查员驳回 4 缺陷 — 1 P1 + 3 P2):
     0 = 成功(parsed > 0 且 failed == 0)
     1 = 解析失败(文件不存在 / 嗅探失败 / 解析 0 行 / Alembic 不通过)
     2 = 业务失败(result.failed > 0)
-    3 = 技术失败(OperationalError 透传,DB 锁/连接错误)
+    3 = 技术失败(DB 打开、锁或连接错误)
 """
 
 from __future__ import annotations
@@ -23,18 +23,23 @@ import argparse
 import sys
 from pathlib import Path
 
+import sqlcipher3
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 sys.path.insert(0, str(PROJECT_ROOT))  # 让直接运行脚本时可 import scripts.* 包
 
-from sqlalchemy.exc import OperationalError  # noqa: E402
+from sqlalchemy.exc import OperationalError, SQLAlchemyError  # noqa: E402
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from my_ai_employee.connectors.wechat_csv import (  # noqa: E402
     UnsupportedCSVVersionError,
     detect_version,
 )
-from my_ai_employee.core.alembic_helper import assert_min_revision  # noqa: E402
+from my_ai_employee.core.alembic_helper import (  # noqa: E402
+    AlembicTechnicalError,
+    assert_min_revision,
+)
 from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.models import Base  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
@@ -102,13 +107,22 @@ def main(argv: list[str] | None = None) -> int:
         print(f"CSV 读取失败: {e}", file=sys.stderr)
         return 1
 
-    db = Database.open(db_path=args.db_path)
+    try:
+        db = Database.open(db_path=args.db_path)
+    except (OSError, sqlcipher3.DatabaseError) as e:
+        # Database.open() 可能因 Keychain、目录或 SQLCipher 校验失败而中断；
+        # CLI 必须保持技术失败 exit 3 契约，不能泄漏 traceback。
+        print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+        return 3
     try:
         engine = make_sqlalchemy_engine(db)
         # D6.6 P2 修复:CLI 启动校验 alembic_version >= '0007_transactions'
         # 防止在旧 DB 上漏迁移(导致 transactions 表不存在)
         try:
             assert_min_revision(engine, _MIN_ALEMBIC_REVISION)
+        except AlembicTechnicalError as e:
+            print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+            return 3
         except RuntimeError as e:
             print(f"Alembic version 校验失败: {e}", file=sys.stderr)
             print("请先跑: alembic upgrade head", file=sys.stderr)
@@ -126,6 +140,9 @@ def main(argv: list[str] | None = None) -> int:
             # D3.3.3 教训:OperationalError 必透传(DB 锁 / 连接错误)
             print(f"数据库技术失败(DB 锁或连接错误): {e}", file=sys.stderr)
             return 3
+    except SQLAlchemyError as e:
+        print(f"数据库技术失败(DB 打开、锁或连接错误): {e}", file=sys.stderr)
+        return 3
     finally:
         db.close()
 

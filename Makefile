@@ -227,7 +227,7 @@ spike-notes: ## D9.2 — Apple Notes spike(30 笔 faker,Mock runner 跑通链路
 .PHONY: test-notes
 test-notes: ## D9.2 — Apple Notes 测试套件(12 cases)
 	@echo "$(BLUE)🧪 跑 Apple Notes 测试(7 HTML cleaner + 5 CLI 集成)$(RESET)"
-	@$(PYTHON) -m pytest tests/scripts/test_sync_notes.py -v
+	@$(PYTHON) -m pytest tests/scripts/test_sync_notes.py -v --no-cov
 
 .PHONY: monthly-report
 monthly-report: ## D10.2 — 数字生活月报生成(沿 D5.6.5 4 退出码范本)
@@ -251,24 +251,28 @@ spike-d8-anomaly: ## v0.2 D8.4 — S11 智能财务异常检测真链路 spike(3
 
 # ===== 9 质量门补齐(v0.2 B-5 + D8 实施前置)=====
 
+# P0-4 只读 launchd 健康采样器位于 scripts/，不纳入历史 CLI/spike 脚本范围；
+# 因此在常规 Ruff、format 与 mypy 门中显式覆盖，避免质量漂移漏检。
+P0_4_HEALTH_SAMPLE := scripts/sample_launchd_health.py
+
 .PHONY: mypy
 mypy: ## 9 质量门 — mypy 类型检查(严格模式 `--strict`,沿 v0.2.42 范本:43 errors 清零 + 失败即阻塞)
 	@echo "$(BLUE)🔍 mypy 类型检查(严格模式 --strict)$(RESET)"
-	@$(PYTHON) -m mypy --strict src tests
+	@$(PYTHON) -m mypy --strict src tests $(P0_4_HEALTH_SAMPLE)
 
 .PHONY: ruff
 ruff: ## 9 质量门 — ruff lint 检查
 	@echo "$(BLUE)🔍 ruff lint 检查$(RESET)"
-	@$(PYTHON) -m ruff check src tests
+	@$(PYTHON) -m ruff check src tests $(P0_4_HEALTH_SAMPLE)
 
 .PHONY: format
 format: ## 9 质量门 — ruff format 检查(--check 模式)
 	@echo "$(BLUE)📐 ruff format 检查(--check 模式)$(RESET)"
-	@$(PYTHON) -m ruff format --check src tests
+	@$(PYTHON) -m ruff format --check src tests $(P0_4_HEALTH_SAMPLE)
 
 .PHONY: format-fix
 format-fix: ## ruff format 自动修复
-	@$(PYTHON) -m ruff format src tests
+	@$(PYTHON) -m ruff format src tests $(P0_4_HEALTH_SAMPLE)
 
 .PHONY: coverage
 coverage: ## 9 质量门 — pytest + 覆盖率 fail_under=80%(沿 v0.1 范本;--cov 见 pyproject addopts)

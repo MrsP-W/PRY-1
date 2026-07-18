@@ -208,6 +208,31 @@ class TestDiscoverOptionalFailure:
         for c in clients.values():
             c.disconnect()
 
+    def test_tool_from_failed_server_is_available_from_another_server(self) -> None:
+        """全局可用工具不应因提供它的首个 server 失败而误报缺失。"""
+        discovery.DEFAULT_SERVERS = {
+            "primary_failing": ServerConfig(
+                name="primary_failing",
+                required=False,
+                transport_factory=_make_failing_factory(MCPConnectionError("primary down")),
+                expected_tools=["read_file"],
+            ),
+            "fallback_working": ServerConfig(
+                name="fallback_working",
+                required=True,
+                transport_factory=_make_working_factory("fallback_working", ["read_file"]),
+                expected_tools=["read_file"],
+            ),
+        }
+
+        clients, report = discover_servers()
+
+        assert report.failed == ["primary_failing"]
+        assert report.available_tools == {"read_file"}
+        assert report.missing_tools == set()
+        for client in clients.values():
+            client.disconnect()
+
 
 class TestDiscoverRequiredFailure:
     """必填 server 失败 → 抛 MCPError(让启动 abort)."""

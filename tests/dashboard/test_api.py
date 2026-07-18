@@ -7,6 +7,8 @@ import threading
 import urllib.error
 import urllib.request
 from collections.abc import Generator
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -683,6 +685,86 @@ def test_build_notes_pending_payload_decrypts_real_encrypted_notes(
     # 4) folder 字段同样按密文回退(明文 A/C=Notes,密文 B=Work)
     folders = {item["folder"] for item in payload["items"]}
     assert folders == {"Notes", "Work"}
+
+
+def test_http_api_notes_pending_concurrent_sqlcipher_requests_are_thread_isolated(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """#97 回归:真实 ThreadingHTTPServer 并发读不得跨线程关闭 SQLCipher 连接."""
+    import logging
+
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import NullPool
+
+    from my_ai_employee.core import keychain
+    from my_ai_employee.core.models import Base
+    from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine
+    from my_ai_employee.db.notes import Note, NoteStore
+    from my_ai_employee.menu_bar.note_confirm_service import NoteConfirmServiceImpl
+
+    def fake_get_db_password() -> keychain.KeychainResult:
+        return keychain.KeychainResult(ok=True, value="f" * 64)
+
+    monkeypatch.setattr(keychain, "get_db_password", fake_get_db_password)
+    engine = make_sqlalchemy_engine(db_path=tmp_path / "dashboard-threading.db")
+    assert isinstance(engine.pool, NullPool)
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine, expire_on_commit=False)
+    with session_factory() as session:
+        session.add(
+            Note(
+                apple_note_id="x-coredata://ICNote/THREADING",
+                folder="Notes",
+                title="并发待确认",
+                body="只读 HTTP 回归数据",
+                is_private=0,
+                tags=None,
+                synced_at_ms=1_700_000_004_000,
+                updated_at_ms=1_700_000_004_000,
+                sync_status="NEW",
+                needs_confirm=1,
+                candidate_match_id=None,
+            )
+        )
+        session.commit()
+
+    context = DashboardContext(
+        git_head_resolver=lambda: "abc1234",
+        keychain_probe=lambda _service: False,
+    ).with_note_confirm(NoteConfirmServiceImpl(NoteStore(session_factory)))
+    server = create_server(context, host="127.0.0.1", port=0)
+    _host, port = server.server_address[:2]
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+
+    def fetch_pending(_request_id: int) -> tuple[int, dict[str, Any]]:
+        return _fetch_json(f"http://127.0.0.1:{port}/api/notes/pending")
+
+    try:
+        with (
+            caplog.at_level(logging.WARNING, logger="sqlalchemy.pool"),
+            ThreadPoolExecutor(max_workers=8) as executor,
+        ):
+            responses = list(executor.map(fetch_pending, range(32)))
+        assert server_thread.is_alive()
+    finally:
+        server.shutdown()
+        server_thread.join(timeout=2.0)
+        engine.dispose()
+
+    assert not server_thread.is_alive()
+    for status, body in responses:
+        assert status == 200
+        assert body["count"] == 1
+        assert body["items"][0]["title"] == "并发待确认"
+    errors = [
+        record.getMessage()
+        for record in caplog.records
+        if "ProgrammingError" in record.getMessage() or "check_same_thread" in record.getMessage()
+    ]
+    assert not errors, f"撞坑 #97 仍存在 SQLCipher 跨线程异常: {errors}"
 
 
 def test_http_api_finance_anomalies(running_server: str) -> None:

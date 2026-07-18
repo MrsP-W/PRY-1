@@ -299,7 +299,9 @@ def test_alipay_cli_exits_1_with_env_missing_confirm(
 # ===== C6. import_all 默认 dry-run + 4 重防误发 =====
 
 
-def test_import_all_dry_run_no_real_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_import_all_dry_run_no_real_env(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
     """D7.6 4 重防误发:默认 dry-run,真实导入需 BILLS_REAL_IMPORT=1 + --confirm."""
     csv_dir = tmp_path / "bills"
     csv_dir.mkdir()
@@ -321,11 +323,29 @@ def test_import_all_dry_run_no_real_env(tmp_path: Path, monkeypatch: pytest.Monk
         # 默认 dry-run,只嗅探不导入
         rc = import_all.main(["--csv-dir", str(csv_dir), "--db-path", str(tmp_path / "new.db")])
 
+    captured = capsys.readouterr()
     assert rc == 0, f"import_all dry-run 应 exit 0,实际 {rc}"
+    assert "汇总: files=1 parsed=0 inserted=0 failed=0" in captured.out
     mock_open.assert_not_called()
     mock_make_engine.assert_not_called()
     mock_create_all.assert_not_called()
     mock_adapter.assert_not_called()
+
+    unknown_csv_dir = tmp_path / "unknown-bills"
+    unknown_csv_dir.mkdir()
+    unknown_csv = unknown_csv_dir / "unknown.csv"
+    unknown_csv.write_text("unsupported,header\nvalue,data\n", encoding="utf-8")
+
+    with patch.object(import_all.Database, "open") as mock_unknown_open:
+        unknown_rc = import_all.main(
+            ["--csv-dir", str(unknown_csv_dir), "--db-path", str(tmp_path / "must-not-open.db")]
+        )
+
+    captured = capsys.readouterr()
+    assert unknown_rc == 1
+    assert "[SKIP] 无法识别来源" in captured.err
+    assert "未发现可识别的账单 CSV" in captured.err
+    mock_unknown_open.assert_not_called()
 
 
 @pytest.mark.parametrize(

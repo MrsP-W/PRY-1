@@ -224,8 +224,13 @@ def _build_default_capture_service() -> ClipboardCaptureService:
     from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine
     from my_ai_employee.db.notes import NoteStore
 
-    db = Database.open()
-    engine = make_sqlalchemy_engine(db)
+    # hotkey-poll 是独立线程。先只取路径并关闭这条启动连接，再由 db_path
+    # 构造 NullPool engine，让每次 session 在当前线程新建/关闭 SQLCipher 连接。
+    # 不能传入单个 Database：默认 SingletonThreadPool 会复用它的 connection，
+    # 在热键线程触发 #97 的 check_same_thread ProgrammingError。
+    with Database.open() as db:
+        db_path = db.db_path
+    engine = make_sqlalchemy_engine(db_path=db_path)
     sf = sessionmaker[Any](bind=engine, expire_on_commit=False)
     store = NoteStore(sf)
     structurer = NoteStructurerService(store=store, llm_provider=get_router())

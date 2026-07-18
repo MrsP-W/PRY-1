@@ -173,7 +173,7 @@ def _scan_docs(root: Path) -> Iterable[ReportEntry]:
     if not docs.is_dir():
         return
     for path in sorted(docs.glob("*.md")):
-        if path.is_file():
+        if _is_scannable_report(path, root):
             yield _entry_from(path, "doc", root)
 
 
@@ -183,7 +183,7 @@ def _scan_reports(root: Path) -> Iterable[ReportEntry]:
     if not reports.is_dir():
         return
     for path in sorted(reports.glob("*.md")):
-        if path.is_file():
+        if _is_scannable_report(path, root):
             yield _entry_from(path, "phase_report", root)
 
 
@@ -200,8 +200,18 @@ def _scan_output(root: Path) -> Iterable[ReportEntry]:
         # YYYY-MM-DD → agent_output 类型
         type_label = "spike" if sub_name.startswith("spike") else "agent_output"
         for path in sorted(sub.rglob("*")):
-            if path.is_file() and path.suffix in {".md", ".json"}:
+            if path.suffix in {".md", ".json"} and _is_scannable_report(path, root):
                 yield _entry_from(path, type_label, root)
+
+
+def _is_scannable_report(path: Path, root: Path) -> bool:
+    """仅扫描根目录内的常规文件且大小不超过只读上限，异常时静默跳过."""
+    try:
+        resolved = path.resolve()
+        resolved.relative_to(root.resolve())
+        return resolved.is_file() and resolved.stat().st_size <= _MAX_FILE_BYTES
+    except (OSError, ValueError):
+        return False
 
 
 # ===== 单文件元数据提取 =====

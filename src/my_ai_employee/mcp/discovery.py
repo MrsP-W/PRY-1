@@ -104,7 +104,7 @@ def discover_servers(
     working: list[str] = []
     failed: list[str] = []
     available_tools: set[str] = set()
-    missing_tools: set[str] = set()
+    expected_tools = {tool for cfg in configs.values() for tool in (cfg.expected_tools or [])}
     errors: list[Any] = []
 
     for name, cfg in configs.items():
@@ -128,9 +128,6 @@ def discover_servers(
             )
             errors.append(error_surface)
             failed.append(name)
-            # 期望的工具标记为 missing
-            if cfg.expected_tools:
-                missing_tools.update(cfg.expected_tools)
             # 关键决策: 必填失败 → abort
             if cfg.required:
                 # 尽力关闭已连的所有 client。清理本身不能掩盖启动失败，
@@ -156,14 +153,12 @@ def discover_servers(
         clients[name] = client
         working.append(name)
         available_tools.update(client.tools)
-        if cfg.expected_tools:
-            missing_tools.update(set(cfg.expected_tools) - set(client.tools))
 
     report = McpDegradedReport(
         working=working,
         failed=failed,
         available_tools=available_tools,
-        missing_tools=missing_tools,
+        missing_tools=expected_tools - available_tools,
         errors=errors,
     )
     return clients, report

@@ -11,7 +11,9 @@ D6.0 范围(2026-06-14 启动):
 跑法:
     python scripts/spike_v0_1_scenarios.py --help
     python scripts/spike_v0_1_scenarios.py --enable-s1-s4    # Week 1 4 场景 InMemory
-    python scripts/spike_v0_1_scenarios.py --enable-s5 --real # 真实 SMTP(沿 D5.6.5)
+    SMTP_REAL_NETWORK=1 python scripts/spike_v0_1_scenarios.py \\
+      --enable-s5 --real --confirm yes-i-understand-this-sends-real-email
+      # 真实 SMTP（沿 D5.6.5；四重门均为必填）
 """
 
 from __future__ import annotations
@@ -24,10 +26,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 E2E_DIR = ROOT / "tests" / "e2e"
+_S5_CONFIRM_PHRASE = "yes-i-understand-this-sends-real-email"
+_S5_CLI_CONFIRM_ENV = "MYAI_EMPLOYEE_S5_CLI_CONFIRMED"
+_S5_CLI_CONFIRM_VALUE = "1"
 
 
-def _run_scenario(scenario: str) -> int:
-    """调 pytest 跑单个 e2e 场景,返回退出码(0=全过,1=有失败,2=全部 skip)."""
+def _run_scenario(scenario: str, *, extra_env: dict[str, str] | None = None) -> int:
+    """调 pytest 跑单个 e2e 场景并原样返回退出码(仅 0 代表成功)."""
     test_file = E2E_DIR / f"test_v0_1_{scenario}.py"
     if not test_file.exists():
         print(f"❌ {scenario}: 测试文件不存在 {test_file}")
@@ -44,7 +49,10 @@ def _run_scenario(scenario: str) -> int:
     ]
     print(f"▶️  跑 {scenario}: {' '.join(cmd)}")
 
-    result = subprocess.run(cmd, cwd=ROOT)
+    child_env = os.environ.copy()
+    if extra_env is not None:
+        child_env.update(extra_env)
+    result = subprocess.run(cmd, cwd=ROOT, env=child_env)
     return result.returncode
 
 
@@ -60,7 +68,7 @@ def main() -> int:
     parser.add_argument(
         "--enable-s5",
         action="store_true",
-        help="跑 S5 真实 SMTP(需 --real + 4 重防误发,沿 D5.6.5 范本)",
+        help="跑 S5 真实 SMTP（需 --real、SMTP_REAL_NETWORK=1 与 --confirm，沿 D5.6.5 范本）",
     )
     parser.add_argument(
         "--enable-s6-s9",
@@ -72,23 +80,37 @@ def main() -> int:
         action="store_true",
         help="S5 真实模式(必须配 --enable-s5,需 SMTP_REAL_NETWORK=1 env)",
     )
+    parser.add_argument(
+        "--confirm",
+        default="",
+        help=(f"S5 真实 SMTP 二次确认短语；必须为 {_S5_CONFIRM_PHRASE!r}"),
+    )
     args = parser.parse_args()
 
     # ===== 4 重防误发(沿 D5.6.5)=====
-    if args.enable_s5 and args.real:
+    if args.real and not args.enable_s5:
+        print("❌ --real 仅可与 --enable-s5 一起使用(默认 deny)")
+        return 1
+    if args.enable_s5 and not args.real:
+        print("❌ S5 必须显式配 --real 才会执行(默认 deny)")
+        return 1
+    if args.enable_s5:
+        if args.enable_s1_s4 or args.enable_s6_s9:
+            print("❌ S5 真实 SMTP 必须单独执行，不能与其他场景组混用(默认 deny)")
+            return 1
         if os.environ.get("SMTP_REAL_NETWORK") != "1":
             print("❌ S5 --real 必须配 SMTP_REAL_NETWORK=1 env(默认 deny)")
             return 1
-        if not args.confirm_phrase if hasattr(args, "confirm_phrase") else True:
-            # 此处仅占位,真实 4 重防误发参数后续 D6 收口时补
-            pass
+        if args.confirm != _S5_CONFIRM_PHRASE:
+            print(f"❌ S5 --real 必须配 --confirm {_S5_CONFIRM_PHRASE!r}(默认 deny)")
+            return 1
         print("⚠️  S5 真实 SMTP 模式已启用(4 重防误发沿 D5.6.5 spike_send_100.py)")
 
     # ===== 默认 dry-run 状态 =====
     if not (args.enable_s1_s4 or args.enable_s5 or args.enable_s6_s9):
         print("ℹ️  default dry-run(无 --enable-* 开关)")
         print("   --enable-s1-s4    Week 1 4 场景(IMAP/草稿/outbox/审批)")
-        print("   --enable-s5       真实 SMTP 1 封(配 --real + SMTP_REAL_NETWORK=1)")
+        print("   --enable-s5       真实 SMTP 1 封（配 --real、SMTP_REAL_NETWORK=1 与 --confirm）")
         print("   --enable-s6-s9    Week 2 4 场景(需 D6/D7/D9/D10 落地)")
         return 0
 
@@ -100,7 +122,10 @@ def main() -> int:
             results[s] = _run_scenario(s)
 
     if args.enable_s5:
-        results["s5_real_smtp"] = _run_scenario("s5_real_smtp")
+        results["s5_real_smtp"] = _run_scenario(
+            "s5_real_smtp",
+            extra_env={_S5_CLI_CONFIRM_ENV: _S5_CLI_CONFIRM_VALUE},
+        )
 
     if args.enable_s6_s9:
         for s in ["s6_finance", "s7_clipboard_notes", "s8_monthly_report", "s9_launchd_recovery"]:
@@ -110,11 +135,11 @@ def main() -> int:
     print("\n" + "=" * 60)
     print("v0.1 端到端 9 场景 spike 汇总:")
     for name, rc in results.items():
-        status = "✅ PASS" if rc == 0 else ("⏭️  SKIP" if rc == 2 else "❌ FAIL")
+        status = "✅ PASS" if rc == 0 else "❌ FAIL"
         print(f"  {name:30s} {status} (rc={rc})")
     print("=" * 60)
 
-    if any(rc not in (0, 2) for rc in results.values()):
+    if any(rc != 0 for rc in results.values()):
         return 1
     return 0
 

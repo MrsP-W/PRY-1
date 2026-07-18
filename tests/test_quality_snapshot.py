@@ -284,6 +284,23 @@ def test_check_state_entries_script_exits_zero(
     """状态入口 CLI 成功与错误退出码不再通过外部子进程复验。"""
     from scripts import check_state_entries as state_script
 
+    captured_args: list[list[str]] = []
+
+    def run_mypy(args: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        captured_args.append(args)
+        return subprocess.CompletedProcess(
+            args=args,
+            returncode=0,
+            stdout="Success: no issues found in 258 source files\n",
+            stderr="",
+        )
+
+    with patch("scripts.check_state_entries.subprocess.run", side_effect=run_mypy):
+        assert state_script.count_mypy_source_files(root=PROJECT_ROOT) == 258
+    assert captured_args == [
+        ["uv", "run", "mypy", "--strict", "src", "tests", state_script.P0_4_HEALTH_SAMPLE]
+    ]
+
     with patch.object(state_script, "check_state_entries", return_value=[]):
         assert state_script.main() == 0
     assert "state entry docs match quality_snapshot" in capsys.readouterr().out

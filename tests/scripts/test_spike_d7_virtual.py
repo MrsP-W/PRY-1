@@ -15,7 +15,14 @@ from __future__ import annotations
 
 import os
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
+from typing import cast
+
+from my_ai_employee.connectors._types import RawTransaction
+from my_ai_employee.core.transaction_adapter import TransactionAdapter
+from my_ai_employee.db.transactions import TransactionStore
+from scripts import spike_d7_virtual_cross_source as spike
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 SPIKE_SCRIPT = PROJECT_ROOT / "scripts" / "spike_d7_virtual_cross_source.py"
@@ -23,6 +30,44 @@ SPIKE_SCRIPT = PROJECT_ROOT / "scripts" / "spike_d7_virtual_cross_source.py"
 CONFIRM_PHRASE = "yes-i-understand-this-is-virtual"
 SPIKE_ENV_VAR = "D7_VIRTUAL_SPIKE"
 SPIKE_ENV_VALUE = "1"
+
+
+@dataclass(frozen=True)
+class _ImportResult:
+    """只提供 C/D 段验证需要的导入计数。"""
+
+    inserted: int
+    needs_confirm: int
+
+
+@dataclass(frozen=True)
+class _StoredTransaction:
+    """只提供 C/D 段验证需要的交易字段。"""
+
+    needs_confirm: int = 1
+    candidate_match_id: int | None = 1
+
+
+class _RecordingAdapter:
+    """不访问数据库，记录 C/D 段导入方向。"""
+
+    def __init__(self) -> None:
+        self.sources: list[str] = []
+
+    def import_raw_transactions(self, rows: list[RawTransaction], *, source: str) -> _ImportResult:
+        self.sources.append(source)
+        return _ImportResult(inserted=len(rows), needs_confirm=len(rows))
+
+
+class _RecordingStore:
+    """记录精确 external_id 查询，避免让占位查询被静默忽略。"""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str]] = []
+
+    def by_external_id(self, source: str, external_id: str) -> _StoredTransaction:
+        self.calls.append((source, external_id))
+        return _StoredTransaction()
 
 
 def _run_spike(
@@ -41,6 +86,51 @@ def _run_spike(
         cwd=PROJECT_ROOT,
         timeout=120,
     )
+
+
+# ===== C/D 段数据库验证回归 =====
+
+
+def _assert_segment_c_queries_only_exact_unique_alipay_ids() -> None:
+    """C 段不得查询占位 ID，重复输入仍须按枚举序号逐笔验证。"""
+    pair = spike._build_cross_source_pairs()[0]
+    pairs = [pair.copy(), pair.copy()]
+    adapter = _RecordingAdapter()
+    store = _RecordingStore()
+
+    result = spike._segment_c_cross_source_alipay_triggers_wechat_candidate(
+        cast(TransactionAdapter, adapter),
+        cast(TransactionStore, store),
+        pairs,
+    )
+
+    assert result.passed is True
+    assert adapter.sources == ["wechat", "alipay"]
+    assert store.calls == [
+        ("alipay", "alipay-xsrc-001-10"),
+        ("alipay", "alipay-xsrc-002-10"),
+    ]
+
+
+def _assert_segment_d_queries_exact_unique_wechat_ids() -> None:
+    """D 段也用枚举序号，不能因重复字典而反复验证第一笔。"""
+    pair = spike._build_cross_source_pairs()[0]
+    pairs = [pair.copy(), pair.copy()]
+    adapter = _RecordingAdapter()
+    store = _RecordingStore()
+
+    result = spike._segment_d_cross_source_wechat_triggers_alipay_candidate(
+        cast(TransactionAdapter, adapter),
+        cast(TransactionStore, store),
+        pairs,
+    )
+
+    assert result.passed is True
+    assert adapter.sources == ["alipay", "wechat"]
+    assert store.calls == [
+        ("wechat", "wechat-xsrc-001-20"),
+        ("wechat", "wechat-xsrc-002-20"),
+    ]
 
 
 # ===== 4 重防'误' 范本 =====
@@ -147,7 +237,7 @@ def test_spike_5_segments_all_pass(tmp_path: Path) -> None:
 
 
 def test_spike_different_pairs_runs_segments(tmp_path: Path) -> None:
-    """--pairs=2 也应能跑(段 C/D 的"对数"参数化)."""
+    """--pairs=2 跑通，并验证 C/D 段只查询精确且唯一的外部 ID。"""
     result = _run_spike(
         "--confirm",
         CONFIRM_PHRASE,
@@ -161,6 +251,8 @@ def test_spike_different_pairs_runs_segments(tmp_path: Path) -> None:
     )
     assert result.returncode == 0
     assert "5 段全过: True" in result.stdout
+    _assert_segment_c_queries_only_exact_unique_alipay_ids()
+    _assert_segment_d_queries_exact_unique_wechat_ids()
 
 
 def test_spike_creates_temporary_db_not_real(tmp_path: Path) -> None:

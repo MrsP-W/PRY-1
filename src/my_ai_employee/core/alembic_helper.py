@@ -19,6 +19,10 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.exc import SQLAlchemyError
 
 
+class AlembicTechnicalError(RuntimeError):
+    """读取 Alembic 状态时发生的可恢复技术错误。"""
+
+
 def get_alembic_revision(engine: Engine) -> str | None:
     """读 alembic_version 表的当前 revision.
 
@@ -33,15 +37,16 @@ def get_alembic_revision(engine: Engine) -> str | None:
     """
     from sqlalchemy import text
 
-    with engine.connect() as conn:
-        try:
+    try:
+        with engine.connect() as conn:
             row = conn.execute(text("SELECT version_num FROM alembic_version")).first()
-        except SQLAlchemyError as e:
-            err_str = str(e).lower()
-            # 表不存在 → 返回 None(区分"未迁移"vs"DB 损坏")
-            if "alembic_version" in err_str or "no such table" in err_str:
-                return None
-            raise RuntimeError(f"读 alembic_version 失败: {e!r}") from e
+    except SQLAlchemyError as e:
+        err_str = str(e).lower()
+        # 仅明确的缺表错误才表示“尚未迁移”。SQLAlchemy 的 lock/连接错误会把
+        # SELECT ... alembic_version 附在错误文本中，不能据此误判为缺表。
+        if "no such table" in err_str and "alembic_version" in err_str:
+            return None
+        raise AlembicTechnicalError(f"读 alembic_version 失败: {e!r}") from e
     if row is None:
         return None
     return str(row[0])
@@ -87,6 +92,7 @@ def _is_revision_at_least(current: str, minimum: str) -> bool:
 
 
 __all__ = [
+    "AlembicTechnicalError",
     "get_alembic_revision",
     "assert_min_revision",
 ]

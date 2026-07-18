@@ -113,14 +113,14 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **2946 passed / 1 skipped** / **89.10%** / mypy --strict 0 / **257 files** / MD lint **291 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 2946/1) |
+| **质量基线** | **3030 passed / 1 skipped** / **90.22%** / mypy --strict 0 / **263 files** / MD lint **291 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v0.2.76 + pitfall-90/91/92/93/94/97/98 + I1-I4(撞坑 #96) + J1-J4(撞坑 #95) + K1-K7(撞坑 #98 launchd legacy retirement) + 2 NullPool 回归测试(撞坑 #97) → 3030/1) |
 | **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
 | **P1-3 #98 修复(本次 commit `f188d13`)** | `fix(launchd): #98 P1-3 修复 legacy retirement 仅 install 模式执行 + K5 回归测试`(2026-07-10 · 8 files / +78 -27 · **撞坑 #98 P1 审查发现**:原 5.5 段顺序有 bug,deploy-only 早退前 legacy retirement 会被执行,违反"只部署、不改变运行态"安全语义;**修复**:`launchd_install.sh` deploy-only 退出从 5.6 移到 5.5(NEW 段号),legacy retirement 移到 5.6(后置)· **K5 回归测试**:`tests/scripts/test_launchd_install.py` 新增 `test_k5_deploy_only_does_not_trigger_legacy_retirement`(5.5 段代码必不含 launchctl unload/bootout/my-ai-employee-start;5.5 必在 5.6 之前 → deploy-only 不退役 legacy)· K1/K3 段号 5.5→5.6 同步修正 · 5件套 baseline 同步 2936/1/89.12/290 → 2937/1/89.10/291(K5 +1 test, ruff format +0 MD)· 9/9 质量门全绿 2937 passed / 1 skipped / 89.10% / 291 MD / mypy 257 files · 默认不 push · 等 push 授权后启动 P0-4 24h 观察) |
 | **P1-4 #98 行为回归补强(commit `c5b4238`)** | `test(launchd): 覆盖 deploy-only/no-load 的 legacy 保留语义`(2026-07-10 · 仅测试与当前状态快照 · 新增参数化 K6:临时 HOME 预置 legacy plist/wrapper/两份日志、fake launchctl；两模式均断言成功早退、四个 legacy 文件内容不变、四个当前 wrapper 与四个 plist 已部署、无 unload/bootout/load 调用 · 同时修正 F7 的 echo 误判与 K2 的段落定位 · 定向 64 passed / 全量 2939 passed, 1 skipped / 89.10% / MD 291 / mypy 257 files · 未执行真实 launchctl、push、tag 或外部写入) |
 | **P1-5 #98 install 可靠性修复(本次)** | `fix(launchd): 精确匹配 launchctl label 并保留全部 EXIT cleanup`(2026-07-10 · `launchctl_list_has_label()` 用 awk 精确匹配末列，替换 install/uninstall/load/验证共 10 处 list 判断；后续 trap 继续清理 `LC_OUT_LEGACY`，不再泄漏临时文件 · K7 参数化 3 场景覆盖精确 legacy、点号变体、后缀 label；先复现 3/3 失败，修复后 K7 3 passed、launchd 定向 67 passed · 全量 2942 passed / 1 skipped / 实测 coverage 89.12%；按 <0.1pp 抖动规则，snapshot 保持 89.10% / MD 291 / mypy 257 files · 不执行真实 launchctl、push、tag 或外部写入) |
-| **2026-07-11 当前状态纠正** | **优先于上方旧 Day 13/P3-A 下一棒表述**：#95 已完成 P0-3 1h 验证；#97 已以 `NullPool` 修复，#98 legacy retirement 已收口；下一项为 P0-4 24h 完整观察（menu-bar / dashboard 零重启，stderr 无 #97 traceback）。本自动化不 push、不打 tag、不做真实外部写入。 |
+| **2026-07-11 当前状态纠正** | **优先于上方旧 Day 13/P3-A 下一棒表述**：#95 已完成 P0-3 1h 验证；#97 已以 `NullPool` 修复并补真实 HTTP 并发回归，#98 legacy retirement 已收口；只读核验发现 menu-bar 于 07:23 重启，P0-4 的 24h 零重启观察需重新计时。本自动化不 push、不打 tag、不做真实外部写入。 |
 | **后续锚点** | Phase A+B+C 已收口(2026-07-01) · **`v0.2.1` tag 已落地(`71b4602`)** · `v0.2.1-rc1` 历史快照 |
 | **Day 10 Phase 1.2(本次)** | `feat(day10-1.2): fallback 集成测试 + Dashboard/菜单栏解密展示测试`(2026-07-02 · 9 files / +118 -7 · `tests/db/test_notes_encryption_store.py` +3 tests(Stub/Impl 读旧明文 + 混合密文明文)+ `tests/dashboard/test_api.py` +1 test(真实 NoteStore(Impl)→`build_notes_pending_payload` 解密)+ `tests/menu_bar/test_note_confirm_service.py` +2 tests(Impl/Stub `list_pending_confirm` 解密)+ `quality_snapshot.py` baseline 校准 2785 → 2786 + 5 state files README/CLAUDE/SESSION-STATE/MODIFICATION-LOG/v0.2-launch-plan 同步 · 撞坑 #1/#18/#64/#65 严判沿用 · 业务代码 0 改动 · **`ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开** · 9/9 质量门全绿 2786 passed / 2 skipped / 89.12% / 244 MD / mypy 248 · 默认不 push) |
 
@@ -150,6 +150,237 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-17 [报告扫描边界与 E2E Keychain fixture 隔离] — 收口
+
+- **fix(dashboard)**：报告扫描统一解析候选文件真实路径；仅接受项目根内、常规且不超过只读上限的文件，避免 `docs/`、`reports/` 或 `output/` 内的外部 symlink 暴露根外元数据。
+- **test(dashboard)**：补超限文件与根外 symlink 回归；正常项目内报告仍会被枚举。
+- **fix(e2e)**：fake Keychain 的动态 `get`/`set` hook 改由 `monkeypatch` 安装，fixture 结束后自动恢复，避免同一 pytest 进程污染后续用例；同时保持 S5 默认 deny，不触发真实 SMTP。
+- **test(e2e)**：新增 hook 作用域恢复断言；严格 mypy 与 Ruff 均通过。
+- **验证**：`make ci` 9 项质量门全绿：**2985 passed / 1 skipped**、实测 coverage **89.30%**、mypy **259 source files**、MD lint **291 files**、Alembic SQL、构建与最终 `make check-snapshot` 均通过；快照覆盖率维持 **89.28%**（小于 0.1pp 波动，不重置基线）。
+- **边界**：所有相关文件均含本轮开始前混合 WIP，不暂存、不提交、不 push；未发送邮件、未做真实 DB 或 launchd 写入。
+
+### 2026-07-17 [自动化快照计数修复与 P0-4 只读复核] — 收口
+
+- **fix(snapshot)**：已暂存的 #97 Dashboard 并发回归新增 1 个收集用例；将当前快照和
+  六个状态入口从 **2975 passed / 1 skipped** 同步为 **2976 passed / 1 skipped**，历史
+  2026-07-12 验证记录保持不改。
+- **验证**：`make test` **2976 passed / 1 skipped / 89.28%**；`make check-snapshot`、
+  `make lint`、`uv run mypy --strict src tests`、Alembic SQL 与 `uv build` 均通过。
+- **P0-4 只读复采**：采样器未发现四个 GUI launchd job，8765 亦未监听；与当前“GUI
+  launchd 域未注册、恢复需独立授权”状态一致，未执行 load/unload/bootout 或真实业务写入。
+- **下一棒**：取得 GUI launchd 恢复授权后，再从零开始 24h 零重启观察；本轮混合 WIP 不提交。
+
+### 2026-07-12 [S5 direct pytest 子进程确认门] — 收口
+
+**1. 本次修改内容**
+
+- **fix(gate)**：`scripts/spike_v0_1_scenarios.py` 仅在 S5 CLI 四重门通过后，
+  向其单次子 pytest 传递 `MYAI_EMPLOYEE_S5_CLI_CONFIRMED=1`；父进程环境不写入。
+- **fix(e2e)**：`tests/e2e/conftest.py` 现在同时要求 `SMTP_REAL_NETWORK=1` 与上述临时
+  子进程标记精确匹配；直接 pytest 即使显式网络变量存在也在 collection 阶段跳过。
+- **test(gate)**：新增 collection hook 回归并补子环境合并/父环境不污染断言，合计 +7 tests；
+  质量快照同步至 **2975 passed / 1 skipped / 89.28%**。
+
+**2. 验证证据**
+
+- 定向：S5 相关回归 **13 passed / 1 skipped**；临时 `SMTP_REAL_NETWORK=1` 的 direct pytest 为
+  **1 skipped**，未进入真实发送测试体。
+- 全量：`make test` **2975 passed / 1 skipped / 89.28%**；`make lint`、Ruff、format、
+  `uv run mypy --strict src tests`（**258 source files**）及含 P0-4 采样器的 `make mypy`
+  （**259 source files**）、Alembic SQL 与 `uv build` 均通过。
+
+**3. 边界与下一棒**
+
+- 未发送邮件、未写真实 DB、未恢复 launchd、未 push/tag。该临时标记用于防误触，不能替代对
+  故意伪造 shell 环境的授权控制。
+- S5 脚本及关联测试属于本轮开始前混合 WIP；不创建混合提交。真实 S5 仍须单独授权并完成实际链路。
+
+### 2026-07-12 [P0-4 采样器 strict mypy 纳管] — 收口
+
+**1. 本次修改内容**
+
+- **fix(quality-gate)**：`Makefile` 的 `mypy` 目标纳入
+  `scripts/sample_launchd_health.py`，与既有 Ruff/format 覆盖保持一致。
+- **fix(snapshot)**：`check_state_entries.py` 使用与 `make mypy` 相同的文件集；
+  质量快照与五个当前入口同步为 **258 files**，避免实际门禁与状态校验分叉。
+- **test(guard)**：在既有 snapshot 守护测试中断言 mypy 子命令包含 P0-4 采样器。
+
+**2. 验证证据**
+
+- 定向：P0-4 采样器测试 **8 passed**；snapshot 守护测试 **9 passed**；
+  `make mypy` 为 **0 errors / 258 source files**。
+- 完整：`make lint`、Ruff/format、Alembic SQL、`uv build` 均通过；最终唯一
+  `make check-snapshot` 显式通过（**2968 passed / 1 skipped / 89.28% / 291 MD**）。
+
+**3. 边界与下一棒**
+
+- 未恢复 launchd、未执行 SMTP 或真实 DB 写入，也未 push/tag；涉及的 Makefile 与状态入口
+  在本轮开始前已是混合 WIP，故不创建混合提交。
+- P0-4 仍须先取得 GUI launchd job 恢复授权，再从零开始 24h 观察。
+
+### 2026-07-12 [S5 场景入口 fail-closed 补强] — 收口
+
+**1. 本次修改内容**
+
+- **fix(gate)**：真实 S5 不得与 S1-S4 / S6-S9 批量场景混用；在任何子场景启动前默认拒绝。
+- **fix(exit-code)**：场景入口仅将 pytest `rc=0` 视为成功；`rc=2`（中断）及所有其他非零码统一失败，避免自动化误报 PASS。
+- **test(gate)**：既有 S5 门控回归补齐三种混用零调用断言和 `rc=2` fail-closed 断言，保持收集基线不变。
+
+**2. 验证证据**
+
+- 定向：`uv run pytest tests/scripts/test_spike_v0_1_scenarios.py -q --no-cov` 为 **6 passed**；混用 CLI 在启动任何子场景前返回 `rc=1`。
+- 全量：`make test` **2968 passed / 1 skipped / 89.28%**；`make lint`（291 files）、`uv run mypy src tests`（257 files）、Alembic SQL 与 `uv build` 均通过。
+
+**3. 边界与下一棒**
+
+- 未设置持久环境变量、未触发真实 SMTP、DB、launchd、push 或 tag；本次文件属于启动前混合 WIP，不创建混合提交。
+- 真实 S5 实现前仍应补 direct pytest 的确认门；P0-4 24h 观察仍等待恢复 GUI launchd job 的独立授权。
+
+### 2026-07-12 [S5 真实 SMTP 占位 fail-closed] — 收口
+
+**1. 本次修改内容**
+
+- **fix(e2e)**：`test_v0_1_s5_real_smtp.py` 在 `SMTP_REAL_NETWORK=1` 时不再将未实现的真实发送链路标记为 `skip`，而是明确失败；避免场景 CLI 将 pytest 的 rc=0 误报为 PASS。
+- **test(gate)**：四种拒绝路径统一 mock `_run_scenario` 并断言零调用；四门满足后，子场景 rc=1 必须向场景 CLI 透传为 rc=1。
+
+**2. 验证证据**
+
+- 默认保护路径：S5 定向联测 `6 passed / 1 skipped`；未设置 `SMTP_REAL_NETWORK` 时仍不触发真实 SMTP。
+- fail-closed 路径：显式 `SMTP_REAL_NETWORK=1` 的 e2e 与场景 CLI 均返回 rc=1，并输出 `FAIL`；占位分支失败在任何网络调用前。
+- 完整门禁：`make test` **2968 passed / 1 skipped / 89.28%**；`make lint`、`uv run mypy src tests`、`uv run alembic upgrade head --sql`、`uv build` 均通过；最终单 owner `make check-snapshot` 显式 OK。
+
+**3. 边界**
+
+- 未发送邮件、未写入真实数据库、未恢复 launchd、未 push/tag。S5 的真实一封发送仍待单独授权和实现。
+- 场景入口及其回归测试属于本轮开始前的混合 WIP；本次不创建混合提交。
+
+### 2026-07-12 [批量账单导入四重门控] — 收口
+
+**1. 本次修改内容**
+
+- **fix(import)**：提交 `7ac6721` 让 `scripts/import_all.py` 复用统一门控；真实批量导入必须同时满足 `BILLS_REAL_IMPORT=1`、确认口令、`--max-rows 1` 与 `--count 1`，并将行数限制透传给两个 adapter。
+- **test(import)**：`tests/scripts/test_import_alipay_cli.py` 新增四种拒绝路径和成功路径透传断言；任一门失败时 `Database.open()` 不得执行。
+
+**2. 风险点**
+
+- 未执行真实账单导入、DB 写入或外部调用；本轮开始前已有 Dashboard、launchd 采样器与状态文档混合改动，均未并入该提交。
+- 当前 GUI launchd 域的四个 job 未注册、8765 未监听；恢复需另行授权逐个加载现有 plist，本轮未写入运行态。
+
+**3. 当前项目整体总结**
+
+- 全量质量门：`2968 passed / 1 skipped / 89.28%`、MD lint 291、mypy 257 files、Alembic SQL 与构建均通过；本地仅提交 `7ac6721`，未 push/tag。
+- 下一棒：先决定是否授权恢复 launchd，再重新开始 P0-4 24h 观察；既有混合 WIP 继续保留。
+
+### 2026-07-11 [P0-4 launchd 采样器超时保护] — 收口
+
+**1. 本次修改内容**
+
+- **fix(ops)**：`_subprocess_runner()` 为 `launchctl`、`lsof`、`ps` 增加 5 秒硬超时；`TimeoutExpired` 固定映射为非敏感 `returncode=124` 和空输出，避免单个只读 probe 挂死 10 分钟自动化循环。
+- **test(ops)**：新增真实 runner 超时回归，断言超时参数、稳定返回码和 stderr 不泄漏。
+- **baseline**：新增 1 项回归后，当前质量快照同步为 **2956 passed / 1 skipped / 89.25% / 291 MD / 257 mypy files**。
+
+**2. 验证与边界**
+
+- 定向采样器回归 **8 passed**；全量 `make test` **2956 passed / 1 skipped / 89.25%**。
+- `make ruff`、`make format`、`uv run mypy src tests`、`uv run alembic upgrade head --sql`、`uv build` 全部通过。
+- 启动前该采样器、其测试和状态入口已有混合未提交改动；本轮只追加可辨识补丁，不创建提交、不 reload launchd、不执行外部写入。
+
+### 2026-07-11 [#97 菜单栏 hotkey SQLCipher 线程隔离] — 收口
+
+**1. 本次修改内容**
+
+- **fix(menu-bar)**：`_build_default_capture_service()` 不再把单一 `Database` 交给 SQLAlchemy；先在 context manager 中取得 `db_path` 并关闭启动连接，再以 `make_sqlalchemy_engine(db_path=...)` 构造 `NullPool` 引擎。
+- **test(menu-bar)**：新增主线程 → `hotkey-poll` 线程的真实 SQLCipher `SELECT 1` 回归，断言引擎为 `NullPool` 且无跨线程异常。
+
+**2. 风险点**
+
+- 修复只在后续懒构造 capture service 时生效；为保护 P0-4 观察窗，本轮未 reload launchd、未触发真实业务写入。
+- 启动前已有 Dashboard 回归、健康采样器和状态基线改动，故不创建混合提交。
+
+**3. 验证证据**
+
+- 修复前回归明确得到 `SingletonThreadPool`；修复后 `tests/menu_bar/test_app.py` 新回归与 `tests/core/test_sqlcipher_compat.py` 共 **6 passed**，ruff / format / mypy 通过。
+- 完整质量门与 `make check-snapshot` 以后续本轮实测为准。
+
+### 2026-07-11 [质量快照守护 + 基线复检] — 收口
+
+**1. 本次修改内容**
+
+- **test(snapshot)**：`tests/test_quality_snapshot.py` 的少报测试数场景改为完全注入式；不再因当前工作树漂移而跳过，固定验证 `9 passed / 1 skipped` 声明对 11 个收集用例必须报错。
+- **baseline（本小任务）**：当前工作树新增的菜单栏回归使收集数为 2953，质量快照及当前入口先同步为 **2952 passed / 1 skipped / 89.23% / 291 MD / 257 mypy files**；后续 P0-4 采样器回归使最新基线升为 2953/1。
+
+**2. 验证证据**
+
+- `make test`：**2952 passed / 1 skipped / 89.23%**。
+- `make lint`、ruff、mypy、`alembic upgrade head --sql`、`uv build`：全部通过；最终 `make check-snapshot` 作为实时入口复核。
+
+**3. 提交边界**
+
+- 启动前已有状态文档、快照、Dashboard 回归和 launchd 采样器混合改动；本轮仅独占 `tests/test_quality_snapshot.py`，状态同步文件不混入提交。
+
+### 2026-07-11 [P0-4 无状态 launchd 健康采样器] — 收口
+
+**1. 本次修改内容**
+
+- **feat(ops)**:新增 `scripts/sample_launchd_health.py`；仅调用 `launchctl list`、loopback `lsof`、已见 PID 的 `ps` 和两个 err log 的 `stat`，输出 JSON 或单行文本快照。不执行 load/unload/bootout/kickstart，不读数据库、Keychain、`.env` 或日志正文。
+- **test(ops)**:新增 4 个注入式回归，覆盖健康快照、计划型 agent/imap idle、menu-bar/dashboard 或 listener 缺失、probe 失败脱敏序列化；不依赖真实服务。
+- **fix(ops)**：在既有未跟踪采样器基础上，`ps` 成功但 menu-bar/dashboard PID 消失时增加 `missing_process:<label>`，避免 listener 尚在时误报健康；`ps` 自身失败仅保留 probe 错误。
+- **test(ops)**：补 PID race 回归，采样器套件扩为 5 个注入式测试。
+- **baseline**:pytest `2947/1` → `2951/1`，coverage 维持 89.10%，MD lint 291、mypy 257 files 不变；当前入口已同步。
+
+**2. 风险点**
+
+- 采样器本身无状态；24h JSONL 基线由外层自动化保存和比较。menu-bar 于 07:23 重启后，P0-4 的 24h 零重启观察仍需从该时间重新计时。
+- 不把 Dashboard job PID 与 8765 listener PID 强等：实机 listener 是 Dashboard job 子进程。`#97` stderr 正文仍由独立脱敏审计处理。
+- 启动前已有 Dashboard HTML、#97 回归及状态快照改动，故本轮不创建混合提交、不 push、不打 tag。
+
+**3. 验证证据**
+
+- `uv run pytest -q --no-cov tests/scripts/test_sample_launchd_health.py` → 4 passed。
+- `make test` → **2951 passed / 1 skipped / 89.10%**。
+- `make lint`、`uv run mypy src tests`、`uv run alembic upgrade head --sql`、`uv build` 均通过；`make check-snapshot` 待本次 state 记录后复核。
+- 本轮补充：采样器定向 **5 passed**；全量 `make test` **2953 passed / 1 skipped / 89.23%**。最终 `make check-snapshot` 与 Markdown lint 作为收口证据。
+
+### 2026-07-11 [#97 hotkey 回归防挂死 + P0-4 首次采样] — 收口
+
+**1. 本次修改内容**
+
+- **test(menu-bar)**：`hotkey-poll` 回归线程改为 daemon，并使用
+  `join(timeout=2)`；超时会明确失败，不再无限阻塞质量门。
+- **verify(ops)**：以既有无状态采样器完成一次只读运行态采样；四个目标
+  LaunchAgent 均已注册，menu-bar、Dashboard 与 loopback listener 均健康。
+
+**2. 验证证据**
+
+- #97、Dashboard、SQLCipher 与 P0-4 定向回归：**66 passed**。
+- 全量 `make test`：**2953 passed / 1 skipped / 89.23%**；`make lint`、
+  `uv run mypy src tests`、`uv run alembic upgrade head --sql`、`uv build` 与
+  `make check-snapshot` 均通过。
+
+**3. 提交边界与下一步**
+
+- `tests/menu_bar/test_app.py` 在启动前已含 #97 回归改动；本轮只补防挂死
+  断言，不创建混合提交，也未 reload、push、打 tag 或执行真实外部写入。
+- P0-4 的 24h 零重启观察仍从 07:23 重计；下轮只读复采 menu-bar 与
+  Dashboard PID，并审计脱敏后的 #97 stderr 结果。
+
+### 2026-07-11 [#97 Dashboard HTTP 并发回归 + P0-4 基线重置] — 收口
+
+**1. 本次修改内容**
+
+- **test(dashboard)**:新增真实 SQLCipher 临时库 + `ThreadingHTTPServer` 回归，32 个并发 `GET /api/notes/pending` 全部返回 200 且返回待确认数据；断言 `NullPool` 与无跨线程 `ProgrammingError`。
+- **docs(state)**:质量快照与五个入口同步至 **2947 passed / 1 skipped / 89.10% / 291 MD / 257 mypy files**。
+
+**2. 风险点**
+
+- 仅使用临时本地 DB 和 localhost HTTP；未触发真实业务写入、launchctl、push 或 tag。既有 `docs/ui/codex-style-dashboard.html` 改动继续独立保留。
+- 只读运行态核验显示 Dashboard 持续运行，但 menu-bar 于 07:23 重启；P0-4 的 24h 零重启观察必须从该时间后重新计时。
+
+**3. 当前项目整体总结**
+
+- `make ci` 9 项质量门全绿：2947 passed / 1 skipped，coverage 89.10%，mypy 257 files，MD lint 291 files，迁移 SQL 与构建通过。
+- 下一棒：保持当前 LaunchAgent，不做 reload；待满 24h 后复核 menu-bar/dashboard PID 与 #97 stderr。
 
 ### 2026-07-11 [snapshot guardian 防递归 + launchd K8 精确标签回归] — 收口
 
@@ -5897,3 +6128,48 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **当前阶段**:P3-A T3 L4 撞坑 #94 B 路径实战验证 ✅ + 撞坑 #95 NEW 暴露 ⚠️ · 1h 观察窗启动中 · 等 user 决策 #95 修复路径(A/B/C/D)
 - **完成度**:项目约 **94%**(不变)· 可无人值守生产运行约 **82%**(↓ 3pp · #95 限制 menu_bar/dashboard 常驻)· v1.0 发布就绪约 **87%**(不变 · #94 修复 +0% v1.0)
 - **下一棒**:user 决策 #95(推荐 A 立即 + B/C 后续 D-step)→ docs/v0.2.78 #95 修复 D-step → 24h 完整观察窗(锚 3/3 launchd job)→ v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)。
+
+---
+
+### 2026-07-11 [P0-4 采样端口精确匹配与命令超时保护] — 收口
+
+#### 1. 本次修改内容
+
+- **fix(ops)**：`scripts/sample_launchd_health.py` 改为解析 `lsof` 的精确 endpoint 字段；仅接受 `127.0.0.1:8765`、`[::1]:8765` 或 `::1:8765`，拒绝相邻端口与非 loopback。
+- **fix(ops)**：`launchctl`、`lsof`、`ps` probe 统一设为 5 秒超时；超时映射为稳定的 `124` 失败码且不回显命令输出，避免单个系统命令卡住 10 分钟观察循环。
+- **test(ops)**：`tests/scripts/test_sample_launchd_health.py` 新增端口前缀与绑定地址反例，覆盖 `87650`、IPv6 `87650` 和 `0.0.0.0:8765` 假阳性。
+- **test(ops)**：补 `TimeoutExpired` 回归，断言 timeout 参数为 5 秒、返回值脱敏且稳定；严格 mypy mock 同步修正。
+- **baseline**：采样器定向测试 **8 passed**；当前入口为 **2956 passed / 1 skipped / 89.25%**，MD lint **291**，mypy **257 files**。
+
+#### 2. 风险点
+
+- 该采样器仍是无状态、只读证据；不会 load/reload/bootout/kickstart，也不读取日志正文、Keychain 或数据库。
+- 超时仅将本次采样标为 probe 失败，不会重试、重启服务或触碰 launchd 状态。
+- `ps` 成功时已验证 listener 为 Dashboard PID 本身或其直接子进程；非零 `last_exit_status` 的解释仍留待 P0-4 观察窗口结束后单独评估。
+- 修改位于启动前已有的混合 WIP，故本轮不暂存、不提交、不 push、不打 tag。
+
+#### 3. 当前项目整体总结
+
+- **验证**：采样器定向 **8 passed**；全量 `make test` **2956 passed / 1 skipped / 89.25%**；`make check-snapshot`、lint、ruff、format、mypy、Alembic SQL 与构建均通过。
+- **当前阶段**：P0-4 24h 零重启观察仍从 07:23 CST 计时；本次提高了观测端口与进程归属判定的可信度。
+- **下一棒**：观察窗口结束后串行复采 menu-bar/Dashboard PID、8765 listener 与脱敏 #97 stderr，再复核快照质量门。
+
+---
+
+### 2026-07-12 [MCP 必填 factory 失败清理回归] — 完成
+
+- **test(mcp)**：补 `discover_servers()` 的必填 `transport_factory()` 直接抛 `MCPConnectionError` 回归；断言此前已连接的 client 会关闭，避免启动中止时遗留连接。
+- **baseline**：质量快照与当前入口同步为 **2957 passed / 1 skipped / 89.23%**，MD lint **291**、mypy **257 files**；这些文件均为本轮启动前混合 WIP，保留未暂存。
+- **验证**：定向 `tests/mcp/test_discovery.py` **8 passed**；守卫联测 **17 passed**；全量 `make test` **2957 passed / 1 skipped / 89.23%**；`make lint`、Ruff、format、mypy、Alembic SQL、`uv build` 均通过。
+- **边界**：最终 `make check-snapshot` 检测到另一条先启动的 checker 后，仅终止本轮进程组，不重试、不把取消结果视为证据；启动阶段的快照门已通过。
+- **提交**：仅干净的 `tests/mcp/test_discovery.py` 将单独提交；既有 WIP、真实 SMTP 与 P0-4 07:23 CST 后的只读复采均不触碰。
+
+---
+
+### 2026-07-17 [账单导入零开库 + S5 direct pytest 假绿修复] — 完成
+
+- **fix(import)**：微信、支付宝单文件导入均在 `Database.open()` 前完成 CSV 版本嗅探；空文件或不支持格式退出 1，不触碰 SQLCipher、Keychain 或 WAL。
+- **test(import)**：C1-C5 现显式通过四重门控，真实覆盖缺文件、空 CSV、坏 header、0 行解析和旧 Alembic；新增两条断言 `Database.open()` 从未调用的回归。
+- **fix(test)**：S5 仅在未设 `SMTP_REAL_NETWORK=1` 时 skip；网络已开但缺 CLI 临时确认会明确失败，避免 direct pytest 以退出码 0 伪装成功；不发送邮件。
+- **验证**：`make test` **2980 passed / 1 skipped / 89.30%**；lint、Ruff、format、mypy、Alembic SQL、build 均通过。
+- **边界**：本轮起点已有 MCP、P0-4、S5 与状态文档混合 WIP；仅本轮独占的账单导入源码/测试可单独提交，其余保留未暂存。
