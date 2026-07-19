@@ -30,7 +30,7 @@ D3.3.3 教训应用:
     - NoteDuplicateError 不算失败(已同步过,归 skipped)
 
 D6.6 P2 修复应用:
-    - 启动校验 alembic_version >= '0008_notes'(防漏迁移)
+    - 启动校验 alembic_version >= '0017_codex_conversation_notes'(防漏迁移)
     - failed_items 走 stderr 详情(每项 apple_id + error_class + msg)
 
 D9.6.3 P2-1 修复(2026-06-15 晨间精细代码审查):
@@ -65,8 +65,9 @@ from my_ai_employee.core.db import Database  # noqa: E402
 from my_ai_employee.core.sqlcipher_compat import make_sqlalchemy_engine  # noqa: E402
 from my_ai_employee.db.notes import NoteDuplicateError, NoteStore  # noqa: E402
 
-# D9.2 决策:Apple Notes 同步所需最低 alembic revision(0008_notes)
-_MIN_ALEMBIC_REVISION: str = "0008_notes"
+# 0017 为 NoteStore.insert() 写入 ``note_source`` 的最低 schema；旧库必须先迁移，
+# 避免写入时才暴露“no such column”技术错误。
+_MIN_ALEMBIC_REVISION: str = "0017_codex_conversation_notes"
 
 # Spike B-1 预热新增:真实 AppleScript 同步默认 deny,沿 SMTP_REAL_NETWORK=1 范本。
 _NOTES_REAL_NETWORK_ENV: str = "NOTES_REAL_NETWORK"
@@ -93,7 +94,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
     """正常同步模式(真 AppleScript 调 Notes.app)。
 
     流程:
-        1. Database.open() + make_sqlalchemy_engine + assert_min_revision(0008_notes)
+        1. Database.open() + make_sqlalchemy_engine + assert_min_revision(0017_codex_conversation_notes)
         2. NotesConnector(osascript_runner=real).list_all_notes()
         3. per-note: get_note_body() → clean_notes_html() → NoteStore.insert()
         4. 失败隔离(per-note try/except,失败归 failed_items)

@@ -2944,6 +2944,254 @@
         animation-play-state: paused !important;
       }
 
+      /* Note Confirmation Core：笔记候选使用低彩度科技节点，统一信号与操作层级。 */
+      #notes-queue {
+        gap: 10px;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+      }
+
+      #notes-queue .queue-item {
+        position: relative;
+        isolation: isolate;
+        grid-template-columns: minmax(0, 1fr) 174px;
+        min-height: 96px;
+        gap: 18px;
+        overflow: hidden;
+        padding: 14px 13px 14px 18px;
+        border: 1px solid rgb(112 159 178 / 20%);
+        border-radius: 16px;
+        background:
+          linear-gradient(rgb(96 155 178 / 4.5%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(96 155 178 / 4.5%) 1px, transparent 1px),
+          radial-gradient(circle at 92% 50%, rgb(129 193 214 / 10%), transparent 30%),
+          linear-gradient(145deg, rgb(255 255 255 / 88%), rgb(239 247 250 / 70%));
+        background-size: 18px 18px, 18px 18px, 100% 100%, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 94%),
+          0 10px 24px rgb(44 78 93 / 7%);
+        transition:
+          border-color 180ms ease,
+          box-shadow 180ms ease,
+          transform 180ms ease;
+      }
+
+      #notes-queue .queue-item::before {
+        position: absolute;
+        z-index: 1;
+        top: 18px;
+        bottom: 18px;
+        left: 0;
+        width: 2px;
+        border-radius: 0 2px 2px 0;
+        background: linear-gradient(180deg, transparent, #78b3c8 28%, #8cc5d8 70%, transparent);
+        box-shadow: 0 0 10px rgb(96 177 205 / 24%);
+        content: "";
+      }
+
+      #notes-queue .queue-item::after {
+        position: absolute;
+        z-index: 1;
+        top: 9px;
+        right: 9px;
+        width: 15px;
+        height: 15px;
+        border-top: 1px solid rgb(102 166 190 / 28%);
+        border-right: 1px solid rgb(102 166 190 / 28%);
+        border-radius: 0 7px 0 0;
+        content: "";
+      }
+
+      #notes-queue .queue-item:hover {
+        border-color: rgb(93 159 184 / 34%);
+        box-shadow:
+          inset 0 1px 0 #fff,
+          0 14px 30px rgb(44 78 93 / 11%),
+          0 0 0 1px rgb(105 181 207 / 5%);
+        transform: translateY(-2px);
+      }
+
+      #notes-queue .note-candidate {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 13px;
+      }
+
+      #notes-queue .note-candidate-copy {
+        min-width: 0;
+      }
+
+      #notes-queue .note-candidate-icon {
+        position: relative;
+        display: inline-grid;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(105 169 192 / 24%);
+        border-radius: 14px;
+        background:
+          linear-gradient(rgb(93 158 183 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(93 158 183 / 8%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(249 253 254 / 90%), rgb(219 237 244 / 70%));
+        background-size: 9px 9px, 9px 9px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 88%),
+          0 8px 16px rgb(51 91 108 / 9%);
+        color: #5e899a;
+      }
+
+      #notes-queue .note-candidate-icon::before {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        border: 1px dashed rgb(103 172 198 / 26%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 9s linear infinite;
+      }
+
+      #notes-queue .note-candidate-icon::after {
+        position: absolute;
+        top: 7px;
+        width: 22px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgb(116 190 215 / 56%), transparent);
+        box-shadow: 0 0 7px rgb(105 181 207 / 34%);
+        content: "";
+        animation: tech-scan-y 2.6s ease-in-out infinite;
+      }
+
+      #notes-queue .note-candidate-icon .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 21px;
+        height: 21px;
+      }
+
+      #notes-queue .note-node-index {
+        display: block;
+        margin-bottom: 7px;
+        color: #7a929d;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.12em;
+      }
+
+      #notes-queue .queue-title {
+        color: #263a45;
+        font-size: 14px;
+        letter-spacing: -0.01em;
+      }
+
+      #notes-queue .queue-meta {
+        margin-top: 6px;
+        color: #788990;
+        font-size: 11px;
+      }
+
+      #notes-queue .queue-actions {
+        position: relative;
+        display: grid;
+        width: 174px;
+        align-items: stretch;
+        gap: 7px;
+        padding: 8px;
+        overflow: hidden;
+        border: 1px solid rgb(112 164 184 / 22%);
+        border-radius: 13px;
+        background:
+          linear-gradient(rgb(94 156 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(94 156 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(250 254 255 / 76%), rgb(224 239 245 / 56%));
+        background-size: 13px 13px, 13px 13px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 90%),
+          0 7px 15px rgb(46 81 96 / 7%);
+      }
+
+      #notes-queue .queue-actions::before {
+        padding: 0 1px 5px;
+        border-bottom: 1px solid rgb(102 154 175 / 13%);
+        color: #7b929c;
+        content: "确认节点";
+        font: 7px/1 var(--font-mono);
+        letter-spacing: 0.11em;
+      }
+
+      #notes-queue .queue-actions::after {
+        position: absolute;
+        top: 7px;
+        right: 9px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #79aec1;
+        box-shadow: 0 0 7px rgb(105 181 207 / 46%);
+        content: "";
+        animation: tech-beacon 1.8s ease-in-out infinite;
+      }
+
+      #notes-queue .queue-actions .tag {
+        display: flex;
+        min-height: 22px;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        border-color: rgb(104 154 174 / 18%);
+        border-radius: 7px;
+        padding: 3px 7px;
+        background: rgb(244 250 252 / 64%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 78%);
+        color: #617b87;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.04em;
+      }
+
+      #notes-queue .queue-actions .dry-run-btn {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid rgb(96 151 172 / 28%);
+        border-radius: 8px;
+        background: linear-gradient(145deg, #657f8b, #435c68);
+        box-shadow:
+          0 6px 13px rgb(42 76 91 / 16%),
+          inset 0 1px 0 rgb(255 255 255 / 20%);
+        color: #edf9fc;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.03em;
+      }
+
+      #notes-queue .queue-actions .dry-run-btn:hover:not(:disabled) {
+        border-color: rgb(116 190 215 / 42%);
+        background: linear-gradient(145deg, #708d99, #4d6874);
+        box-shadow:
+          0 8px 16px rgb(42 76 91 / 20%),
+          inset 0 1px 0 rgb(255 255 255 / 24%),
+          0 0 0 1px rgb(105 181 207 / 8%);
+        color: #fff;
+      }
+
+      #notes-queue .queue-actions .action-icon {
+        width: 13px;
+        height: 13px;
+        flex: 0 0 13px;
+        filter: drop-shadow(0 0 4px rgb(164 222 239 / 30%));
+        stroke-width: 1.7;
+      }
+
+      body.motion-paused #notes-queue .note-candidate-icon::before,
+      body.motion-paused #notes-queue .note-candidate-icon::after,
+      body.motion-paused #notes-queue .queue-actions::after {
+        animation-play-state: paused !important;
+      }
+
       /* Page Title System：每个工作页统一为动态科技图标 + 文字标题。 */
       .page-title {
         display: flex;
@@ -3121,11 +3369,13 @@
       }
 
       @media (max-width: 600px) {
-        #mail-queue .queue-item {
+        #mail-queue .queue-item,
+        #notes-queue .queue-item {
           grid-template-columns: minmax(0, 1fr);
         }
 
-        #mail-queue .queue-actions {
+        #mail-queue .queue-actions,
+        #notes-queue .queue-actions {
           width: 100%;
         }
 
@@ -3559,18 +3809,32 @@
               </div>
               <div class="queue" id="notes-queue" style="margin-top: 16px">
                 <div class="queue-item">
-                  <div>
-                    <div class="queue-title">二级跨源候选</div>
-                    <div class="queue-meta">工作 · 待确认</div>
+                  <div class="note-candidate">
+                    <span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>
+                    <div class="note-candidate-copy">
+                      <span class="note-node-index">候选节点 01</span>
+                      <div class="queue-title">二级跨源候选</div>
+                      <div class="queue-meta">工作 · 待确认</div>
+                    </div>
                   </div>
-                  <span class="tag">确认</span>
+                  <div class="queue-actions">
+                    <span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span>
+                    <button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button>
+                  </div>
                 </div>
                 <div class="queue-item">
-                  <div>
-                    <div class="queue-title">会议纪要待归档</div>
-                    <div class="queue-meta">个人 · 待确认</div>
+                  <div class="note-candidate">
+                    <span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>
+                    <div class="note-candidate-copy">
+                      <span class="note-node-index">候选节点 02</span>
+                      <div class="queue-title">会议纪要待归档</div>
+                      <div class="queue-meta">个人 · 待确认</div>
+                    </div>
                   </div>
-                  <span class="tag">确认</span>
+                  <div class="queue-actions">
+                    <span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span>
+                    <button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4262,10 +4526,11 @@
         return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(subject)}"><div><div class="queue-title">${escapeHtml(subject || "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}"><span class="queue-status-signal" aria-hidden="true"></span>${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="${escapeHtml(btnLabel)}"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-route"></use></svg><span>${escapeHtml(btnLabel)}</span></button><button type="button" class="btn btn-sm decide-btn" data-decision="approve" aria-label="批准"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>批准</span></button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject" aria-label="拒绝"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-x"></use></svg><span>拒绝</span></button></div></div>`;
       }
 
-      function renderNotesItem(item) {
+      function renderNotesItem(item, index) {
         const folder = item.folder ? `${item.folder} · ` : "";
         const targetId = String(item.apple_note_id ?? item.id ?? "");
-        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "笔记候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">预演确认</button></div></div>`;
+        const sequence = String(index + 1).padStart(2, "0");
+        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "笔记候选")}"><div class="note-candidate"><span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span><div class="note-candidate-copy"><span class="note-node-index">候选节点 ${sequence}</span><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div></div><div class="queue-actions"><span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button></div></div>`;
       }
 
       function renderNewsItem(item) {

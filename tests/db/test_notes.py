@@ -85,11 +85,12 @@ def valid_note_params() -> dict[Any, Any]:
 # ===== 1. Note ORM 模型(3 tests)=====
 
 
-def test_note_orm_has_11_columns() -> None:
-    """1.1 Note ORM 必含 12 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms/sync_status)。
+def test_note_orm_has_15_columns() -> None:
+    """1.1 Note ORM 必含 15 列(id/apple_note_id/folder/title/body/attachments_json/is_private/tags/synced_at_ms/updated_at_ms/sync_status/normalized_fingerprint/needs_confirm/candidate_match_id/note_source)。
 
     v0.2.1 #4 增量(2026-06-17): 加 sync_status 列(5 状态枚举,默认 'NEW')。
     v0.2.1+ 增量(2026-06-17): 加 needs_confirm + candidate_match_id 列(L2 跨源写入字段,沿 0013 范本无 FK)。
+    2026-07-19: 加 note_source 列，隔离普通笔记与 Codex 对话摘要。
     """
     from my_ai_employee.db.notes import Note
 
@@ -108,6 +109,7 @@ def test_note_orm_has_11_columns() -> None:
         "normalized_fingerprint",
         "needs_confirm",
         "candidate_match_id",
+        "note_source",
     }
     actual = {col.name for col in Note.__table__.columns}
     assert actual == expected, f"列不匹配:expected={expected}, actual={actual}"
@@ -175,6 +177,7 @@ def test_insert_minimal_required_fields(store: NoteStore) -> None:
     assert note.attachments_json is None
     assert note.is_private == 0
     assert note.tags is None
+    assert note.note_source == "note"
 
 
 def test_insert_is_private_true_stores_as_1(store: NoteStore) -> None:

@@ -4,12 +4,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 > **我的AI员工** — 全天候个人 AI 数字员工（与 Agent Assistant 兄弟项目，2026-06-12 落地 L4 Agent 层软链）
 >
+> **当前状态（2026-07-19，优先于下方历史详述）**：Codex 本地对话笔记采用显式 JSONL 导入、原子幂等更新、归档/加密/来源隔离保护；**3091 passed / 1 skipped / 90.27%** / **292 MD** / mypy **277 files**。P0-4 24h 观察仍是运行稳定性下一棒。
+>
 > 最后更新:2026-07-19(**Day 14 + 撞坑 #95 修复(`commit 74d1d65` · 拆 menu-bar + Dashboard 为 2 独立 LaunchAgent)✅ + P0-3 caffeinate 1h 观察 ✅(menu-bar + dashboard 持续 1h 1min 23s 零重启 + 127.0.0.1:8765 LISTEN) + 撞坑 #97 修复 ✅(SQLCipher 跨线程 close · `sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool · 不 StaticPool · 2 回归测试 5 passed) + 撞坑 #98 NEW(launchd 升级场景旧 digital-employee 迁移缺口 · K1-K4 4 回归测试 + launchd_install.sh 5.5 legacy retirement 段) + v0.2.78 收口 + v0.2.74/v0.2.74.1/v0.2.75/v0.2.76/v0.2.77 收口** · outbox 2 条已 `cancelled` · 未 SMTP 外发 · P0 `send_one_approved` 先校验收件人再审批 · 9 质量门 **3074 passed / 1 skipped / 90.39%** / **292 MD** / mypy **273 files** · **T3 L4 撞坑 #94 B 路径修复实战完全通过**(数字员工 launcher exit 0 + 9/9 预检全过 + err.log 空 + menu_bar.log B 路径 DB 反复 open/close 模式) + **撞坑 #95 NEW**(`ProcessType=Background` 不允许 fork · menu_bar/dashboard 50s 内被 launchd 回收 · 数字员工 plist `state=not running` · 1h 观察窗启动中锚 agent+imap-sync)· **1h/24h 观察启动选项 D · A+B 混合**(0 改动 · 等 #95 修复 D-step 后再走 24h 完整数字员工)(当前 HEAD 以 `git rev-parse --short HEAD` 为准) · **v0.2.65 preflight + v0.2.66 P2 preflight + v0.2.67 P2 真 install + v0.2.68 P3 prep + v0.2.69 P3-C + 撞坑 #81 bootout 收口 docs-only + v0.2.73 deploy-only + v0.2.74 #92 修复 B + v0.2.74.1 #92 巡检报告 + v0.2.75 #93 修复 + v0.2.76 T3 L4 #93 实战验证 + v0.2.77 T3 L4 #94 B 路径实战验证 + 撞坑 #95 NEW 暴露**(3 wrapper + 3 plist 部署 · 4 wrapper 用绝对路径 /opt/homebrew/bin/uv + ops 脚本用 ${UV_BIN} 检测 · launchd 实际 2/3 active + 1/3 注册(数字员工 launcher 一次性 RunAtLoad 模式 · 进程已退)· 完成度:**整体 ~94%**/**可无人值守 ~82%**(↓ 6pp · #95 限制 menu_bar/dashboard 常驻)/**v1.0 ~87%**(↓ 2pp)) #92 修复 B path migration ✅ + 撞坑
 > 核心模型：MiniMax-M3 · 维护者：Mr-PRY
 
 ---
 
 ## 🚀 TL;DR — 30 秒读懂我的AI员工
+
+**当前阶段（2026-07-19，优先于下方历史详述）**：Dashboard AI 每日情报台与 Codex 本地对话笔记已落地；后者默认只校验、显式 `--apply` 写入。9 质量门 **3091 passed / 1 skipped / 90.27%** / **292 MD** / mypy **277 files**；下一棒为 P0-4 24h 稳定观察。
 
 **项目**：Agent Assistant 的"执行器"载体 — 把 10 角色从"晨晚链路半成品"升级为"全天候数字员工"。
 **核心差异化**：**数据不出本机**（SQLCipher 加密）+ 与 Agent Assistant **无缝衔接**（Skill/角色复用）+ minimax M3 LLM 统一链路。

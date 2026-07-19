@@ -26,8 +26,8 @@
     - 直接 import main()(不 subprocess,避免 SQLCipher 加密 DB 问题)
     - mock Database.open 走 plain sqlite(测试环境,沿 D6.4 范本)
     - tmp_path 临时文件(避免污染 fixtures)
-    - 临时 SQLite 初始化成满足 alembic_version >= '0008_notes' 校验的"伪 alembic DB"
-    - 临时 SQLite 显式建 notes 表(14 字段)让 NoteStore.insert 不抛
+    - 临时 SQLite 初始化成满足 alembic_version >= '0017_codex_conversation_notes' 校验的"伪 alembic DB"
+    - 临时 SQLite 显式建 notes 表(15 字段)让 NoteStore.insert 不抛
 """
 
 from __future__ import annotations
@@ -46,7 +46,12 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # ===== 测试 fixture 工厂 =====
 
 
-def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") -> None:
+def _make_pretend_alembic_notes_db(
+    db_path: Path,
+    revision: str = "0017_codex_conversation_notes",
+    *,
+    include_note_source: bool = True,
+) -> None:
     """在临时 SQLite 上伪造 alembic_version + notes 表(用于通过 alembic 校验 + NoteStore.insert).
 
     真实 SQLCipher + 真实 alembic upgrade head 走 tests/db/test_notes_migration.py
@@ -54,6 +59,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
 
     兜底:用 `IF NOT EXISTS` 避免 T8 场景下 tmp_path 复用时的残留冲突。
     """
+    note_source_column = "note_source TEXT NOT NULL DEFAULT 'note'," if include_note_source else ""
     conn = sqlite3.connect(str(db_path))
     try:
         conn.execute(
@@ -62,7 +68,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
         # 清理旧 revision + 插新 revision(避免多次调用累积)
         conn.execute("DELETE FROM alembic_version")
         conn.execute("INSERT INTO alembic_version (version_num) VALUES (?)", (revision,))
-        conn.execute("""
+        conn.execute(f"""
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 apple_note_id TEXT NOT NULL,
@@ -78,6 +84,7 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
                 normalized_fingerprint TEXT,
                 needs_confirm INTEGER NOT NULL DEFAULT 0,
                 candidate_match_id INTEGER,
+                {note_source_column}
                 UNIQUE(apple_note_id)
             )
             """)
@@ -86,12 +93,18 @@ def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") 
         conn.close()
 
 
-def _make_pretend_alembic_old_db(db_path: Path, revision: str = "0007_transactions") -> None:
-    """在临时 SQLite 上伪造 alembic_version 为 0007_transactions(过旧,触发 alembic 校验失败)。
+def _make_pretend_alembic_old_db(
+    db_path: Path, revision: str = "0016_approval_gate_audits"
+) -> None:
+    """伪造 0016 旧 notes schema（缺 note_source），验证入口先拒绝写入。
 
-    用于 T11:验证 alembic revision < '0008_notes' 时 CLI exit 1。
+    用于 T11:验证 alembic revision < '0017_codex_conversation_notes' 时 CLI exit 1。
     """
-    _make_pretend_alembic_notes_db(db_path, revision=revision)
+    _make_pretend_alembic_notes_db(
+        db_path,
+        revision=revision,
+        include_note_source=False,
+    )
 
 
 def _make_pretend_alembic_missing_db(db_path: Path) -> None:
@@ -300,13 +313,19 @@ def test_cli_spike_idempotent_second_run(
 def test_cli_spike_alembic_too_old_exit_1(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """D9.2:T11 alembic revision 0007_transactions < 0008_notes → exit 1(防漏迁移)。"""
+    """T11：0016 旧库缺 note_source 时，写入前提示升级并 exit 1。"""
     db = tmp_path / "old_alembic.db"
-    _make_pretend_alembic_old_db(db, revision="0007_transactions")
+    _make_pretend_alembic_old_db(db, revision="0016_approval_gate_audits")
     rc = _run_cli_with_mock_db(db, ["spike", "--n", "5"])
     captured = capsys.readouterr()
     assert rc == 1, f"alembic revision 过旧应 exit 1,实际 {rc}\nstderr={captured.err}"
     assert "Alembic version 校验失败" in captured.err
+    assert "需要>='0017_codex_conversation_notes'" in captured.err
+    conn = sqlite3.connect(str(db))
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM notes").fetchone()[0] == 0
+    finally:
+        conn.close()
 
 
 # ===== T12. alembic_version 表不存在 → exit 1 =====

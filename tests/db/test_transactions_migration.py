@@ -222,10 +222,10 @@ def test_alembic_upgrade_downgrade_upgrade_idempotent(
             assert "transactions" in tables
             # notes 表(D9.1)也建了
             assert "notes" in tables
-            # alembic_version = head(v0.2.53.51 = 0016_approval_gate_audits)
+            # alembic_version = head(0017_codex_conversation_notes)
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0016_approval_gate_audits"
+            assert version[0] == "0017_codex_conversation_notes"
     finally:
         db.close()
 

@@ -38,7 +38,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 # ===== 测试 fixture 工厂(沿 test_sync_notes.py 范本)=====
 
-# alembic 校验需要 0008_notes(对应 notes 表已建)
+# alembic 校验需要 0017_codex_conversation_notes(note_source 已建)
 _NOTES_TABLE_DDL = """
     CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -55,12 +55,15 @@ _NOTES_TABLE_DDL = """
         normalized_fingerprint TEXT,
         needs_confirm INTEGER NOT NULL DEFAULT 0,
         candidate_match_id INTEGER,
+        note_source TEXT NOT NULL DEFAULT 'note',
         UNIQUE(apple_note_id)
     )
 """
 
 
-def _make_pretend_alembic_notes_db(db_path: Path, revision: str = "0008_notes") -> None:
+def _make_pretend_alembic_notes_db(
+    db_path: Path, revision: str = "0017_codex_conversation_notes"
+) -> None:
     """建临时 SQLite + alembic_version + notes 表(沿 test_sync_notes.py 范本)."""
     conn = sqlite3.connect(str(db_path))
     try:
