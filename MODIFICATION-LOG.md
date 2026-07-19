@@ -158,6 +158,12 @@
 - 定向菜单栏回归 **44 passed**；全量 `make test` **3091 passed / 1 skipped / 90.34%**，lint、mypy、Alembic SQL 与 build 均通过。
 - 未重启或重载 LaunchAgent，P0-4 24h 观察继续；下次菜单栏启动后生效。
 
+### 2026-07-19 [菜单栏 UI 热更新] — 收口
+
+- 用户反馈界面未变化；核验发现运行中的 menu-bar PID `54767` 早于 `b38bee1`，常驻 Python 进程不会热加载源码。
+- P0-4 24h 同 PID 观察已收口后，仅执行 `launchctl kickstart -k gui/501/com.myaiemployee.menu-bar`；新 PID `27009` 正常运行，Dashboard 未重启。
+- 新进程从项目 `scripts/run_menu_bar.py` 启动，日志记录 `2026-07-19 23:29:36` 配置加载；工作树保持干净。
+
 ### 2026-07-19 [Codex 本地当日对话笔记] — 收口
 
 - 本地 JSONL 显式导入：默认仅校验，`--apply` 才写入；同一 `thread_id` 使用 SQLite/SQLCipher 原子冲突处理实现幂等更新。
