@@ -298,7 +298,15 @@ def test_check_state_entries_script_exits_zero(
     with patch("scripts.check_state_entries.subprocess.run", side_effect=run_mypy):
         assert state_script.count_mypy_source_files(root=PROJECT_ROOT) == 258
     assert captured_args == [
-        ["uv", "run", "mypy", "--strict", "src", "tests", state_script.P0_4_HEALTH_SAMPLE]
+        [
+            "uv",
+            "run",
+            "mypy",
+            "--strict",
+            "src",
+            "tests",
+            *state_script.LAUNCHD_HEALTH_SCRIPTS,
+        ]
     ]
 
     with patch.object(state_script, "check_state_entries", return_value=[]):

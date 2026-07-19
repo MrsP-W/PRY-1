@@ -19,6 +19,7 @@ LAUNCHD_LABELS=(
     "com.myaiemployee.imap-sync"
     "com.myaiemployee.menu-bar"
     "com.myaiemployee.dashboard"
+    "com.myaiemployee.health-monitor"
     "com.myaiemployee.digital-employee"
 )
 TARGET_WRAPPERS=(
@@ -26,6 +27,7 @@ TARGET_WRAPPERS=(
     "${HOME_BIN}/my-ai-employee-imap-sync"
     "${HOME_BIN}/my-ai-employee-menu-bar-runner"
     "${HOME_BIN}/my-ai-employee-dashboard-runner"
+    "${HOME_BIN}/my-ai-employee-health-monitor-runner"
     "${HOME_BIN}/my-ai-employee-start"
 )
 

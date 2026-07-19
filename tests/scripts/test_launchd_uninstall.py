@@ -13,6 +13,7 @@ LABELS = (
     "com.myaiemployee.imap-sync",
     "com.myaiemployee.menu-bar",
     "com.myaiemployee.dashboard",
+    "com.myaiemployee.health-monitor",
     "com.myaiemployee.digital-employee",
 )
 WRAPPER_NAMES = (
@@ -20,6 +21,7 @@ WRAPPER_NAMES = (
     "my-ai-employee-imap-sync",
     "my-ai-employee-menu-bar-runner",
     "my-ai-employee-dashboard-runner",
+    "my-ai-employee-health-monitor-runner",
     "my-ai-employee-start",
 )
 

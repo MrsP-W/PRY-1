@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  P1 运行巡检 — 独立 one-shot LaunchAgent
+
+  - RunAtLoad + StartInterval=900：登录后立即采样，此后每 15 分钟一次
+  - KeepAlive=false：业务不健康不触发 launchd 重启热循环
+  - ProcessType=Background：仅做短时只读采样，单轮上限小于 45 秒
+  - 不替代 menu-bar / Dashboard 的 KeepAlive；不执行任何服务启停
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.myaiemployee.health-monitor</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/$USER/bin/my-ai-employee-health-monitor-runner</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/$USER/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/$USER</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartInterval</key>
+    <integer>900</integer>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>1</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/health-monitor.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/health-monitor.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/$USER</string>
+</dict>
+</plist>
