@@ -1,0 +1,69 @@
+{
+  "captured_at": "2026-07-19T21:35:49.213363+00:00",
+  "dashboard_listener": {
+    "loopback_listening": true,
+    "pids": [
+      34594
+    ],
+    "port": 8765
+  },
+  "error_log_metadata": {
+    "dashboard": {
+      "exists": true,
+      "mtime_epoch": 1784496944,
+      "size_bytes": 895925
+    },
+    "menu_bar": {
+      "exists": true,
+      "mtime_epoch": 1784496944,
+      "size_bytes": 7672
+    }
+  },
+  "healthy": true,
+  "jobs": {
+    "com.myaiemployee.agent": {
+      "last_exit_status": 0,
+      "pid": null,
+      "registered": true,
+      "required_running": false
+    },
+    "com.myaiemployee.dashboard": {
+      "last_exit_status": 143,
+      "pid": 34591,
+      "registered": true,
+      "required_running": true
+    },
+    "com.myaiemployee.imap-sync": {
+      "last_exit_status": 0,
+      "pid": null,
+      "registered": true,
+      "required_running": false
+    },
+    "com.myaiemployee.menu-bar": {
+      "last_exit_status": 143,
+      "pid": 34582,
+      "registered": true,
+      "required_running": true
+    }
+  },
+  "monotonic_ns": 153717092511541,
+  "probe_errors": [],
+  "processes": {
+    "34582": {
+      "elapsed": "00:06",
+      "ppid": 1
+    },
+    "34591": {
+      "elapsed": "00:05",
+      "ppid": 1
+    },
+    "34594": {
+      "elapsed": "00:05",
+      "ppid": 34591
+    }
+  },
+  "read_only": true,
+  "reasons": [],
+  "schema_version": 1,
+  "_recover_seconds": 5.21
+}

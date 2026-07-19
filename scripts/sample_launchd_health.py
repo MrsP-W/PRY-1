@@ -251,7 +251,9 @@ def collect_snapshot(
         if not state.registered:
             reasons.append(f"missing_job:{label}")
             continue
-        if state.last_exit_status not in (None, 0):
+        # KeepAlive / kickstart 后 launchctl 仍保留历史非零 exit；进程已在跑则不算不健康。
+        # 仅当当前无 PID（未恢复）且 last exit 非 0 时记为失败。
+        if state.pid is None and state.last_exit_status not in (None, 0):
             reasons.append(f"last_exit_nonzero:{label}:{state.last_exit_status}")
         if state.required_running and state.pid is None:
             reasons.append(f"not_running:{label}")

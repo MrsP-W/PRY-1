@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "drill": "P0-5 controlled kickstart self-heal",
+  "captured_at": "2026-07-19T213543Z",
+  "baseline_pids": {
+    "menu_bar": 27009,
+    "dashboard": 72319
+  },
+  "menu_bar": {
+    "old_pid": 27009,
+    "new_pid": 34582,
+    "recover_seconds": 0.08,
+    "healthy": true
+  },
+  "dashboard": {
+    "old_pid": 72319,
+    "new_pid": 34591,
+    "recover_seconds": 5.21,
+    "healthy": true,
+    "listener": {
+      "loopback_listening": true,
+      "pids": [
+        34594
+      ],
+      "port": 8765
+    }
+  },
+  "agent_registered": true,
+  "imap_registered": true,
+  "pass": true,
+  "mac_reboot_logout_not_done": true
+}

@@ -136,6 +136,19 @@ def test_registered_job_with_nonzero_last_exit_is_unhealthy() -> None:
     assert snapshot["probe_errors"] == []
 
 
+def test_running_keepalive_job_with_historical_nonzero_exit_is_healthy() -> None:
+    """KeepAlive/kickstart 后仍在跑时，历史 SIGTERM(143) 不算不健康。"""
+    after_kickstart = LAUNCHCTL_HEALTHY.replace(
+        "20196\t0\tcom.myaiemployee.menu-bar", "20196\t143\tcom.myaiemployee.menu-bar"
+    )
+
+    snapshot, _ = _snapshot(launchctl=health.CommandResult(0, after_kickstart))
+
+    assert snapshot["healthy"] is True
+    assert snapshot["reasons"] == []
+    assert snapshot["jobs"]["com.myaiemployee.menu-bar"]["last_exit_status"] == 143  # type: ignore[index]
+
+
 def test_parse_lsof_listener_pids_requires_exact_loopback_endpoint_port() -> None:
     listeners = """\
 COMMAND   PID USER   FD   TYPE DEVICE SIZE/OFF NODE NAME
