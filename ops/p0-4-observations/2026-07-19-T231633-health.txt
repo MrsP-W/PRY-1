@@ -1,0 +1,1 @@
+2026-07-19T21:16:33.426459+00:00 healthy=true menu_bar=pid:54767 dashboard=pid:72319 listener=8765:72321 reasons=-
