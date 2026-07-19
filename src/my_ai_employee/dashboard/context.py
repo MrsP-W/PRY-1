@@ -42,6 +42,7 @@ from my_ai_employee.menu_bar.outbox_draft_service import (
     OutboxDraftServiceImpl,
     OutboxDraftServiceStub,
 )
+from my_ai_employee.news import NewsService
 from my_ai_employee.quality_snapshot import DEFAULT_QUALITY_GATES, QualityGateSnapshot
 
 GitHeadResolver = Callable[[], str]
@@ -72,6 +73,8 @@ class DashboardContext:
     outbox_draft_service: OutboxDraftService = field(
         default_factory=OutboxDraftServiceStub.get_default_stub
     )
+    # AI 情报独立于 DASHBOARD_REAL_DB：Dashboard 仅读本地缓存，绝不在请求路径访问外网。
+    news_service: NewsService = field(default_factory=NewsService)
     business_writer: BusinessWriter | None = field(
         default=None  # 默认 None 表示使用 BusinessWriterStub.get_default_stub()
     )
@@ -144,6 +147,7 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=service,
+            news_service=self.news_service,
             business_writer=self.business_writer,
             audit_store=self.audit_store,
             version=self.version,
@@ -158,6 +162,7 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=service,
             outbox_draft_service=self.outbox_draft_service,
+            news_service=self.news_service,
             business_writer=self.business_writer,
             audit_store=self.audit_store,
             version=self.version,
@@ -172,6 +177,7 @@ class DashboardContext:
             expense_service=service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
+            news_service=self.news_service,
             business_writer=self.business_writer,
             audit_store=self.audit_store,
             version=self.version,
@@ -190,6 +196,7 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
+            news_service=self.news_service,
             business_writer=writer if writer is not None else BusinessWriterStub(),
             audit_store=self.audit_store,
             version=self.version,
@@ -210,8 +217,24 @@ class DashboardContext:
             expense_service=self.expense_service,
             note_confirm_service=self.note_confirm_service,
             outbox_draft_service=self.outbox_draft_service,
+            news_service=self.news_service,
             business_writer=self.business_writer,
             audit_store=store,
+            version=self.version,
+            quality_gates=self.quality_gates,
+            git_head_resolver=self.git_head_resolver,
+            keychain_probe=self.keychain_probe,
+        )
+
+    def with_news_service(self, service: NewsService) -> DashboardContext:
+        """返回替换 AI 情报只读服务的上下文，主要供本地 API 测试注入。"""
+        return DashboardContext(
+            expense_service=self.expense_service,
+            note_confirm_service=self.note_confirm_service,
+            outbox_draft_service=self.outbox_draft_service,
+            news_service=service,
+            business_writer=self.business_writer,
+            audit_store=self.audit_store,
             version=self.version,
             quality_gates=self.quality_gates,
             git_head_resolver=self.git_head_resolver,

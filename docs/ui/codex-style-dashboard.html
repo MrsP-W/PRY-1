@@ -614,6 +614,18 @@
         white-space: nowrap;
       }
 
+      .queue-title-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .queue-title-link:hover,
+      .queue-title-link:focus-visible {
+        color: var(--blue);
+        text-decoration: underline;
+      }
+
       .queue-meta {
         margin-top: 5px;
         color: var(--muted);
@@ -1890,14 +1902,1416 @@
         box-shadow: 0 8px 20px rgb(41 53 69 / 5%), inset 0 1px 0 #fff;
       }
 
+      /* Quiet Sci‑Fi：在 Apple 低彩度基础上增加精密网格、HUD 边角与数据微光。 */
+      :root {
+        --tech-cyan: #6f9eb3;
+        --tech-blue: #788fae;
+        --tech-glow: rgb(91 153 180 / 46%);
+        --tech-line: rgb(88 137 159 / 15%);
+        --font-mono: "SFMono-Regular", "Roboto Mono", Consolas, monospace;
+      }
+
+      .shell {
+        position: relative;
+        isolation: isolate;
+        background:
+          radial-gradient(circle at 78% 6%, rgb(230 247 255 / 46%), transparent 27rem),
+          radial-gradient(circle at 18% 92%, rgb(220 231 246 / 38%), transparent 30rem),
+          linear-gradient(150deg, #f8fafc 0%, #edf2f6 58%, #e6ecf2 100%);
+      }
+
+      .shell::before,
+      .shell::after {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        content: "";
+        pointer-events: none;
+      }
+
+      .shell::before {
+        background-image:
+          linear-gradient(var(--tech-line) 1px, transparent 1px),
+          linear-gradient(90deg, var(--tech-line) 1px, transparent 1px),
+          linear-gradient(rgb(78 126 150 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(78 126 150 / 8%) 1px, transparent 1px);
+        background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
+        mask-image: radial-gradient(ellipse at 62% 42%, #000 0%, rgb(0 0 0 / 54%) 48%, transparent 88%);
+        opacity: 0.52;
+      }
+
+      .shell::after {
+        width: 32%;
+        background: linear-gradient(90deg, transparent, rgb(190 232 247 / 20%), transparent);
+        filter: blur(2px);
+        transform: translateX(-145%);
+        animation: ambient-scan 14s ease-in-out infinite;
+      }
+
+      .shell > header,
+      .shell > .workspace,
+      .shell > footer {
+        position: relative;
+        z-index: 1;
+      }
+
+      @keyframes ambient-scan {
+        0%,
+        18% {
+          transform: translateX(-145%);
+        }
+        78%,
+        100% {
+          transform: translateX(410%);
+        }
+      }
+
+      header {
+        overflow: hidden;
+        border-color: rgb(169 206 220 / 38%);
+        background: linear-gradient(110deg, rgb(255 255 255 / 76%), rgb(241 248 251 / 62%));
+        box-shadow:
+          0 12px 30px rgb(39 65 82 / 9%),
+          inset 0 1px 0 rgb(255 255 255 / 96%),
+          inset 0 -1px 0 rgb(91 153 180 / 9%);
+      }
+
+      header::before {
+        position: absolute;
+        top: 0;
+        left: 24px;
+        width: min(38vw, 420px);
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--tech-glow), transparent);
+        box-shadow: 0 0 12px rgb(91 153 180 / 26%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .avatar {
+        position: relative;
+        overflow: hidden;
+        border-color: rgb(176 220 235 / 44%);
+        background:
+          radial-gradient(circle at 50% 48%, rgb(165 222 240 / 22%) 0 17%, transparent 18%),
+          conic-gradient(from 30deg, #17212a, #526b78, #131b23, #405968, #17212a);
+        box-shadow:
+          0 0 0 1px rgb(101 163 187 / 12%),
+          0 8px 22px rgb(32 65 82 / 22%),
+          inset 0 0 16px rgb(151 219 240 / 16%);
+        font-family: var(--font-mono);
+        letter-spacing: -0.06em;
+      }
+
+      .avatar::before {
+        position: absolute;
+        inset: 5px;
+        border: 1px solid rgb(188 229 241 / 34%);
+        border-radius: 8px;
+        content: "";
+        transform: rotate(45deg);
+      }
+
+      .avatar::after {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #c6edf7;
+        box-shadow: 0 0 8px #a7dfee;
+        content: "";
+        animation: signal-pulse 2.8s ease-in-out infinite;
+      }
+
+      @keyframes signal-pulse {
+        0%,
+        100% {
+          opacity: 0.45;
+          transform: scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.35);
+        }
+      }
+
+      .brand-subtitle,
+      .pill,
+      .hud-clock,
+      .section-kicker,
+      footer .log {
+        font-family: var(--font-mono);
+      }
+
+      .brand-subtitle {
+        color: #718b98;
+        font-size: 9px;
+        letter-spacing: 0.075em;
+      }
+
+      .pill {
+        position: relative;
+        border-color: rgb(104 151 171 / 15%);
+        background: rgb(248 253 255 / 48%);
+        letter-spacing: -0.02em;
+      }
+
+      .pill::after {
+        position: absolute;
+        right: 5px;
+        bottom: 3px;
+        width: 8px;
+        height: 1px;
+        background: rgb(88 145 169 / 28%);
+        content: "";
+      }
+
+      .pill.live {
+        border-color: rgb(94 158 184 / 28%);
+        background: linear-gradient(145deg, rgb(248 254 255 / 78%), rgb(225 240 247 / 62%));
+        box-shadow: 0 0 18px rgb(83 151 179 / 10%), inset 0 1px 0 #fff;
+      }
+
+      .header-actions {
+        gap: 9px;
+      }
+
+      .hud-clock {
+        display: grid;
+        min-width: 70px;
+        gap: 1px;
+        padding-right: 10px;
+        border-right: 1px solid rgb(86 138 160 / 18%);
+        color: #7c919c;
+        font-size: 8px;
+        letter-spacing: 0.08em;
+        line-height: 1.1;
+        text-align: right;
+      }
+
+      .hud-clock strong {
+        color: #455e6b;
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        font-weight: 560;
+        letter-spacing: 0.04em;
+      }
+
+      aside {
+        border-color: rgb(163 204 220 / 34%);
+        background:
+          radial-gradient(circle at 22% 8%, rgb(188 231 245 / 20%), transparent 11rem),
+          linear-gradient(180deg, rgb(250 254 255 / 64%), rgb(222 234 243 / 36%));
+        box-shadow:
+          0 20px 42px rgb(35 62 79 / 12%),
+          inset 0 1px 0 rgb(255 255 255 / 96%),
+          inset -1px 0 0 rgb(89 151 176 / 7%);
+      }
+
+      aside::after {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        background-image:
+          linear-gradient(rgb(78 134 158 / 10%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(78 134 158 / 10%) 1px, transparent 1px);
+        background-size: 22px 22px;
+        content: "";
+        mask-image: linear-gradient(180deg, #000, transparent 72%);
+        opacity: 0.42;
+        pointer-events: none;
+      }
+
+      .nav button {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav button.active {
+        border-color: rgb(160 205 223 / 46%);
+        background:
+          linear-gradient(90deg, rgb(165 219 238 / 13%), transparent 42%),
+          linear-gradient(145deg, rgb(255 255 255 / 85%), rgb(221 234 241 / 72%));
+        box-shadow:
+          0 12px 24px rgb(39 73 91 / 14%),
+          inset 0 1px 0 #fff,
+          inset 3px 0 0 rgb(91 153 180 / 46%);
+      }
+
+      .nav button.active::after {
+        position: absolute;
+        top: 0;
+        left: 9px;
+        width: 34px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        box-shadow: 0 0 8px rgb(91 153 180 / 22%);
+        content: "";
+      }
+
+      .nav button.active .nav-icon {
+        background: linear-gradient(145deg, #668394, #344b58);
+        box-shadow:
+          0 7px 15px rgb(45 86 105 / 22%),
+          inset 0 0 9px rgb(186 232 246 / 12%);
+        font-family: var(--font-mono);
+      }
+
+      .card,
+      .thread,
+      .draft,
+      .flow-card,
+      .inspector {
+        border-color: rgb(162 202 218 / 30%);
+        box-shadow:
+          0 18px 38px rgb(34 61 78 / 9%),
+          0 2px 7px rgb(34 61 78 / 4%),
+          inset 0 1px 0 rgb(255 255 255 / 96%);
+      }
+
+      .card::after {
+        border-color: rgb(255 255 255 / 52%);
+        background:
+          linear-gradient(90deg, var(--tech-glow), transparent) top left / 28px 1px no-repeat,
+          linear-gradient(180deg, var(--tech-glow), transparent) top left / 1px 28px no-repeat,
+          linear-gradient(270deg, var(--tech-glow), transparent) right bottom / 28px 1px no-repeat,
+          linear-gradient(0deg, var(--tech-glow), transparent) right bottom / 1px 28px no-repeat;
+      }
+
+      .hero > .card:first-child {
+        background:
+          radial-gradient(circle at 9% 26%, rgb(175 222 238 / 18%), transparent 9rem),
+          linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(241 247 250 / 84%));
+      }
+
+      .hero > .card:first-child::before {
+        border-color: rgb(174 219 234 / 44%);
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 18%), transparent 45%),
+          conic-gradient(from 45deg, #7b9aaa, #3d5664, #6c8796, #293f4c, #7b9aaa);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 26px rgb(41 83 102 / 22%),
+          inset 0 0 15px rgb(196 235 246 / 16%);
+        content: "◈";
+        font-family: var(--font-mono);
+        font-size: 21px;
+        text-shadow: 0 0 10px rgb(202 241 251 / 44%);
+      }
+
+      .priority-eyebrow,
+      .section-kicker {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #718a96;
+        letter-spacing: 0.045em;
+      }
+
+      .priority-eyebrow::before,
+      .section-kicker::before {
+        width: 22px;
+        height: 1px;
+        flex: 0 0 22px;
+        background: linear-gradient(90deg, var(--tech-cyan), transparent);
+        box-shadow: 0 0 7px rgb(91 153 180 / 25%);
+        content: "";
+      }
+
+      .section-heading {
+        position: relative;
+        padding-left: 14px;
+      }
+
+      .section-heading::after {
+        position: absolute;
+        top: 2px;
+        bottom: 2px;
+        left: 0;
+        width: 2px;
+        border-radius: 99px;
+        background: linear-gradient(180deg, var(--tech-glow), rgb(91 153 180 / 4%));
+        box-shadow: 0 0 10px rgb(91 153 180 / 18%);
+        content: "";
+      }
+
+      .metric {
+        background:
+          linear-gradient(rgb(91 153 180 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 8%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(255 255 255 / 82%), rgb(237 245 248 / 72%));
+        background-size: 16px 16px, 16px 16px, 100% 100%;
+        box-shadow:
+          0 9px 20px rgb(35 69 87 / 7%),
+          inset 0 1px 0 #fff,
+          inset 0 -1px 0 rgb(91 153 180 / 8%);
+      }
+
+      .metric::before {
+        position: absolute;
+        top: 9px;
+        right: 11px;
+        color: rgb(68 116 137 / 42%);
+        content: "0";
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.08em;
+      }
+
+      .metric:nth-child(1)::before { content: "01"; }
+      .metric:nth-child(2)::before { content: "02"; }
+      .metric:nth-child(3)::before { content: "03"; }
+      .metric:nth-child(4)::before { content: "04"; }
+
+      .metric:hover {
+        transform: translateY(-3px);
+        box-shadow:
+          0 15px 28px rgb(35 73 92 / 11%),
+          0 0 0 1px rgb(105 172 198 / 12%),
+          inset 0 1px 0 #fff;
+      }
+
+      .metric-value {
+        color: #294451;
+        font-variant-numeric: tabular-nums;
+        text-shadow: 0 0 18px rgb(93 160 188 / 14%);
+      }
+
+      .thread,
+      .flow-card {
+        position: relative;
+      }
+
+      .thread::before,
+      .flow-card::after {
+        position: absolute;
+        top: 0;
+        left: 22px;
+        width: 76px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        box-shadow: 0 0 10px rgb(91 153 180 / 18%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .step-icon {
+        border-color: rgb(126 176 196 / 24%);
+        background: linear-gradient(145deg, rgb(250 254 255 / 92%), rgb(222 236 242 / 76%));
+        color: #53717f;
+        font-family: var(--font-mono);
+        box-shadow: 0 5px 12px rgb(45 83 101 / 9%), inset 0 1px 0 #fff;
+      }
+
+      .queue-item {
+        position: relative;
+        transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+      }
+
+      .queue-item:hover {
+        background: linear-gradient(90deg, rgb(210 237 246 / 22%), rgb(255 255 255 / 26%));
+        box-shadow: inset 2px 0 0 rgb(91 153 180 / 34%);
+        transform: translateX(1px);
+      }
+
+      .flow-card {
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          radial-gradient(circle at 18% 112%, rgb(197 225 237 / 34%), transparent 11rem),
+          linear-gradient(145deg, rgb(255 255 255 / 90%), rgb(239 247 250 / 82%));
+        background-size: 22px 22px, 22px 22px, 100% 100%, 100% 100%;
+      }
+
+      .flow-card h2::after {
+        margin-left: 8px;
+        color: rgb(73 124 146 / 52%);
+        content: "// 处理链路";
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.08em;
+      }
+
+      .process-flow li:not(:last-child)::after {
+        height: 1px;
+        background: linear-gradient(90deg, rgb(92 150 174 / 55%), rgb(92 150 174 / 12%));
+        box-shadow: 0 0 6px rgb(91 153 180 / 14%);
+      }
+
+      .flow-stage {
+        border-color: rgb(144 192 210 / 32%);
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, #fff, #e6f0f4);
+        background-size: 12px 12px, 12px 12px, 100% 100%;
+        color: #466573;
+        font-family: var(--font-mono);
+      }
+
+      .process-flow li.active .flow-stage {
+        border-color: rgb(174 221 237 / 52%);
+        background:
+          radial-gradient(circle, rgb(166 220 238 / 18%), transparent 58%),
+          linear-gradient(145deg, #668695, #344e5c);
+        box-shadow:
+          0 14px 22px rgb(40 80 98 / 22%),
+          0 3px 0 #2d4653,
+          0 0 0 5px rgb(100 170 196 / 6%),
+          inset 0 0 15px rgb(197 237 248 / 13%);
+      }
+
+      .inspector {
+        position: relative;
+        background:
+          linear-gradient(90deg, rgb(174 222 238 / 9%), transparent 12%),
+          linear-gradient(160deg, rgb(251 254 255 / 80%), rgb(235 245 249 / 74%));
+      }
+
+      .inspector::before {
+        position: absolute;
+        top: 20px;
+        left: 0;
+        width: 1px;
+        height: 110px;
+        background: linear-gradient(180deg, transparent, var(--tech-glow), transparent);
+        box-shadow: 0 0 10px rgb(91 153 180 / 22%);
+        content: "";
+        pointer-events: none;
+      }
+
+      .inspector-section:first-child {
+        border-color: rgb(145 192 210 / 22%);
+        background:
+          linear-gradient(90deg, rgb(191 230 242 / 16%), transparent),
+          rgb(255 255 255 / 42%);
+      }
+
+      .inspector h3::before {
+        margin-right: 7px;
+        color: var(--tech-cyan);
+        content: "⌁";
+        font-family: var(--font-mono);
+        text-shadow: 0 0 8px rgb(91 153 180 / 24%);
+      }
+
+      footer {
+        overflow: hidden;
+        border-color: rgb(151 196 213 / 30%);
+        background: linear-gradient(90deg, rgb(248 253 255 / 72%), rgb(232 244 248 / 58%));
+      }
+
+      footer::before {
+        position: absolute;
+        top: 0;
+        left: 16px;
+        width: 120px;
+        height: 1px;
+        background: linear-gradient(90deg, var(--tech-glow), transparent);
+        content: "";
+      }
+
+      footer .log {
+        color: #657f8b;
+        font-size: 9px;
+        letter-spacing: 0.01em;
+      }
+
+      /* Animated Tech Icons：统一替代汉字方块与静态符号，保持离线可用。 */
+      .icon-sprite {
+        position: absolute;
+        width: 0;
+        height: 0;
+        overflow: hidden;
+      }
+
+      .tech-icon {
+        width: 18px;
+        height: 18px;
+        overflow: visible;
+        fill: none;
+        stroke: currentcolor;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        stroke-width: 1.55;
+        filter: drop-shadow(0 0 4px rgb(105 181 207 / 24%));
+        transform-origin: center;
+        animation:
+          tech-icon-float 2.6s ease-in-out infinite,
+          tech-icon-glow 1.9s ease-in-out infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .tech-icon use {
+        stroke-dasharray: 7 4;
+        stroke-dashoffset: 0;
+        animation: tech-icon-trace 1.8s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      @keyframes tech-icon-float {
+        0%,
+        100% {
+          transform: translateY(0) scale(1);
+        }
+        50% {
+          transform: translateY(-3px) scale(1.06) rotate(1.5deg);
+        }
+      }
+
+      @keyframes tech-icon-trace {
+        from {
+          stroke-dashoffset: 0;
+          opacity: 0.76;
+        }
+        to {
+          stroke-dashoffset: -33;
+          opacity: 1;
+        }
+      }
+
+      @keyframes tech-icon-glow {
+        0%,
+        100% {
+          filter: drop-shadow(0 0 2px rgb(105 181 207 / 18%));
+        }
+        50% {
+          filter: drop-shadow(0 0 7px rgb(105 181 207 / 48%));
+        }
+      }
+
+      @keyframes tech-orbit-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes tech-beacon {
+        0%,
+        100% {
+          box-shadow: 0 0 0 0 rgb(143 210 231 / 0%);
+          opacity: 0.4;
+        }
+        50% {
+          box-shadow: 0 0 0 4px rgb(143 210 231 / 9%);
+          opacity: 1;
+        }
+      }
+
+      @keyframes tech-scan-y {
+        0% {
+          opacity: 0;
+          transform: translateY(-12px);
+        }
+        30%,
+        70% {
+          opacity: 0.75;
+        }
+        100% {
+          opacity: 0;
+          transform: translateY(28px);
+        }
+      }
+
+      .avatar > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 21px;
+        height: 21px;
+        color: #d5f3fb;
+        stroke-width: 1.35;
+      }
+
+      .avatar::before {
+        animation: tech-orbit-spin 12s linear infinite;
+      }
+
+      .nav-icon {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nav-icon > .tech-icon {
+        width: 16px;
+        height: 16px;
+        color: #587584;
+      }
+
+      .nav-icon::after {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #83b8ca;
+        content: "";
+        animation: tech-beacon 2.8s ease-in-out infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .nav-icon::before {
+        position: absolute;
+        inset: 4px;
+        border: 1px dashed rgb(91 153 180 / 28%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 4.8s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .nav button:nth-child(1) { --icon-delay: -0.2s; }
+      .nav button:nth-child(2) { --icon-delay: -0.7s; }
+      .nav button:nth-child(3) { --icon-delay: -1.2s; }
+      .nav button:nth-child(4) { --icon-delay: -1.7s; }
+      .nav button:nth-child(5) { --icon-delay: -2.2s; }
+      .nav button:nth-child(6) { --icon-delay: -2.7s; }
+      .nav button:nth-child(7) { --icon-delay: -3.2s; }
+      .nav button:nth-child(8) { --icon-delay: -3.7s; }
+
+      .nav button.active .nav-icon > .tech-icon {
+        color: #e1f6fb;
+        filter: drop-shadow(0 0 6px rgb(177 229 243 / 40%));
+      }
+
+      .hero-core {
+        position: absolute;
+        top: 27px;
+        left: 24px;
+        z-index: 2;
+        display: grid;
+        width: 50px;
+        height: 50px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(174 219 234 / 44%);
+        border-radius: 16px;
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 18%), transparent 45%),
+          conic-gradient(from 45deg, #7b9aaa, #3d5664, #6c8796, #293f4c, #7b9aaa);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 26px rgb(41 83 102 / 22%),
+          inset 0 0 15px rgb(196 235 246 / 16%);
+      }
+
+      .hero-core::before {
+        position: absolute;
+        inset: 7px;
+        border: 1px dashed rgb(189 230 242 / 50%);
+        border-top-color: #d1f2fa;
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 9s linear infinite;
+      }
+
+      .hero-core::after {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        width: 4px;
+        height: 4px;
+        border-radius: 50%;
+        background: #c6edf7;
+        box-shadow: 0 0 9px #a7dfee;
+        content: "";
+        transform: translateX(-50%);
+        animation: tech-beacon 2.4s ease-in-out infinite;
+      }
+
+      .hero-core > .tech-icon {
+        z-index: 1;
+        width: 24px;
+        height: 24px;
+        color: #e0f6fb;
+        stroke-width: 1.35;
+      }
+
+      .hero > .card:first-child::before {
+        display: none;
+      }
+
+      .panel-title,
+      .flow-card h2,
+      .btn-with-icon {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .panel-title > .tech-icon,
+      .flow-card h2 > .tech-icon {
+        width: 17px;
+        height: 17px;
+        color: #668d9f;
+      }
+
+      .hero > .card:last-child h3::before {
+        display: none;
+      }
+
+      .button-icon {
+        width: 14px;
+        height: 14px;
+        color: #5f7f8e;
+      }
+
+      .motion-toggle {
+        display: inline-flex;
+        min-height: 28px;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgb(100 159 182 / 24%);
+        border-radius: 999px;
+        padding: 4px 8px;
+        background: rgb(242 252 255 / 58%);
+        color: #537584;
+        cursor: pointer;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.035em;
+        white-space: nowrap;
+      }
+
+      .motion-toggle:hover {
+        border-color: rgb(91 153 180 / 42%);
+        background: rgb(238 251 255 / 84%);
+      }
+
+      .motion-signal {
+        position: relative;
+        width: 7px;
+        height: 7px;
+        border: 1px solid rgb(98 168 194 / 48%);
+        border-radius: 50%;
+      }
+
+      .motion-signal::after {
+        position: absolute;
+        inset: 1px;
+        border-radius: inherit;
+        background: #77b0c5;
+        box-shadow: 0 0 7px rgb(105 181 207 / 58%);
+        content: "";
+        animation: tech-beacon 1.5s ease-in-out infinite;
+      }
+
+      .step-icon > .tech-icon {
+        width: 17px;
+        height: 17px;
+        color: #547787;
+      }
+
+      .step-icon {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .step-icon::after {
+        position: absolute;
+        right: 3px;
+        left: 3px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgb(152 215 235 / 72%), transparent);
+        box-shadow: 0 0 6px rgb(105 181 207 / 32%);
+        content: "";
+        animation: tech-scan-y 2.7s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .step:nth-child(1) { --icon-delay: -0.4s; }
+      .step:nth-child(2) { --icon-delay: -1.2s; }
+      .step:nth-child(3) { --icon-delay: -2s; }
+
+      .flow-stage > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 22px;
+        height: 22px;
+        color: #4f7585;
+        stroke-width: 1.45;
+      }
+
+      .flow-stage {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .flow-stage::before {
+        position: absolute;
+        inset: 8px;
+        border: 1px dashed rgb(91 153 180 / 28%);
+        border-top-color: rgb(139 205 227 / 62%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 5.4s linear infinite;
+        animation-delay: var(--icon-delay, 0s);
+      }
+
+      .process-flow li:nth-child(1) { --icon-delay: -0.2s; }
+      .process-flow li:nth-child(2) { --icon-delay: -0.8s; }
+      .process-flow li:nth-child(3) { --icon-delay: -1.4s; }
+      .process-flow li:nth-child(4) { --icon-delay: -2s; }
+      .process-flow li:nth-child(5) { --icon-delay: -2.6s; }
+
+      .process-flow li.active .flow-stage > .tech-icon {
+        color: #d9f3f9;
+        filter: drop-shadow(0 0 7px rgb(181 229 242 / 45%));
+      }
+
+      .inspector h3::before {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin-right: 8px;
+        border: 1px solid rgb(95 157 182 / 48%);
+        border-radius: 2px;
+        background: conic-gradient(from 45deg, transparent, rgb(109 181 207 / 42%), transparent 62%);
+        box-shadow: 0 0 8px rgb(91 153 180 / 18%);
+        content: "";
+        vertical-align: 1px;
+        animation: tech-orbit-spin 6s linear infinite;
+      }
+
+      body.motion-paused .tech-icon,
+      body.motion-paused .tech-icon use,
+      body.motion-paused .shell::after,
+      body.motion-paused .avatar::before,
+      body.motion-paused .avatar::after,
+      body.motion-paused .nav-icon::before,
+      body.motion-paused .nav-icon::after,
+      body.motion-paused .hero-core::before,
+      body.motion-paused .hero-core::after,
+      body.motion-paused .motion-signal::after,
+      body.motion-paused .step-icon::after,
+      body.motion-paused .flow-stage::before,
+      body.motion-paused .inspector h3::before {
+        animation-play-state: paused !important;
+      }
+
+      body.motion-paused .motion-toggle {
+        border-color: rgb(125 139 148 / 22%);
+        background: rgb(247 249 250 / 58%);
+        color: #89959b;
+      }
+
+      body.motion-paused .motion-signal::after {
+        background: #9aa6ab;
+        box-shadow: none;
+      }
+
+      /* Mail Action Rail：用单一冷灰蓝层级替代黄/蓝/绿/红按钮堆叠。 */
+      #mail-queue .queue-item {
+        grid-template-columns: minmax(0, 1fr) 188px;
+        gap: 20px;
+        padding: 14px 12px 14px 18px;
+      }
+
+      #mail-queue .queue-actions {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 188px;
+        align-items: stretch;
+        gap: 6px;
+        padding: 8px;
+        overflow: hidden;
+        border: 1px solid rgb(119 168 187 / 24%);
+        border-radius: 14px;
+        background:
+          linear-gradient(rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(91 153 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(250 254 255 / 80%), rgb(226 238 244 / 54%));
+        background-size: 14px 14px, 14px 14px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 92%),
+          inset 2px 0 0 rgb(104 170 194 / 16%),
+          0 8px 18px rgb(43 76 91 / 7%);
+      }
+
+      #mail-queue .queue-actions::before {
+        grid-column: 1 / -1;
+        padding: 0 1px 5px;
+        border-bottom: 1px solid rgb(102 154 175 / 13%);
+        color: #7a929d;
+        content: "操作 / 控制";
+        font: 7px/1 var(--font-mono);
+        letter-spacing: 0.11em;
+      }
+
+      #mail-queue .queue-actions::after {
+        position: absolute;
+        top: 7px;
+        right: 9px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #79aec1;
+        box-shadow: 0 0 7px rgb(105 181 207 / 46%);
+        content: "";
+        animation: tech-beacon 1.8s ease-in-out infinite;
+      }
+
+      #mail-queue .queue-actions .tag,
+      #mail-queue .queue-actions .tag.green {
+        display: flex;
+        min-height: 22px;
+        grid-column: 1 / -1;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        align-self: stretch;
+        border-color: rgb(104 154 174 / 18%);
+        border-radius: 7px;
+        padding: 3px 7px;
+        background: rgb(244 250 252 / 62%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 78%);
+        color: #617b87;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.04em;
+      }
+
+      .queue-status-signal {
+        width: 5px;
+        height: 5px;
+        flex: 0 0 5px;
+        border: 1px solid rgb(92 149 171 / 42%);
+        border-radius: 50%;
+        background: rgb(118 169 187 / 34%);
+        box-shadow: 0 0 6px rgb(105 181 207 / 26%);
+        animation: tech-beacon 2.2s ease-in-out infinite;
+      }
+
+      #mail-queue .queue-actions .btn {
+        display: inline-flex;
+        min-width: 0;
+        min-height: 30px;
+        align-items: center;
+        justify-content: center;
+        gap: 5px;
+        border-color: rgb(105 153 172 / 22%);
+        border-radius: 8px;
+        padding: 5px 7px;
+        background: rgb(249 253 254 / 64%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 86%);
+        color: #5d7783;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.01em;
+      }
+
+      #mail-queue .queue-actions .btn:hover:not(:disabled) {
+        border-color: rgb(93 159 184 / 40%);
+        background: rgb(241 251 254 / 86%);
+        box-shadow:
+          0 5px 12px rgb(47 84 100 / 10%),
+          inset 0 1px 0 #fff,
+          0 0 0 1px rgb(105 181 207 / 8%);
+        color: #3f6677;
+      }
+
+      #mail-queue .queue-actions .dry-run-btn {
+        grid-column: 1 / -1;
+        border-style: dashed;
+        background: linear-gradient(90deg, rgb(225 242 248 / 40%), rgb(250 253 254 / 66%));
+      }
+
+      #mail-queue .queue-actions .decide-btn {
+        border-color: rgb(99 151 171 / 28%);
+        background: linear-gradient(145deg, #657f8b, #435c68);
+        box-shadow:
+          0 6px 13px rgb(42 76 91 / 16%),
+          inset 0 1px 0 rgb(255 255 255 / 20%);
+        color: #edf9fc;
+      }
+
+      #mail-queue .queue-actions .decide-btn.reject {
+        border-color: rgb(112 139 150 / 26%);
+        border-style: dashed;
+        background: rgb(248 251 252 / 50%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+        color: #6d7e85;
+      }
+
+      #mail-queue .queue-actions .action-icon {
+        width: 12px;
+        height: 12px;
+        flex: 0 0 12px;
+        filter: drop-shadow(0 0 3px rgb(105 181 207 / 24%));
+        stroke-width: 1.7;
+      }
+
+      body.motion-paused #mail-queue .queue-actions::after,
+      body.motion-paused .queue-status-signal {
+        animation-play-state: paused !important;
+      }
+
+      /* Note Confirmation Core：笔记候选使用低彩度科技节点，统一信号与操作层级。 */
+      #notes-queue {
+        gap: 10px;
+        overflow: visible;
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+      }
+
+      #notes-queue .queue-item {
+        position: relative;
+        isolation: isolate;
+        grid-template-columns: minmax(0, 1fr) 174px;
+        min-height: 96px;
+        gap: 18px;
+        overflow: hidden;
+        padding: 14px 13px 14px 18px;
+        border: 1px solid rgb(112 159 178 / 20%);
+        border-radius: 16px;
+        background:
+          linear-gradient(rgb(96 155 178 / 4.5%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(96 155 178 / 4.5%) 1px, transparent 1px),
+          radial-gradient(circle at 92% 50%, rgb(129 193 214 / 10%), transparent 30%),
+          linear-gradient(145deg, rgb(255 255 255 / 88%), rgb(239 247 250 / 70%));
+        background-size: 18px 18px, 18px 18px, 100% 100%, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 94%),
+          0 10px 24px rgb(44 78 93 / 7%);
+        transition:
+          border-color 180ms ease,
+          box-shadow 180ms ease,
+          transform 180ms ease;
+      }
+
+      #notes-queue .queue-item::before {
+        position: absolute;
+        z-index: 1;
+        top: 18px;
+        bottom: 18px;
+        left: 0;
+        width: 2px;
+        border-radius: 0 2px 2px 0;
+        background: linear-gradient(180deg, transparent, #78b3c8 28%, #8cc5d8 70%, transparent);
+        box-shadow: 0 0 10px rgb(96 177 205 / 24%);
+        content: "";
+      }
+
+      #notes-queue .queue-item::after {
+        position: absolute;
+        z-index: 1;
+        top: 9px;
+        right: 9px;
+        width: 15px;
+        height: 15px;
+        border-top: 1px solid rgb(102 166 190 / 28%);
+        border-right: 1px solid rgb(102 166 190 / 28%);
+        border-radius: 0 7px 0 0;
+        content: "";
+      }
+
+      #notes-queue .queue-item:hover {
+        border-color: rgb(93 159 184 / 34%);
+        box-shadow:
+          inset 0 1px 0 #fff,
+          0 14px 30px rgb(44 78 93 / 11%),
+          0 0 0 1px rgb(105 181 207 / 5%);
+        transform: translateY(-2px);
+      }
+
+      #notes-queue .note-candidate {
+        display: flex;
+        min-width: 0;
+        align-items: center;
+        gap: 13px;
+      }
+
+      #notes-queue .note-candidate-copy {
+        min-width: 0;
+      }
+
+      #notes-queue .note-candidate-icon {
+        position: relative;
+        display: inline-grid;
+        width: 46px;
+        height: 46px;
+        flex: 0 0 46px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(105 169 192 / 24%);
+        border-radius: 14px;
+        background:
+          linear-gradient(rgb(93 158 183 / 8%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(93 158 183 / 8%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(249 253 254 / 90%), rgb(219 237 244 / 70%));
+        background-size: 9px 9px, 9px 9px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 88%),
+          0 8px 16px rgb(51 91 108 / 9%);
+        color: #5e899a;
+      }
+
+      #notes-queue .note-candidate-icon::before {
+        position: absolute;
+        width: 34px;
+        height: 34px;
+        border: 1px dashed rgb(103 172 198 / 26%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 9s linear infinite;
+      }
+
+      #notes-queue .note-candidate-icon::after {
+        position: absolute;
+        top: 7px;
+        width: 22px;
+        height: 1px;
+        background: linear-gradient(90deg, transparent, rgb(116 190 215 / 56%), transparent);
+        box-shadow: 0 0 7px rgb(105 181 207 / 34%);
+        content: "";
+        animation: tech-scan-y 2.6s ease-in-out infinite;
+      }
+
+      #notes-queue .note-candidate-icon .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 21px;
+        height: 21px;
+      }
+
+      #notes-queue .note-node-index {
+        display: block;
+        margin-bottom: 7px;
+        color: #7a929d;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.12em;
+      }
+
+      #notes-queue .queue-title {
+        color: #263a45;
+        font-size: 14px;
+        letter-spacing: -0.01em;
+      }
+
+      #notes-queue .queue-meta {
+        margin-top: 6px;
+        color: #788990;
+        font-size: 11px;
+      }
+
+      #notes-queue .queue-actions {
+        position: relative;
+        display: grid;
+        width: 174px;
+        align-items: stretch;
+        gap: 7px;
+        padding: 8px;
+        overflow: hidden;
+        border: 1px solid rgb(112 164 184 / 22%);
+        border-radius: 13px;
+        background:
+          linear-gradient(rgb(94 156 180 / 7%) 1px, transparent 1px),
+          linear-gradient(90deg, rgb(94 156 180 / 7%) 1px, transparent 1px),
+          linear-gradient(145deg, rgb(250 254 255 / 76%), rgb(224 239 245 / 56%));
+        background-size: 13px 13px, 13px 13px, 100% 100%;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 90%),
+          0 7px 15px rgb(46 81 96 / 7%);
+      }
+
+      #notes-queue .queue-actions::before {
+        padding: 0 1px 5px;
+        border-bottom: 1px solid rgb(102 154 175 / 13%);
+        color: #7b929c;
+        content: "确认节点";
+        font: 7px/1 var(--font-mono);
+        letter-spacing: 0.11em;
+      }
+
+      #notes-queue .queue-actions::after {
+        position: absolute;
+        top: 7px;
+        right: 9px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #79aec1;
+        box-shadow: 0 0 7px rgb(105 181 207 / 46%);
+        content: "";
+        animation: tech-beacon 1.8s ease-in-out infinite;
+      }
+
+      #notes-queue .queue-actions .tag {
+        display: flex;
+        min-height: 22px;
+        align-items: center;
+        justify-content: flex-start;
+        gap: 6px;
+        border-color: rgb(104 154 174 / 18%);
+        border-radius: 7px;
+        padding: 3px 7px;
+        background: rgb(244 250 252 / 64%);
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 78%);
+        color: #617b87;
+        font: 8px/1 var(--font-mono);
+        letter-spacing: 0.04em;
+      }
+
+      #notes-queue .queue-actions .dry-run-btn {
+        display: inline-flex;
+        min-height: 32px;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: 1px solid rgb(96 151 172 / 28%);
+        border-radius: 8px;
+        background: linear-gradient(145deg, #657f8b, #435c68);
+        box-shadow:
+          0 6px 13px rgb(42 76 91 / 16%),
+          inset 0 1px 0 rgb(255 255 255 / 20%);
+        color: #edf9fc;
+        font: 9px/1 var(--font-mono);
+        letter-spacing: 0.03em;
+      }
+
+      #notes-queue .queue-actions .dry-run-btn:hover:not(:disabled) {
+        border-color: rgb(116 190 215 / 42%);
+        background: linear-gradient(145deg, #708d99, #4d6874);
+        box-shadow:
+          0 8px 16px rgb(42 76 91 / 20%),
+          inset 0 1px 0 rgb(255 255 255 / 24%),
+          0 0 0 1px rgb(105 181 207 / 8%);
+        color: #fff;
+      }
+
+      #notes-queue .queue-actions .action-icon {
+        width: 13px;
+        height: 13px;
+        flex: 0 0 13px;
+        filter: drop-shadow(0 0 4px rgb(164 222 239 / 30%));
+        stroke-width: 1.7;
+      }
+
+      body.motion-paused #notes-queue .note-candidate-icon::before,
+      body.motion-paused #notes-queue .note-candidate-icon::after,
+      body.motion-paused #notes-queue .queue-actions::after {
+        animation-play-state: paused !important;
+      }
+
+      /* Page Title System：每个工作页统一为动态科技图标 + 文字标题。 */
+      .page-title {
+        display: flex;
+        width: fit-content;
+        align-items: center;
+        gap: 13px;
+      }
+
+      .page-title-icon {
+        position: relative;
+        display: inline-grid;
+        width: 42px;
+        height: 42px;
+        flex: 0 0 42px;
+        place-items: center;
+        overflow: hidden;
+        border: 1px solid rgb(137 190 210 / 36%);
+        border-radius: 13px;
+        background:
+          radial-gradient(circle at 50% 46%, rgb(169 223 240 / 18%), transparent 48%),
+          linear-gradient(145deg, rgb(246 253 255 / 90%), rgb(216 233 240 / 72%));
+        box-shadow:
+          0 9px 20px rgb(38 78 96 / 13%),
+          inset 0 1px 0 rgb(255 255 255 / 94%),
+          inset 0 0 12px rgb(118 187 211 / 10%);
+        color: #4f7484;
+      }
+
+      .page-title-icon::before {
+        position: absolute;
+        inset: 6px;
+        border: 1px dashed rgb(98 165 191 / 34%);
+        border-top-color: rgb(118 195 219 / 74%);
+        border-radius: 50%;
+        content: "";
+        animation: tech-orbit-spin 6.4s linear infinite;
+      }
+
+      .page-title-icon::after {
+        position: absolute;
+        top: 5px;
+        right: 6px;
+        width: 3px;
+        height: 3px;
+        border-radius: 50%;
+        background: #80b8ca;
+        box-shadow: 0 0 8px rgb(105 181 207 / 52%);
+        content: "";
+        animation: tech-beacon 1.9s ease-in-out infinite;
+      }
+
+      .page-title-icon > .tech-icon {
+        position: relative;
+        z-index: 1;
+        width: 22px;
+        height: 22px;
+        color: inherit;
+        stroke-width: 1.55;
+      }
+
+      .page-title-text {
+        min-width: 0;
+        color: inherit !important;
+      }
+
+      .page-title-overview .page-title-icon {
+        width: 48px;
+        height: 48px;
+        flex-basis: 48px;
+        border-color: rgb(155 209 226 / 42%);
+        background:
+          radial-gradient(circle at 50% 50%, rgb(177 228 243 / 20%), transparent 46%),
+          linear-gradient(145deg, #668593, #344e5b);
+        box-shadow:
+          0 0 0 5px rgb(105 170 194 / 5%),
+          0 12px 25px rgb(41 83 102 / 20%),
+          inset 0 0 14px rgb(196 235 246 / 14%);
+        color: #dff5fa;
+      }
+
+      .page-title-overview .page-title-icon > .tech-icon {
+        width: 24px;
+        height: 24px;
+      }
+
+      .hero > .card:first-child {
+        padding-left: 24px;
+      }
+
+      .priority-heading {
+        align-items: center;
+      }
+
+      body.motion-paused .page-title-icon::before,
+      body.motion-paused .page-title-icon::after {
+        animation-play-state: paused !important;
+      }
+
       @media (prefers-reduced-motion: reduce) {
-        *,
-        *::before,
-        *::after {
+        body:not(.motion-enabled) *,
+        body:not(.motion-enabled) *::before,
+        body:not(.motion-enabled) *::after {
           scroll-behavior: auto !important;
           transition-duration: 0.01ms !important;
           animation-duration: 0.01ms !important;
           animation-iteration-count: 1 !important;
+        }
+
+        body:not(.motion-enabled) .shell::after {
+          display: none;
+        }
+      }
+
+      @media (max-width: 1280px) and (min-width: 1161px) {
+        .workspace {
+          grid-template-columns: 220px minmax(0, 1fr);
+        }
+
+        .inspector {
+          display: none;
         }
       }
 
@@ -1955,6 +3369,28 @@
       }
 
       @media (max-width: 600px) {
+        #mail-queue .queue-item,
+        #notes-queue .queue-item {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        #mail-queue .queue-actions,
+        #notes-queue .queue-actions {
+          width: 100%;
+        }
+
+        .page-title {
+          gap: 10px;
+        }
+
+        .page-title-icon,
+        .page-title-overview .page-title-icon {
+          width: 38px;
+          height: 38px;
+          flex-basis: 38px;
+          border-radius: 11px;
+        }
+
         .hero > .card:first-child {
           min-height: 0;
           padding-left: 22px;
@@ -1992,26 +3428,116 @@
       }
     </style>
   </head>
-  <body>
+  <body class="motion-enabled">
+    <svg class="icon-sprite" aria-hidden="true">
+      <defs>
+        <symbol id="ti-core" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M12 2v4m0 12v4M2 12h4m12 0h4"></path>
+          <path d="M5.5 5.5l2.8 2.8m7.4 7.4 2.8 2.8m0-13-2.8 2.8m-7.4 7.4-2.8 2.8"></path>
+        </symbol>
+        <symbol id="ti-overview" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="2"></rect>
+          <rect x="14" y="3" width="7" height="7" rx="2"></rect>
+          <rect x="3" y="14" width="7" height="7" rx="2"></rect>
+          <path d="M14 17.5h7M17.5 14v7"></path>
+        </symbol>
+        <symbol id="ti-mail" viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="14" rx="3"></rect>
+          <path d="m4 7 8 6 8-6"></path>
+          <path d="m4 17 5-5m11 5-5-5"></path>
+        </symbol>
+        <symbol id="ti-note" viewBox="0 0 24 24">
+          <path d="M6 3h9l3 3v15H6z"></path>
+          <path d="M15 3v4h4M9 11h6m-6 4h6m-6 4h4"></path>
+        </symbol>
+        <symbol id="ti-news" viewBox="0 0 24 24">
+          <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+          <path d="M8 8h8M8 12h8M8 16h5"></path>
+          <path d="M18 4v5h-5"></path>
+        </symbol>
+        <symbol id="ti-calendar" viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="16" rx="3"></rect>
+          <path d="M7 3v4m10-4v4M3 10h18M8 14h2m4 0h2m-8 4h2"></path>
+        </symbol>
+        <symbol id="ti-report" viewBox="0 0 24 24">
+          <path d="M4 19V5m0 14h16"></path>
+          <path d="M6 15h3l2-6 3 8 2-5h4"></path>
+        </symbol>
+        <symbol id="ti-system" viewBox="0 0 24 24">
+          <rect x="6" y="6" width="12" height="12" rx="3"></rect>
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M9 2v4m6-4v4M9 18v4m6-4v4M2 9h4m-4 6h4m12-6h4m-4 6h4"></path>
+        </symbol>
+        <symbol id="ti-settings" viewBox="0 0 24 24">
+          <path d="m12 3 3 2 3.5-.2.7 3.4L21 11l-2 3 .2 3.5-3.4.7L13 21l-3-2-3.5.2-.7-3.4L3 13l2-3-.2-3.5 3.4-.7z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </symbol>
+        <symbol id="ti-user" viewBox="0 0 24 24">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4.5 21c.8-4.2 3.3-6.5 7.5-6.5s6.7 2.3 7.5 6.5"></path>
+        </symbol>
+        <symbol id="ti-route" viewBox="0 0 24 24">
+          <circle cx="5" cy="6" r="2"></circle><circle cx="19" cy="18" r="2"></circle>
+          <path d="M7 6h5a3 3 0 0 1 3 3v1a3 3 0 0 1-3 3H9a3 3 0 0 0-3 3v2h11"></path>
+        </symbol>
+        <symbol id="ti-check" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="m8 12 2.7 2.7L16.5 9"></path>
+        </symbol>
+        <symbol id="ti-inbox" viewBox="0 0 24 24">
+          <path d="M4 5h16l2 9v5H2v-5z"></path>
+          <path d="M3 14h5l2 3h4l2-3h5"></path>
+        </symbol>
+        <symbol id="ti-branch" viewBox="0 0 24 24">
+          <circle cx="6" cy="5" r="2"></circle><circle cx="18" cy="8" r="2"></circle><circle cx="18" cy="18" r="2"></circle>
+          <path d="M6 7v8a3 3 0 0 0 3 3h7M8 8h8M12 8v10"></path>
+        </symbol>
+        <symbol id="ti-sap" viewBox="0 0 24 24">
+          <path d="m12 2 8.5 5v10L12 22l-8.5-5V7z"></path>
+          <path d="M8 9h8M8 12h5m-5 3h8"></path>
+        </symbol>
+        <symbol id="ti-archive" viewBox="0 0 24 24">
+          <path d="M4 8h16v12H4zM3 4h18v4H3z"></path>
+          <path d="M9 12h6"></path>
+        </symbol>
+        <symbol id="ti-shield" viewBox="0 0 24 24">
+          <path d="M12 3 20 6v6c0 5-3.2 8-8 10-4.8-2-8-5-8-10V6z"></path>
+          <path d="m8.5 12 2.2 2.2 4.8-5"></path>
+        </symbol>
+        <symbol id="ti-x" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"></circle>
+          <path d="m8.5 8.5 7 7m0-7-7 7"></path>
+        </symbol>
+      </defs>
+    </svg>
     <div class="shell">
       <header>
         <div class="brand">
-          <div class="avatar" aria-hidden="true">AI</div>
+          <div class="avatar" aria-hidden="true"><svg class="tech-icon"><use href="#ti-core"></use></svg></div>
           <div>
             <div class="brand-title">我的AI员工</div>
-            <div class="brand-subtitle">本地运营控制台</div>
+            <div class="brand-subtitle">本地智能系统</div>
           </div>
         </div>
         <div class="status-strip" aria-label="系统状态">
           <span class="pill"><span class="dot green"></span>本地运行</span>
           <span class="pill quality"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
-          <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
-          <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 禁写(默认)</span></span>
-          <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
+          <span class="pill"><span class="dot yellow"></span><span id="header-smtp">邮件发送未解锁</span></span>
+          <span class="pill"><span class="dot red"></span><span id="header-keychain">钥匙串凭据缺失</span></span>
+          <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">预演模式禁写（默认）</span></span>
+          <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">接口检测中</span></span>
         </div>
         <div class="header-actions">
-          <button class="btn" type="button" data-jump-view="system">系统状态</button>
+          <button class="motion-toggle" id="motion-toggle" type="button" aria-pressed="false" title="暂停科技图标动效">
+            <span class="motion-signal" aria-hidden="true"></span>
+            <span id="motion-toggle-label">动态开启</span>
+          </button>
+          <div class="hud-clock" aria-label="本地系统时间">
+            <span>本地 / 系统</span>
+            <strong id="hud-clock">--:--:--</strong>
+          </div>
+          <button class="btn btn-with-icon" type="button" data-jump-view="system"><svg class="tech-icon button-icon" aria-hidden="true"><use href="#ti-system"></use></svg>系统状态</button>
         </div>
       </header>
 
@@ -2019,20 +3545,20 @@
         <aside>
           <div class="nav-title">工作区</div>
           <nav class="nav" aria-label="主导航">
-            <button class="active" data-view="today" aria-current="page"><span class="nav-label"><span class="nav-icon" aria-hidden="true">总</span>总览</span><span class="badge" id="badge-today">6</span></button>
-            <button data-view="mail"><span class="nav-label"><span class="nav-icon" aria-hidden="true">邮</span>邮件</span><span class="badge" id="badge-mail">3</span></button>
-            <button data-view="notes"><span class="nav-label"><span class="nav-icon" aria-hidden="true">笔</span>笔记</span><span class="badge" id="badge-notes">2</span></button>
-            <button data-view="finance"><span class="nav-label"><span class="nav-icon" aria-hidden="true">财</span>财务</span><span class="badge" id="badge-finance">1</span></button>
-            <button data-view="calendar"><span class="nav-label"><span class="nav-icon" aria-hidden="true">日</span>日程</span><span class="badge">0</span></button>
-            <button data-view="reports"><span class="nav-label"><span class="nav-icon" aria-hidden="true">报</span>报告</span><span class="badge" id="badge-reports">8</span></button>
-            <button data-view="system"><span class="nav-label"><span class="nav-icon" aria-hidden="true">系</span>系统</span><span class="badge">7/8</span></button>
-            <button data-view="settings"><span class="nav-label"><span class="nav-icon" aria-hidden="true">设</span>设置</span><span class="badge">安全</span></button>
+            <button class="active" data-view="today" aria-current="page"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span>总览</span><span class="badge" id="badge-today">6</span></button>
+            <button data-view="mail"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-mail"></use></svg></span>邮件</span><span class="badge" id="badge-mail">3</span></button>
+            <button data-view="notes"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>笔记</span><span class="badge" id="badge-notes">2</span></button>
+            <button data-view="news"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-news"></use></svg></span>每日新闻</span><span class="badge" id="badge-news">--</span></button>
+            <button data-view="calendar"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span>日程</span><span class="badge">0</span></button>
+            <button data-view="reports"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-report"></use></svg></span>报告</span><span class="badge" id="badge-reports">8</span></button>
+            <button data-view="system"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-system"></use></svg></span>系统</span><span class="badge">7/8</span></button>
+            <button data-view="settings"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-settings"></use></svg></span>设置</span><span class="badge">安全</span></button>
           </nav>
 
           <div class="side-card">
             <h3>今日重点</h3>
             <div class="tiny">
-              审核邮件草稿、复核财务异常、确认 Notes 候选。
+              审核邮件草稿、确认笔记候选、跟进 AI 情报台高优先级信号。
             </div>
           </div>
 
@@ -2048,9 +3574,9 @@
           <section id="today" class="view active">
             <div class="hero">
               <div class="card card-pad">
-                <p class="tiny priority-eyebrow" id="today-source">今日工作 · 正在连接本地 API</p>
+                <p class="tiny priority-eyebrow" id="today-source">今日工作 · 正在连接本地接口</p>
                 <div class="priority-heading">
-                  <h1 class="headline"><span id="total-tasks">6</span><span class="headline-label">个待处理项</span></h1>
+                  <h1 class="headline page-title page-title-overview"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span><span class="page-title-text"><span id="total-tasks">6</span><span class="headline-label">个待处理项</span></span></h1>
                   <p class="priority-risk"><span aria-hidden="true"></span><span id="risk-summary">1 项需要优先复核</span></p>
                 </div>
                 <div class="summary-grid">
@@ -2060,25 +3586,25 @@
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-notes">2</div>
-                    <div class="metric-label">Notes 候选</div>
+                    <div class="metric-label">笔记候选</div>
                   </div>
                   <div class="metric">
-                    <div class="metric-value" id="metric-finance">1</div>
-                    <div class="metric-label">财务异常</div>
+                    <div class="metric-value" id="metric-news">--</div>
+                    <div class="metric-label">今日 AI 情报</div>
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-readiness">7/8</div>
-                    <div class="metric-label">Tag readiness</div>
+                    <div class="metric-label">标签就绪度</div>
                   </div>
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>安全门控</h3>
+                <h3 class="panel-title"><svg class="tech-icon" aria-hidden="true"><use href="#ti-shield"></use></svg>安全门控</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>真实 SMTP</strong><span class="tag red" id="gate-smtp">禁用</span></div>
-                  <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="gate-approval">禁写</span></div>
-                  <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
-                  <div class="gate"><strong>Keychain</strong><span class="tag red" id="gate-keychain">missing</span></div>
+                  <div class="gate"><strong>真实邮件发送</strong><span class="tag red" id="gate-smtp">禁用</span></div>
+                  <div class="gate"><strong>审批门</strong><span class="tag red" id="gate-approval">禁写</span></div>
+                  <div class="gate"><strong>新闻数据</strong><span class="tag green">本地只读缓存</span></div>
+                  <div class="gate"><strong>钥匙串凭据</strong><span class="tag red" id="gate-keychain">缺失</span></div>
                 </div>
               </div>
             </div>
@@ -2086,32 +3612,32 @@
             <div class="today-lower">
               <div class="thread">
                 <div class="step">
-                <div class="step-icon">你</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-user"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>用户指令</span>
                     <span class="tiny">09:40</span>
                   </div>
-                  <div>处理今天邮件、笔记候选和财务异常；高风险动作先给计划，等待确认。</div>
+                  <div>处理今天邮件、笔记候选，并查看 AI 情报台；高风险动作先给计划，等待确认。</div>
                 </div>
                 </div>
                 <div class="step">
-                <div class="step-icon">计</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-route"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>计划</span>
                     <span class="tag">等待审批</span>
                   </div>
-                  <div>先审最高风险邮件草稿 → 复核账单异常 → 确认 Notes 候选 → 输出今日摘要。</div>
+                  <div>先审最高风险邮件草稿 → 确认笔记候选 → 提炼 AI 情报台高优信号 → 输出今日摘要。</div>
                   <div class="chips">
                     <span class="chip ok">不真实发送</span>
-                    <span class="chip ok">不写 Keychain</span>
+                    <span class="chip ok">不写入钥匙串</span>
                     <span class="chip warn">需要用户确认邮件草稿</span>
                   </div>
                 </div>
                 </div>
                 <div class="step">
-                <div class="step-icon">结</div>
+                <div class="step-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-check"></use></svg></div>
                 <div class="step-body">
                   <div class="step-title">
                     <span>当前结果</span>
@@ -2121,30 +3647,30 @@
                     <div class="queue-item">
                       <div>
                         <div class="queue-title">供应商付款确认邮件</div>
-                        <div class="queue-meta">收件人白名单通过，黑名单通过，SMTP 缺凭据</div>
+                        <div class="queue-meta">收件人白名单通过，黑名单通过，邮件发送凭据缺失</div>
                       </div>
                       <span class="tag">先审</span>
                     </div>
                     <div class="queue-item">
                       <div>
-                        <div class="queue-title">支付宝异常支出 ¥1,299.00</div>
-                        <div class="queue-meta">高于历史均值 2.8 倍，需要人工标记</div>
+                        <div class="queue-title">会议纪要待归档</div>
+                        <div class="queue-meta">笔记候选待确认；确认前不写入二级记忆</div>
                       </div>
-                      <span class="tag red">风险</span>
+                      <span class="tag">确认</span>
                     </div>
                   </div>
                 </div>
                 </div>
               </div>
               <section class="flow-card" aria-labelledby="process-flow-title">
-                <h2 id="process-flow-title">处理流程</h2>
+                <h2 id="process-flow-title"><svg class="tech-icon" aria-hidden="true"><use href="#ti-route"></use></svg>处理流程</h2>
                 <p class="tiny">自动化只推进至安全边界，高风险动作始终等待确认。</p>
                 <ol class="process-flow">
-                  <li class="active"><span class="flow-stage" aria-hidden="true">收</span><span>收件箱</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">分</span><span>分类</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">SAP</span><span>SAP 处理</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">人</span><span>人工确认</span></li>
-                  <li><span class="flow-stage" aria-hidden="true">档</span><span>归档</span></li>
+                  <li class="active"><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-inbox"></use></svg></span><span>收件箱</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-branch"></use></svg></span><span>分类</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-sap"></use></svg></span><span>SAP 处理</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-user"></use></svg></span><span>人工确认</span></li>
+                  <li><span class="flow-stage" aria-hidden="true"><svg class="tech-icon"><use href="#ti-archive"></use></svg></span><span>归档</span></li>
                 </ol>
               </section>
             </div>
@@ -2154,21 +3680,21 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="mail-source">邮件工作台 · 待审批队列</p>
-                <h1 class="headline">邮件草稿审批</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-mail"></use></svg></span><span class="page-title-text">邮件草稿审批</span></h1>
                 <p class="section-summary">草稿可保存；真实发送仍由审批、凭据与网络门控保护。</p>
               </div>
               <div class="queue" id="mail-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">供应商付款确认 · URGENT</div>
-                    <div class="queue-meta">to: finance-vendor@example.com · provider: outlook · priority: high</div>
+                    <div class="queue-title">项目协作确认 · 紧急</div>
+                    <div class="queue-meta">收件人：project-partner@example.com · 服务商：微软邮箱 · 优先级：高</div>
                   </div>
                   <span class="tag">待审批</span>
                 </div>
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">月结资料补充 · TODO</div>
-                    <div class="queue-meta">to: accounting@example.com · provider: qq · priority: normal</div>
+                    <div class="queue-title">知识库资料补充 · 待办</div>
+                    <div class="queue-meta">收件人：team@example.com · 服务商：腾讯邮箱 · 优先级：普通</div>
                   </div>
                   <span class="tag green">可保存</span>
                 </div>
@@ -2176,18 +3702,18 @@
             </div>
 
             <div class="draft">
-              <h3>AI 草稿预览</h3>
+              <h3>智能草稿预览</h3>
               <pre>主题：请确认 6 月供应商付款资料
 
 你好，
 
 我已整理 6 月付款资料，当前缺少 2 张发票附件。请在今天 17:00 前补充确认。
 
-本邮件为草稿预览，真实发送需要用户审批 + Keychain 凭据 + SMTP_REAL_NETWORK 显式开启。</pre>
+本邮件为草稿预览，真实发送需要用户审批、钥匙串凭据和真实邮件网络显式开启。</pre>
               <div class="chips">
                 <button class="btn">保存草稿</button>
                 <button class="btn">退回重写</button>
-                <button class="btn primary">1-click 审批</button>
+                <button class="btn primary">一键审批</button>
                 <button class="btn danger" disabled>真实发送：门控未满足</button>
               </div>
             </div>
@@ -2197,7 +3723,7 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">运行状态 · 本地只读</p>
-                <h1 class="headline">系统健康</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-system"></use></svg></span><span class="page-title-text">系统健康</span></h1>
                 <p class="section-summary">核心服务可继续运行；外发和写入能力保持锁定。</p>
               </div>
             </div>
@@ -2205,67 +3731,67 @@
               <div class="card card-pad">
                 <h3>质量门</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>pytest</strong><span class="tag green" id="system-pytest">待读取</span></div>
-                  <div class="gate"><strong>mypy --strict</strong><span class="tag green" id="system-mypy">0 errors</span></div>
-                  <div class="gate"><strong>make lint</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
+                  <div class="gate"><strong>单元测试</strong><span class="tag green" id="system-pytest">待读取</span></div>
+                  <div class="gate"><strong>严格类型检查</strong><span class="tag green" id="system-mypy">0 个错误</span></div>
+                  <div class="gate"><strong>代码规范检查</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
                 </div>
               </div>
               <div class="card card-pad" id="path4-five-gate-card">
                 <!-- v0.2.55 Path 4 5 门 · 由 /api/status 驱动 -->
-                <h3>Path 4 5 门 <span class="tag gray" id="path4-five-gate-header" title="v0.2.53.53 v2 launch checklist">待读取</span></h3>
+                <h3>第四路径五道门 <span class="tag gray" id="path4-five-gate-header" title="v0.2.53.53 第二版上线检查表">待读取</span></h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>1. DASHBOARD_WRITE_API</strong><span class="tag red" id="path4-gate-1">待读取</span></div>
-                  <div class="gate"><strong>2. confirm_text=CONFIRM_WRITE</strong><span class="tag red" id="path4-gate-2">待读取</span></div>
-                  <div class="gate"><strong>3. BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="path4-gate-3">待读取</span></div>
-                  <div class="gate"><strong>4. real_write_handler_enabled</strong><span class="tag red" id="path4-gate-4">待读取</span></div>
-                  <div class="gate"><strong>5. ENABLE_PATH_4_WRITE</strong><span class="tag red" id="path4-gate-5">待读取</span></div>
+                  <div class="gate"><strong>1. 仪表盘写入接口开关</strong><span class="tag red" id="path4-gate-1">待读取</span></div>
+                  <div class="gate"><strong>2. 逐次写入确认</strong><span class="tag red" id="path4-gate-2">待读取</span></div>
+                  <div class="gate"><strong>3. 业务写入器开关</strong><span class="tag red" id="path4-gate-3">待读取</span></div>
+                  <div class="gate"><strong>4. 真实写入处理器</strong><span class="tag red" id="path4-gate-4">待读取</span></div>
+                  <div class="gate"><strong>5. 第四路径写入开关</strong><span class="tag red" id="path4-gate-5">待读取</span></div>
                 </div>
                 <div class="card-footnote" id="path4-five-gate-footnote" style="font-size: 12px; color: var(--muted); margin-top: 8px">
-                  沿 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> v2 5 门 · 由 <code>/api/status</code> 实时刷新
+                  依据 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> 第二版五道门 · 由状态接口实时刷新
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>Provider</h3>
+                <h3>邮件服务</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>IMAP</strong><span class="tag green">可用</span></div>
-                  <div class="gate"><strong>SMTP provider</strong><span class="tag green">factory ready</span></div>
-                  <div class="gate"><strong>SMTP_REAL_NETWORK</strong><span class="tag red" id="system-smtp-real">off</span></div>
+                  <div class="gate"><strong>收件服务</strong><span class="tag green">可用</span></div>
+                  <div class="gate"><strong>发件服务</strong><span class="tag green">服务器已就绪</span></div>
+                  <div class="gate"><strong>真实邮件网络</strong><span class="tag red" id="system-smtp-real">关闭</span></div>
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>Git</h3>
+                <h3>版本控制</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>branch</strong><span class="tag green">main</span></div>
-                  <div class="gate"><strong>HEAD</strong><span class="tag" id="system-head">unknown</span></div>
-                  <div class="gate"><strong>tag</strong><span class="tag">v0.1.0 anchored</span></div>
-                  <div class="gate"><strong>v0.2.x tag</strong><span class="tag red">不打</span></div>
+                  <div class="gate"><strong>当前分支</strong><span class="tag green">主分支</span></div>
+                  <div class="gate"><strong>当前版本</strong><span class="tag" id="system-head">未知</span></div>
+                  <div class="gate"><strong>版本标签</strong><span class="tag">v0.1.0 已锚定</span></div>
+                  <div class="gate"><strong>v0.2.x 版本标签</strong><span class="tag red">不打</span></div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3>审批门状态</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag red" id="system-gate-first">closed</span></div>
-                  <div class="gate"><strong>第二道 confirm_text</strong><span class="tag" id="system-gate-second">每动作需 confirm</span></div>
-                  <div class="gate"><strong>第三道 BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="system-gate-third">closed</span></div>
-                  <div class="gate"><strong>Dry-run 当前结果</strong><span class="tag red" id="system-dry-run-outcome">Dry-run 禁写(默认)</span></div>
+                  <div class="gate"><strong>第一道：仪表盘写入接口</strong><span class="tag red" id="system-gate-first">已关闭</span></div>
+                  <div class="gate"><strong>第二道：逐次写入确认</strong><span class="tag" id="system-gate-second">每个动作需确认</span></div>
+                  <div class="gate"><strong>第三道：业务写入器</strong><span class="tag red" id="system-gate-third">已关闭</span></div>
+                  <div class="gate"><strong>预演当前结果</strong><span class="tag red" id="system-dry-run-outcome">预演模式禁写（默认）</span></div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3>审批门</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>Keychain 写入</strong><span class="tag red">需确认</span></div>
-                  <div class="gate"><strong>launchd/kickstart</strong><span class="tag red">需确认</span></div>
-                  <div class="gate"><strong>真实账单导入</strong><span class="tag">仅人工触发</span></div>
+                  <div class="gate"><strong>钥匙串写入</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>系统服务重启</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>新闻来源配置</strong><span class="tag green">白名单 HTTPS</span></div>
                 </div>
               </div>
               <div class="card card-pad" id="audit-card">
-                <h3>Audit 落档 <span class="tag" id="audit-state-tag">默认 Stub</span></h3>
-              <p class="tiny" id="audit-source">最近写操作与 dry-run 记录</p>
+                <h3>审计落档 <span class="tag" id="audit-state-tag">默认占位存储</span></h3>
+              <p class="tiny" id="audit-source">最近写操作与预演记录</p>
                 <div class="queue" id="audit-queue" style="margin-top: 12px">
                   <div class="queue-item" id="audit-empty">
                     <div>
-                      <div class="queue-title">暂无 audit 记录</div>
-                      <div class="queue-meta">默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory</div>
+                      <div class="queue-title">暂无审计记录</div>
+                      <div class="queue-meta">默认使用占位存储 · 需启用真实数据库和业务写入器后注入内存存储</div>
                     </div>
                     <span class="tag">0 条</span>
                   </div>
@@ -2278,42 +3804,69 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="notes-source">笔记工作台 · 待确认候选</p>
-                <h1 class="headline">笔记候选确认</h1>
-                <p class="section-summary">确认后才写入 L2；敏感内容继续留在本地。</p>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span><span class="page-title-text">笔记候选确认</span></h1>
+                <p class="section-summary">确认后才写入二级记忆；敏感内容继续留在本地。</p>
               </div>
               <div class="queue" id="notes-queue" style="margin-top: 16px">
                 <div class="queue-item">
-                  <div>
-                    <div class="queue-title">L2 跨源候选</div>
-                    <div class="queue-meta">工作 · 待确认</div>
+                  <div class="note-candidate">
+                    <span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>
+                    <div class="note-candidate-copy">
+                      <span class="note-node-index">候选节点 01</span>
+                      <div class="queue-title">二级跨源候选</div>
+                      <div class="queue-meta">工作 · 待确认</div>
+                    </div>
                   </div>
-                  <span class="tag">确认</span>
+                  <div class="queue-actions">
+                    <span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span>
+                    <button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button>
+                  </div>
                 </div>
                 <div class="queue-item">
-                  <div>
-                    <div class="queue-title">会议纪要待归档</div>
-                    <div class="queue-meta">个人 · 待确认</div>
+                  <div class="note-candidate">
+                    <span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>
+                    <div class="note-candidate-copy">
+                      <span class="note-node-index">候选节点 02</span>
+                      <div class="queue-title">会议纪要待归档</div>
+                      <div class="queue-meta">个人 · 待确认</div>
+                    </div>
                   </div>
-                  <span class="tag">确认</span>
+                  <div class="queue-actions">
+                    <span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span>
+                    <button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button>
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <section id="finance" class="view">
+          <section id="news" class="view">
             <div class="card card-pad">
               <div class="section-heading">
-                <p class="section-kicker" id="finance-source">财务工作台 · 异常复核</p>
-                <h1 class="headline">财务异常复核</h1>
-                <p class="section-summary">异常可标记；真实账单导入仍受安全门控保护。</p>
+                <p class="section-kicker" id="news-source">AI 每日情报 · 等待首次本地刷新</p>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-news"></use></svg></span><span class="page-title-text">每日 AI 情报台</span></h1>
+                <p class="section-summary">按小时设计聚合国内、国际 AI 大事件与可追溯公开发言；只展示原文链接和已核验的官方摘录，不生成无出处引语。</p>
               </div>
-              <div class="queue" id="finance-queue" style="margin-top: 16px">
+              <div class="gate-list" style="margin-top: 12px">
+                <div class="gate"><strong>更新调度</strong><span class="tag" id="news-refresh-mode">每小时刷新待部署</span></div>
+                <div class="gate"><strong>来源健康</strong><span class="tag" id="news-source-health">等待刷新</span></div>
+                <div class="gate"><strong>覆盖范围</strong><span class="tag" id="news-coverage">国内 0 · 国际 0 · 发言 0</span></div>
+                <div class="gate"><strong>覆盖验收</strong><span class="tag" id="news-coverage-status">等待首次刷新</span></div>
+              </div>
+              <div class="filter-row" id="news-filter-row" style="margin-top: 14px" aria-label="AI 情报筛选">
+                <button class="filter active" type="button" data-news-filter="all" aria-pressed="true">全部</button>
+                <button class="filter" type="button" data-news-filter="domestic" aria-pressed="false">国内</button>
+                <button class="filter" type="button" data-news-filter="international" aria-pressed="false">国际</button>
+                <button class="filter" type="button" data-news-filter="statements" aria-pressed="false">已核验原话</button>
+                <button class="filter" type="button" data-news-filter="clues" aria-pressed="false">发言线索</button>
+              </div>
+              <div class="queue" id="news-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">支付宝 ¥1,299.00</div>
-                    <div class="queue-meta">2026-06-25 · amount_spike</div>
+                    <div class="queue-title">尚未完成首次 AI 情报刷新</div>
+                    <div class="queue-meta">刷新器会写入本地只读缓存；网络不可用时保留最近一次成功结果。</div>
                   </div>
-                  <span class="tag red">风险</span>
+                  <span class="tag gray">待刷新</span>
                 </div>
               </div>
             </div>
@@ -2323,11 +3876,11 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">日程工作台 · 本地摘要</p>
-                <h1 class="headline">今日日程</h1>
-                <p class="section-summary">CalDAV 尚未接入，当前显示本地只读摘要。</p>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span><span class="page-title-text">今日日程</span></h1>
+                <p class="section-summary">日历服务尚未接入，当前显示本地只读摘要。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
-                <div class="gate"><strong>数据源</strong><span class="tag" data-tone="red">CalDAV 未接入</span></div>
+                <div class="gate"><strong>数据源</strong><span class="tag" data-tone="red">日历服务未接入</span></div>
                 <div class="gate"><strong>事件数</strong><span class="tag" id="calendar-event-count">0</span></div>
                 <div class="gate"><strong>同步模式</strong><span class="tag">只读</span></div>
               </div>
@@ -2339,11 +3892,11 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker" id="reports-source">报告工作台 · 本地只读</p>
-                <h1 class="headline">报告与运行记录</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-report"></use></svg></span><span class="page-title-text">报告与运行记录</span></h1>
                 <p class="section-summary">集中查看质量门、运行证据与阶段产出。</p>
               </div>
 
-              <div class="filter-row" style="margin-top: 12px">
+              <div class="filter-row" id="reports-filter-row" style="margin-top: 12px">
                 <input
                   id="reports-search"
                   class="search-input"
@@ -2353,17 +3906,17 @@
                 />
                 <button id="reports-search-clear" class="filter" type="button" hidden aria-label="清除搜索" title="清除搜索">×</button>
                 <button class="filter active" data-filter="all">全部</button>
-                <button class="filter" data-filter="doc">docs</button>
-                <button class="filter" data-filter="phase_report">reports</button>
-                <button class="filter" data-filter="spike">spike</button>
-                <button class="filter" data-filter="agent_output">agent-output</button>
+                <button class="filter" data-filter="doc">文档</button>
+                <button class="filter" data-filter="phase_report">报告</button>
+                <button class="filter" data-filter="spike">实验</button>
+                <button class="filter" data-filter="agent_output">智能产出</button>
               </div>
 
               <div class="reports-summary" id="reports-summary" style="margin-top: 12px">
                 <span class="tag">合计 <strong id="reports-count">0</strong></span>
                 <span class="tag">最近 <strong id="reports-latest-date">—</strong></span>
                 <span class="tag" id="reports-match-count">0 项</span>
-                <span class="tag" id="reports-filter-hint">点击条目预览 · spike 可详情</span>
+                <span class="tag" id="reports-filter-hint">点击条目预览 · 实验可查看详情</span>
               </div>
 
               <div class="queue" id="reports-queue" style="margin-top: 16px"></div>
@@ -2380,26 +3933,26 @@
             <div class="card card-pad">
               <div class="section-heading">
                 <p class="section-kicker">系统设置 · 连接状态</p>
-                <h1 class="headline">凭据与集成</h1>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-settings"></use></svg></span><span class="page-title-text">凭据与集成</span></h1>
                 <p class="section-summary">只展示连接状态，不读取或显示凭据明文。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
-                <div class="gate"><strong>DB 密码</strong><span class="tag" id="settings-keychain-db" data-tone="red">present</span></div>
-                <div class="gate"><strong>SMTP outlook</strong><span class="tag" id="settings-keychain-smtp-outlook" data-tone="red">missing</span></div>
-                <div class="gate"><strong>SMTP gmail</strong><span class="tag" id="settings-keychain-smtp-gmail" data-tone="red">missing</span></div>
-                <div class="gate"><strong>OAuth Microsoft</strong><span class="tag" id="settings-keychain-oauth-ms" data-tone="red">missing</span></div>
-                <div class="gate"><strong>OAuth Google</strong><span class="tag" id="settings-keychain-oauth-google" data-tone="red">missing</span></div>
+                <div class="gate"><strong>数据库密码</strong><span class="tag" id="settings-keychain-db" data-tone="red">已配置</span></div>
+                <div class="gate"><strong>微软邮箱发件服务</strong><span class="tag" id="settings-keychain-smtp-outlook" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>谷歌邮箱发件服务</strong><span class="tag" id="settings-keychain-smtp-gmail" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>微软第三方授权</strong><span class="tag" id="settings-keychain-oauth-ms" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>谷歌第三方授权</strong><span class="tag" id="settings-keychain-oauth-google" data-tone="red">缺失</span></div>
               </div>
-              <p class="tiny" style="margin-top: 10px">凭据写入需用户授权 + 显式启动 spike;不接 launchd 不写明文。</p>
+              <p class="tiny" style="margin-top: 10px">凭据写入需用户授权并显式启动实验；不接入系统服务就不写明文。</p>
             </div>
           </section>
         </main>
 
         <section class="inspector" aria-label="上下文检查器">
           <div class="inspector-section">
-            <h3>AI 建议</h3>
+            <h3>智能建议</h3>
             <div class="tiny">
-              先复核财务异常，再处理需要审批的邮件草稿。
+              先处理需要审批的邮件草稿，再查看 AI 情报台中的高优先级信号。
             </div>
           </div>
 
@@ -2408,9 +3961,9 @@
             <div class="gate-list">
               <div class="gate"><strong>收件人白名单</strong><span class="tag green">通过</span></div>
               <div class="gate"><strong>黑名单检查</strong><span class="tag green">通过</span></div>
-              <div class="gate"><strong>Keychain</strong><span class="tag red" id="inspect-keychain">missing</span></div>
-              <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">off</span></div>
-              <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="inspect-approval">disabled</span></div>
+              <div class="gate"><strong>钥匙串凭据</strong><span class="tag red" id="inspect-keychain">缺失</span></div>
+              <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">关闭</span></div>
+              <div class="gate"><strong>审批门</strong><span class="tag red" id="inspect-approval">禁用</span></div>
             </div>
           </div>
 
@@ -2426,29 +3979,29 @@
           </div>
 
           <div class="inspector-section" id="three-gate-section">
-            <h3>三门状态 · dry-run</h3>
+            <h3>三道审批门状态 · 预演</h3>
             <div class="gate-list">
-              <div class="gate"><strong>第一道 · DASHBOARD_WRITE_API</strong><span class="tag red" id="inspect-gate-first">closed</span></div>
-              <div class="gate"><strong>第二道 · confirm_text</strong><span class="tag" id="inspect-gate-second">每动作需 confirm</span></div>
-              <div class="gate"><strong>第三道 · Writer ready</strong><span class="tag red" id="inspect-gate-third">closed</span></div>
-              <div class="gate"><strong>综合 outcome</strong><span class="tag red" id="inspect-gate-outcome">Dry-run 禁写(默认)</span></div>
+              <div class="gate"><strong>第一道 · 仪表盘写入接口</strong><span class="tag red" id="inspect-gate-first">已关闭</span></div>
+              <div class="gate"><strong>第二道 · 逐次写入确认</strong><span class="tag" id="inspect-gate-second">每个动作需确认</span></div>
+              <div class="gate"><strong>第三道 · 写入器就绪</strong><span class="tag red" id="inspect-gate-third">已关闭</span></div>
+              <div class="gate"><strong>综合结果</strong><span class="tag red" id="inspect-gate-outcome">预演模式禁写（默认）</span></div>
             </div>
-            <p class="tiny" id="inspect-gate-detail">第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。</p>
+            <p class="tiny" id="inspect-gate-detail">第二道门是单次请求级确认，不是全局环境开关。</p>
           </div>
 
           <div class="inspector-section" id="approval-dry-run-section" hidden>
-            <h3>ApprovalGate dry-run</h3>
+            <h3>审批门预演</h3>
             <div class="dry-run-panel">
               <div class="gate-list">
                 <div class="gate"><strong>动作</strong><span class="tag" id="dry-run-action">—</span></div>
                 <div class="gate"><strong>目标</strong><span class="tiny" id="dry-run-target">—</span></div>
-                <div class="gate"><strong>HTTP</strong><span class="tag" id="dry-run-http">—</span></div>
-                <div class="gate"><strong>write_executed</strong><span class="tag green" id="dry-run-executed">false</span></div>
+                <div class="gate"><strong>请求状态</strong><span class="tag" id="dry-run-http">—</span></div>
+                <div class="gate"><strong>已执行写入</strong><span class="tag green" id="dry-run-executed">否</span></div>
                 <div class="gate"><strong>双门</strong><span class="tag" id="dry-run-approval-gate" data-tone="red">未通过</span></div>
-                <div class="gate"><strong>Writer env</strong><span class="tag" id="dry-run-writer-env" data-tone="red">—</span></div>
-                <div class="gate"><strong>Writer Impl</strong><span class="tag" id="dry-run-writer-impl" data-tone="red">—</span></div>
-                <div class="gate"><strong>Writer ready</strong><span class="tag" id="dry-run-writer-ready" data-tone="red">—</span></div>
-                <div class="gate"><strong>would_allow</strong><span class="tag" id="dry-run-would-allow" data-tone="red">false</span></div>
+                <div class="gate"><strong>写入器环境</strong><span class="tag" id="dry-run-writer-env" data-tone="red">—</span></div>
+                <div class="gate"><strong>写入器实现</strong><span class="tag" id="dry-run-writer-impl" data-tone="red">—</span></div>
+                <div class="gate"><strong>写入器就绪</strong><span class="tag" id="dry-run-writer-ready" data-tone="red">—</span></div>
+                <div class="gate"><strong>将允许执行</strong><span class="tag" id="dry-run-would-allow" data-tone="red">否</span></div>
               </div>
               <p class="tiny" id="dry-run-reason" style="margin: 10px 0 0">尚未选择审批动作，当前保持禁写。</p>
               <pre id="dry-run-detail"></pre>
@@ -2458,7 +4011,7 @@
           <div class="inspector-section">
             <h3>执行边界</h3>
             <div class="tiny">
-              API 离线时自动使用只读兜底；所有 dry-run 结果均保持 write_executed=false。
+              接口离线时自动使用只读兜底；所有预演结果都保持禁止真实写入。
             </div>
           </div>
         </section>
@@ -2467,10 +4020,10 @@
       <footer>
         <div class="log">
           <span>运行状态</span>
-          <span id="footer-api">API 检测中</span>
-          <span id="footer-dry-run">ApprovalGate dry-run wired ✅</span>
-          <span>真实 SMTP blocked ✅</span>
-          <span>Keychain plaintext hidden ✅</span>
+          <span id="footer-api">接口检测中</span>
+          <span id="footer-dry-run">审批门预演已接入 ✅</span>
+          <span>真实邮件发送已阻断 ✅</span>
+          <span>钥匙串明文已隐藏 ✅</span>
         </div>
         <button class="btn btn-sm" id="footer-log-toggle" type="button" aria-expanded="false">展开</button>
       </footer>
@@ -2480,13 +4033,40 @@
       const API_BASE = "http://127.0.0.1:8765";
       const buttons = document.querySelectorAll(".nav button");
       const views = document.querySelectorAll(".view");
+      const hudClock = document.getElementById("hud-clock");
+      const motionToggle = document.getElementById("motion-toggle");
+      const motionToggleLabel = document.getElementById("motion-toggle-label");
+
+      const refreshHudClock = () => {
+        if (!hudClock) return;
+        hudClock.textContent = new Intl.DateTimeFormat("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+          hour12: false,
+        }).format(new Date());
+      };
+
+      refreshHudClock();
+      window.setInterval(refreshHudClock, 1000);
+
+      const setMotionPaused = (paused) => {
+        document.body.classList.toggle("motion-paused", paused);
+        if (!motionToggle || !motionToggleLabel) return;
+        motionToggle.setAttribute("aria-pressed", String(paused));
+        motionToggleLabel.textContent = paused ? "动态关闭" : "动态开启";
+        motionToggle.title = paused ? "开启科技图标动效" : "暂停科技图标动效";
+      };
+
+      motionToggle?.addEventListener("click", () => {
+        setMotionPaused(!document.body.classList.contains("motion-paused"));
+      });
 
       const fallbackTasks = {
-        total: 6,
+        total: 5,
         tasks: [
           { id: "mail_drafts", count: 3 },
           { id: "notes_confirm", count: 2 },
-          { id: "finance_anomaly", count: 1 },
         ],
       };
 
@@ -2495,18 +4075,18 @@
         items: [
           {
             outbox_id: 1,
-            subject: "供应商付款确认 · URGENT",
+            subject: "项目协作确认 · 紧急",
             status: "pending_send",
             priority: "urgent",
-            to: "finance-vendor@example.com",
+            to: "project-partner@example.com",
             provider: "outlook",
           },
           {
             outbox_id: 2,
-            subject: "月结资料补充 · TODO",
+            subject: "知识库资料补充 · 待办",
             status: "draft",
             priority: "normal",
-            to: "accounting@example.com",
+            to: "team@example.com",
             provider: "qq",
           },
         ],
@@ -2515,21 +4095,25 @@
       const fallbackNotes = {
         count: 2,
         items: [
-          { apple_note_id: "note-1", title: "L2 跨源候选", folder: "工作", needs_confirm: 1 },
+          { apple_note_id: "note-1", title: "二级跨源候选", folder: "工作", needs_confirm: 1 },
           { apple_note_id: "note-2", title: "会议纪要待归档", folder: "个人", needs_confirm: 1 },
         ],
       };
 
-      const fallbackFinance = {
-        count: 1,
-        items: [
-          {
-            date: "2026-06-25",
-            counterparty: "支付宝",
-            amount: 1299,
-            kinds: "amount_spike",
-          },
-        ],
+      const fallbackNews = {
+        available: false,
+        state: "not_refreshed",
+        count: 0,
+        items: [],
+        sources: [],
+        coverage: {
+          domestic: 0,
+          international: 0,
+          leader_statements: 0,
+          leader_clues: 0,
+          successful_sources: 0,
+          total_sources: 0,
+        },
       };
 
       // ===== v0.2.53.9 报告页 fallback 数据 =====
@@ -2547,7 +4131,7 @@
           {
             path: "docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md",
             type: "doc",
-            title: "v0.2.53.7 Dashboard opt-in 真实 Outbox",
+            title: "v0.2.53.7 仪表盘可选真实发件箱",
             date: "2026-06-25",
             status: "done",
             size_bytes: 6020,
@@ -2555,7 +4139,7 @@
           {
             path: "output/spike/spike_send_100_20260625_163607.md",
             type: "spike",
-            title: "spike_send_100 spike — OutboxDispatcher 端到端发送",
+            title: "发件实验 100 — 发件调度器端到端发送",
             date: "2026-06-25",
             status: "done",
             size_bytes: 3420,
@@ -2581,46 +4165,46 @@
 
       const THREE_GATE_COPY = {
         first: {
-          open: { label: "open", tone: "green" },
-          closed: { label: "closed", tone: "red" },
+          open: { label: "已开启", tone: "green" },
+          closed: { label: "已关闭", tone: "red" },
         },
         second: {
           confirm_required_per_action: {
-            label: "每动作需 confirm",
+            label: "每个动作需确认",
             tone: "yellow",
-            detail: "第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。",
+            detail: "第二道门是单次请求级确认，不是全局环境开关。",
           },
         },
         third: {
-          open: { label: "open", tone: "green" },
-          closed: { label: "closed", tone: "red" },
-          env_only: { label: "env only · Impl 未注入", tone: "yellow" },
+          open: { label: "已开启", tone: "green" },
+          closed: { label: "已关闭", tone: "red" },
+          env_only: { label: "环境已开 · 实现未注入", tone: "yellow" },
         },
         outcome: {
           disabled: {
-            text: "Dry-run 禁写(默认)",
+            text: "预演模式禁写（默认）",
             tone: "red",
-            detail: "第一道门 DASHBOARD_WRITE_API 未开;默认禁写,write_executed 恒 false。",
+            detail: "第一道仪表盘写入接口未开启；默认禁写，不会执行真实写入。",
           },
           needs_confirmation: {
-            text: "Dry-run 需 confirm_text",
+            text: "预演需要逐次确认",
             tone: "yellow",
-            detail: "第二道门:POST 须带 confirm_text=CONFIRM_WRITE。",
+            detail: "第二道门：单次请求必须携带写入确认。",
           },
           writer_required: {
-            text: "Dry-run writer 未就绪",
+            text: "预演写入器未就绪",
             tone: "yellow",
-            detail: "第三道门:BUSINESS_WRITER env 或 Impl 未满足;见 Writer env / Impl badge。",
+            detail: "第三道门：业务写入器环境或实现未满足；请查看写入器状态。",
           },
           dry_run_ready: {
-            text: "Dry-run 三门已就绪",
+            text: "预演三道门已就绪",
             tone: "green",
-            detail: "三门通过;点击 dry-run 可模拟,仍 write_executed=false。",
+            detail: "三道门已通过；可执行预演，仍不会真实写入。",
           },
           api_offline: {
             text: "只读兜底",
             tone: "yellow",
-            detail: "ApprovalGate 未连接；三门保持关闭。",
+            detail: "审批门未连接；三道门保持关闭。",
           },
           unknown: {
             text: "状态未知",
@@ -2629,13 +4213,13 @@
           },
         },
         writerBadge: {
-          env: { on: "已开", off: "未开" },
+          env: { on: "已开启", off: "未开启" },
           impl: { on: "已注入", off: "未注入" },
-          ready: { on: "ready", off: "未 ready" },
+          ready: { on: "已就绪", off: "未就绪" },
         },
         offlineDryRun: {
           error: "api_offline",
-          reason: "ApprovalGate 未连接 · 三门默认 closed · 静态兜底不发起 POST",
+          reason: "审批门未连接 · 三道门默认关闭 · 静态兜底不发起写入请求",
           required: [
             "DASHBOARD_WRITE_API=1",
             "confirm_text=CONFIRM_WRITE",
@@ -2646,20 +4230,20 @@
 
       function writerRequiredOutcomeText(writerEnvEnabled, writerInjected) {
         if (writerEnvEnabled && !writerInjected) {
-          return "Dry-run writer env 已开 · Impl 未注入";
+          return "预演写入器环境已开 · 实现未注入";
         }
         if (!writerEnvEnabled) {
-          return "Dry-run writer env 未开";
+          return "预演写入器环境未开";
         }
         return THREE_GATE_COPY.outcome.writer_required.text;
       }
 
       function writerRequiredDetail(writerEnvEnabled, writerInjected) {
         if (writerEnvEnabled && !writerInjected) {
-          return "第三道门:BUSINESS_WRITER env 已开但 Impl 未注入;需 DASHBOARD_REAL_DB=1 + BusinessWriterImpl 构造成功。";
+          return "第三道门：业务写入器环境已开，但实现未注入；需启用真实数据库并成功构建写入器。";
         }
         if (!writerEnvEnabled) {
-          return "第三道门:BUSINESS_WRITER_ENABLED 未开;writer 路径未启用。";
+          return "第三道门：业务写入器未开启；写入路径未启用。";
         }
         return THREE_GATE_COPY.outcome.writer_required.detail;
       }
@@ -2697,11 +4281,166 @@
           .replaceAll('"', "&quot;");
       }
 
-      function formatAmount(amount) {
-        if (typeof amount === "number") {
-          return `¥${amount.toLocaleString("zh-CN")}`;
+      function localizeSubject(value) {
+        return String(value ?? "")
+          .replace(/\bURGENT\b/gi, "紧急")
+          .replace(/\bTODO\b/gi, "待办");
+      }
+
+      function providerLabel(value) {
+        const labels = {
+          outlook: "微软邮箱",
+          gmail: "谷歌邮箱",
+          qq: "腾讯邮箱",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "未知服务商";
+      }
+
+      function priorityLabel(value) {
+        const labels = {
+          urgent: "紧急",
+          high: "高",
+          normal: "普通",
+          low: "低",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "普通";
+      }
+
+      function outboxStatusLabel(value) {
+        const labels = {
+          pending_send: "待发送审批",
+          pending: "待处理",
+          draft: "草稿",
+          sent: "已发送",
+          cancelled: "已取消",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "未知状态";
+      }
+
+      function newsRegionLabel(value) {
+        return String(value) === "cn" ? "国内" : "国际";
+      }
+
+      function newsKindLabel(value) {
+        const labels = {
+          event: "AI 事件",
+          leader_statement: "已核验原话",
+          leader_clue: "发言线索",
+          official_voice: "官方视频",
+        };
+        return labels[String(value ?? "")] ?? "AI 动态";
+      }
+
+      function formatNewsTime(value) {
+        const timestamp = Date.parse(String(value ?? ""));
+        if (Number.isNaN(timestamp)) return "时间未标注";
+        return new Intl.DateTimeFormat("zh-CN", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(timestamp));
+      }
+
+      function safeExternalUrl(value) {
+        try {
+          const url = new URL(String(value ?? ""));
+          return url.protocol === "https:" ? url.href : "";
+        } catch (_error) {
+          return "";
         }
-        return escapeHtml(amount);
+      }
+
+      function reportTypeLabel(value) {
+        const labels = {
+          doc: "文档",
+          phase_report: "阶段报告",
+          spike: "实验记录",
+          agent_output: "智能产出",
+        };
+        return labels[String(value ?? "")] ?? "其他";
+      }
+
+      function actionLabel(value) {
+        const labels = {
+          "outbox.approve": "批准邮件草稿",
+          "outbox.cancel": "取消邮件草稿",
+          "notes.confirm": "确认笔记候选",
+          approve: "批准",
+          reject: "拒绝",
+        };
+        return labels[String(value ?? "")] ?? "未知动作";
+      }
+
+      function booleanLabel(value) {
+        if (value === true) return "是";
+        if (value === false) return "否";
+        return "未知";
+      }
+
+      function errorLabel(value) {
+        const labels = {
+          api_offline: "接口离线",
+          request_failed: "请求失败",
+          missing_target: "目标缺失",
+          invalid_json_response: "响应格式无效",
+        };
+        if (!value) return "无";
+        return labels[String(value)] ?? "未知错误";
+      }
+
+      function localizeReason(value) {
+        if (!value) return "无拒写原因";
+        return String(value)
+          .replaceAll("ApprovalGate", "审批门")
+          .replaceAll("API", "接口")
+          .replaceAll("Dry-run", "预演")
+          .replaceAll("dry-run", "预演")
+          .replaceAll("write_executed", "已执行写入")
+          .replaceAll("false", "否")
+          .replaceAll("true", "是")
+          .replaceAll("closed", "关闭")
+          .replaceAll("POST", "写入请求")
+          .replaceAll("user", "用户")
+          .replaceAll("UI", "页面");
+      }
+
+      function requiredConditionLabel(value) {
+        const labels = {
+          "DASHBOARD_WRITE_API=1": "开启仪表盘写入接口",
+          "confirm_text=CONFIRM_WRITE": "提供逐次写入确认",
+          business_writer_implementation: "注入业务写入器实现",
+        };
+        return labels[String(value)] ?? "其他安全条件";
+      }
+
+      function localizeTechnicalStatus(value) {
+        const text = String(value ?? "未知");
+        const labels = {
+          unknown: "未知",
+          on: "开启",
+          off: "关闭",
+          enabled: "已启用",
+          disabled: "已禁用",
+          open: "已开启",
+          closed: "已关闭",
+          missing: "缺失",
+          present: "已配置",
+          ready: "已就绪",
+          passed: "已通过",
+          pass: "已通过",
+          clean: "无问题",
+          true: "是",
+          false: "否",
+        };
+        const exact = labels[text.toLowerCase()];
+        if (exact) return exact;
+        const passed = text.match(/^(\d+)\s+passed$/i);
+        if (passed) return `${passed[1]} 项通过`;
+        const errors = text.match(/^(\d+)\s+errors?$/i);
+        if (errors) return `${errors[1]} 个错误`;
+        return text;
       }
 
       function setText(id, value) {
@@ -2741,17 +4480,18 @@
         const tasks = payload.tasks ?? fallbackTasks.tasks;
         const mail = taskCount(tasks, "mail_drafts");
         const notes = taskCount(tasks, "notes_confirm");
-        const finance = taskCount(tasks, "finance_anomaly");
-        const total = payload.total ?? mail + notes + finance;
+        // AI 新闻是信息流，不混入需要人工处理的邮件/笔记待办总数。
+        const total = mail + notes;
         setText("total-tasks", String(total));
         setText("metric-mail", String(mail));
         setText("metric-notes", String(notes));
-        setText("metric-finance", String(finance));
         setText("badge-today", String(total));
         setText("badge-mail", String(mail));
         setText("badge-notes", String(notes));
-        setText("badge-finance", String(finance));
-        setText("risk-summary", finance > 0 ? `${finance} 个需要先看风险` : "暂无高风险项");
+        setText(
+          "risk-summary",
+          mail > 0 ? `${mail} 封邮件等待审批` : notes > 0 ? `${notes} 条笔记待确认` : "待办队列已清空",
+        );
         setText("result-source", sourceLabel);
       }
 
@@ -2774,45 +4514,62 @@
         const tagClass = status === "pending_send" ? "" : "green";
         const targetId = String(item.outbox_id ?? item.id ?? "");
         const action = status === "pending_send" ? "outbox.approve" : "outbox.cancel";
-        const btnLabel = status === "pending_send" ? "dry-run 审批" : "dry-run 取消";
+        const btnLabel = status === "pending_send" ? "审批预演" : "取消预演";
+        const subject = localizeSubject(item.subject ?? "邮件草稿");
         const metaParts = [
-          item.to ? `to: ${item.to}` : "",
-          item.provider ? `provider: ${item.provider}` : "",
-          priority ? `priority: ${priority}` : "",
-          status ? `status: ${status}` : "",
+          item.to ? `收件人：${item.to}` : "",
+          item.provider ? `服务商：${providerLabel(item.provider)}` : "",
+          priority ? `优先级：${priorityLabel(priority)}` : "",
+          status ? `状态：${outboxStatusLabel(status)}` : "",
         ].filter(Boolean);
-        const meta = metaParts.join(" · ") || "outbox 草稿";
-        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}">${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn">${escapeHtml(btnLabel)}</button><button type="button" class="btn btn-sm decide-btn" data-decision="approve">1-click 批准</button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject">1-click 拒绝</button></div></div>`;
+        const meta = metaParts.join(" · ") || "发件箱草稿";
+        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(subject)}"><div><div class="queue-title">${escapeHtml(subject || "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}"><span class="queue-status-signal" aria-hidden="true"></span>${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="${escapeHtml(btnLabel)}"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-route"></use></svg><span>${escapeHtml(btnLabel)}</span></button><button type="button" class="btn btn-sm decide-btn" data-decision="approve" aria-label="批准"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>批准</span></button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject" aria-label="拒绝"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-x"></use></svg><span>拒绝</span></button></div></div>`;
       }
 
-      function renderNotesItem(item) {
+      function renderNotesItem(item, index) {
         const folder = item.folder ? `${item.folder} · ` : "";
         const targetId = String(item.apple_note_id ?? item.id ?? "");
-        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "Notes 候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 确认</button></div></div>`;
+        const sequence = String(index + 1).padStart(2, "0");
+        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "笔记候选")}"><div class="note-candidate"><span class="note-candidate-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span><div class="note-candidate-copy"><span class="note-node-index">候选节点 ${sequence}</span><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div></div><div class="queue-actions"><span class="tag"><span class="queue-status-signal" aria-hidden="true"></span>等待确认</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="预演确认"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>预演确认</span></button></div></div>`;
       }
 
-      function renderFinanceItem(item) {
-        const title = `${item.counterparty ?? "未知"} ${formatAmount(item.amount)}`;
-        const meta = [item.date, item.kinds].filter(Boolean).join(" · ") || "财务异常";
-        const targetId = [item.date, item.counterparty, item.amount].filter((v) => v !== undefined && v !== null && v !== "").join("|");
-        return `<div class="queue-item" data-approval-action="finance.dismiss_anomaly" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(title)}"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag red">风险</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 忽略</button></div></div>`;
+      function renderNewsItem(item) {
+        const url = safeExternalUrl(item.url);
+        const title = escapeHtml(item.title ?? "无标题 AI 动态");
+        const titleHtml = url
+          ? `<a class="queue-title queue-title-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+          : `<div class="queue-title">${title}</div>`;
+        const topics = Array.isArray(item.topics) ? item.topics.filter(Boolean).join(" / ") : "AI 动态";
+        const isVerbatim = item.kind === "leader_statement" && item.verbatim === true && item.quote;
+        const meta = [
+          newsRegionLabel(item.region),
+          formatNewsTime(item.published_at),
+          isVerbatim && item.speaker ? `发言人：${item.speaker}` : "",
+          item.source ?? "来源未标注",
+          topics,
+        ].filter(Boolean).join(" · ");
+        const quote = isVerbatim
+          ? `<div class="queue-meta">官方原文摘录：${escapeHtml(item.quote)}</div>`
+          : item.summary
+            ? `<div class="queue-meta">${escapeHtml(item.summary)}</div>`
+            : "";
+        const tagClass = item.kind === "leader_statement" ? "green" : item.kind === "leader_clue" ? "blue" : "";
+        return `<div class="queue-item"><div>${titleHtml}<div class="queue-meta">${escapeHtml(meta)}</div>${quote}</div><span class="tag ${tagClass}">${escapeHtml(newsKindLabel(item.kind))}</span></div>`;
       }
 
       function renderTodayQueueItem(kind, item) {
         if (kind === "mail") {
-          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.subject ?? "邮件草稿")}</div><div class="queue-meta">邮件草稿 · ${escapeHtml(item.status ?? "pending")}</div></div><span class="tag">先审</span></div>`;
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(localizeSubject(item.subject ?? "邮件草稿"))}</div><div class="queue-meta">邮件草稿 · ${escapeHtml(outboxStatusLabel(item.status ?? "pending"))}</div></div><span class="tag">先审</span></div>`;
         }
         if (kind === "notes") {
-          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "Notes 候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "笔记候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
         }
-        const title = `${item.counterparty ?? "异常"} ${formatAmount(item.amount)}`;
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(item.kinds ?? "财务异常")}</div></div><span class="tag red">风险</span></div>`;
+        return "";
       }
 
-      function renderTodayQueue(outbox, notes, finance) {
+      function renderTodayQueue(outbox, notes) {
         const mixed = [];
         (outbox.items ?? []).slice(0, 2).forEach((item) => mixed.push(renderTodayQueueItem("mail", item)));
-        (finance.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("finance", item)));
         (notes.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("notes", item)));
         const container = document.getElementById("today-queue");
         if (!container) {
@@ -2820,32 +4577,114 @@
         }
         if (mixed.length === 0) {
           container.innerHTML =
-            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">outbox / notes / finance 均为空</div></div></div>';
+            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">邮件与笔记队列均为空</div></div></div>';
           return;
         }
         container.innerHTML = mixed.join("");
       }
 
-      function renderExtendedViews(outbox, notes, finance, fromApi) {
-        const sourceSuffix = fromApi ? "来自本地只读 API" : "静态兜底";
-        setText("mail-source", `邮件审批 · diff + approval · ${sourceSuffix}`);
-        setText("notes-source", `Notes 待确认 · ${sourceSuffix}`);
-        setText("finance-source", `财务异常 · ${sourceSuffix}`);
+      function filterNewsItems(items) {
+        return items.filter((item) => {
+          if (_currentNewsFilter === "domestic") return item.region === "cn";
+          if (_currentNewsFilter === "international") return item.region === "global";
+          if (_currentNewsFilter === "statements") {
+            return item.kind === "leader_statement" && item.verbatim === true;
+          }
+          if (_currentNewsFilter === "clues") {
+            return item.kind === "leader_clue" || item.kind === "official_voice";
+          }
+          return true;
+        });
+      }
+
+      function newsCoverageStatus(domestic, international, statements, available) {
+        if (!available) return { text: "等待首次刷新", tone: "" };
+        const missing = [];
+        if (domestic < 4) missing.push(`国内 ${domestic}/4`);
+        if (international < 8) missing.push(`国际 ${international}/8`);
+        if (statements < 1) missing.push(`已核验原话 ${statements}/1`);
+        return missing.length === 0
+          ? { text: "覆盖达标", tone: "green" }
+          : { text: `覆盖待补全：${missing.join(" · ")}`, tone: "yellow" };
+      }
+
+      function renderNews(news, fromApi) {
+        const payload = news ?? fallbackNews;
+        _currentNewsPayload = payload;
+        _currentNewsFromApi = fromApi;
+        const coverage = payload.coverage ?? {};
+        const totalSources = Number(coverage.total_sources ?? 0);
+        const successfulSources = Number(coverage.successful_sources ?? 0);
+        const domestic = Number(coverage.domestic ?? 0);
+        const international = Number(coverage.international ?? 0);
+        const statements = Number(coverage.leader_statements ?? 0);
+        const clues = Number(coverage.leader_clues ?? 0);
+        const stateLabels = {
+          fresh: "数据新鲜",
+          stale: "缓存已过期",
+          degraded: "上次刷新降级",
+          empty: "本轮无合格内容",
+          not_refreshed: "等待首次刷新",
+          invalid_snapshot: "缓存格式无效",
+        };
+        const state = String(payload.state ?? "not_refreshed");
+        const partialFailure = totalSources > 0 && successfulSources < totalSources;
+        const sourceLabel = partialFailure && state === "fresh"
+          ? "数据新鲜（部分来源失败）"
+          : stateLabels[state] ?? "来源状态未知";
+        const age = Number.isFinite(Number(payload.age_minutes)) ? `${payload.age_minutes} 分钟前` : "尚未刷新";
+        setText("news-source", `AI 每日情报 · ${sourceLabel} · ${age}`);
+        setTag(
+          "news-source-health",
+          totalSources > 0 ? `${successfulSources}/${totalSources} 个来源可用` : "等待刷新",
+          totalSources === 0 ? "" : partialFailure || state === "degraded" ? "yellow" : "green",
+        );
+        setText("news-coverage", `国内 ${domestic} · 国际 ${international} · 已核验原话 ${statements} · 发言线索 ${clues}`);
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        const coverageStatus = newsCoverageStatus(domestic, international, statements, payload.available === true);
+        setTag("news-coverage-status", coverageStatus.text, coverageStatus.tone);
+        setText("metric-news", payload.available === true ? String(items.length) : "--");
+        setText("badge-news", payload.available === true ? String(items.length) : "--");
+        const container = document.getElementById("news-queue");
+        if (!container) return;
+        if (items.length === 0) {
+          const message = fromApi && state === "not_refreshed"
+            ? "尚未完成首次 AI 情报刷新"
+            : state === "stale" || state === "empty"
+              ? "最近缓存没有可展示的 AI 情报"
+              : "AI 情报暂不可用";
+          const detail = fromApi
+            ? "刷新器会保留最近一次成功缓存；媒体报道不作为大佬原话展示。"
+            : "本地接口离线，无法读取 AI 情报缓存。";
+          container.innerHTML = `<div class="queue-item"><div><div class="queue-title">${escapeHtml(message)}</div><div class="queue-meta">${escapeHtml(detail)}</div></div><span class="tag gray">只读</span></div>`;
+          return;
+        }
+        const filteredItems = filterNewsItems(items);
+        if (filteredItems.length === 0) {
+          container.innerHTML = '<div class="queue-item"><div><div class="queue-title">当前筛选没有匹配的 AI 情报</div><div class="queue-meta">只显示有一手来源证据的原话；媒体转述会保留为发言线索。</div></div><span class="tag gray">筛选</span></div>';
+          return;
+        }
+        container.innerHTML = filteredItems.map(renderNewsItem).join("");
+      }
+
+      function renderExtendedViews(outbox, notes, news, fromApi) {
+        const sourceSuffix = fromApi ? "来自本地只读接口" : "静态兜底";
+        setText("mail-source", `邮件审批 · 差异 + 审批 · ${sourceSuffix}`);
+        setText("notes-source", `笔记待确认 · ${sourceSuffix}`);
         renderList("mail-queue", outbox.items ?? [], renderOutboxItem, "暂无邮件草稿");
-        renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无 Notes 候选");
-        renderList("finance-queue", finance.items ?? [], renderFinanceItem, "暂无财务异常");
-        renderTodayQueue(outbox, notes, finance);
+        renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无笔记候选");
+        renderNews(news, fromApi);
+        renderTodayQueue(outbox, notes);
         if (fromApi) {
           setText("badge-mail", String(outbox.count ?? (outbox.items ?? []).length));
           setText("badge-notes", String(notes.count ?? (notes.items ?? []).length));
-          setText("badge-finance", String(finance.count ?? (finance.items ?? []).length));
         }
       }
 
       function renderPath4FiveGates(approval, options = {}) {
         const offline = options.offline === true;
         if (offline) {
-          setTag("path4-five-gate-header", "API 离线", "gray");
+          setTag("path4-five-gate-header", "接口离线", "gray");
           setTag("path4-gate-1", "未知", "red");
           setTag("path4-gate-2", "未知", "red");
           setTag("path4-gate-3", "未知", "red");
@@ -2853,7 +4692,7 @@
           setTag("path4-gate-5", "未知", "red");
           setText(
             "path4-five-gate-footnote",
-            "API 离线 · 五门状态暂不可用",
+            "接口离线 · 五道门状态暂不可用",
           );
           return;
         }
@@ -2867,7 +4706,7 @@
         setTag("path4-gate-1", writeApi ? "已启用" : "未启用", writeApi ? "green" : "red");
         setTag(
           "path4-gate-2",
-          writeApi ? "POST 级" : "未启用",
+          writeApi ? "请求级" : "未启用",
           writeApi ? "yellow" : "red",
         );
         setTag("path4-gate-3", writerEnv ? "已启用" : "未启用", writerEnv ? "green" : "red");
@@ -2881,8 +4720,8 @@
         setText(
           "path4-five-gate-footnote",
           path4Ready
-            ? "五门全开 · Path 4 实写路径已就绪(仍需 POST confirm_text=CONFIRM_WRITE)"
-            : "默认拒写 · 五门缺任一门均不会真实写入",
+            ? "五道门全开 · 第四路径实写已就绪（仍需逐次确认）"
+            : "默认拒写 · 五道门缺任何一道都不会真实写入",
         );
       }
 
@@ -2900,20 +4739,20 @@
         const writerInjected = approval.business_writer_impl_injected === true;
         const writerReady = approval.business_writer_ready === true;
         const dryRunStatus = approval.v0_2_53_26_dry_run_status ?? null;
-        setText("system-head", payload.git_head ?? "unknown");
-        setText("system-pytest", quality.pytest ?? "unknown");
-        setText("system-mypy", quality.mypy ?? "unknown");
-        setText("system-lint", quality.lint ?? "unknown");
+        setText("system-head", payload.git_head ?? "未知");
+        setText("system-pytest", localizeTechnicalStatus(quality.pytest));
+        setText("system-mypy", localizeTechnicalStatus(quality.mypy));
+        setText("system-lint", localizeTechnicalStatus(quality.lint));
         setText("header-quality", quality.pytest ? "质量门已读取" : "质量门未知");
         setTag("gate-smtp", realSmtp ? "可发送" : "禁用", realSmtp ? "green" : "red");
         setTag("gate-approval", writeApi ? "设计态开启" : "禁写", writeApi ? "green" : "red");
-        setTag("system-smtp-real", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
-        setTag("inspect-real-network", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
-        setTag("inspect-approval", writeApi ? "enabled" : "disabled", writeApi ? "green" : "red");
-        setTag("gate-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
-        setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
-        setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");
-        setText("header-keychain", `${presentCount}/3 Keychain`);
+        setTag("system-smtp-real", providers.smtp_real_network ? "开启" : "关闭", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-real-network", providers.smtp_real_network ? "开启" : "关闭", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-approval", writeApi ? "已启用" : "已禁用", writeApi ? "green" : "red");
+        setTag("gate-keychain", `${presentCount}/3 项已配置`, presentCount > 0 ? "green" : "red");
+        setTag("inspect-keychain", `${presentCount}/3 项已配置`, presentCount > 0 ? "green" : "red");
+        setText("header-smtp", realSmtp ? "邮件发送可用" : "邮件发送未解锁");
+        setText("header-keychain", `${presentCount}/3 项钥匙串凭据`);
         // v0.2.53.28 三门联调 — 第三道门以 Impl 实际注入为准
         renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected);
         renderPath4FiveGates(approval);
@@ -2955,13 +4794,13 @@
         renderDryRunThreeGate(FALLBACK_DRY_RUN_STATUS, false, false, false, false, { offline: true });
         renderPath4FiveGates({}, { offline: true });
         setTag("gate-approval", "禁写", "red");
-        setTag("inspect-approval", "disabled", "red");
+        setTag("inspect-approval", "已禁用", "red");
         setText("header-quality", "质量门待读取");
-        setText("system-pytest", "API 离线");
-        setText("system-mypy", "API 离线");
-        setText("system-lint", "API 离线");
-        setText("system-head", "unknown");
-        setText("footer-dry-run", "ApprovalGate · 只读兜底");
+        setText("system-pytest", "接口离线");
+        setText("system-mypy", "接口离线");
+        setText("system-lint", "接口离线");
+        setText("system-head", "未知");
+        setText("footer-dry-run", "审批门 · 只读兜底");
       }
 
       async function fetchJson(path) {
@@ -3024,13 +4863,13 @@
         if (section) {
           section.hidden = false;
         }
-        const action = payload.action ?? "—";
-        const targetId = payload.target_id ?? "—";
-        setText("dry-run-action", action);
+        const action = payload.action ?? payload.mapped_action ?? payload.decision ?? "";
+        const targetId = payload.target_id ?? payload.audit_id ?? "—";
+        setText("dry-run-action", actionLabel(action));
         setText("dry-run-target", label ? `${label} · ${targetId}` : String(targetId));
-        const httpLabel = httpStatus === null || httpStatus === undefined ? "offline" : String(httpStatus);
+        const httpLabel = httpStatus === null || httpStatus === undefined ? "离线" : String(httpStatus);
         setTag("dry-run-http", httpLabel, dryRunHttpTone(httpStatus));
-        setTag("dry-run-executed", payload.write_executed === true ? "true" : "false", payload.write_executed === true ? "red" : "green");
+        setTag("dry-run-executed", booleanLabel(payload.write_executed === true), payload.write_executed === true ? "red" : "green");
         // v0.2.53.22 HTML inspector 升级:approval_gate_passed / writer_enabled / would_allow 三 badge
         const gatePassed = payload.approval_gate_passed === true;
         setTag("dry-run-approval-gate", gatePassed ? "通过" : "未通过", gatePassed ? "green" : "red");
@@ -3042,26 +4881,26 @@
         setTag("dry-run-writer-impl", writerImpl ? THREE_GATE_COPY.writerBadge.impl.on : THREE_GATE_COPY.writerBadge.impl.off, writerImpl ? "green" : "red");
         setTag("dry-run-writer-ready", writerReady ? THREE_GATE_COPY.writerBadge.ready.on : THREE_GATE_COPY.writerBadge.ready.off, writerReady ? "green" : "red");
         const wouldAllow = payload.would_allow === true;
-        setTag("dry-run-would-allow", wouldAllow ? "true" : "false", wouldAllow ? "green" : "red");
-        const reason = payload.reason ?? payload.error ?? "无拒写原因";
+        setTag("dry-run-would-allow", booleanLabel(wouldAllow), wouldAllow ? "green" : "red");
+        const reason = localizeReason(payload.reason ?? payload.error);
         setText("dry-run-reason", reason);
         const detail = {
-          error: payload.error ?? null,
-          reason: payload.reason ?? null,
-          write_enabled: payload.write_enabled ?? null,
-          writer_enabled: payload.writer_enabled ?? null,
-          business_writer_env_enabled: payload.business_writer_env_enabled ?? null,
-          business_writer_impl_injected: payload.business_writer_impl_injected ?? null,
-          business_writer_ready: payload.business_writer_ready ?? null,
-          write_executed: payload.write_executed ?? false,
-          approval_gate_passed: payload.approval_gate_passed ?? false,
-          would_allow: payload.would_allow ?? false,
-          dry_run: payload.dry_run ?? true,
-          required: payload.required ?? [],
-          business_writer_error: payload.business_writer_error ?? null,
-          business_writer_reason: payload.business_writer_reason ?? null,
-          action_contract: payload.action_contract ?? null,
-          audit: payload.audit ?? null,
+          "动作": actionLabel(action),
+          "目标": String(targetId),
+          "错误": errorLabel(payload.error),
+          "原因": reason,
+          "写入已启用": booleanLabel(payload.write_enabled),
+          "写入器已启用": booleanLabel(payload.writer_enabled),
+          "写入器环境已启用": booleanLabel(payload.business_writer_env_enabled),
+          "写入器实现已注入": booleanLabel(payload.business_writer_impl_injected),
+          "写入器已就绪": booleanLabel(payload.business_writer_ready),
+          "已执行写入": booleanLabel(payload.write_executed ?? false),
+          "审批门已通过": booleanLabel(payload.approval_gate_passed ?? false),
+          "将允许执行": booleanLabel(payload.would_allow ?? false),
+          "预演模式": booleanLabel(payload.dry_run ?? true),
+          "所需条件": (payload.required ?? []).map(requiredConditionLabel),
+          "业务写入器错误": errorLabel(payload.business_writer_error),
+          "业务写入器原因": localizeReason(payload.business_writer_reason),
         };
         const pre = document.getElementById("dry-run-detail");
         if (pre) {
@@ -3074,7 +4913,7 @@
           renderDryRunResult(
             {
               error: "missing_target",
-              reason: "队列项缺少 action 或 target_id,无法 dry-run。",
+              reason: "队列项缺少动作或目标编号，无法预演。",
               write_executed: false,
               action,
               target_id: targetId,
@@ -3123,7 +4962,7 @@
           renderDryRunResult(
             {
               error: "request_failed",
-              reason: "POST /api/approval-gate/actions 请求失败,仍保持禁写。",
+              reason: "审批动作请求失败，仍保持禁写。",
               write_executed: false,
               action,
               target_id: targetId,
@@ -3176,7 +5015,7 @@
               {
                 endpoint: "decide",
                 error: "api_offline",
-                reason: "API 离线,1-click decide 静态兜底:仍需 user 在 UI 二次确认,write_executed 恒 false。",
+                reason: "接口离线，一键审批使用静态兜底：仍需用户在页面二次确认，始终不执行真实写入。",
                 decision,
                 audit_id: targetId,
                 mapped_action:
@@ -3187,7 +5026,7 @@
                 contract_version: "v0.2.57",
               },
               null,
-              label || `1-click ${decision}`,
+              label || `一键${actionLabel(decision)}`,
             );
             return;
           }
@@ -3199,20 +5038,20 @@
             reason: `dashboard 1-click ${decision} dry-run`,
             actor: "local_dashboard",
           });
-          renderDryRunResult(body, status, label || `1-click ${decision}`);
+          renderDryRunResult(body, status, label || `一键${actionLabel(decision)}`);
         } catch (_err) {
           renderDryRunResult(
             {
               endpoint: "decide",
               error: "request_failed",
-              reason: "POST /api/approval-gate/decide 请求失败,仍保持禁写。",
+              reason: "审批决策请求失败，仍保持禁写。",
               decision,
               audit_id: targetId,
               write_executed: false,
               dry_run: true,
             },
             null,
-            label || `1-click ${decision}`,
+            label || `一键${actionLabel(decision)}`,
           );
         } finally {
           if (buttonEl) {
@@ -3251,6 +5090,9 @@
       let _currentReportFilter = "all";
       let _currentReportSearch = "";
       let _selectedReportPath = "";
+      let _currentNewsPayload = fallbackNews;
+      let _currentNewsFromApi = false;
+      let _currentNewsFilter = "all";
       let _apiOnline = false;
 
       function statusToTagTone(status) {
@@ -3274,13 +5116,34 @@
           draft: "草稿",
           unknown: "未知",
         };
-        return map[status] ?? status;
+        return map[status] ?? "未知";
       }
 
       function formatBytes(n) {
-        if (!n || n < 1024) return `${n ?? 0} B`;
-        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-        return `${(n / 1024 / 1024).toFixed(1)} MB`;
+        if (!n || n < 1024) return `${n ?? 0} 字节`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} 千字节`;
+        return `${(n / 1024 / 1024).toFixed(1)} 兆字节`;
+      }
+
+      function reportFilterLabel(value) {
+        const labels = {
+          all: "全部",
+          doc: "文档",
+          phase_report: "报告",
+          spike: "实验",
+          agent_output: "智能产出",
+        };
+        return labels[String(value ?? "all")] ?? "其他";
+      }
+
+      function localizeReportTitle(value) {
+        return String(value ?? "")
+          .replaceAll("Dashboard", "仪表盘")
+          .replaceAll("dashboard", "仪表盘")
+          .replaceAll("opt-in", "可选启用")
+          .replaceAll("OutboxDispatcher", "发件调度器")
+          .replaceAll("Outbox", "发件箱")
+          .replaceAll("spike", "实验");
       }
 
       function filteredReports() {
@@ -3327,7 +5190,7 @@
         setText("report-preview-title", title || "报告预览");
         setText(
           "report-preview-meta",
-          `${meta}${truncated ? " · 已截断(8KB)" : ""}`,
+          `${meta}${truncated ? " · 已截断（8 千字节）" : ""}`,
         );
         const pre = document.getElementById("report-preview-body");
         if (pre) pre.textContent = body || "无预览内容";
@@ -3339,9 +5202,9 @@
         if (!_apiOnline) {
           const item = _currentReports.find((r) => r.path === reportPath);
           renderReportPreviewPanel(
-            item?.title ?? reportPath,
-            `${item?.type ?? "unknown"} · ${item?.path ?? reportPath} · 静态兜底`,
-            "API 离线，暂时无法加载报告正文。\n\n路径: " + reportPath,
+            localizeReportTitle(item?.title ?? reportPath),
+            `${reportTypeLabel(item?.type)} · ${item?.path ?? reportPath} · 静态兜底`,
+            "接口离线，暂时无法加载报告正文。\n\n路径：" + reportPath,
             false,
           );
           return;
@@ -3351,8 +5214,8 @@
             `/api/reports/preview?path=${encodeURIComponent(reportPath)}`,
           );
           renderReportPreviewPanel(
-            payload.title,
-            `${payload.type} · ${payload.path} · ${formatBytes(payload.size_bytes)}`,
+            localizeReportTitle(payload.title),
+            `${reportTypeLabel(payload.type)} · ${payload.path} · ${formatBytes(payload.size_bytes)}`,
             payload.preview,
             payload.truncated,
           );
@@ -3391,13 +5254,13 @@
       //   - InMemory 注入 → enabled=true,按 executed_at_ms DESC 倒序
       //   - 失败 audit(带 error 字段)用红色 tag 标识
       function renderAudits(payload, sourceLabel) {
-        setText("audit-source", `audit 落档 · ${sourceLabel}`);
+        setText("audit-source", `审计落档 · ${sourceLabel}`);
         const enabled = payload.enabled === true;
         const items = Array.isArray(payload.items) ? payload.items : [];
         const count = payload.count ?? items.length;
         const stateTag = document.getElementById("audit-state-tag");
         if (stateTag) {
-          stateTag.textContent = enabled ? "InMemory 已注入" : "默认 Stub";
+          stateTag.textContent = enabled ? "内存存储已注入" : "默认占位存储";
           stateTag.className = enabled ? "tag green" : "tag";
         }
         const container = document.getElementById("audit-queue");
@@ -3410,12 +5273,12 @@
           const left = document.createElement("div");
           const title = document.createElement("div");
           title.className = "queue-title";
-          title.textContent = enabled ? "暂无 audit 记录" : "暂无 audit 记录";
+          title.textContent = "暂无审计记录";
           const meta = document.createElement("div");
           meta.className = "queue-meta";
           meta.textContent = enabled
-            ? "InMemory 注入成功,等待首次写操作"
-            : "默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory";
+            ? "内存存储注入成功，等待首次写操作"
+            : "默认使用占位存储 · 需启用真实数据库和业务写入器后注入内存存储";
           left.appendChild(title);
           left.appendChild(meta);
           empty.appendChild(left);
@@ -3432,12 +5295,12 @@
           const left = document.createElement("div");
           const title = document.createElement("div");
           title.className = "queue-title";
-          title.textContent = `${item.action} → ${item.target_id ?? "?"}`;
+          title.textContent = `${actionLabel(item.action)} → ${item.target_id ?? "?"}`;
           const meta = document.createElement("div");
           meta.className = "queue-meta";
           const reason = item.reason && item.reason.length > 0 ? ` · ${item.reason}` : "";
-          const actor = item.actor ?? "local_dashboard";
-          meta.textContent = `actor=${actor}${reason}`;
+          const actor = item.actor === "local_dashboard" || !item.actor ? "本地仪表盘" : "其他操作者";
+          meta.textContent = `操作者：${actor}${reason ? localizeReason(reason) : ""}`;
           left.appendChild(title);
           left.appendChild(meta);
           row.appendChild(left);
@@ -3451,7 +5314,7 @@
             tag.textContent = "已执行";
           } else {
             tag.className = "tag";
-            tag.textContent = "dry-run";
+            tag.textContent = "预演";
           }
           row.appendChild(tag);
           container.appendChild(row);
@@ -3469,8 +5332,8 @@
         if (filtered.length === 0) {
           const q = _currentReportSearch.trim();
           const emptyMsg = q
-            ? `<div class="queue-empty">未找到匹配「<mark>${escapeHtml(q)}</mark>」的报告 · 调整搜索或 filter</div>`
-            : '<div class="queue-empty">暂无匹配报告 · 调整 filter</div>';
+            ? `<div class="queue-empty">未找到匹配「<mark>${escapeHtml(q)}</mark>」的报告 · 调整搜索或筛选条件</div>`
+            : '<div class="queue-empty">暂无匹配报告 · 调整筛选条件</div>';
           container.innerHTML = emptyMsg;
         } else {
           container.innerHTML = filtered
@@ -3478,7 +5341,7 @@
               const tone = statusToTagTone(r.status);
               const label = statusToLabel(r.status);
               const selected = r.path === _selectedReportPath ? " selected" : "";
-              const titleHtml = highlightMatch(r.title || "—", _currentReportSearch);
+              const titleHtml = highlightMatch(localizeReportTitle(r.title || "—"), _currentReportSearch);
               const pathHtml = highlightMatch(r.path || "", _currentReportSearch);
               return `
               <div class="queue-item clickable${selected}" data-report-path="${escapeHtml(r.path)}" role="button" tabindex="0">
@@ -3486,7 +5349,7 @@
                   <div class="queue-title">${titleHtml}</div>
                   <div class="queue-meta">
                     <span class="tag ${tone}">${label}</span>
-                    <span class="tag">${escapeHtml(r.type)}</span>
+                    <span class="tag">${escapeHtml(reportTypeLabel(r.type))}</span>
                     <span>${escapeHtml(r.date || "—")}</span>
                     <span>${formatBytes(r.size_bytes)}</span>
                   </div>
@@ -3504,7 +5367,7 @@
           if (q) {
             matchHint.textContent = `${filtered.length} / ${total} 项匹配「${q}」`;
           } else if (_currentReportFilter !== "all") {
-            matchHint.textContent = `${filtered.length} / ${total} 项 (${_currentReportFilter})`;
+            matchHint.textContent = `${filtered.length} / ${total} 项（${reportFilterLabel(_currentReportFilter)}）`;
           } else {
             matchHint.textContent = `${total} 项`;
           }
@@ -3517,20 +5380,33 @@
         });
         const hint = document.getElementById("reports-filter-hint");
         if (hint && _currentReportFilter === "spike") {
-          hint.textContent = "spike 详情 · 点击条目加载预览";
+          hint.textContent = "实验详情 · 点击条目加载预览";
         } else if (hint) {
           hint.textContent = "点击条目预览 · 支持搜索";
         }
       }
 
-      document.querySelectorAll(".filter-row .filter").forEach((btn) => {
+      document.querySelectorAll("#reports-filter-row .filter").forEach((btn) => {
         btn.addEventListener("click", () => {
           document
-            .querySelectorAll(".filter-row .filter")
+            .querySelectorAll("#reports-filter-row .filter")
             .forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           _currentReportFilter = btn.dataset.filter || "all";
           renderReportsList();
+        });
+      });
+
+      document.querySelectorAll("#news-filter-row .filter").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#news-filter-row .filter").forEach((b) => {
+            b.classList.remove("active");
+            b.setAttribute("aria-pressed", "false");
+          });
+          btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
+          _currentNewsFilter = btn.dataset.newsFilter || "all";
+          renderNews(_currentNewsPayload, _currentNewsFromApi);
         });
       });
 
@@ -3567,33 +5443,42 @@
 
       async function hydrateDashboard() {
         try {
-          const [status, tasks, outbox, notes, finance, reports, audits] = await Promise.all([
+          const [status, tasks, outbox, notes, news, reports, audits] = await Promise.all([
             fetchJson("/api/status"),
             fetchJson("/api/tasks/today"),
             fetchJson("/api/outbox?limit=10"),
             fetchJson("/api/notes/pending?limit=10"),
-            fetchJson("/api/finance/anomalies?limit=10"),
+            fetchJson("/api/news/daily"),
             fetchJson("/api/reports?limit=50"),
             fetchJson("/api/approval-gate/audits?limit=10"),
           ]);
           _apiOnline = true;
           renderStatus(status);
-          renderTasks(tasks, "来自本地只读 API");
-          renderExtendedViews(outbox, notes, finance, true);
-          renderReports(reports, "本地只读 API · 文件系统扫描");
-          renderAudits(audits, "本地只读 API · audit 落档列表");
-          setText("today-source", "今日工作 · 本地 API 已连接");
-          setApiState(true, "API 已连接");
-          setText("footer-dry-run", "ApprovalGate dry-run wired · write_executed=false");
+          renderTasks(tasks, "来自本地只读接口");
+          renderExtendedViews(outbox, notes, news, true);
+          renderReports(reports, "本地只读接口 · 文件系统扫描");
+          renderAudits(audits, "本地只读接口 · 审计落档列表");
+          setText("today-source", "今日工作 · 本地接口已连接");
+          setApiState(true, "接口已连接");
+          setText("footer-dry-run", "审批门预演已接入 · 未执行真实写入");
         } catch (_err) {
           _apiOnline = false;
           renderOfflineApprovalState();
           renderTasks(fallbackTasks, "静态兜底数据");
-          renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
+          renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackNews, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");
-          renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "API 离线兜底");
-          setText("today-source", "今日工作 · API 离线，使用只读兜底");
-          setApiState(false, "API 离线");
+          renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "接口离线兜底");
+          setText("today-source", "今日工作 · 接口离线，使用只读兜底");
+          setApiState(false, "接口离线");
+        }
+      }
+
+      async function refreshNewsFromLocalCache() {
+        try {
+          const news = await fetchJson("/api/news/daily");
+          renderNews(news, true);
+        } catch (_error) {
+          // 保留上一次可见新闻，避免短暂本地接口波动清空信息流。
         }
       }
 
@@ -3634,6 +5519,12 @@
       bindApprovalDryRunClick();
       bindApprovalDecideClick();
       hydrateDashboard();
+      window.setInterval(() => {
+        if (!document.hidden) refreshNewsFromLocalCache();
+      }, 5 * 60 * 1000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshNewsFromLocalCache();
+      });
     </script>
   </body>
 </html>

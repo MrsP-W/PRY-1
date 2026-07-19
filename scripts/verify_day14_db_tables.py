@@ -75,6 +75,7 @@ TABLE_CONTRACTS: dict[str, dict[str, Any]] = {
                 "normalized_fingerprint",
                 "needs_confirm",
                 "candidate_match_id",
+                "note_source",
             }
         ),
         "required_indexes": frozenset(
@@ -84,6 +85,7 @@ TABLE_CONTRACTS: dict[str, dict[str, Any]] = {
                 "idx_notes_sync_status",
                 "idx_notes_fingerprint",
                 "idx_notes_needs_confirm",
+                "idx_notes_source_updated",
             }
         ),
         "required_unique": (("apple_note_id",),),

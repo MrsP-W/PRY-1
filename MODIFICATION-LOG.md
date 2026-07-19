@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3048 passed / 1 skipped** / **90.25%** / mypy --strict 0 / **263 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 只读兼容) |
-| **下一棒** | P3-A T3 L4 #94 真实 load 复验(需授权)→ 撞坑 #90 launchd 持久化 → P3-B 新草稿+命名收件人逐封 SMTP → P4 24h dry-run → P5 v1.0 评估 |
+| **质量基线** | **3091 passed / 1 skipped** / **90.27%** / mypy --strict 0 / **277 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 L3 只读兼容) |
+| **下一棒** | PR #1 merge → P0-4 续采满 24h(`ops/p0-4-observations/`)→ P0-5 v1.0 评估(默认不打)· SMTP 仍待新草稿+逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
 | **P1-3 #98 修复(本次 commit `f188d13`)** | `fix(launchd): #98 P1-3 修复 legacy retirement 仅 install 模式执行 + K5 回归测试`(2026-07-10 · 8 files / +78 -27 · **撞坑 #98 P1 审查发现**:原 5.5 段顺序有 bug,deploy-only 早退前 legacy retirement 会被执行,违反"只部署、不改变运行态"安全语义;**修复**:`launchd_install.sh` deploy-only 退出从 5.6 移到 5.5(NEW 段号),legacy retirement 移到 5.6(后置)· **K5 回归测试**:`tests/scripts/test_launchd_install.py` 新增 `test_k5_deploy_only_does_not_trigger_legacy_retirement`(5.5 段代码必不含 launchctl unload/bootout/my-ai-employee-start;5.5 必在 5.6 之前 → deploy-only 不退役 legacy)· K1/K3 段号 5.5→5.6 同步修正 · 5件套 baseline 同步 2936/1/89.12/290 → 2937/1/89.10/291(K5 +1 test, ruff format +0 MD)· 9/9 质量门全绿 2937 passed / 1 skipped / 89.10% / 291 MD / mypy 257 files · 默认不 push · 等 push 授权后启动 P0-4 24h 观察) |
@@ -150,6 +150,48 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-19 [Codex 本地当日对话笔记] — 收口
+
+- 本地 JSONL 显式导入：默认仅校验，`--apply` 才写入；同一 `thread_id` 使用 SQLite/SQLCipher 原子冲突处理实现幂等更新。
+- `0017_codex_conversation_notes` 增加来源列与当日查询索引；普通 Notes 与 Codex 摘要的 L2/L3 候选隔离，归档记录与当前密钥不可用的密文均拒绝覆盖。
+- 新增当日 Markdown 输出、迁移/CLI/加密/归档/来源隔离回归；质量基线更新为 **3091 passed / 1 skipped / 90.27% / 292 MD files / 277 mypy files**。
+
+### 2026-07-19 [Dashboard 财务展示层替换为 AI 每日情报台] — 收口
+
+**1. 本次修改内容**
+
+- 新增 `news/` 本地链路：12 个受控 HTTPS Feed → 原子 JSON 缓存 → `GET /api/news/daily` → Dashboard；API 请求不访问外网。
+- Dashboard 以“每日新闻”替换财务展示，提供全部、国内、国际、已核验原话、发言线索五类筛选，并每 5 分钟只重读本地缓存。
+- 官方逐字引语仅接受 NVIDIA Newsroom 中白名单说话人、紧邻明确归因和逐字引号同时成立的条目；媒体报道只作发言线索。
+
+**2. 风险点**
+
+- 单源失败、全源失败或空解析均保留最后非空缓存并标记降级；Feed 重定向仅允许同 HTTPS origin、最多两跳。
+- 当前没有自动生成国内大佬引语，也不抓取登录态社交媒体；P0-4 观察期内不安装或重载任何 LaunchAgent。
+
+**3. 当前项目整体总结**
+
+- 真实临时刷新：12/12 来源成功，48 条（国内 12、国际 36、已核验原话 3）；定向新闻/API 回归 **54 passed**。
+- 隔离工作树完整 `make test`：**3074 passed / 1 skipped / 90.39%**；快照守卫与状态入口均通过，mypy 基线 **273 files**、MD lint **292 files**。
+- 下一棒：待 P0-4 通过且 GUI 域获授权后，部署独立 one-shot 每小时刷新任务（`StartInterval=3600`、`RunAtLoad=true`、无 `KeepAlive`）；不触碰既有四个 job。
+
+### 2026-07-18 [NotesCipher v2 L3 历史标题兼容] — 收口
+
+**1. 本次修改内容**
+
+- `tests/db/test_notes_encryption_store.py` 新增固定认证 v2 title 向量的 L3 ±1 天回归：直接落库的 `enc:v2:` 标题先解密、再完成模糊标题归一化与候选关联。
+- 覆盖 `NoteStore._find_l3_fuzzy_in_session()` 的独立解密路径，避免未来仅普通 `get/list` 保持兼容、L3 去重却漏读历史笔记。
+
+**2. 风险点**
+
+- 不修改生产代码、密文格式、Keychain、数据库或外部服务；生产真加密与 SMTP 均仍关闭。
+- 认证失败的 v2/v3 密文继续被 L3 跳过，不能降级为标题或候选。
+
+**3. 当前项目整体总结**
+
+- 定向核心 + NoteStore 测试 **52 passed**；全量 `make test` **3049 passed / 1 skipped / 90.24%**。
+- 下一棒：P0-4 24h 观察仍保持只读；Dashboard HTML 用户 WIP 继续不混入提交。
 
 ### 2026-07-18 [NotesCipher AES-GCM v3 写入与 v2 兼容] — 收口
 

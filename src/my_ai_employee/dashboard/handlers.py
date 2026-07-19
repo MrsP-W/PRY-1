@@ -28,6 +28,7 @@ from my_ai_employee.dashboard.business_writer import (
 from my_ai_employee.dashboard.context import DashboardContext, parse_limit
 from my_ai_employee.dashboard.responses import (
     build_approval_gate_audits_payload,
+    build_daily_news_payload,
     build_finance_anomalies_payload,
     build_notes_pending_payload,
     build_outbox_payload,
@@ -124,6 +125,9 @@ class DashboardHandler(BaseHTTPRequestHandler):
                 HTTPStatus.OK,
                 build_finance_anomalies_payload(self.dashboard_context, limit=limit),
             )
+            return
+        if path == "/api/news/daily":
+            self._send_json(HTTPStatus.OK, build_daily_news_payload(self.dashboard_context))
             return
         if path == "/api/reports":
             self._send_json(

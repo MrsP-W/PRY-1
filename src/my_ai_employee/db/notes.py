@@ -43,7 +43,7 @@ D9 决策应用:
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import Any, cast
 
 import sqlcipher3.dbapi2 as _sqlcipher_dbapi  # D3.3.2 教训: 双层 except 防 SQLCipher dialect 不包装 dbapi 异常
 from sqlalchemy import (
@@ -55,6 +55,8 @@ from sqlalchemy import (
     select,
     text,
 )
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+from sqlalchemy.engine import CursorResult
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, Session, mapped_column, sessionmaker
 
@@ -94,7 +96,19 @@ class NoteDuplicateError(Exception):
         self.original_error = original_error
 
 
-# ===== Note ORM(12 字段, v0.2.1 #4 sync_status + #5 normalized_fingerprint)=====
+# ===== 笔记来源（普通笔记 + Codex 对话摘要）=====
+
+# 默认来源覆盖既有 Apple Notes 与剪贴板笔记；迁移为历史行统一回填该值。
+NOTE_SOURCE_DEFAULT: str = "note"
+# Codex 会话摘要由本地显式导入，不参与 Apple Notes 的 L2/L3 去重候选。
+NOTE_SOURCE_CODEX_CONVERSATION: str = "codex_conversation"
+_VALID_NOTE_SOURCES: frozenset[str] = frozenset(
+    {NOTE_SOURCE_DEFAULT, NOTE_SOURCE_CODEX_CONVERSATION}
+)
+CODEX_CONVERSATION_FOLDER: str = "Codex 对话"
+
+
+# ===== Note ORM(15 字段, v0.2.1 #4 sync_status + #5 normalized_fingerprint)=====
 
 
 class Note(Base):
@@ -115,6 +129,7 @@ class Note(Base):
         - normalized_fingerprint: TEXT NULL  # v0.2.1 #5 L2 跨源指纹字段
         - needs_confirm:     INTEGER NOT NULL DEFAULT 0  # v0.2.1+ L2 跨源写入字段
         - candidate_match_id: INTEGER NULL  # v0.2.1+ L2 跨源候选 FK(self-reference to notes.id)
+        - note_source:       TEXT NOT NULL DEFAULT 'note'  # 普通笔记 / Codex 对话摘要
 
     sync_status 状态机(沿 [[v0.2.1-candidates-2026-06-17]] §5.2):
         - NEW(初始入库,默认)
@@ -145,6 +160,7 @@ class Note(Base):
         - idx_notes_sync_status(sync_status)  # v0.2.1 #4 新增
         - idx_notes_fingerprint(normalized_fingerprint)  # v0.2.1 #5 新增(L2 跨源候选)
         - idx_notes_needs_confirm(needs_confirm)  # v0.2.1+ 新增(L2 跨源写入待确认列表)
+        - idx_notes_source_updated(note_source, updated_at_ms DESC)  # 当日 Codex 对话查询
     """
 
     __tablename__ = "notes"
@@ -180,6 +196,13 @@ class Note(Base):
         default=None,
         server_default=None,
     )
+    # 普通笔记与 Codex 对话摘要的来源隔离；旧行由 migration 回填为 ``note``。
+    note_source: Mapped[str] = mapped_column(
+        Text,
+        nullable=False,
+        default=NOTE_SOURCE_DEFAULT,
+        server_default=NOTE_SOURCE_DEFAULT,
+    )
 
     # 约束 + 索引(D3.2 雷区 #8: DESC 索引用 sa.text 包裹)
     __table_args__ = (
@@ -189,13 +212,15 @@ class Note(Base):
         Index("idx_notes_sync_status", "sync_status"),  # v0.2.1 #4 新增
         Index("idx_notes_fingerprint", "normalized_fingerprint"),  # v0.2.1 #5 新增
         Index("idx_notes_needs_confirm", "needs_confirm"),  # v0.2.1+ 新增
+        Index("idx_notes_source_updated", "note_source", text("updated_at_ms DESC")),
     )
 
     def __repr__(self) -> str:
         return (
             f"<Note id={self.id} apple_note_id={self.apple_note_id!r} "
             f"folder={self.folder!r} title={self.title!r} "
-            f"sync_status={self.sync_status!r} fingerprint={self.normalized_fingerprint!r} "
+            f"source={self.note_source!r} sync_status={self.sync_status!r} "
+            f"fingerprint={self.normalized_fingerprint!r} "
             f"needs_confirm={self.needs_confirm} candidate_match_id={self.candidate_match_id}>"
         )
 
@@ -387,6 +412,21 @@ class NoteStore:
         return tags
 
     @staticmethod
+    def _validate_note_source(note_source: str) -> str:
+        """严判笔记来源为当前支持的内部来源枚举。"""
+        if not isinstance(note_source, str):
+            raise TypeError(
+                f"note_source 必须是 str,实际 type={type(note_source).__name__},"
+                f" value={note_source!r}"
+            )
+        cleaned = note_source.strip()
+        if cleaned not in _VALID_NOTE_SOURCES:
+            raise ValueError(
+                f"note_source 必须在 {sorted(_VALID_NOTE_SOURCES)} 之一,实际 {note_source!r}"
+            )
+        return cleaned
+
+    @staticmethod
     def _validate_ms(value: int, field_name: str) -> int:
         """严判 epoch ms:int(非 bool)>= 0.
 
@@ -425,6 +465,7 @@ class NoteStore:
         is_private: bool = False,
         tags: str | None = None,
         synced_at_ms: int | None = None,
+        note_source: str = NOTE_SOURCE_DEFAULT,
     ) -> Note:
         """插入一条 note(D9.1 入库入口 — L1 UNIQUE 业务阻断).
 
@@ -443,6 +484,7 @@ class NoteStore:
             is_private: 是否私密(默认 False,沿 D4.7.2 v1.0.6 私密阻断范本)
             tags: 标签(逗号分隔,note_structurer 输出,可空)
             synced_at_ms: 同步时间戳(默认 = 当前时间)
+            note_source: 内部来源（默认普通笔记；Codex 摘要不参与 L2/L3 候选）
 
         Returns:
             新插入的 Note(已 refresh,id/synced_at_ms/normalized_fingerprint 都可读)
@@ -459,6 +501,7 @@ class NoteStore:
         body = self._validate_body(body)
         attachments_json = self._validate_attachments_json(attachments_json)
         tags = self._validate_tags(tags)
+        note_source = self._validate_note_source(note_source)
         is_private_int = self._validate_is_private(is_private)
         updated_at_ms = self._validate_ms(updated_at_ms, "updated_at_ms")
         if synced_at_ms is None:
@@ -466,15 +509,17 @@ class NoteStore:
         else:
             synced_at_ms = self._validate_ms(synced_at_ms, "synced_at_ms")
 
-        # 2. v0.2.1 #5 自动派生 L2 normalized_fingerprint
-        # 沿 D6.4 transactions 范本(title + folder + updated_at_date)
-        from my_ai_employee.core.fingerprint import normalize_note_fingerprint
+        # 2. v0.2.1 #5 仅为普通 Notes 派生 L2 指纹。Codex 对话摘要必须
+        # 与 Apple Notes 的 L2/L3 候选链路隔离，故保持 NULL。
+        normalized_fingerprint: str | None = None
+        if note_source == NOTE_SOURCE_DEFAULT:
+            from my_ai_employee.core.fingerprint import normalize_note_fingerprint
 
-        normalized_fingerprint = normalize_note_fingerprint(
-            title=title,
-            folder=folder,
-            updated_at_ms=updated_at_ms,
-        )
+            normalized_fingerprint = normalize_note_fingerprint(
+                title=title,
+                folder=folder,
+                updated_at_ms=updated_at_ms,
+            )
 
         # 2.5 v0.2.1+ L2 跨源写入(D9.6 留口业务落地)
         # 自动检查 L2 跨源候选:同 fingerprint 的已有 note
@@ -482,23 +527,25 @@ class NoteStore:
         # 沿 D6.4 transactions L2 范本
         needs_confirm = 0
         candidate_match_id = None
-        with self._sf() as session:
-            candidates_stmt = (
-                select(Note.id)
-                .where(Note.normalized_fingerprint == normalized_fingerprint)
-                .order_by(Note.id.asc())
-                .limit(1)
-            )
-            earliest_candidate_id = session.execute(candidates_stmt).scalar_one_or_none()
-            if earliest_candidate_id is not None:
-                needs_confirm = 1
-                candidate_match_id = earliest_candidate_id
+        if note_source == NOTE_SOURCE_DEFAULT:
+            with self._sf() as session:
+                candidates_stmt = (
+                    select(Note.id)
+                    .where(Note.note_source == NOTE_SOURCE_DEFAULT)
+                    .where(Note.normalized_fingerprint == normalized_fingerprint)
+                    .order_by(Note.id.asc())
+                    .limit(1)
+                )
+                earliest_candidate_id = session.execute(candidates_stmt).scalar_one_or_none()
+                if earliest_candidate_id is not None:
+                    needs_confirm = 1
+                    candidate_match_id = earliest_candidate_id
 
         # 2.6 v0.2.2 #3 L3 模糊匹配 ±1 day fallback(仅当 L2 未命中时触发)
         # 当 L2 fingerprint 不命中但同日/±1 天的归一化 title 命中已有 note 时
         # 视作"同一笔记的轻微标题变化"候选,标记 needs_confirm=1
         # 沿 [[v0.2.1-candidates-2026-06-17]] §6 候选 #5 L3 模糊匹配
-        if needs_confirm == 0:
+        if note_source == NOTE_SOURCE_DEFAULT and needs_confirm == 0:
             with self._sf() as session:
                 fuzzy_candidates = self._find_l3_fuzzy_in_session(
                     session,
@@ -527,6 +574,7 @@ class NoteStore:
                     normalized_fingerprint=normalized_fingerprint,
                     needs_confirm=needs_confirm,
                     candidate_match_id=candidate_match_id,
+                    note_source=note_source,
                 )
                 session.add(note)
                 session.commit()
@@ -620,6 +668,186 @@ class NoteStore:
                 .limit(limit)
             )
             return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
+
+    @staticmethod
+    def _validate_codex_thread_id(thread_id: str) -> str:
+        """严判 Codex thread ID，并预留 ``codex://`` 前缀的 Note 主键长度。"""
+        if not isinstance(thread_id, str):
+            raise TypeError(
+                f"thread_id 必须是 str,实际 type={type(thread_id).__name__}, value={thread_id!r}"
+            )
+        cleaned = thread_id.strip()
+        if not cleaned:
+            raise ValueError("thread_id 必非空(经 strip())")
+        if len(cleaned) > 120:
+            raise ValueError(f"thread_id 长度超 120(实际 {len(cleaned)})")
+        if any(char in cleaned for char in ("\r", "\n", "\x00")):
+            raise ValueError("thread_id 不得包含控制换行字符")
+        return cleaned
+
+    @staticmethod
+    def _validate_daily_note_date(value: str) -> str:
+        """严判 YYYY-MM-DD，避免接口将模糊日期解释成另一日。"""
+        from datetime import date
+
+        if not isinstance(value, str):
+            raise TypeError(
+                f"date 必须是 YYYY-MM-DD 字符串,实际 type={type(value).__name__}, value={value!r}"
+            )
+        cleaned = value.strip()
+        try:
+            parsed = date.fromisoformat(cleaned)
+        except ValueError as exc:
+            raise ValueError(f"date 必须是 YYYY-MM-DD,实际 {value!r}") from exc
+        if parsed.isoformat() != cleaned:
+            raise ValueError(f"date 必须是 YYYY-MM-DD,实际 {value!r}")
+        return cleaned
+
+    @staticmethod
+    def _local_day_bounds_ms(day: str) -> tuple[int, int]:
+        """返回本机时区某自然日的 [start, next_start) 毫秒区间。"""
+        from datetime import date, datetime, timedelta
+        from datetime import time as datetime_time
+
+        parsed = date.fromisoformat(day)
+        # 不可复用“现在”的固定 UTC offset：冬夏令时切换后历史日会偏移 1 小时。
+        # 对每个朴素本地午夜分别 astimezone()，由系统时区解析该日期的真实 offset。
+        start = datetime.combine(parsed, datetime_time.min).astimezone()
+        next_start = datetime.combine(parsed + timedelta(days=1), datetime_time.min).astimezone()
+        return int(start.timestamp() * 1000), int(next_start.timestamp() * 1000)
+
+    def upsert_codex_conversation(
+        self,
+        *,
+        thread_id: str,
+        title: str,
+        summary: str,
+        ended_at_ms: int,
+    ) -> tuple[Note, bool]:
+        """写入一条 Codex 对话摘要；同一 thread 重导入时更新而非生成候选。
+
+        对话摘要只来自调用方显式传入的 ``summary``，本方法不读取 Codex 桌面端历史、
+        不调用 LLM，也不触发 Apple Notes 同步。返回 ``(note, created)``。
+        """
+        thread_id = self._validate_codex_thread_id(thread_id)
+        title = self._validate_title(title).strip()
+        summary = self._validate_body(summary).strip()
+        if not title:
+            raise ValueError("title 必须非空白")
+        if not summary:
+            raise ValueError("summary 必须非空白")
+        if len(title) > 512:
+            raise ValueError(f"title 长度超 512(实际 {len(title)})")
+        if len(summary) > 65536:
+            raise ValueError(f"summary 长度超 65536(实际 {len(summary)})")
+        ended_at_ms = self._validate_ms(ended_at_ms, "ended_at_ms")
+        apple_note_id = self._validate_apple_note_id(f"codex://{thread_id}")
+        now_ms = int(time.time() * 1000)
+        stored_title = self._encrypt_field(title, "title")
+        stored_summary = self._encrypt_field(summary, "body")
+
+        values: dict[str, Any] = {
+            "apple_note_id": apple_note_id,
+            "folder": CODEX_CONVERSATION_FOLDER,
+            "title": stored_title,
+            "body": stored_summary,
+            "attachments_json": None,
+            "is_private": 0,
+            "tags": "codex,对话总结",
+            "synced_at_ms": now_ms,
+            "updated_at_ms": ended_at_ms,
+            "sync_status": SYNC_STATUS_STRUCTURED,
+            "normalized_fingerprint": None,
+            "needs_confirm": 0,
+            "candidate_match_id": None,
+            "note_source": NOTE_SOURCE_CODEX_CONVERSATION,
+        }
+
+        with self._sf() as session:
+            # SQLite/SQLCipher 的 ON CONFLICT DO NOTHING 让并发导入同一 thread
+            # 成为确定的“后者更新”路径，而不是 SELECT → INSERT 的 UNIQUE 竞态。
+            insert_result = cast(
+                CursorResult[Any],
+                session.execute(
+                    sqlite_insert(Note)
+                    .values(**values)
+                    .on_conflict_do_nothing(index_elements=["apple_note_id"])
+                ),
+            )
+            was_created = insert_result.rowcount == 1
+            if was_created:
+                session.commit()
+                created_note = session.execute(
+                    select(Note).where(Note.apple_note_id == apple_note_id)
+                ).scalar_one()
+                return self._decrypt_note(created_note), True
+
+            existing_note = session.execute(
+                select(Note).where(Note.apple_note_id == apple_note_id)
+            ).scalar_one_or_none()
+            if existing_note is None:
+                raise RuntimeError(f"Codex 对话冲突后未找到 apple_note_id={apple_note_id!r}")
+            if existing_note.note_source != NOTE_SOURCE_CODEX_CONVERSATION:
+                raise ValueError(f"apple_note_id={apple_note_id!r} 已被非 Codex 笔记占用，拒绝覆盖")
+            if existing_note.sync_status != SYNC_STATUS_STRUCTURED:
+                raise ValueError(
+                    f"apple_note_id={apple_note_id!r} 当前状态={existing_note.sync_status!r}，"
+                    "仅 STRUCTURED Codex 对话可重新导入"
+                )
+            for field_name in ("title", "body"):
+                raw_value = getattr(existing_note, field_name)
+                if (
+                    is_notes_ciphertext(raw_value)
+                    and self._cipher.decrypt(raw_value, self._field_cipher(field_name)) is None
+                ):
+                    raise ValueError(
+                        f"apple_note_id={apple_note_id!r} 加密内容不可用，拒绝在当前密钥配置下覆盖"
+                    )
+
+            existing_note.folder = CODEX_CONVERSATION_FOLDER
+            existing_note.title = stored_title
+            existing_note.body = stored_summary
+            existing_note.tags = "codex,对话总结"
+            existing_note.synced_at_ms = now_ms
+            existing_note.updated_at_ms = ended_at_ms
+            existing_note.normalized_fingerprint = None
+            existing_note.needs_confirm = 0
+            existing_note.candidate_match_id = None
+            session.commit()
+            session.refresh(existing_note)
+            return self._decrypt_note(existing_note), False
+
+    def list_codex_conversations_for_day(self, day: str, *, limit: int = 100) -> list[Note]:
+        """按本机自然日列出 Codex 对话摘要（最新会话在前）。"""
+        day = self._validate_daily_note_date(day)
+        if type(limit) is bool or not isinstance(limit, int) or limit < 1 or limit > 1000:
+            raise ValueError(
+                f"limit 必须是 [1, 1000] 的 int(非 bool),"
+                f"实际 type={type(limit).__name__}, value={limit!r}"
+            )
+        start_ms, next_start_ms = self._local_day_bounds_ms(day)
+        with self._sf() as session:
+            stmt = (
+                select(Note)
+                .where(Note.note_source == NOTE_SOURCE_CODEX_CONVERSATION)
+                .where(Note.updated_at_ms >= start_ms, Note.updated_at_ms < next_start_ms)
+                .order_by(Note.updated_at_ms.desc(), Note.id.desc())
+                .limit(limit)
+            )
+            return self._decrypt_notes(list(session.execute(stmt).scalars().all()))
+
+    def count_codex_conversations_for_day(self, day: str) -> int:
+        """返回本机自然日的 Codex 对话摘要总数（不读取正文）。"""
+        day = self._validate_daily_note_date(day)
+        start_ms, next_start_ms = self._local_day_bounds_ms(day)
+        with self._sf() as session:
+            stmt = (
+                select(func.count())
+                .select_from(Note)
+                .where(Note.note_source == NOTE_SOURCE_CODEX_CONVERSATION)
+                .where(Note.updated_at_ms >= start_ms, Note.updated_at_ms < next_start_ms)
+            )
+            return int(session.execute(stmt).scalar_one())
 
     def mark_structured(
         self,
@@ -947,6 +1175,7 @@ class NoteStore:
 
         rows = session.execute(
             select(Note.id, Note.title, Note.updated_at_ms).where(
+                Note.note_source == NOTE_SOURCE_DEFAULT,
                 Note.updated_at_ms >= ms_min,
                 Note.updated_at_ms <= ms_max,
             )

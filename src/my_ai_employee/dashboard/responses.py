@@ -162,6 +162,11 @@ def build_finance_anomalies_payload(ctx: DashboardContext, *, limit: int = 10) -
     return {"read_only": True, "count": count, "items": items}
 
 
+def build_daily_news_payload(ctx: DashboardContext) -> dict[str, Any]:
+    """GET /api/news/daily — 读取 AI 情报本地缓存，绝不在 API 请求中访问外网。"""
+    return ctx.news_service.build_payload()
+
+
 def build_reports_payload(
     _ctx: DashboardContext, *, limit: int = 50, type_filter: str | None = None
 ) -> dict[str, Any]:

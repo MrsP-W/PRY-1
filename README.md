@@ -1,10 +1,12 @@
 # 我的AI员工 — 全天候个人 AI 数字员工
 
-> **一句话**：把 Agent Assistant 的 10 角色从"晨晚链路"升级为"全天候数字员工"，能力 = 邮件 + 日程 + 财务 + 笔记 + 主动提醒。
+> **一句话**：把 Agent Assistant 的 10 角色从"晨晚链路"升级为"全天候数字员工"，能力 = 邮件 + 日程 + 每日 AI 情报 + 笔记 + 主动提醒。
 >
 > **核心差异化**：数据不出本机（隐私优先）+ 与 Agent Assistant 无缝衔接（Skill 复用）+ minimax M3 LLM（统一链路）。
 >
-> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。**3048 passed / 1 skipped / 90.25%** / MD lint 292 / mypy 263 files · **NotesCipher 新写入升级为 `enc:v3:` AES-GCM，已认证 `enc:v2:` 保持只读兼容** · Day 4-7 收口(月报 + Dashboard 只读 + 微信真导 1 行 + Notes 真同步 5 条)+ **Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(`/api/approval-gate/decide` 端点 + 1-click UI + `AuditRecord.decision` + `api/mobile_companion.py` 契约 + `core/notes_encryption.py` 字段级加密)+ **Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(`handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + `tests/dashboard/test_companion_readonly.py` 30 tests)+ **Day 10 Phase 2 `count_by_needs_confirm` SQL COUNT(*) 优化 ✅**(`NoteStore.count_by_needs_confirm` + `NoteConfirmServiceImpl` 改调 count · `tests/db/test_notes_l2_cross_source.py` +2)+ **Day 10 Phase 1.2 fallback 集成测试 + Dashboard/菜单栏解密展示 ✅**(`tests/db/test_notes_encryption_store.py` +3 · `tests/dashboard/test_api.py` +1 · `tests/menu_bar/test_note_confirm_service.py` +2)+ **Day 10 Phase 1.1 Keychain notes master key 接线 ✅**(`core/keychain.py` + `load_notes_master_key()` + `NoteStore` 默认 Keychain 接线 + `tests/core/test_keychain_notes.py` 28 tests)+ **Day 13 v1.0 launch runbook dry-run 闭环锁口 ✅**(`docs/v1.0-launch-runbook.md` · 12 KB · 11 段 dry-run 闭环版 · `a0c4e89` 撞坑 #50 衍生 +2 行 test fix 已 push · 沿撞坑 #71 docs-only 边界 · **v1.0 release tag 默认不打**)+ **Day 13 完全体 Day 2 真收口 ✅**(`cf369c7 feat(day2)` · 菜单栏 Impl + audit SQL + launchd 3-job upgrade · `DASHBOARD_REAL_DB=1` opt-in 注入真实服务 + 19 files / 655 +/153 - 业务代码改动日 撞坑 #71 docs-only 边界业务代码改动日破例 · `start-digital-employee.sh` menubar 同步设 env · launchd 月报动态月+IMAP 每日同步+数字员工 RunAtLoad)+ **撞坑 #94 B 路径代码修复候选 ✅**(`make_sqlalchemy_engine(db_path=...)` 长生命周期连接重开 · 待真实 `launchctl load -w` 验证)+ **Day 14 P0-3 caffeinate 1h 观察撞坑 #95 完全修复 ✅**(`commit 74d1d65` 拆 menu-bar + Dashboard 为 2 独立 LaunchAgent · `ProcessType=Standard` + `KeepAlive=true` · caffeinate -i -t 3600 · menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · 清理退役 digital-employee plist)+ **撞坑 #97 NEW**(`SQLCipher` 跨线程 close 报错 · dashboard 30→60min +38 traceback · close-time 仅不 fatal · 推荐修 A: `check_same_thread=False` + `StaticPool`)。月报收支口径已修复 · 账单导入默认拒写 · **Day 13 P2 launchd 真 install ✅(`v0.2.67` · `bash scripts/launchd_install.sh install` 3 wrapper + 3 plist + launchctl load × 3 · 撞坑 #81 实测命中数字员工 TCC Python.framework 3.12 鉴权拦截 → `launchctl bootout` 立即恢复 · agent + imap-sync 2/3 job 仍注册 + 数字员工 1/3 bootout ⏸️ TCC 授权后手动 `launchctl load -w`)**· **P3-C 失败审计 dry-run ✅(`v0.2.69` · spike × 2 全绿 · 撞坑 #88 沉淀 · 0 SMTP/0 Notes 真同步)**· **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置 · `ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · Day 1.3 真同步 + 2.3 outbox 入库已完成(2 条 pending_send,未 SMTP 外发)/1-click SMTP 真发待用户授权(每次临时授权)**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
+> **当前状态（2026-07-19，优先于下方历史详述）**：Dashboard 已具备 AI 每日情报台与 Codex 本地对话笔记；后者只接收显式 JSONL，默认校验、`--apply` 才写入，覆盖原子幂等、归档/加密/来源隔离保护。**3091 passed / 1 skipped / 90.27%** / MD lint 292 / mypy 277 files；P0-4 24h 稳定观察仍是下一棒。
+>
+> **状态**:🟢 **`v0.2.1` 正式 tag 已落地(2026-07-01 · `71b4602` annotated · 撞坑 #60 反转)** + Phase A+B+C 三棒收口 · `v0.2.1-rc1`(`b0e7f94`)历史快照沿用 · 7/1 月度复盘已收官 · Day 3 C 路径 QQ SMTP 1 封真发已验证 · **tag 列表:`v0.1.0`(锚定不动)+ `v0.2.1-rc1`(历史快照)+ `v0.2.1`(正式落地)**。**3074 passed / 1 skipped / 90.39%** / MD lint 292 / mypy 273 files · **NotesCipher 新写入升级为 `enc:v3:` AES-GCM，已认证 `enc:v2:` 保持只读兼容** · Day 4-7 收口(月报 + Dashboard 只读 + 微信真导 1 行 + Notes 真同步 5 条)+ **Day 8 撞坑 #71 解除 ✅ 业务代码改动日 · 4 候选 ABCD 全落地**(`/api/approval-gate/decide` 端点 + 1-click UI + `AuditRecord.decision` + `api/mobile_companion.py` 契约 + `core/notes_encryption.py` 字段级加密)+ **Day 9 移动伴侣只读真实接入 ✅ 6 只读端点上线**(`handlers.py` `_COMPANION_READ_ONLY_ALIASES` 白名单前缀映射 + `tests/dashboard/test_companion_readonly.py` 30 tests)+ **Day 10 Phase 2 `count_by_needs_confirm` SQL COUNT(*) 优化 ✅**(`NoteStore.count_by_needs_confirm` + `NoteConfirmServiceImpl` 改调 count · `tests/db/test_notes_l2_cross_source.py` +2)+ **Day 10 Phase 1.2 fallback 集成测试 + Dashboard/菜单栏解密展示 ✅**(`tests/db/test_notes_encryption_store.py` +3 · `tests/dashboard/test_api.py` +1 · `tests/menu_bar/test_note_confirm_service.py` +2)+ **Day 10 Phase 1.1 Keychain notes master key 接线 ✅**(`core/keychain.py` + `load_notes_master_key()` + `NoteStore` 默认 Keychain 接线 + `tests/core/test_keychain_notes.py` 28 tests)+ **Day 13 v1.0 launch runbook dry-run 闭环锁口 ✅**(`docs/v1.0-launch-runbook.md` · 12 KB · 11 段 dry-run 闭环版 · `a0c4e89` 撞坑 #50 衍生 +2 行 test fix 已 push · 沿撞坑 #71 docs-only 边界 · **v1.0 release tag 默认不打**)+ **Day 13 完全体 Day 2 真收口 ✅**(`cf369c7 feat(day2)` · 菜单栏 Impl + audit SQL + launchd 3-job upgrade · `DASHBOARD_REAL_DB=1` opt-in 注入真实服务 + 19 files / 655 +/153 - 业务代码改动日 撞坑 #71 docs-only 边界业务代码改动日破例 · `start-digital-employee.sh` menubar 同步设 env · launchd 月报动态月+IMAP 每日同步+数字员工 RunAtLoad)+ **撞坑 #94 B 路径代码修复候选 ✅**(`make_sqlalchemy_engine(db_path=...)` 长生命周期连接重开 · 待真实 `launchctl load -w` 验证)+ **Day 14 P0-3 caffeinate 1h 观察撞坑 #95 完全修复 ✅**(`commit 74d1d65` 拆 menu-bar + Dashboard 为 2 独立 LaunchAgent · `ProcessType=Standard` + `KeepAlive=true` · caffeinate -i -t 3600 · menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · 清理退役 digital-employee plist)+ **撞坑 #97 NEW**(`SQLCipher` 跨线程 close 报错 · dashboard 30→60min +38 traceback · close-time 仅不 fatal · 推荐修 A: `check_same_thread=False` + `StaticPool`)。月报收支口径已修复 · 账单导入默认拒写 · **Day 13 P2 launchd 真 install ✅(`v0.2.67` · `bash scripts/launchd_install.sh install` 3 wrapper + 3 plist + launchctl load × 3 · 撞坑 #81 实测命中数字员工 TCC Python.framework 3.12 鉴权拦截 → `launchctl bootout` 立即恢复 · agent + imap-sync 2/3 job 仍注册 + 数字员工 1/3 bootout ⏸️ TCC 授权后手动 `launchctl load -w`)**· **P3-C 失败审计 dry-run ✅(`v0.2.69` · spike × 2 全绿 · 撞坑 #88 沉淀 · 0 SMTP/0 Notes 真同步)**· **不启用 `ENABLE_PATH_4_WRITE=1` · Outlook/Gmail 真实凭据仍不配置 · `ENABLE_NOTES_ENCRYPTION=1` 不写 shell profile · Notes 真加密生产仍不开 · Day 1.3 真同步 + 2.3 outbox 入库已完成(2 条 pending_send,未 SMTP 外发)/1-click SMTP 真发待用户授权(每次临时授权)**。Phase A Path 4 12/12 · Phase B 沙箱 B1-B3 全绿 · Phase C readiness 复盘见 `docs/v0.2.62-v0.2.1-tag-readiness-recap-2026-07-01.md`。
 >
 > **2026-07-11 状态纠正（优先于上段的“#97 NEW”表述）**：#97 已以 `NullPool` 修复并补真实 HTTP 并发回归，#98 legacy retirement 已收口。只读核验发现 menu-bar 于 07:23 重启，P0-4 24h 零重启观察需重新计时。本自动化不 push、不打 tag、不触发真实外部写入。
 
@@ -70,7 +72,7 @@
 │       ├── ai/               # L3 智能层（分类/草稿/财务/笔记）
 │       ├── agents/           # L4 Agent 层（@管家/@审计员 + Agent Assistant 5 复制）
 │       └── menu_bar/         # Mac 菜单栏 UI
-├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 3048 passed / 1 skipped / 90.25% · fail_under=80 硬门槛)
+├── tests/                    # pytest 单元测试(以 `make test` 输出为准 · 当前 3091 passed / 1 skipped / 90.27% · fail_under=80 硬门槛)
 ├── docs/                     # 设计文档
 │   ├── architecture.md       # 5 层架构
 │   ├── week1-mvp.md          # Week 1 计划
@@ -113,7 +115,7 @@ make hello   # 输出 "Hello, 我的AI员工" + 当前时间
 ### 3. 跑测试
 
 ```bash
-make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 3048 passed / 1 skipped / 90.25% · fail_under=80 硬门槛)
+make test    # pytest 单元测试(以 `make test` 输出为准 · 当前 3091 passed / 1 skipped / 90.27% · fail_under=80 硬门槛)
 ```
 
 ### 4. 文档 lint
@@ -140,6 +142,17 @@ make help
 
 > **说明**：用 `python -m my_ai_employee.main` 而不是 `python src/my_ai_employee/main.py`，
 > 避免 Python 把 main.py 当成顶层脚本而非包的一部分（D1.1 包名重构）。
+
+### 7. Codex 当日对话笔记
+
+每次对话先由调用方生成摘要，再以本地 UTF-8 JSONL 导入；默认只校验，显式 `--apply`
+才写入 Notes。相同 `thread_id` 会更新原摘要，`show` 会按本机自然日逐条输出 Markdown。
+
+```bash
+uv run python scripts/codex_daily_notes.py import --input /path/to/codex-summaries.jsonl
+uv run python scripts/codex_daily_notes.py import --input /path/to/codex-summaries.jsonl --apply
+uv run python scripts/codex_daily_notes.py show --date 2026-07-19
+```
 
 输出示例：
 
@@ -178,6 +191,7 @@ make help
 | **D9.5 ⌥⌘N 全局快捷键**（pynput 子进程 + TCC 引导 + open_privacy_settings）| ✅ 落地 | 2026-06-15 |
 | **S7 剪贴板 → Notes 端到端**（NoteStore.insert + structure_and_emit + 30 笔 InMemory + 私有笔记业务阻断）| ✅ 落地 | 2026-06-15 |
 | **D9.6 5 修复**（ClipboardCaptureService 3 入口 / AppleScript ASCII 30 协议 / sync_notes OperationalError 透传 → exit 3 / T11 队列真调 / coverage fail_under=80）| ✅ 落地 | 2026-06-15 |
+| **Codex 当日对话笔记**（本地 JSONL 显式导入 + 同 thread 幂等更新 + 当日 Markdown 输出）| ✅ 本地链路落地 | 2026-07-19 |
 | **D10.1** 7 Agent 角色契约测试(steward + auditor + agent_layer 53 tests)| ✅ 落地 | 2026-06-15 |
 | **D10.2** monthly_report.py CLI + finance_monthly.md 模板(subparsers + 4 退出码 + 14 tests)| ✅ 落地 | 2026-06-15 |
 | **D10.3** launchd_install.sh + plist + uninstall(5 源判定 + ~/bin/ 部署 + 21 tests)| ✅ 落地 | 2026-06-15 |

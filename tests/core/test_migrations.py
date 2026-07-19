@@ -133,7 +133,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0016_approval_gate_audits。
+    """alembic_version 表记录当前 head revision = 0017_codex_conversation_notes。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -149,6 +149,7 @@ def test_alembic_version_records_current_revision(
       - v0.2.1+ 加 0014_note_l2_cross_source(head 推到 0014)
       - v0.2.53.16 加 0015_anomaly_dismissal(head 推到 0015)
       - v0.2.53.51 加 0016_approval_gate_audits(head 推到 0016)
+      - Codex 对话笔记加 0017_codex_conversation_notes(head 推到 0017)
     """
     from alembic import command
 
@@ -160,7 +161,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0016_approval_gate_audits"
+        assert version[0] == "0017_codex_conversation_notes"
     finally:
         db.close()
 
@@ -398,7 +399,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录当前 head
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0016_approval_gate_audits"
+            assert version[0] == "0017_codex_conversation_notes"
     finally:
         db.close()
 
@@ -432,7 +433,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0016_approval_gate_audits"
+            assert version[0] == "0017_codex_conversation_notes"
     finally:
         db.close()
 
