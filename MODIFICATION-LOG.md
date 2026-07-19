@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3091 passed / 1 skipped** / **90.27%** / mypy --strict 0 / **277 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 L3 只读兼容) |
+| **质量基线** | **3091 passed / 1 skipped** / **90.34%** / mypy --strict 0 / **277 files** / MD lint **292 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 L3 只读兼容) |
 | **下一棒** | PR #1 merge → P0-4 续采满 24h(`ops/p0-4-observations/`)→ P0-5 v1.0 评估(默认不打)· SMTP 仍待新草稿+逐封授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -150,6 +150,13 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-19 [菜单栏紧凑控制台化与重复项修复] — 收口
+
+- 菜单栏收敛为待处理、快速捕获、同步、AI 工作台和系统与设置；财务详情与 AI 情报留在 Dashboard。
+- 修复动态 badge 标题导致的 `rumps` 回调重复注册，并以 `quit_button="退出"` 保证只保留一个退出项。
+- 定向菜单栏回归 **44 passed**；全量 `make test` **3091 passed / 1 skipped / 90.34%**，lint、mypy、Alembic SQL 与 build 均通过。
+- 未重启或重载 LaunchAgent，P0-4 24h 观察继续；下次菜单栏启动后生效。
 
 ### 2026-07-19 [Codex 本地当日对话笔记] — 收口
 

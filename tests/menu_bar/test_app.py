@@ -14,6 +14,7 @@ from __future__ import annotations
 import subprocess
 import sys
 import threading
+from collections.abc import Generator
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock
@@ -26,9 +27,10 @@ import pytest
 class _FakeRumpsApp:
     """rumps.App 替身 — 跳过 NSApp 拉起,只记录 super().__init__ 入参."""
 
-    def __init__(self, name: str, *, title: str = "") -> None:
+    def __init__(self, name: str, *, title: str = "", quit_button: str | None = "Quit") -> None:
         self._name = name
         self.title = title
+        self.quit_button = quit_button
         self.menu: list[Any] = []
 
     # 注解 @rumps.events.clicked 走过的回调入口 — 我们的 _on_* 不需要
@@ -52,25 +54,36 @@ def _assert_menu_badge_updated(menu: Any, prefix: str, expected_count: str) -> b
     Returns:
         bool: True = 找到且更新, False = 未找到或未更新
     """
-    expected_title = f"{prefix} ({expected_count})"
-    # 形态 1: list[str](test fake_rumps 环境)— 直接比对 str
+    return f"{prefix} ({expected_count})" in _flatten_menu_titles(menu)
+
+
+def _flatten_menu_titles(menu: Any) -> list[str]:
+    """提取测试替身或真实 rumps 嵌套菜单的可见标题."""
     if isinstance(menu, list):
-        return any(isinstance(item, str) and item == expected_title for item in menu)
-    # 形态 2: rumps.Menu(真实 NSApp)— iter 出来是 str keys,必须查 MenuItem.title
+        titles: list[str] = []
+        for item in menu:
+            if isinstance(item, str):
+                titles.append(item)
+            elif isinstance(item, tuple) and len(item) == 2:
+                parent, children = item
+                if isinstance(parent, str):
+                    titles.append(parent)
+                titles.extend(_flatten_menu_titles(children))
+        return titles
     try:
-        return any(
-            isinstance(title, str)
-            and title.startswith(prefix)
-            and hasattr(menu_item, "title")
-            and menu_item.title == expected_title
-            for title, menu_item in menu.items()
-        )
+        titles = []
+        for _key, menu_item in menu.items():
+            title = getattr(menu_item, "title", None)
+            if isinstance(title, str):
+                titles.append(title)
+            titles.extend(_flatten_menu_titles(menu_item))
+        return titles
     except (TypeError, AttributeError):
-        return False
+        return []
 
 
 @pytest.fixture
-def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
+def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     """monkeypatch rumps.App 为 _FakeRumpsApp(隔离 NSApp 拉起)."""
     monkeypatch.setattr("rumps.App", _FakeRumpsApp)
     # rumps 0.4.0:clicked 装饰器在主模块(非 rumps.events 子模块)
@@ -80,8 +93,14 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         _rumps,
         "clicked",
-        lambda _name: lambda func: func,
+        lambda *_names: lambda func: func,
     )
+    # 若 app 已被其他测试导入，显式替换已绑定的基类，避免拉起真实 NSApp。
+    from my_ai_employee.menu_bar import app as app_module
+
+    original_bases = app_module.NotesMenuBarApp.__bases__
+    app_module.NotesMenuBarApp.__bases__ = (_FakeRumpsApp,)
+    monkeypatch.setattr(app_module, "_RumpsAppBase", _FakeRumpsApp)
     # app.py 顶部 import 时已锁定 _notification_func = _rumps.notification
     # 直接 mock app 模块的 _notification_func(rumps.notification 改不到模块级变量)
     monkeypatch.setattr(
@@ -94,6 +113,8 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
         "my_ai_employee.menu_bar.app._build_default_capture_service",
         lambda: MagicMock(),
     )
+    yield
+    app_module.NotesMenuBarApp.__bases__ = original_bases
 
 
 @pytest.fixture
@@ -242,23 +263,29 @@ def test_app_title_format_initial(fake_rumps: None) -> None:
     assert app.title == "◈"
 
 
-# ===== T5. 4 菜单项注册 =====
+# ===== T5. 紧凑菜单注册 =====
 
 
 def test_app_menu_items_registered(fake_rumps: None) -> None:
-    """D9.3:T5 / v0.2.53 P1 菜单项注册."""
+    """紧凑控制台菜单仅保留高频动作，财务与重复 Quit 不再出现在根菜单。"""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
-    menu = app.menu
-    menu_strs = [str(m) for m in menu]
-    assert any("📋 今日待处理" in s for s in menu_strs), f"menu 缺 '今日待处理', 实际 {menu}"
-    assert any("打开工作台" in s for s in menu_strs), f"menu 缺 '打开工作台', 实际 {menu}"
-    assert any("系统健康" in s for s in menu_strs), f"menu 缺 '系统健康', 实际 {menu}"
-    assert any("立即同步" in s for s in menu_strs), f"menu 缺 '立即同步', 实际 {menu}"
-    assert any("打开 Notes" in s for s in menu_strs), f"menu 缺 '打开 Notes', 实际 {menu}"
-    assert any("授权引导" in s for s in menu_strs), f"menu 缺 '授权引导', 实际 {menu}"
-    assert any("退出" in s for s in menu_strs), f"menu 缺 '退出', 实际 {menu}"
+    menu_titles = _flatten_menu_titles(app.menu)
+    for expected in (
+        "◈ 待处理 (0)",
+        "⌁ 快速捕获  ⌥⌘N",
+        "↻ 同步 Notes",
+        "▣ AI 工作台",
+        "◎ 系统与设置",
+        "系统健康",
+        "打开 Notes",
+        "授权与设置",
+    ):
+        assert expected in menu_titles, f"menu 缺 {expected!r}, 实际 {menu_titles}"
+    assert not any("财务" in title for title in menu_titles)
+    assert "Quit" not in menu_titles
+    assert app.quit_button == "退出"
 
 
 # ===== T6. 同步成功路径 =====
@@ -560,15 +587,13 @@ def test_app_invalid_note_confirm_service_raises(fake_rumps: None) -> None:
 
 
 def test_app_pending_confirm_menu_items_registered(fake_rumps: None) -> None:
-    """v0.2.2 #2 / v0.2.53 P1:T16 menu 含 Notes待确认 + 确认第 1 条."""
+    """待处理子菜单仍保留 Notes 查看与单条确认操作。"""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     app = NotesMenuBarApp()
-    menu_strs = [str(m) for m in app.menu]
-    assert any("Notes待确认" in s for s in menu_strs), f"menu 缺 Notes待确认, 实际 {menu_strs}"
-    assert any("📥 确认第 1 条" in s for s in menu_strs), (
-        f"menu 缺 '📥 确认第 1 条', 实际 {menu_strs}"
-    )
+    menu_titles = _flatten_menu_titles(app.menu)
+    assert "Notes 待确认 (0)" in menu_titles, f"menu 缺 Notes 待确认, 实际 {menu_titles}"
+    assert "确认下一条" in menu_titles, f"menu 缺 '确认下一条', 实际 {menu_titles}"
 
 
 # ===== T17. _refresh_pending_confirm_count 刷新 badge =====
@@ -596,11 +621,8 @@ def test_refresh_pending_confirm_count_updates_badge(fake_rumps: None) -> None:
     # 触发刷新
     app._refresh_pending_confirm_count()
 
-    # 验证 menu 中"📥 待确认" 项更新到 (3)
-    # 修复(v0.2.2 #2): rumps.Menu(真实 NSApp)iter 出来是 str keys,改 MenuItem.title 不会改 keys;
-    # 必须同时检查 list[str] 形态(替换 str)和 MenuItem 形态(改 .title)
-    found = _assert_menu_badge_updated(app.menu, "  📝 Notes待确认", "3")
-    assert found, "未找到 'Notes待确认' 菜单项"
+    found = _assert_menu_badge_updated(app.menu, "Notes 待确认", "3")
+    assert found, "未找到 'Notes 待确认' 菜单项"
 
 
 # ===== T18. _on_show_pending_confirm 空列表 → "暂无待确认" notification =====
@@ -743,8 +765,8 @@ def test_on_confirm_first_success_flow(fake_rumps: None) -> None:
     # 验 menu badge 已被刷新到 (1)
     # 修复(v0.2.2 #2): rumps.Menu 形态下, iter 出来是 OrderedDict 的 str keys
     # (改 MenuItem.title 不会改 keys); 必须用 _assert_menu_badge_updated 同时支持 2 种形态
-    found_badge = _assert_menu_badge_updated(app.menu, "  📝 Notes待确认", "1")
-    assert found_badge, "未找到 'Notes待确认' 菜单项"
+    found_badge = _assert_menu_badge_updated(app.menu, "Notes 待确认", "1")
+    assert found_badge, "未找到 'Notes 待确认' 菜单项"
 
 
 # ===== T21. _on_confirm_first 空列表 → "暂无待确认" notification =====
@@ -788,7 +810,7 @@ def test_app_uses_default_outbox_draft_stub(fake_rumps: None) -> None:
 
 
 def test_app_title_reflects_pending_total(fake_rumps: None) -> None:
-    """v0.2.53 P1:T23 title 数字 = 邮件草稿 + Notes + 财务异常."""
+    """菜单栏 title 数字 = 邮件草稿 + Notes 待确认；财务不再占用菜单栏。"""
     from my_ai_employee.menu_bar import NotesMenuBarApp
 
     class _DraftSvc:
@@ -835,7 +857,7 @@ def test_app_title_reflects_pending_total(fake_rumps: None) -> None:
         note_confirm_service=_ConfirmSvc(),
         outbox_draft_service=_DraftSvc(),
     )
-    assert app.title == "◈ 6"
+    assert app.title == "◈ 5"
 
 
 def test_on_open_dashboard_subprocess(

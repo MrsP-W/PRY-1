@@ -1,10 +1,9 @@
 """D9.3+D9.5 — NotesMenuBarApp(rumps 菜单栏 UI + ⌥⌘N 全局快捷键).
 
 承接 docs/v0.1-launch-plan.md §D9.3 + §D9.5 + v0.2.53 P1 Codex 信息架构:
-    - 菜单栏 title: ◈ / ◈ N,N = 今日待处理合计(邮件草稿 + Notes待确认 + 财务异常)
-    - P1 菜单结构(沿 docs/v0.2.53-codex-style-ui-design-2026-06-25.md §8.2):
-        今日待处理 / 邮件草稿 / Notes待确认 / 财务异常 / 快捷捕获 / 打开工作台 / 系统健康
-    - 保留 D9.3 能力项: 立即同步 / 打开 Notes / 授权引导 / 退出 / 📥 确认第 1 条
+    - 菜单栏 title: ◈ / ◈ N,N = 今日待处理合计(邮件草稿 + Notes待确认)
+    - 紧凑菜单:待处理子菜单 / 快速捕获 / 同步 / AI 工作台 / 系统与设置
+    - 财务详情与 AI 情报统一放入工作台,菜单栏只保留高频动作
     - ExpenseService 状态展示(title 数字 + 子菜单"最近笔记" + 剪贴板/TCC 状态)
     - ⌥⌘N 全局快捷键(D9.5 双进程范本):
         * 子进程 HotkeyListenerProcess 跑 pynput.keyboard.GlobalHotKeys
@@ -84,11 +83,19 @@ _PRIVACY_URL: str = "x-apple.systempreferences:com.apple.preference.security?Pri
 # 菜单栏紧凑标记:无待办只显示单色图标,有待办时追加数字
 _TITLE_ICON: str = "◈"
 
-# P1 菜单 badge 前缀(沿 _update_menu_badge 范本,decorator 绑前缀不含计数)
-_MENU_TODAY_PENDING: str = "📋 今日待处理"
-_MENU_MAIL_DRAFT: str = "  ✉️ 邮件草稿"
-_MENU_NOTES_CONFIRM: str = "  📝 Notes待确认"
-_MENU_FINANCE_ANOMALY: str = "  💰 财务异常"
+# 菜单 key 必须与 @rumps.clicked 路径完全一致。计数仅改 MenuItem.title，不能改 key；
+# 否则 rumps 会在 run() 时追加同名回调项，造成重复菜单。
+_MENU_TODAY_PENDING: str = "◈ 待处理"
+_MENU_MAIL_DRAFT: str = "邮件草稿"
+_MENU_NOTES_CONFIRM: str = "Notes 待确认"
+_MENU_CONFIRM_FIRST: str = "确认下一条"
+_MENU_QUICK_CAPTURE: str = "⌁ 快速捕获  ⌥⌘N"
+_MENU_SYNC: str = "↻ 同步 Notes"
+_MENU_DASHBOARD: str = "▣ AI 工作台"
+_MENU_SYSTEM: str = "◎ 系统与设置"
+_MENU_SYSTEM_HEALTH: str = "系统健康"
+_MENU_OPEN_NOTES: str = "打开 Notes"
+_MENU_ACCESS: str = "授权与设置"
 
 # P0 静态工作台 HTML(只 open 本地文件,不接真实 DB)
 _DASHBOARD_HTML: Path = (
@@ -171,7 +178,7 @@ def _validate_note_confirm_service(obj: object) -> None:
 
 
 def _update_menu_badge(menu: Any, prefix: str, new_title: str) -> None:
-    """更新菜单栏 badge — 支持 list[Any] 和 rumps.Menu 2 种形态(沿 v0.2.2 #2 范本).
+    """更新菜单栏 badge — 支持嵌套 list[Any] 和 rumps.Menu 2 种形态.
 
     设计决策(2026-06-17 锁定):
         - rumps.Menu 内部是 OrderedDict[str, MenuItem],iter 出来是 str(title),
@@ -185,24 +192,47 @@ def _update_menu_badge(menu: Any, prefix: str, new_title: str) -> None:
         prefix: 旧 title 前缀(用于匹配)
         new_title: 新 title(完整字符串,非前缀)
     """
-    # 形态 1: 普通 list[str](test fake_rumps 环境)
-    if isinstance(menu, list):
-        for idx, item in enumerate(menu):
+
+    def _update_list(items: list[Any]) -> bool:
+        """更新测试替身中的字符串或二元子菜单."""
+        for index, item in enumerate(items):
             if isinstance(item, str) and item.startswith(prefix):
-                menu[idx] = new_title
-        return
-    # 形态 2: rumps.Menu(真实 NSApp 环境)— 内部 OrderedDict
-    # menu.items() 返回 (str_title, MenuItem) tuple 对(沿 OrderedDict API)
-    try:
-        items_method = getattr(menu, "items", None)
-        if not callable(items_method):
-            return
-        for title, menu_item in items_method():
-            if isinstance(title, str) and title.startswith(prefix) and hasattr(menu_item, "title"):
-                menu_item.title = new_title
-    except (TypeError, AttributeError):
-        # 防御性 fallback: 啥都不做(避免崩菜单栏)
-        pass
+                items[index] = new_title
+                return True
+            if isinstance(item, tuple) and len(item) == 2:
+                parent, children = item
+                if isinstance(parent, str) and parent.startswith(prefix):
+                    items[index] = (new_title, children)
+                    return True
+                if isinstance(children, list) and _update_list(children):
+                    return True
+        return False
+
+    def _update_rumps(items: Any) -> bool:
+        """递归更新真实 rumps.Menu 的可见标题，保留其稳定 lookup key."""
+        try:
+            items_method = getattr(items, "items", None)
+            if not callable(items_method):
+                return False
+            for title, menu_item in items_method():
+                if (
+                    isinstance(title, str)
+                    and title.startswith(prefix)
+                    and hasattr(menu_item, "title")
+                ):
+                    menu_item.title = new_title
+                    return True
+                if _update_rumps(menu_item):
+                    return True
+        except (TypeError, AttributeError):
+            # 防御性 fallback:不让菜单栏因单个 badge 失败而退出。
+            return False
+        return False
+
+    if isinstance(menu, list):
+        _update_list(menu)
+    else:
+        _update_rumps(menu)
 
 
 def _build_default_capture_service() -> ClipboardCaptureService:
@@ -245,10 +275,9 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
                          D10 替换为 ExpenseServiceImpl(真实 DB 接入)
 
     Menu items:
-        1. "立即同步" — subprocess 调 sync_notes.py sync,4 退出码契约
-        2. "打开 Notes" — `open -a Notes` 打开 Apple Notes.app
-        3. "授权引导" — 打开 系统设置→自动化,引导用户授权
-        4. "退出" — 退出 menu bar
+        1. 待处理子菜单 — 邮件草稿 / Notes 待确认 / 确认下一条
+        2. 快速捕获 / 同步 Notes / AI 工作台 — 日常高频动作
+        3. 系统与设置子菜单 — 健康 / Apple Notes / 授权
     """
 
     def __init__(
@@ -324,30 +353,34 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         self._capture_service_built: bool = capture_service is not None
 
         # 调 rumps.App.__init__ 启动 NSApp 主循环
-        super().__init__("MyAIEmployee", title=self._format_title(self._pending_total))
+        # 交给 rumps 在 run() 时追加唯一、中文化的原生退出项；不能再手工放一个
+        # 无回调的“退出”，否则会同时出现“退出”和默认英文 Quit。
+        super().__init__(
+            "MyAIEmployee",
+            title=self._format_title(self._pending_total),
+            quit_button="退出",
+        )
 
         # v0.2.2 启动候选 #6 — badge 实时刷新轮询(沿 D5 业务调度 polling 范本)
-        # 独立 thread 定时调 _refresh_pending_confirm_count + _refresh_anomaly_count
+        # 独立 thread 定时刷新邮件与 Notes 待处理 badge。
         # 触发场景:外部 sync_notes / IMAP / AppleScript 等更新 needs_confirm=1 后
         # 用户无需点击菜单, badge 自动同步数字
         self._badge_poll_interval_seconds: float = float(badge_poll_interval_seconds)
         self._badge_poll_thread: _threading.Thread | None = None
 
-        # v0.2.53 P1 Codex 信息架构菜单(保留 D9.3/D8.3/v0.2.2 能力项)
+        # 原生 NSMenu 不支持安全的 CSS 霓虹/玻璃效果，因此以单色符号、短标签和
+        # 子菜单形成“控制台”层级。所有动态项先以稳定 key 注册，刷新时仅改可见 title。
         self.menu: list[Any] = [
-            f"{_MENU_TODAY_PENDING} (0)",
-            f"{_MENU_MAIL_DRAFT} (0)",
-            f"{_MENU_NOTES_CONFIRM} (0)",
-            f"{_MENU_FINANCE_ANOMALY} (0)",
-            "快捷捕获 ⌥⌘N",
-            "📥 确认第 1 条",
-            "立即同步",
-            "打开 Notes",
-            "打开工作台",
-            "系统健康",
+            (
+                _MENU_TODAY_PENDING,
+                [_MENU_MAIL_DRAFT, _MENU_NOTES_CONFIRM, _MENU_CONFIRM_FIRST],
+            ),
             None,
-            "授权引导",
-            "退出",
+            _MENU_QUICK_CAPTURE,
+            _MENU_SYNC,
+            _MENU_DASHBOARD,
+            None,
+            (_MENU_SYSTEM, [_MENU_SYSTEM_HEALTH, _MENU_OPEN_NOTES, _MENU_ACCESS]),
         ]
         self._refresh_all_badges()
 
@@ -373,7 +406,7 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         """格式化紧凑菜单栏 title(无待办隐藏数字,有待办保留提醒).
 
         Args:
-            count: 今日待处理合计(邮件草稿 + Notes待确认 + 财务异常)
+            count: 今日待处理合计(邮件草稿 + Notes 待确认)
 
         Returns:
             "◈" 或 "◈ N" 格式字符串
@@ -388,12 +421,10 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             return 0
 
     def _compute_today_pending_total(self) -> int:
-        """今日待处理合计(静默降级:单项失败不计入,不崩菜单栏)."""
-        return (
-            self._safe_pending_count(self._outbox_draft_service.get_pending_draft_count)
-            + self._safe_pending_count(self._note_confirm_service.get_pending_confirm_count)
-            + self._safe_pending_count(lambda: self._service.get_anomaly_count())
-        )
+        """今日待处理合计(邮件草稿 + Notes 待确认，静默降级)."""
+        return self._safe_pending_count(
+            self._outbox_draft_service.get_pending_draft_count
+        ) + self._safe_pending_count(self._note_confirm_service.get_pending_confirm_count)
 
     def _refresh_title(self) -> None:
         """刷新菜单栏 title(同步后调,沿 D5 范本)."""
@@ -402,15 +433,14 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         self.title = self._format_title(self._pending_total)
 
     def _refresh_all_badges(self) -> None:
-        """刷新 P1 全部 badge + title(沿 v0.2.2 #6 polling 范本)."""
+        """刷新紧凑菜单的待处理 badge + title(沿 v0.2.2 #6 polling 范本)."""
         self._refresh_mail_draft_count()
         self._refresh_pending_confirm_count()
-        self._refresh_anomaly_count()
         self._refresh_today_pending_summary()
         self._pending_total = self._compute_today_pending_total()
         self.title = self._format_title(self._pending_total)
 
-    @_clicked_decorator("立即同步")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_SYNC)  # type: ignore[untyped-decorator]
     def _on_sync_now(self, _sender: Any) -> None:
         """点击"立即同步" — subprocess 调 sync_notes.py sync(4 退出码契约).
 
@@ -432,7 +462,7 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
                 (result.stderr or "未知错误")[:200],
             )
 
-    @_clicked_decorator("打开 Notes")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_SYSTEM, _MENU_OPEN_NOTES)  # type: ignore[untyped-decorator]
     def _on_open_notes(self, _sender: Any) -> None:
         """点击"打开 Notes" — `open -a Notes` 启动 Apple Notes.app."""
         subprocess.run(  # noqa: S603
@@ -442,12 +472,12 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             timeout=10,
         )
 
-    @_clicked_decorator("快捷捕获 ⌥⌘N")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_QUICK_CAPTURE)  # type: ignore[untyped-decorator]
     def _on_quick_capture(self, _sender: Any) -> None:
         """点击"快捷捕获 ⌥⌘N" — 与全局快捷键同链路."""
         self._on_clipboard_capture()
 
-    @_clicked_decorator("打开工作台")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_DASHBOARD)  # type: ignore[untyped-decorator]
     def _on_open_dashboard(self, _sender: Any) -> None:
         """点击"打开工作台" — 用系统浏览器打开 P0 静态 HTML 原型."""
         if not _DASHBOARD_HTML.is_file():
@@ -464,7 +494,7 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             timeout=10,
         )
 
-    @_clicked_decorator("系统健康")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_SYSTEM, _MENU_SYSTEM_HEALTH)  # type: ignore[untyped-decorator]
     def _on_system_health(self, _sender: Any) -> None:
         """点击"系统健康" — 弹窗展示质量门基线(只读,不跑 CI)."""
         head = subprocess.run(  # noqa: S603
@@ -478,30 +508,8 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         body = format_system_health_body(git_head=head_str)
         _notification_func("系统健康", "9/9 质量门基线(只读快照)", body[:200])
 
-    @_clicked_decorator("📋 今日待处理")  # type: ignore[untyped-decorator]
-    def _on_today_pending_summary(self, _sender: Any) -> None:
-        """点击"今日待处理" — 弹窗展示三项 breakdown."""
-        try:
-            draft = self._outbox_draft_service.get_pending_draft_count()
-            notes = self._note_confirm_service.get_pending_confirm_count()
-            anomaly = self._service.get_anomaly_count()
-        except Exception as e:  # noqa: BLE001
-            _notification_func(
-                "📋 今日待处理",
-                "获取待办失败",
-                f"{type(e).__name__}: {str(e)[:100]}",
-            )
-            return
-        total = draft + notes + anomaly
-        body = f"邮件草稿: {draft}\nNotes待确认: {notes}\n财务异常: {anomaly}\n合计: {total}"
-        _notification_func(
-            f"📋 今日待处理 ({total})",
-            "等待你确认的高优先级项",
-            body[:200],
-        )
-
     def _refresh_today_pending_summary(self) -> None:
-        """刷新"今日待处理"父项 badge."""
+        """刷新“待处理”父项 badge."""
         total = self._compute_today_pending_total()
         _update_menu_badge(self.menu, _MENU_TODAY_PENDING, f"{_MENU_TODAY_PENDING} ({total})")
 
@@ -513,32 +521,32 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             return
         _update_menu_badge(self.menu, _MENU_MAIL_DRAFT, f"{_MENU_MAIL_DRAFT} ({count})")
 
-    @_clicked_decorator("  ✉️ 邮件草稿")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_TODAY_PENDING, _MENU_MAIL_DRAFT)  # type: ignore[untyped-decorator]
     def _on_mail_draft_pending(self, _sender: Any) -> None:
         """点击"邮件草稿" — 占位:Stub 阶段提示 outbox 审批入口."""
         try:
             count = self._outbox_draft_service.get_pending_draft_count()
         except Exception as e:  # noqa: BLE001
             _notification_func(
-                "  ✉️ 邮件草稿",
+                _MENU_MAIL_DRAFT,
                 "获取草稿数失败",
                 f"{type(e).__name__}: {str(e)[:100]}",
             )
             return
         if count == 0:
             _notification_func(
-                "  ✉️ 邮件草稿",
+                _MENU_MAIL_DRAFT,
                 "暂无待审批草稿",
                 "outbox 无 pending_send/approved 待处理项(Stub 阶段)",
             )
             return
         _notification_func(
-            f"  ✉️ 邮件草稿 ({count})",
+            f"{_MENU_MAIL_DRAFT} ({count})",
             "请打开工作台审批",
             "沿 outbox 1-click 审批状态机,不自动发送",
         )
 
-    @_clicked_decorator("授权引导")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_SYSTEM, _MENU_ACCESS)  # type: ignore[untyped-decorator]
     def _on_open_privacy(self, _sender: Any) -> None:
         """点击"授权引导" — 打开 系统设置→自动化 引导用户授权."""
         subprocess.run(  # noqa: S603
@@ -548,62 +556,9 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
             timeout=10,
         )
 
-    # ===== D8.3 财务异常菜单项(不弹通知,用户主动查询)=====
+    # ===== v0.2.2 候选 #2 1-click 确认 UI =====
 
-    @_clicked_decorator("  💰 财务异常")  # type: ignore[untyped-decorator]
-    def _on_anomaly_alert(self, _sender: Any) -> None:
-        """点击"⚠️ 异常告警" — 弹窗显示本月异常列表(D8.3 接入 RuleBasedAnomalyDetector).
-
-        设计决策(沿 D8 docs 评估决策 #5):
-            - 用户主动查询 vs 被动打扰(只接入"已确认"异常不弹每笔)
-            - Stub 阶段:返回空 list[Any],弹窗提示"暂无异常"
-            - D10 后:替换为真实 ExpenseServiceImpl,接 AnomalyDetector 真实链路
-        """
-        try:
-            anomalies = self._service.get_recent_anomalies(limit=10)
-        except Exception as e:  # noqa: BLE001 — Stub 异常不能让菜单崩
-            _notification_func(
-                "⚠️ 异常告警",
-                "获取异常列表失败",
-                f"{type(e).__name__}: {str(e)[:100]}",
-            )
-            return
-        if not anomalies:
-            _notification_func(
-                "⚠️ 异常告警",
-                "暂无异常",
-                "本月无金额 / 频率 / 重复扣款 / 商家画像漂移异常",
-            )
-            return
-        body = "\n".join(
-            f"• {a.get('date', '?')} | {a.get('counterparty', '?')} | "
-            f"¥{a.get('amount', '?')} | {a.get('kinds', '?')}"
-            for a in anomalies
-        )
-        _notification_func(
-            f"⚠️ 异常告警 ({len(anomalies)} 笔)",
-            "本月检测到以下异常:",
-            body[:200],
-        )
-
-    def _refresh_anomaly_count(self) -> None:
-        """刷新异常告警菜单项 badge (D8.3 stub 阶段 0, D10 后真实计数).
-
-        v0.2.2 启动候选 #6 修复: 原代码用 `getattr(item, "title", None)` 在 str 形态
-        下拿到 `str.title` 内置方法(非 None), 然后 `item.title = ...` 在 str 上
-        抛 AttributeError 静默吞掉. 改用 _update_menu_badge helper(沿 #2 范本),
-        同时支持 list[str] 和 rumps.Menu 2 种形态.
-        """
-        try:
-            count = self._service.get_anomaly_count()
-        except Exception:  # noqa: BLE001 — 静默降级,不影响主流程
-            return
-        new_title = f"{_MENU_FINANCE_ANOMALY} ({count})"
-        _update_menu_badge(self.menu, _MENU_FINANCE_ANOMALY, new_title)
-
-    # ===== v0.2.2 候选 #2 1-click 确认 UI(沿 D8.3 异常告警范本)=====
-
-    @_clicked_decorator("  📝 Notes待确认")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_TODAY_PENDING, _MENU_NOTES_CONFIRM)  # type: ignore[untyped-decorator]
     def _on_show_pending_confirm(self, _sender: Any) -> None:
         """点击"📥 待确认" — 弹窗显示 L2 跨源候选待确认列表(v0.2.2 候选 #2 接入).
 
@@ -658,7 +613,7 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         new_title = f"{_MENU_NOTES_CONFIRM} ({count})"
         _update_menu_badge(self.menu, _MENU_NOTES_CONFIRM, new_title)
 
-    @_clicked_decorator("📥 确认第 1 条")  # type: ignore[untyped-decorator]
+    @_clicked_decorator(_MENU_TODAY_PENDING, _MENU_CONFIRM_FIRST)  # type: ignore[untyped-decorator]
     def _on_confirm_first(self, _sender: Any) -> None:
         """点击"📥 确认第 1 条" — 1-click 确认 top 1 待确认 note(v0.2.2 候选 #2).
 
@@ -783,15 +738,8 @@ class NotesMenuBarApp(_RumpsAppBase):  # type: ignore[misc]
         """
         interval = self._badge_poll_interval_seconds
         # 首次启动立即刷 1 次(避免刚启动 30s 后才显示正确数字)
-        try:
-            self._refresh_pending_confirm_count()
-            self._refresh_anomaly_count()
-            self._refresh_mail_draft_count()
-            self._refresh_today_pending_summary()
-            self._pending_total = self._compute_today_pending_total()
-            self.title = self._format_title(self._pending_total)
-        except Exception:  # noqa: BLE001 — 静默, 不影响主循环
-            pass
+        with contextlib.suppress(Exception):
+            self._refresh_all_badges()
         # 优雅 polling: time.monotonic() 精确测 elapsed + Event.wait 支持秒级 stop 响应
         import time as _time
 

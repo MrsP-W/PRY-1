@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Generator
 from typing import Any
 from unittest.mock import MagicMock
 
@@ -31,9 +32,10 @@ import pytest
 class _FakeRumpsApp:
     """rumps.App 替身 — 跳过 NSApp 拉起,只记录 super().__init__ 入参."""
 
-    def __init__(self, name: str, *, title: str = "") -> None:
+    def __init__(self, name: str, *, title: str = "", quit_button: str | None = "Quit") -> None:
         self._name = name
         self.title = title
+        self.quit_button = quit_button
         self.menu: list[Any] = []
 
 
@@ -105,7 +107,7 @@ class _FakeAnomalyService:
 
 
 def _find_badge_title(menu: list[Any], prefix: str) -> str | None:
-    """从 menu list 找 badge 完整 title(支持 list[str] + MenuItem 形态).
+    """从嵌套 menu list 找 badge 完整 title(支持 list[str] + 子菜单形态).
 
     修复坑点: str 类型有内置方法 .title (title-cased), 直接 getattr(s, "title", s)
     会拿到 bound method 而非默认值. 必须先 isinstance(item, str) 短路, 否则
@@ -114,6 +116,15 @@ def _find_badge_title(menu: list[Any], prefix: str) -> str | None:
     for item in menu:
         if isinstance(item, str):
             title: str = item
+        elif isinstance(item, tuple) and len(item) == 2:
+            parent, children = item
+            if isinstance(parent, str) and parent.startswith(prefix):
+                return parent
+            if isinstance(children, list):
+                nested_title = _find_badge_title(children, prefix)
+                if nested_title is not None:
+                    return nested_title
+            continue
         elif hasattr(item, "title") and isinstance(getattr(item, "title", None), str):
             title = item.title
         else:
@@ -124,7 +135,7 @@ def _find_badge_title(menu: list[Any], prefix: str) -> str | None:
 
 
 @pytest.fixture(autouse=True)
-def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
+def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     """monkeypatch rumps.App 为 _FakeRumpsApp(隔离 NSApp 拉起).
 
     autouse=True: 每个 test 都强制 monkeypatch _RumpsAppBase, 防 test_app.py
@@ -140,6 +151,7 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("rumps.App", _FakeRumpsApp)
     # 2) 直接改 NotesMenuBarApp 的基类(关键! class 继承在 import 时已绑定)
     app_cls = app_module.NotesMenuBarApp
+    original_bases = app_cls.__bases__
     app_cls.__bases__ = (_FakeRumpsApp,)
     # 3) 同时更新模块级 _RumpsAppBase(防新代码读)
     monkeypatch.setattr(app_module, "_RumpsAppBase", _FakeRumpsApp)
@@ -159,6 +171,8 @@ def fake_rumps(monkeypatch: pytest.MonkeyPatch) -> None:
         "_start_hotkey_listener",
         _start_without_polling,
     )
+    yield
+    app_cls.__bases__ = original_bases
 
 
 # ===== 段 1 — __init__ 严判 =====
@@ -244,8 +258,8 @@ def test_poll_badge_count_initial_refresh() -> None:
     app._stop_hotkey_poll.set()
     t.join(timeout=2.0)
     assert svc.call_count >= 1, f"polling 应至少调 1 次,实际 {svc.call_count}"
-    badge_title = _find_badge_title(app.menu, "  📝 Notes待确认")
-    assert badge_title == "  📝 Notes待确认 (7)"
+    badge_title = _find_badge_title(app.menu, "Notes 待确认")
+    assert badge_title == "Notes 待确认 (7)"
 
 
 def test_poll_badge_count_polls_periodically(fake_rumps: None) -> None:
@@ -318,8 +332,8 @@ def test_poll_badge_count_updates_badge_on_change(fake_rumps: None) -> None:
     time.sleep(0.2)
     app._stop_hotkey_poll.set()
     t.join(timeout=2.0)
-    badge_after = _find_badge_title(app.menu, "  📝 Notes待确认")
-    assert badge_after == "  📝 Notes待确认 (9)", f"改 count 后 badge 应为 (9),实际 {badge_after}"
+    badge_after = _find_badge_title(app.menu, "Notes 待确认")
+    assert badge_after == "Notes 待确认 (9)", f"改 count 后 badge 应为 (9),实际 {badge_after}"
 
 
 def test_poll_badge_count_default_interval_is_30s(fake_rumps: None) -> None:
@@ -339,32 +353,25 @@ def test_poll_badge_count_default_interval_is_30s(fake_rumps: None) -> None:
 # ===== 段 3 — 端到端实时刷新(双 badge 同步)=====
 
 
-def test_poll_badge_count_refreshes_both_badges(fake_rumps: None) -> None:
-    """v0.2.2 #6 P3-1: 一次 polling 同时刷待确认 + 异常告警.
-
-    修复: fake_rumps fixture 禁用 __init__ 起 polling, 直接手动调 _refresh_*_count
-    同步验 badge 数字. (沿 v0.2.2 #2 _refresh_*_count 已存在, 验证它们能正确改 menu)
-    """
+def test_poll_badge_count_refreshes_compact_pending_summary(fake_rumps: None) -> None:
+    """一次 polling 刷新 Notes 明细和不含财务的待处理汇总。"""
     from my_ai_employee.menu_bar import NotesMenuBarApp
     from my_ai_employee.menu_bar.expense_service import ExpenseServiceStub
 
     confirm_svc = _FakeBadgeConfirmService(count_to_return=5)
-    # 用真实 ExpenseServiceStub(返回默认 0) + 替换 _service 为 _FakeAnomalyService
+    # 财务已从菜单层移除；保留任意 ExpenseService 仅满足构造接口。
     app = NotesMenuBarApp(
         expense_service=ExpenseServiceStub.get_default_stub(),
         note_confirm_service=confirm_svc,
         badge_poll_interval_seconds=0.1,
     )
-    # 替换 _service 为可控异常告警
+    # 即便底层存在异常，也不应再显示在菜单 badge 中。
     app._service = _FakeAnomalyService(count=3)  # type: ignore[assignment]
-    # 显式调一次 _refresh_*_count(fake_rumps 禁用 polling, 不会异步覆盖)
-    app._refresh_pending_confirm_count()
-    app._refresh_anomaly_count()
-    # 验 2 个 badge 都更新
-    pending_badge = _find_badge_title(app.menu, "  📝 Notes待确认")
-    anomaly_badge = _find_badge_title(app.menu, "  💰 财务异常")
-    assert pending_badge == "  📝 Notes待确认 (5)"
-    assert anomaly_badge == "  💰 财务异常 (3)"
+    app._refresh_all_badges()
+    notes_badge = _find_badge_title(app.menu, "Notes 待确认")
+    summary_badge = _find_badge_title(app.menu, "◈ 待处理")
+    assert notes_badge == "Notes 待确认 (5)"
+    assert summary_badge == "◈ 待处理 (5)"
 
 
 def test_poll_badge_count_thread_is_daemon(fake_rumps: None) -> None:
