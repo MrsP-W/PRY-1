@@ -2315,7 +2315,7 @@
       .flow-card h2::after {
         margin-left: 8px;
         color: rgb(73 124 146 / 52%);
-        content: "// PIPELINE";
+        content: "// 处理链路";
         font: 8px/1 var(--font-mono);
         letter-spacing: 0.08em;
       }
@@ -2821,7 +2821,7 @@
         padding: 0 1px 5px;
         border-bottom: 1px solid rgb(102 154 175 / 13%);
         color: #7a929d;
-        content: "ACTION / CONTROL";
+        content: "操作 / 控制";
         font: 7px/1 var(--font-mono);
         letter-spacing: 0.11em;
       }
@@ -3255,24 +3255,24 @@
           <div class="avatar" aria-hidden="true"><svg class="tech-icon"><use href="#ti-core"></use></svg></div>
           <div>
             <div class="brand-title">我的AI员工</div>
-            <div class="brand-subtitle">LOCAL INTELLIGENCE SYSTEM</div>
+            <div class="brand-subtitle">本地智能系统</div>
           </div>
         </div>
         <div class="status-strip" aria-label="系统状态">
           <span class="pill"><span class="dot green"></span>本地运行</span>
           <span class="pill quality"><span class="dot green"></span><span id="header-quality">质量门全绿</span></span>
-          <span class="pill"><span class="dot yellow"></span><span id="header-smtp">SMTP 未解锁</span></span>
-          <span class="pill"><span class="dot red"></span><span id="header-keychain">Keychain missing</span></span>
-          <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">Dry-run 禁写(默认)</span></span>
-          <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">API 检测中</span></span>
+          <span class="pill"><span class="dot yellow"></span><span id="header-smtp">邮件发送未解锁</span></span>
+          <span class="pill"><span class="dot red"></span><span id="header-keychain">钥匙串凭据缺失</span></span>
+          <span class="pill"><span class="dot red" id="header-dry-run-dot"></span><span id="header-dry-run">预演模式禁写（默认）</span></span>
+          <span class="pill live"><span id="api-dot" class="dot yellow"></span><span id="api-status">接口检测中</span></span>
         </div>
         <div class="header-actions">
           <button class="motion-toggle" id="motion-toggle" type="button" aria-pressed="false" title="暂停科技图标动效">
             <span class="motion-signal" aria-hidden="true"></span>
-            <span id="motion-toggle-label">动态 ON</span>
+            <span id="motion-toggle-label">动态开启</span>
           </button>
           <div class="hud-clock" aria-label="本地系统时间">
-            <span>LOCAL / SYS</span>
+            <span>本地 / 系统</span>
             <strong id="hud-clock">--:--:--</strong>
           </div>
           <button class="btn btn-with-icon" type="button" data-jump-view="system"><svg class="tech-icon button-icon" aria-hidden="true"><use href="#ti-system"></use></svg>系统状态</button>
@@ -3296,7 +3296,7 @@
           <div class="side-card">
             <h3>今日重点</h3>
             <div class="tiny">
-              审核邮件草稿、复核财务异常、确认 Notes 候选。
+              审核邮件草稿、复核财务异常、确认笔记候选。
             </div>
           </div>
 
@@ -3312,7 +3312,7 @@
           <section id="today" class="view active">
             <div class="hero">
               <div class="card card-pad">
-                <p class="tiny priority-eyebrow" id="today-source">今日工作 · 正在连接本地 API</p>
+                <p class="tiny priority-eyebrow" id="today-source">今日工作 · 正在连接本地接口</p>
                 <div class="priority-heading">
                   <h1 class="headline page-title page-title-overview"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span><span class="page-title-text"><span id="total-tasks">6</span><span class="headline-label">个待处理项</span></span></h1>
                   <p class="priority-risk"><span aria-hidden="true"></span><span id="risk-summary">1 项需要优先复核</span></p>
@@ -3324,7 +3324,7 @@
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-notes">2</div>
-                    <div class="metric-label">Notes 候选</div>
+                    <div class="metric-label">笔记候选</div>
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-finance">1</div>
@@ -3332,17 +3332,17 @@
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-readiness">7/8</div>
-                    <div class="metric-label">Tag readiness</div>
+                    <div class="metric-label">标签就绪度</div>
                   </div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3 class="panel-title"><svg class="tech-icon" aria-hidden="true"><use href="#ti-shield"></use></svg>安全门控</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>真实 SMTP</strong><span class="tag red" id="gate-smtp">禁用</span></div>
-                  <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="gate-approval">禁写</span></div>
+                  <div class="gate"><strong>真实邮件发送</strong><span class="tag red" id="gate-smtp">禁用</span></div>
+                  <div class="gate"><strong>审批门</strong><span class="tag red" id="gate-approval">禁写</span></div>
                   <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
-                  <div class="gate"><strong>Keychain</strong><span class="tag red" id="gate-keychain">missing</span></div>
+                  <div class="gate"><strong>钥匙串凭据</strong><span class="tag red" id="gate-keychain">缺失</span></div>
                 </div>
               </div>
             </div>
@@ -3366,10 +3366,10 @@
                     <span>计划</span>
                     <span class="tag">等待审批</span>
                   </div>
-                  <div>先审最高风险邮件草稿 → 复核账单异常 → 确认 Notes 候选 → 输出今日摘要。</div>
+                  <div>先审最高风险邮件草稿 → 复核账单异常 → 确认笔记候选 → 输出今日摘要。</div>
                   <div class="chips">
                     <span class="chip ok">不真实发送</span>
-                    <span class="chip ok">不写 Keychain</span>
+                    <span class="chip ok">不写入钥匙串</span>
                     <span class="chip warn">需要用户确认邮件草稿</span>
                   </div>
                 </div>
@@ -3385,7 +3385,7 @@
                     <div class="queue-item">
                       <div>
                         <div class="queue-title">供应商付款确认邮件</div>
-                        <div class="queue-meta">收件人白名单通过，黑名单通过，SMTP 缺凭据</div>
+                        <div class="queue-meta">收件人白名单通过，黑名单通过，邮件发送凭据缺失</div>
                       </div>
                       <span class="tag">先审</span>
                     </div>
@@ -3424,15 +3424,15 @@
               <div class="queue" id="mail-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">供应商付款确认 · URGENT</div>
-                    <div class="queue-meta">to: finance-vendor@example.com · provider: outlook · priority: high</div>
+                    <div class="queue-title">供应商付款确认 · 紧急</div>
+                    <div class="queue-meta">收件人：finance-vendor@example.com · 服务商：微软邮箱 · 优先级：高</div>
                   </div>
                   <span class="tag">待审批</span>
                 </div>
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">月结资料补充 · TODO</div>
-                    <div class="queue-meta">to: accounting@example.com · provider: qq · priority: normal</div>
+                    <div class="queue-title">月结资料补充 · 待办</div>
+                    <div class="queue-meta">收件人：accounting@example.com · 服务商：腾讯邮箱 · 优先级：普通</div>
                   </div>
                   <span class="tag green">可保存</span>
                 </div>
@@ -3440,18 +3440,18 @@
             </div>
 
             <div class="draft">
-              <h3>AI 草稿预览</h3>
+              <h3>智能草稿预览</h3>
               <pre>主题：请确认 6 月供应商付款资料
 
 你好，
 
 我已整理 6 月付款资料，当前缺少 2 张发票附件。请在今天 17:00 前补充确认。
 
-本邮件为草稿预览，真实发送需要用户审批 + Keychain 凭据 + SMTP_REAL_NETWORK 显式开启。</pre>
+本邮件为草稿预览，真实发送需要用户审批、钥匙串凭据和真实邮件网络显式开启。</pre>
               <div class="chips">
                 <button class="btn">保存草稿</button>
                 <button class="btn">退回重写</button>
-                <button class="btn primary">1-click 审批</button>
+                <button class="btn primary">一键审批</button>
                 <button class="btn danger" disabled>真实发送：门控未满足</button>
               </div>
             </div>
@@ -3469,67 +3469,67 @@
               <div class="card card-pad">
                 <h3>质量门</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>pytest</strong><span class="tag green" id="system-pytest">待读取</span></div>
-                  <div class="gate"><strong>mypy --strict</strong><span class="tag green" id="system-mypy">0 errors</span></div>
-                  <div class="gate"><strong>make lint</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
+                  <div class="gate"><strong>单元测试</strong><span class="tag green" id="system-pytest">待读取</span></div>
+                  <div class="gate"><strong>严格类型检查</strong><span class="tag green" id="system-mypy">0 个错误</span></div>
+                  <div class="gate"><strong>代码规范检查</strong><span class="tag green" id="system-lint">待本轮复跑</span></div>
                 </div>
               </div>
               <div class="card card-pad" id="path4-five-gate-card">
                 <!-- v0.2.55 Path 4 5 门 · 由 /api/status 驱动 -->
-                <h3>Path 4 5 门 <span class="tag gray" id="path4-five-gate-header" title="v0.2.53.53 v2 launch checklist">待读取</span></h3>
+                <h3>第四路径五道门 <span class="tag gray" id="path4-five-gate-header" title="v0.2.53.53 第二版上线检查表">待读取</span></h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>1. DASHBOARD_WRITE_API</strong><span class="tag red" id="path4-gate-1">待读取</span></div>
-                  <div class="gate"><strong>2. confirm_text=CONFIRM_WRITE</strong><span class="tag red" id="path4-gate-2">待读取</span></div>
-                  <div class="gate"><strong>3. BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="path4-gate-3">待读取</span></div>
-                  <div class="gate"><strong>4. real_write_handler_enabled</strong><span class="tag red" id="path4-gate-4">待读取</span></div>
-                  <div class="gate"><strong>5. ENABLE_PATH_4_WRITE</strong><span class="tag red" id="path4-gate-5">待读取</span></div>
+                  <div class="gate"><strong>1. 仪表盘写入接口开关</strong><span class="tag red" id="path4-gate-1">待读取</span></div>
+                  <div class="gate"><strong>2. 逐次写入确认</strong><span class="tag red" id="path4-gate-2">待读取</span></div>
+                  <div class="gate"><strong>3. 业务写入器开关</strong><span class="tag red" id="path4-gate-3">待读取</span></div>
+                  <div class="gate"><strong>4. 真实写入处理器</strong><span class="tag red" id="path4-gate-4">待读取</span></div>
+                  <div class="gate"><strong>5. 第四路径写入开关</strong><span class="tag red" id="path4-gate-5">待读取</span></div>
                 </div>
                 <div class="card-footnote" id="path4-five-gate-footnote" style="font-size: 12px; color: var(--muted); margin-top: 8px">
-                  沿 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> v2 5 门 · 由 <code>/api/status</code> 实时刷新
+                  依据 <code>docs/v0.2.53.53-path4-launch-checklist-2026-06-30.md</code> 第二版五道门 · 由状态接口实时刷新
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>Provider</h3>
+                <h3>邮件服务</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>IMAP</strong><span class="tag green">可用</span></div>
-                  <div class="gate"><strong>SMTP provider</strong><span class="tag green">factory ready</span></div>
-                  <div class="gate"><strong>SMTP_REAL_NETWORK</strong><span class="tag red" id="system-smtp-real">off</span></div>
+                  <div class="gate"><strong>收件服务</strong><span class="tag green">可用</span></div>
+                  <div class="gate"><strong>发件服务</strong><span class="tag green">服务器已就绪</span></div>
+                  <div class="gate"><strong>真实邮件网络</strong><span class="tag red" id="system-smtp-real">关闭</span></div>
                 </div>
               </div>
               <div class="card card-pad">
-                <h3>Git</h3>
+                <h3>版本控制</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>branch</strong><span class="tag green">main</span></div>
-                  <div class="gate"><strong>HEAD</strong><span class="tag" id="system-head">unknown</span></div>
-                  <div class="gate"><strong>tag</strong><span class="tag">v0.1.0 anchored</span></div>
-                  <div class="gate"><strong>v0.2.x tag</strong><span class="tag red">不打</span></div>
+                  <div class="gate"><strong>当前分支</strong><span class="tag green">主分支</span></div>
+                  <div class="gate"><strong>当前版本</strong><span class="tag" id="system-head">未知</span></div>
+                  <div class="gate"><strong>版本标签</strong><span class="tag">v0.1.0 已锚定</span></div>
+                  <div class="gate"><strong>v0.2.x 版本标签</strong><span class="tag red">不打</span></div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3>审批门状态</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>第一道 DASHBOARD_WRITE_API</strong><span class="tag red" id="system-gate-first">closed</span></div>
-                  <div class="gate"><strong>第二道 confirm_text</strong><span class="tag" id="system-gate-second">每动作需 confirm</span></div>
-                  <div class="gate"><strong>第三道 BUSINESS_WRITER_ENABLED</strong><span class="tag red" id="system-gate-third">closed</span></div>
-                  <div class="gate"><strong>Dry-run 当前结果</strong><span class="tag red" id="system-dry-run-outcome">Dry-run 禁写(默认)</span></div>
+                  <div class="gate"><strong>第一道：仪表盘写入接口</strong><span class="tag red" id="system-gate-first">已关闭</span></div>
+                  <div class="gate"><strong>第二道：逐次写入确认</strong><span class="tag" id="system-gate-second">每个动作需确认</span></div>
+                  <div class="gate"><strong>第三道：业务写入器</strong><span class="tag red" id="system-gate-third">已关闭</span></div>
+                  <div class="gate"><strong>预演当前结果</strong><span class="tag red" id="system-dry-run-outcome">预演模式禁写（默认）</span></div>
                 </div>
               </div>
               <div class="card card-pad">
                 <h3>审批门</h3>
                 <div class="gate-list">
-                  <div class="gate"><strong>Keychain 写入</strong><span class="tag red">需确认</span></div>
-                  <div class="gate"><strong>launchd/kickstart</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>钥匙串写入</strong><span class="tag red">需确认</span></div>
+                  <div class="gate"><strong>系统服务重启</strong><span class="tag red">需确认</span></div>
                   <div class="gate"><strong>真实账单导入</strong><span class="tag">仅人工触发</span></div>
                 </div>
               </div>
               <div class="card card-pad" id="audit-card">
-                <h3>Audit 落档 <span class="tag" id="audit-state-tag">默认 Stub</span></h3>
-              <p class="tiny" id="audit-source">最近写操作与 dry-run 记录</p>
+                <h3>审计落档 <span class="tag" id="audit-state-tag">默认占位存储</span></h3>
+              <p class="tiny" id="audit-source">最近写操作与预演记录</p>
                 <div class="queue" id="audit-queue" style="margin-top: 12px">
                   <div class="queue-item" id="audit-empty">
                     <div>
-                      <div class="queue-title">暂无 audit 记录</div>
-                      <div class="queue-meta">默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory</div>
+                      <div class="queue-title">暂无审计记录</div>
+                      <div class="queue-meta">默认使用占位存储 · 需启用真实数据库和业务写入器后注入内存存储</div>
                     </div>
                     <span class="tag">0 条</span>
                   </div>
@@ -3543,12 +3543,12 @@
               <div class="section-heading">
                 <p class="section-kicker" id="notes-source">笔记工作台 · 待确认候选</p>
                 <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span><span class="page-title-text">笔记候选确认</span></h1>
-                <p class="section-summary">确认后才写入 L2；敏感内容继续留在本地。</p>
+                <p class="section-summary">确认后才写入二级记忆；敏感内容继续留在本地。</p>
               </div>
               <div class="queue" id="notes-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">L2 跨源候选</div>
+                    <div class="queue-title">二级跨源候选</div>
                     <div class="queue-meta">工作 · 待确认</div>
                   </div>
                   <span class="tag">确认</span>
@@ -3575,7 +3575,7 @@
                 <div class="queue-item">
                   <div>
                     <div class="queue-title">支付宝 ¥1,299.00</div>
-                    <div class="queue-meta">2026-06-25 · amount_spike</div>
+                    <div class="queue-meta">2026-06-25 · 金额突增</div>
                   </div>
                   <span class="tag red">风险</span>
                 </div>
@@ -3588,10 +3588,10 @@
               <div class="section-heading">
                 <p class="section-kicker">日程工作台 · 本地摘要</p>
                 <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span><span class="page-title-text">今日日程</span></h1>
-                <p class="section-summary">CalDAV 尚未接入，当前显示本地只读摘要。</p>
+                <p class="section-summary">日历服务尚未接入，当前显示本地只读摘要。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
-                <div class="gate"><strong>数据源</strong><span class="tag" data-tone="red">CalDAV 未接入</span></div>
+                <div class="gate"><strong>数据源</strong><span class="tag" data-tone="red">日历服务未接入</span></div>
                 <div class="gate"><strong>事件数</strong><span class="tag" id="calendar-event-count">0</span></div>
                 <div class="gate"><strong>同步模式</strong><span class="tag">只读</span></div>
               </div>
@@ -3617,17 +3617,17 @@
                 />
                 <button id="reports-search-clear" class="filter" type="button" hidden aria-label="清除搜索" title="清除搜索">×</button>
                 <button class="filter active" data-filter="all">全部</button>
-                <button class="filter" data-filter="doc">docs</button>
-                <button class="filter" data-filter="phase_report">reports</button>
-                <button class="filter" data-filter="spike">spike</button>
-                <button class="filter" data-filter="agent_output">agent-output</button>
+                <button class="filter" data-filter="doc">文档</button>
+                <button class="filter" data-filter="phase_report">报告</button>
+                <button class="filter" data-filter="spike">实验</button>
+                <button class="filter" data-filter="agent_output">智能产出</button>
               </div>
 
               <div class="reports-summary" id="reports-summary" style="margin-top: 12px">
                 <span class="tag">合计 <strong id="reports-count">0</strong></span>
                 <span class="tag">最近 <strong id="reports-latest-date">—</strong></span>
                 <span class="tag" id="reports-match-count">0 项</span>
-                <span class="tag" id="reports-filter-hint">点击条目预览 · spike 可详情</span>
+                <span class="tag" id="reports-filter-hint">点击条目预览 · 实验可查看详情</span>
               </div>
 
               <div class="queue" id="reports-queue" style="margin-top: 16px"></div>
@@ -3648,20 +3648,20 @@
                 <p class="section-summary">只展示连接状态，不读取或显示凭据明文。</p>
               </div>
               <div class="gate-list" style="margin-top: 12px">
-                <div class="gate"><strong>DB 密码</strong><span class="tag" id="settings-keychain-db" data-tone="red">present</span></div>
-                <div class="gate"><strong>SMTP outlook</strong><span class="tag" id="settings-keychain-smtp-outlook" data-tone="red">missing</span></div>
-                <div class="gate"><strong>SMTP gmail</strong><span class="tag" id="settings-keychain-smtp-gmail" data-tone="red">missing</span></div>
-                <div class="gate"><strong>OAuth Microsoft</strong><span class="tag" id="settings-keychain-oauth-ms" data-tone="red">missing</span></div>
-                <div class="gate"><strong>OAuth Google</strong><span class="tag" id="settings-keychain-oauth-google" data-tone="red">missing</span></div>
+                <div class="gate"><strong>数据库密码</strong><span class="tag" id="settings-keychain-db" data-tone="red">已配置</span></div>
+                <div class="gate"><strong>微软邮箱发件服务</strong><span class="tag" id="settings-keychain-smtp-outlook" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>谷歌邮箱发件服务</strong><span class="tag" id="settings-keychain-smtp-gmail" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>微软第三方授权</strong><span class="tag" id="settings-keychain-oauth-ms" data-tone="red">缺失</span></div>
+                <div class="gate"><strong>谷歌第三方授权</strong><span class="tag" id="settings-keychain-oauth-google" data-tone="red">缺失</span></div>
               </div>
-              <p class="tiny" style="margin-top: 10px">凭据写入需用户授权 + 显式启动 spike;不接 launchd 不写明文。</p>
+              <p class="tiny" style="margin-top: 10px">凭据写入需用户授权并显式启动实验；不接入系统服务就不写明文。</p>
             </div>
           </section>
         </main>
 
         <section class="inspector" aria-label="上下文检查器">
           <div class="inspector-section">
-            <h3>AI 建议</h3>
+            <h3>智能建议</h3>
             <div class="tiny">
               先复核财务异常，再处理需要审批的邮件草稿。
             </div>
@@ -3672,9 +3672,9 @@
             <div class="gate-list">
               <div class="gate"><strong>收件人白名单</strong><span class="tag green">通过</span></div>
               <div class="gate"><strong>黑名单检查</strong><span class="tag green">通过</span></div>
-              <div class="gate"><strong>Keychain</strong><span class="tag red" id="inspect-keychain">missing</span></div>
-              <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">off</span></div>
-              <div class="gate"><strong>ApprovalGate</strong><span class="tag red" id="inspect-approval">disabled</span></div>
+              <div class="gate"><strong>钥匙串凭据</strong><span class="tag red" id="inspect-keychain">缺失</span></div>
+              <div class="gate"><strong>真实网络</strong><span class="tag red" id="inspect-real-network">关闭</span></div>
+              <div class="gate"><strong>审批门</strong><span class="tag red" id="inspect-approval">禁用</span></div>
             </div>
           </div>
 
@@ -3690,29 +3690,29 @@
           </div>
 
           <div class="inspector-section" id="three-gate-section">
-            <h3>三门状态 · dry-run</h3>
+            <h3>三道审批门状态 · 预演</h3>
             <div class="gate-list">
-              <div class="gate"><strong>第一道 · DASHBOARD_WRITE_API</strong><span class="tag red" id="inspect-gate-first">closed</span></div>
-              <div class="gate"><strong>第二道 · confirm_text</strong><span class="tag" id="inspect-gate-second">每动作需 confirm</span></div>
-              <div class="gate"><strong>第三道 · Writer ready</strong><span class="tag red" id="inspect-gate-third">closed</span></div>
-              <div class="gate"><strong>综合 outcome</strong><span class="tag red" id="inspect-gate-outcome">Dry-run 禁写(默认)</span></div>
+              <div class="gate"><strong>第一道 · 仪表盘写入接口</strong><span class="tag red" id="inspect-gate-first">已关闭</span></div>
+              <div class="gate"><strong>第二道 · 逐次写入确认</strong><span class="tag" id="inspect-gate-second">每个动作需确认</span></div>
+              <div class="gate"><strong>第三道 · 写入器就绪</strong><span class="tag red" id="inspect-gate-third">已关闭</span></div>
+              <div class="gate"><strong>综合结果</strong><span class="tag red" id="inspect-gate-outcome">预演模式禁写（默认）</span></div>
             </div>
-            <p class="tiny" id="inspect-gate-detail">第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。</p>
+            <p class="tiny" id="inspect-gate-detail">第二道门是单次请求级确认，不是全局环境开关。</p>
           </div>
 
           <div class="inspector-section" id="approval-dry-run-section" hidden>
-            <h3>ApprovalGate dry-run</h3>
+            <h3>审批门预演</h3>
             <div class="dry-run-panel">
               <div class="gate-list">
                 <div class="gate"><strong>动作</strong><span class="tag" id="dry-run-action">—</span></div>
                 <div class="gate"><strong>目标</strong><span class="tiny" id="dry-run-target">—</span></div>
-                <div class="gate"><strong>HTTP</strong><span class="tag" id="dry-run-http">—</span></div>
-                <div class="gate"><strong>write_executed</strong><span class="tag green" id="dry-run-executed">false</span></div>
+                <div class="gate"><strong>请求状态</strong><span class="tag" id="dry-run-http">—</span></div>
+                <div class="gate"><strong>已执行写入</strong><span class="tag green" id="dry-run-executed">否</span></div>
                 <div class="gate"><strong>双门</strong><span class="tag" id="dry-run-approval-gate" data-tone="red">未通过</span></div>
-                <div class="gate"><strong>Writer env</strong><span class="tag" id="dry-run-writer-env" data-tone="red">—</span></div>
-                <div class="gate"><strong>Writer Impl</strong><span class="tag" id="dry-run-writer-impl" data-tone="red">—</span></div>
-                <div class="gate"><strong>Writer ready</strong><span class="tag" id="dry-run-writer-ready" data-tone="red">—</span></div>
-                <div class="gate"><strong>would_allow</strong><span class="tag" id="dry-run-would-allow" data-tone="red">false</span></div>
+                <div class="gate"><strong>写入器环境</strong><span class="tag" id="dry-run-writer-env" data-tone="red">—</span></div>
+                <div class="gate"><strong>写入器实现</strong><span class="tag" id="dry-run-writer-impl" data-tone="red">—</span></div>
+                <div class="gate"><strong>写入器就绪</strong><span class="tag" id="dry-run-writer-ready" data-tone="red">—</span></div>
+                <div class="gate"><strong>将允许执行</strong><span class="tag" id="dry-run-would-allow" data-tone="red">否</span></div>
               </div>
               <p class="tiny" id="dry-run-reason" style="margin: 10px 0 0">尚未选择审批动作，当前保持禁写。</p>
               <pre id="dry-run-detail"></pre>
@@ -3722,7 +3722,7 @@
           <div class="inspector-section">
             <h3>执行边界</h3>
             <div class="tiny">
-              API 离线时自动使用只读兜底；所有 dry-run 结果均保持 write_executed=false。
+              接口离线时自动使用只读兜底；所有预演结果都保持禁止真实写入。
             </div>
           </div>
         </section>
@@ -3731,10 +3731,10 @@
       <footer>
         <div class="log">
           <span>运行状态</span>
-          <span id="footer-api">API 检测中</span>
-          <span id="footer-dry-run">ApprovalGate dry-run wired ✅</span>
-          <span>真实 SMTP blocked ✅</span>
-          <span>Keychain plaintext hidden ✅</span>
+          <span id="footer-api">接口检测中</span>
+          <span id="footer-dry-run">审批门预演已接入 ✅</span>
+          <span>真实邮件发送已阻断 ✅</span>
+          <span>钥匙串明文已隐藏 ✅</span>
         </div>
         <button class="btn btn-sm" id="footer-log-toggle" type="button" aria-expanded="false">展开</button>
       </footer>
@@ -3765,7 +3765,7 @@
         document.body.classList.toggle("motion-paused", paused);
         if (!motionToggle || !motionToggleLabel) return;
         motionToggle.setAttribute("aria-pressed", String(paused));
-        motionToggleLabel.textContent = paused ? "动态 OFF" : "动态 ON";
+        motionToggleLabel.textContent = paused ? "动态关闭" : "动态开启";
         motionToggle.title = paused ? "开启科技图标动效" : "暂停科技图标动效";
       };
 
@@ -3787,7 +3787,7 @@
         items: [
           {
             outbox_id: 1,
-            subject: "供应商付款确认 · URGENT",
+            subject: "供应商付款确认 · 紧急",
             status: "pending_send",
             priority: "urgent",
             to: "finance-vendor@example.com",
@@ -3795,7 +3795,7 @@
           },
           {
             outbox_id: 2,
-            subject: "月结资料补充 · TODO",
+            subject: "月结资料补充 · 待办",
             status: "draft",
             priority: "normal",
             to: "accounting@example.com",
@@ -3807,7 +3807,7 @@
       const fallbackNotes = {
         count: 2,
         items: [
-          { apple_note_id: "note-1", title: "L2 跨源候选", folder: "工作", needs_confirm: 1 },
+          { apple_note_id: "note-1", title: "二级跨源候选", folder: "工作", needs_confirm: 1 },
           { apple_note_id: "note-2", title: "会议纪要待归档", folder: "个人", needs_confirm: 1 },
         ],
       };
@@ -3819,7 +3819,7 @@
             date: "2026-06-25",
             counterparty: "支付宝",
             amount: 1299,
-            kinds: "amount_spike",
+            kinds: "金额突增",
           },
         ],
       };
@@ -3839,7 +3839,7 @@
           {
             path: "docs/v0.2.53.7-dashboard-opt-in-real-db-2026-06-25.md",
             type: "doc",
-            title: "v0.2.53.7 Dashboard opt-in 真实 Outbox",
+            title: "v0.2.53.7 仪表盘可选真实发件箱",
             date: "2026-06-25",
             status: "done",
             size_bytes: 6020,
@@ -3847,7 +3847,7 @@
           {
             path: "output/spike/spike_send_100_20260625_163607.md",
             type: "spike",
-            title: "spike_send_100 spike — OutboxDispatcher 端到端发送",
+            title: "发件实验 100 — 发件调度器端到端发送",
             date: "2026-06-25",
             status: "done",
             size_bytes: 3420,
@@ -3873,46 +3873,46 @@
 
       const THREE_GATE_COPY = {
         first: {
-          open: { label: "open", tone: "green" },
-          closed: { label: "closed", tone: "red" },
+          open: { label: "已开启", tone: "green" },
+          closed: { label: "已关闭", tone: "red" },
         },
         second: {
           confirm_required_per_action: {
-            label: "每动作需 confirm",
+            label: "每个动作需确认",
             tone: "yellow",
-            detail: "第二道门为 POST 请求级 confirm_text=CONFIRM_WRITE,非全局 env。",
+            detail: "第二道门是单次请求级确认，不是全局环境开关。",
           },
         },
         third: {
-          open: { label: "open", tone: "green" },
-          closed: { label: "closed", tone: "red" },
-          env_only: { label: "env only · Impl 未注入", tone: "yellow" },
+          open: { label: "已开启", tone: "green" },
+          closed: { label: "已关闭", tone: "red" },
+          env_only: { label: "环境已开 · 实现未注入", tone: "yellow" },
         },
         outcome: {
           disabled: {
-            text: "Dry-run 禁写(默认)",
+            text: "预演模式禁写（默认）",
             tone: "red",
-            detail: "第一道门 DASHBOARD_WRITE_API 未开;默认禁写,write_executed 恒 false。",
+            detail: "第一道仪表盘写入接口未开启；默认禁写，不会执行真实写入。",
           },
           needs_confirmation: {
-            text: "Dry-run 需 confirm_text",
+            text: "预演需要逐次确认",
             tone: "yellow",
-            detail: "第二道门:POST 须带 confirm_text=CONFIRM_WRITE。",
+            detail: "第二道门：单次请求必须携带写入确认。",
           },
           writer_required: {
-            text: "Dry-run writer 未就绪",
+            text: "预演写入器未就绪",
             tone: "yellow",
-            detail: "第三道门:BUSINESS_WRITER env 或 Impl 未满足;见 Writer env / Impl badge。",
+            detail: "第三道门：业务写入器环境或实现未满足；请查看写入器状态。",
           },
           dry_run_ready: {
-            text: "Dry-run 三门已就绪",
+            text: "预演三道门已就绪",
             tone: "green",
-            detail: "三门通过;点击 dry-run 可模拟,仍 write_executed=false。",
+            detail: "三道门已通过；可执行预演，仍不会真实写入。",
           },
           api_offline: {
             text: "只读兜底",
             tone: "yellow",
-            detail: "ApprovalGate 未连接；三门保持关闭。",
+            detail: "审批门未连接；三道门保持关闭。",
           },
           unknown: {
             text: "状态未知",
@@ -3921,13 +3921,13 @@
           },
         },
         writerBadge: {
-          env: { on: "已开", off: "未开" },
+          env: { on: "已开启", off: "未开启" },
           impl: { on: "已注入", off: "未注入" },
-          ready: { on: "ready", off: "未 ready" },
+          ready: { on: "已就绪", off: "未就绪" },
         },
         offlineDryRun: {
           error: "api_offline",
-          reason: "ApprovalGate 未连接 · 三门默认 closed · 静态兜底不发起 POST",
+          reason: "审批门未连接 · 三道门默认关闭 · 静态兜底不发起写入请求",
           required: [
             "DASHBOARD_WRITE_API=1",
             "confirm_text=CONFIRM_WRITE",
@@ -3938,20 +3938,20 @@
 
       function writerRequiredOutcomeText(writerEnvEnabled, writerInjected) {
         if (writerEnvEnabled && !writerInjected) {
-          return "Dry-run writer env 已开 · Impl 未注入";
+          return "预演写入器环境已开 · 实现未注入";
         }
         if (!writerEnvEnabled) {
-          return "Dry-run writer env 未开";
+          return "预演写入器环境未开";
         }
         return THREE_GATE_COPY.outcome.writer_required.text;
       }
 
       function writerRequiredDetail(writerEnvEnabled, writerInjected) {
         if (writerEnvEnabled && !writerInjected) {
-          return "第三道门:BUSINESS_WRITER env 已开但 Impl 未注入;需 DASHBOARD_REAL_DB=1 + BusinessWriterImpl 构造成功。";
+          return "第三道门：业务写入器环境已开，但实现未注入；需启用真实数据库并成功构建写入器。";
         }
         if (!writerEnvEnabled) {
-          return "第三道门:BUSINESS_WRITER_ENABLED 未开;writer 路径未启用。";
+          return "第三道门：业务写入器未开启；写入路径未启用。";
         }
         return THREE_GATE_COPY.outcome.writer_required.detail;
       }
@@ -3987,6 +3987,144 @@
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;")
           .replaceAll('"', "&quot;");
+      }
+
+      function localizeSubject(value) {
+        return String(value ?? "")
+          .replace(/\bURGENT\b/gi, "紧急")
+          .replace(/\bTODO\b/gi, "待办");
+      }
+
+      function providerLabel(value) {
+        const labels = {
+          outlook: "微软邮箱",
+          gmail: "谷歌邮箱",
+          qq: "腾讯邮箱",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "未知服务商";
+      }
+
+      function priorityLabel(value) {
+        const labels = {
+          urgent: "紧急",
+          high: "高",
+          normal: "普通",
+          low: "低",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "普通";
+      }
+
+      function outboxStatusLabel(value) {
+        const labels = {
+          pending_send: "待发送审批",
+          pending: "待处理",
+          draft: "草稿",
+          sent: "已发送",
+          cancelled: "已取消",
+        };
+        return labels[String(value ?? "").toLowerCase()] ?? "未知状态";
+      }
+
+      function financeKindLabel(value) {
+        const labels = {
+          amount_spike: "金额突增",
+          duplicate: "重复记录",
+          unusual_vendor: "异常供应商",
+        };
+        const key = String(value ?? "");
+        return labels[key] ?? (key || "财务异常");
+      }
+
+      function reportTypeLabel(value) {
+        const labels = {
+          doc: "文档",
+          phase_report: "阶段报告",
+          spike: "实验记录",
+          agent_output: "智能产出",
+        };
+        return labels[String(value ?? "")] ?? "其他";
+      }
+
+      function actionLabel(value) {
+        const labels = {
+          "outbox.approve": "批准邮件草稿",
+          "outbox.cancel": "取消邮件草稿",
+          "notes.confirm": "确认笔记候选",
+          "finance.dismiss_anomaly": "忽略财务异常",
+          approve: "批准",
+          reject: "拒绝",
+        };
+        return labels[String(value ?? "")] ?? "未知动作";
+      }
+
+      function booleanLabel(value) {
+        if (value === true) return "是";
+        if (value === false) return "否";
+        return "未知";
+      }
+
+      function errorLabel(value) {
+        const labels = {
+          api_offline: "接口离线",
+          request_failed: "请求失败",
+          missing_target: "目标缺失",
+          invalid_json_response: "响应格式无效",
+        };
+        if (!value) return "无";
+        return labels[String(value)] ?? "未知错误";
+      }
+
+      function localizeReason(value) {
+        if (!value) return "无拒写原因";
+        return String(value)
+          .replaceAll("ApprovalGate", "审批门")
+          .replaceAll("API", "接口")
+          .replaceAll("Dry-run", "预演")
+          .replaceAll("dry-run", "预演")
+          .replaceAll("write_executed", "已执行写入")
+          .replaceAll("false", "否")
+          .replaceAll("true", "是")
+          .replaceAll("closed", "关闭")
+          .replaceAll("POST", "写入请求")
+          .replaceAll("user", "用户")
+          .replaceAll("UI", "页面");
+      }
+
+      function requiredConditionLabel(value) {
+        const labels = {
+          "DASHBOARD_WRITE_API=1": "开启仪表盘写入接口",
+          "confirm_text=CONFIRM_WRITE": "提供逐次写入确认",
+          business_writer_implementation: "注入业务写入器实现",
+        };
+        return labels[String(value)] ?? "其他安全条件";
+      }
+
+      function localizeTechnicalStatus(value) {
+        const text = String(value ?? "未知");
+        const labels = {
+          unknown: "未知",
+          on: "开启",
+          off: "关闭",
+          enabled: "已启用",
+          disabled: "已禁用",
+          open: "已开启",
+          closed: "已关闭",
+          missing: "缺失",
+          present: "已配置",
+          ready: "已就绪",
+          passed: "已通过",
+          pass: "已通过",
+          clean: "无问题",
+          true: "是",
+          false: "否",
+        };
+        const exact = labels[text.toLowerCase()];
+        if (exact) return exact;
+        const passed = text.match(/^(\d+)\s+passed$/i);
+        if (passed) return `${passed[1]} 项通过`;
+        const errors = text.match(/^(\d+)\s+errors?$/i);
+        if (errors) return `${errors[1]} 个错误`;
+        return text;
       }
 
       function formatAmount(amount) {
@@ -4067,38 +4205,39 @@
         const targetId = String(item.outbox_id ?? item.id ?? "");
         const action = status === "pending_send" ? "outbox.approve" : "outbox.cancel";
         const btnLabel = status === "pending_send" ? "审批预演" : "取消预演";
+        const subject = localizeSubject(item.subject ?? "邮件草稿");
         const metaParts = [
-          item.to ? `to: ${item.to}` : "",
-          item.provider ? `provider: ${item.provider}` : "",
-          priority ? `priority: ${priority}` : "",
-          status ? `status: ${status}` : "",
+          item.to ? `收件人：${item.to}` : "",
+          item.provider ? `服务商：${providerLabel(item.provider)}` : "",
+          priority ? `优先级：${priorityLabel(priority)}` : "",
+          status ? `状态：${outboxStatusLabel(status)}` : "",
         ].filter(Boolean);
-        const meta = metaParts.join(" · ") || "outbox 草稿";
-        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.subject ?? "邮件草稿")}"><div><div class="queue-title">${escapeHtml(item.subject ?? "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}"><span class="queue-status-signal" aria-hidden="true"></span>${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="${escapeHtml(btnLabel)}"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-route"></use></svg><span>${escapeHtml(btnLabel)}</span></button><button type="button" class="btn btn-sm decide-btn" data-decision="approve" aria-label="批准"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>批准</span></button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject" aria-label="拒绝"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-x"></use></svg><span>拒绝</span></button></div></div>`;
+        const meta = metaParts.join(" · ") || "发件箱草稿";
+        return `<div class="queue-item" data-approval-action="${escapeHtml(action)}" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(subject)}"><div><div class="queue-title">${escapeHtml(subject || "无主题")}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag ${tagClass}"><span class="queue-status-signal" aria-hidden="true"></span>${escapeHtml(tagText)}</span><button type="button" class="btn btn-sm dry-run-btn" aria-label="${escapeHtml(btnLabel)}"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-route"></use></svg><span>${escapeHtml(btnLabel)}</span></button><button type="button" class="btn btn-sm decide-btn" data-decision="approve" aria-label="批准"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-check"></use></svg><span>批准</span></button><button type="button" class="btn btn-sm decide-btn reject" data-decision="reject" aria-label="拒绝"><svg class="tech-icon action-icon" aria-hidden="true"><use href="#ti-x"></use></svg><span>拒绝</span></button></div></div>`;
       }
 
       function renderNotesItem(item) {
         const folder = item.folder ? `${item.folder} · ` : "";
         const targetId = String(item.apple_note_id ?? item.id ?? "");
-        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "Notes 候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 确认</button></div></div>`;
+        return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "笔记候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">预演确认</button></div></div>`;
       }
 
       function renderFinanceItem(item) {
         const title = `${item.counterparty ?? "未知"} ${formatAmount(item.amount)}`;
-        const meta = [item.date, item.kinds].filter(Boolean).join(" · ") || "财务异常";
+        const meta = [item.date, financeKindLabel(item.kinds)].filter(Boolean).join(" · ") || "财务异常";
         const targetId = [item.date, item.counterparty, item.amount].filter((v) => v !== undefined && v !== null && v !== "").join("|");
-        return `<div class="queue-item" data-approval-action="finance.dismiss_anomaly" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(title)}"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag red">风险</span><button type="button" class="btn btn-sm dry-run-btn">dry-run 忽略</button></div></div>`;
+        return `<div class="queue-item" data-approval-action="finance.dismiss_anomaly" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(title)}"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag red">风险</span><button type="button" class="btn btn-sm dry-run-btn">预演忽略</button></div></div>`;
       }
 
       function renderTodayQueueItem(kind, item) {
         if (kind === "mail") {
-          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.subject ?? "邮件草稿")}</div><div class="queue-meta">邮件草稿 · ${escapeHtml(item.status ?? "pending")}</div></div><span class="tag">先审</span></div>`;
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(localizeSubject(item.subject ?? "邮件草稿"))}</div><div class="queue-meta">邮件草稿 · ${escapeHtml(outboxStatusLabel(item.status ?? "pending"))}</div></div><span class="tag">先审</span></div>`;
         }
         if (kind === "notes") {
-          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "Notes 候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
+          return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "笔记候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
         }
         const title = `${item.counterparty ?? "异常"} ${formatAmount(item.amount)}`;
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(item.kinds ?? "财务异常")}</div></div><span class="tag red">风险</span></div>`;
+        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(financeKindLabel(item.kinds))}</div></div><span class="tag red">风险</span></div>`;
       }
 
       function renderTodayQueue(outbox, notes, finance) {
@@ -4112,19 +4251,19 @@
         }
         if (mixed.length === 0) {
           container.innerHTML =
-            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">outbox / notes / finance 均为空</div></div></div>';
+            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">发件箱、笔记和财务队列均为空</div></div></div>';
           return;
         }
         container.innerHTML = mixed.join("");
       }
 
       function renderExtendedViews(outbox, notes, finance, fromApi) {
-        const sourceSuffix = fromApi ? "来自本地只读 API" : "静态兜底";
-        setText("mail-source", `邮件审批 · diff + approval · ${sourceSuffix}`);
-        setText("notes-source", `Notes 待确认 · ${sourceSuffix}`);
+        const sourceSuffix = fromApi ? "来自本地只读接口" : "静态兜底";
+        setText("mail-source", `邮件审批 · 差异 + 审批 · ${sourceSuffix}`);
+        setText("notes-source", `笔记待确认 · ${sourceSuffix}`);
         setText("finance-source", `财务异常 · ${sourceSuffix}`);
         renderList("mail-queue", outbox.items ?? [], renderOutboxItem, "暂无邮件草稿");
-        renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无 Notes 候选");
+        renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无笔记候选");
         renderList("finance-queue", finance.items ?? [], renderFinanceItem, "暂无财务异常");
         renderTodayQueue(outbox, notes, finance);
         if (fromApi) {
@@ -4137,7 +4276,7 @@
       function renderPath4FiveGates(approval, options = {}) {
         const offline = options.offline === true;
         if (offline) {
-          setTag("path4-five-gate-header", "API 离线", "gray");
+          setTag("path4-five-gate-header", "接口离线", "gray");
           setTag("path4-gate-1", "未知", "red");
           setTag("path4-gate-2", "未知", "red");
           setTag("path4-gate-3", "未知", "red");
@@ -4145,7 +4284,7 @@
           setTag("path4-gate-5", "未知", "red");
           setText(
             "path4-five-gate-footnote",
-            "API 离线 · 五门状态暂不可用",
+            "接口离线 · 五道门状态暂不可用",
           );
           return;
         }
@@ -4159,7 +4298,7 @@
         setTag("path4-gate-1", writeApi ? "已启用" : "未启用", writeApi ? "green" : "red");
         setTag(
           "path4-gate-2",
-          writeApi ? "POST 级" : "未启用",
+          writeApi ? "请求级" : "未启用",
           writeApi ? "yellow" : "red",
         );
         setTag("path4-gate-3", writerEnv ? "已启用" : "未启用", writerEnv ? "green" : "red");
@@ -4173,8 +4312,8 @@
         setText(
           "path4-five-gate-footnote",
           path4Ready
-            ? "五门全开 · Path 4 实写路径已就绪(仍需 POST confirm_text=CONFIRM_WRITE)"
-            : "默认拒写 · 五门缺任一门均不会真实写入",
+            ? "五道门全开 · 第四路径实写已就绪（仍需逐次确认）"
+            : "默认拒写 · 五道门缺任何一道都不会真实写入",
         );
       }
 
@@ -4192,20 +4331,20 @@
         const writerInjected = approval.business_writer_impl_injected === true;
         const writerReady = approval.business_writer_ready === true;
         const dryRunStatus = approval.v0_2_53_26_dry_run_status ?? null;
-        setText("system-head", payload.git_head ?? "unknown");
-        setText("system-pytest", quality.pytest ?? "unknown");
-        setText("system-mypy", quality.mypy ?? "unknown");
-        setText("system-lint", quality.lint ?? "unknown");
+        setText("system-head", payload.git_head ?? "未知");
+        setText("system-pytest", localizeTechnicalStatus(quality.pytest));
+        setText("system-mypy", localizeTechnicalStatus(quality.mypy));
+        setText("system-lint", localizeTechnicalStatus(quality.lint));
         setText("header-quality", quality.pytest ? "质量门已读取" : "质量门未知");
         setTag("gate-smtp", realSmtp ? "可发送" : "禁用", realSmtp ? "green" : "red");
         setTag("gate-approval", writeApi ? "设计态开启" : "禁写", writeApi ? "green" : "red");
-        setTag("system-smtp-real", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
-        setTag("inspect-real-network", providers.smtp_real_network ? "on" : "off", providers.smtp_real_network ? "green" : "red");
-        setTag("inspect-approval", writeApi ? "enabled" : "disabled", writeApi ? "green" : "red");
-        setTag("gate-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
-        setTag("inspect-keychain", `${presentCount}/3 present`, presentCount > 0 ? "green" : "red");
-        setText("header-smtp", realSmtp ? "SMTP 可发送" : "SMTP 未解锁");
-        setText("header-keychain", `${presentCount}/3 Keychain`);
+        setTag("system-smtp-real", providers.smtp_real_network ? "开启" : "关闭", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-real-network", providers.smtp_real_network ? "开启" : "关闭", providers.smtp_real_network ? "green" : "red");
+        setTag("inspect-approval", writeApi ? "已启用" : "已禁用", writeApi ? "green" : "red");
+        setTag("gate-keychain", `${presentCount}/3 项已配置`, presentCount > 0 ? "green" : "red");
+        setTag("inspect-keychain", `${presentCount}/3 项已配置`, presentCount > 0 ? "green" : "red");
+        setText("header-smtp", realSmtp ? "邮件发送可用" : "邮件发送未解锁");
+        setText("header-keychain", `${presentCount}/3 项钥匙串凭据`);
         // v0.2.53.28 三门联调 — 第三道门以 Impl 实际注入为准
         renderDryRunThreeGate(dryRunStatus, writeApi, writerReady, writerEnvEnabled, writerInjected);
         renderPath4FiveGates(approval);
@@ -4247,13 +4386,13 @@
         renderDryRunThreeGate(FALLBACK_DRY_RUN_STATUS, false, false, false, false, { offline: true });
         renderPath4FiveGates({}, { offline: true });
         setTag("gate-approval", "禁写", "red");
-        setTag("inspect-approval", "disabled", "red");
+        setTag("inspect-approval", "已禁用", "red");
         setText("header-quality", "质量门待读取");
-        setText("system-pytest", "API 离线");
-        setText("system-mypy", "API 离线");
-        setText("system-lint", "API 离线");
-        setText("system-head", "unknown");
-        setText("footer-dry-run", "ApprovalGate · 只读兜底");
+        setText("system-pytest", "接口离线");
+        setText("system-mypy", "接口离线");
+        setText("system-lint", "接口离线");
+        setText("system-head", "未知");
+        setText("footer-dry-run", "审批门 · 只读兜底");
       }
 
       async function fetchJson(path) {
@@ -4316,13 +4455,13 @@
         if (section) {
           section.hidden = false;
         }
-        const action = payload.action ?? "—";
-        const targetId = payload.target_id ?? "—";
-        setText("dry-run-action", action);
+        const action = payload.action ?? payload.mapped_action ?? payload.decision ?? "";
+        const targetId = payload.target_id ?? payload.audit_id ?? "—";
+        setText("dry-run-action", actionLabel(action));
         setText("dry-run-target", label ? `${label} · ${targetId}` : String(targetId));
-        const httpLabel = httpStatus === null || httpStatus === undefined ? "offline" : String(httpStatus);
+        const httpLabel = httpStatus === null || httpStatus === undefined ? "离线" : String(httpStatus);
         setTag("dry-run-http", httpLabel, dryRunHttpTone(httpStatus));
-        setTag("dry-run-executed", payload.write_executed === true ? "true" : "false", payload.write_executed === true ? "red" : "green");
+        setTag("dry-run-executed", booleanLabel(payload.write_executed === true), payload.write_executed === true ? "red" : "green");
         // v0.2.53.22 HTML inspector 升级:approval_gate_passed / writer_enabled / would_allow 三 badge
         const gatePassed = payload.approval_gate_passed === true;
         setTag("dry-run-approval-gate", gatePassed ? "通过" : "未通过", gatePassed ? "green" : "red");
@@ -4334,26 +4473,26 @@
         setTag("dry-run-writer-impl", writerImpl ? THREE_GATE_COPY.writerBadge.impl.on : THREE_GATE_COPY.writerBadge.impl.off, writerImpl ? "green" : "red");
         setTag("dry-run-writer-ready", writerReady ? THREE_GATE_COPY.writerBadge.ready.on : THREE_GATE_COPY.writerBadge.ready.off, writerReady ? "green" : "red");
         const wouldAllow = payload.would_allow === true;
-        setTag("dry-run-would-allow", wouldAllow ? "true" : "false", wouldAllow ? "green" : "red");
-        const reason = payload.reason ?? payload.error ?? "无拒写原因";
+        setTag("dry-run-would-allow", booleanLabel(wouldAllow), wouldAllow ? "green" : "red");
+        const reason = localizeReason(payload.reason ?? payload.error);
         setText("dry-run-reason", reason);
         const detail = {
-          error: payload.error ?? null,
-          reason: payload.reason ?? null,
-          write_enabled: payload.write_enabled ?? null,
-          writer_enabled: payload.writer_enabled ?? null,
-          business_writer_env_enabled: payload.business_writer_env_enabled ?? null,
-          business_writer_impl_injected: payload.business_writer_impl_injected ?? null,
-          business_writer_ready: payload.business_writer_ready ?? null,
-          write_executed: payload.write_executed ?? false,
-          approval_gate_passed: payload.approval_gate_passed ?? false,
-          would_allow: payload.would_allow ?? false,
-          dry_run: payload.dry_run ?? true,
-          required: payload.required ?? [],
-          business_writer_error: payload.business_writer_error ?? null,
-          business_writer_reason: payload.business_writer_reason ?? null,
-          action_contract: payload.action_contract ?? null,
-          audit: payload.audit ?? null,
+          "动作": actionLabel(action),
+          "目标": String(targetId),
+          "错误": errorLabel(payload.error),
+          "原因": reason,
+          "写入已启用": booleanLabel(payload.write_enabled),
+          "写入器已启用": booleanLabel(payload.writer_enabled),
+          "写入器环境已启用": booleanLabel(payload.business_writer_env_enabled),
+          "写入器实现已注入": booleanLabel(payload.business_writer_impl_injected),
+          "写入器已就绪": booleanLabel(payload.business_writer_ready),
+          "已执行写入": booleanLabel(payload.write_executed ?? false),
+          "审批门已通过": booleanLabel(payload.approval_gate_passed ?? false),
+          "将允许执行": booleanLabel(payload.would_allow ?? false),
+          "预演模式": booleanLabel(payload.dry_run ?? true),
+          "所需条件": (payload.required ?? []).map(requiredConditionLabel),
+          "业务写入器错误": errorLabel(payload.business_writer_error),
+          "业务写入器原因": localizeReason(payload.business_writer_reason),
         };
         const pre = document.getElementById("dry-run-detail");
         if (pre) {
@@ -4366,7 +4505,7 @@
           renderDryRunResult(
             {
               error: "missing_target",
-              reason: "队列项缺少 action 或 target_id,无法 dry-run。",
+              reason: "队列项缺少动作或目标编号，无法预演。",
               write_executed: false,
               action,
               target_id: targetId,
@@ -4415,7 +4554,7 @@
           renderDryRunResult(
             {
               error: "request_failed",
-              reason: "POST /api/approval-gate/actions 请求失败,仍保持禁写。",
+              reason: "审批动作请求失败，仍保持禁写。",
               write_executed: false,
               action,
               target_id: targetId,
@@ -4468,7 +4607,7 @@
               {
                 endpoint: "decide",
                 error: "api_offline",
-                reason: "API 离线,1-click decide 静态兜底:仍需 user 在 UI 二次确认,write_executed 恒 false。",
+                reason: "接口离线，一键审批使用静态兜底：仍需用户在页面二次确认，始终不执行真实写入。",
                 decision,
                 audit_id: targetId,
                 mapped_action:
@@ -4479,7 +4618,7 @@
                 contract_version: "v0.2.57",
               },
               null,
-              label || `1-click ${decision}`,
+              label || `一键${actionLabel(decision)}`,
             );
             return;
           }
@@ -4491,20 +4630,20 @@
             reason: `dashboard 1-click ${decision} dry-run`,
             actor: "local_dashboard",
           });
-          renderDryRunResult(body, status, label || `1-click ${decision}`);
+          renderDryRunResult(body, status, label || `一键${actionLabel(decision)}`);
         } catch (_err) {
           renderDryRunResult(
             {
               endpoint: "decide",
               error: "request_failed",
-              reason: "POST /api/approval-gate/decide 请求失败,仍保持禁写。",
+              reason: "审批决策请求失败，仍保持禁写。",
               decision,
               audit_id: targetId,
               write_executed: false,
               dry_run: true,
             },
             null,
-            label || `1-click ${decision}`,
+            label || `一键${actionLabel(decision)}`,
           );
         } finally {
           if (buttonEl) {
@@ -4566,13 +4705,34 @@
           draft: "草稿",
           unknown: "未知",
         };
-        return map[status] ?? status;
+        return map[status] ?? "未知";
       }
 
       function formatBytes(n) {
-        if (!n || n < 1024) return `${n ?? 0} B`;
-        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
-        return `${(n / 1024 / 1024).toFixed(1)} MB`;
+        if (!n || n < 1024) return `${n ?? 0} 字节`;
+        if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} 千字节`;
+        return `${(n / 1024 / 1024).toFixed(1)} 兆字节`;
+      }
+
+      function reportFilterLabel(value) {
+        const labels = {
+          all: "全部",
+          doc: "文档",
+          phase_report: "报告",
+          spike: "实验",
+          agent_output: "智能产出",
+        };
+        return labels[String(value ?? "all")] ?? "其他";
+      }
+
+      function localizeReportTitle(value) {
+        return String(value ?? "")
+          .replaceAll("Dashboard", "仪表盘")
+          .replaceAll("dashboard", "仪表盘")
+          .replaceAll("opt-in", "可选启用")
+          .replaceAll("OutboxDispatcher", "发件调度器")
+          .replaceAll("Outbox", "发件箱")
+          .replaceAll("spike", "实验");
       }
 
       function filteredReports() {
@@ -4619,7 +4779,7 @@
         setText("report-preview-title", title || "报告预览");
         setText(
           "report-preview-meta",
-          `${meta}${truncated ? " · 已截断(8KB)" : ""}`,
+          `${meta}${truncated ? " · 已截断（8 千字节）" : ""}`,
         );
         const pre = document.getElementById("report-preview-body");
         if (pre) pre.textContent = body || "无预览内容";
@@ -4631,9 +4791,9 @@
         if (!_apiOnline) {
           const item = _currentReports.find((r) => r.path === reportPath);
           renderReportPreviewPanel(
-            item?.title ?? reportPath,
-            `${item?.type ?? "unknown"} · ${item?.path ?? reportPath} · 静态兜底`,
-            "API 离线，暂时无法加载报告正文。\n\n路径: " + reportPath,
+            localizeReportTitle(item?.title ?? reportPath),
+            `${reportTypeLabel(item?.type)} · ${item?.path ?? reportPath} · 静态兜底`,
+            "接口离线，暂时无法加载报告正文。\n\n路径：" + reportPath,
             false,
           );
           return;
@@ -4643,8 +4803,8 @@
             `/api/reports/preview?path=${encodeURIComponent(reportPath)}`,
           );
           renderReportPreviewPanel(
-            payload.title,
-            `${payload.type} · ${payload.path} · ${formatBytes(payload.size_bytes)}`,
+            localizeReportTitle(payload.title),
+            `${reportTypeLabel(payload.type)} · ${payload.path} · ${formatBytes(payload.size_bytes)}`,
             payload.preview,
             payload.truncated,
           );
@@ -4683,13 +4843,13 @@
       //   - InMemory 注入 → enabled=true,按 executed_at_ms DESC 倒序
       //   - 失败 audit(带 error 字段)用红色 tag 标识
       function renderAudits(payload, sourceLabel) {
-        setText("audit-source", `audit 落档 · ${sourceLabel}`);
+        setText("audit-source", `审计落档 · ${sourceLabel}`);
         const enabled = payload.enabled === true;
         const items = Array.isArray(payload.items) ? payload.items : [];
         const count = payload.count ?? items.length;
         const stateTag = document.getElementById("audit-state-tag");
         if (stateTag) {
-          stateTag.textContent = enabled ? "InMemory 已注入" : "默认 Stub";
+          stateTag.textContent = enabled ? "内存存储已注入" : "默认占位存储";
           stateTag.className = enabled ? "tag green" : "tag";
         }
         const container = document.getElementById("audit-queue");
@@ -4702,12 +4862,12 @@
           const left = document.createElement("div");
           const title = document.createElement("div");
           title.className = "queue-title";
-          title.textContent = enabled ? "暂无 audit 记录" : "暂无 audit 记录";
+          title.textContent = "暂无审计记录";
           const meta = document.createElement("div");
           meta.className = "queue-meta";
           meta.textContent = enabled
-            ? "InMemory 注入成功,等待首次写操作"
-            : "默认 ApprovalGateAuditStoreStub · 需 DASHBOARD_REAL_DB=1 + BUSINESS_WRITER_ENABLED=1 注入 InMemory";
+            ? "内存存储注入成功，等待首次写操作"
+            : "默认使用占位存储 · 需启用真实数据库和业务写入器后注入内存存储";
           left.appendChild(title);
           left.appendChild(meta);
           empty.appendChild(left);
@@ -4724,12 +4884,12 @@
           const left = document.createElement("div");
           const title = document.createElement("div");
           title.className = "queue-title";
-          title.textContent = `${item.action} → ${item.target_id ?? "?"}`;
+          title.textContent = `${actionLabel(item.action)} → ${item.target_id ?? "?"}`;
           const meta = document.createElement("div");
           meta.className = "queue-meta";
           const reason = item.reason && item.reason.length > 0 ? ` · ${item.reason}` : "";
-          const actor = item.actor ?? "local_dashboard";
-          meta.textContent = `actor=${actor}${reason}`;
+          const actor = item.actor === "local_dashboard" || !item.actor ? "本地仪表盘" : "其他操作者";
+          meta.textContent = `操作者：${actor}${reason ? localizeReason(reason) : ""}`;
           left.appendChild(title);
           left.appendChild(meta);
           row.appendChild(left);
@@ -4743,7 +4903,7 @@
             tag.textContent = "已执行";
           } else {
             tag.className = "tag";
-            tag.textContent = "dry-run";
+            tag.textContent = "预演";
           }
           row.appendChild(tag);
           container.appendChild(row);
@@ -4761,8 +4921,8 @@
         if (filtered.length === 0) {
           const q = _currentReportSearch.trim();
           const emptyMsg = q
-            ? `<div class="queue-empty">未找到匹配「<mark>${escapeHtml(q)}</mark>」的报告 · 调整搜索或 filter</div>`
-            : '<div class="queue-empty">暂无匹配报告 · 调整 filter</div>';
+            ? `<div class="queue-empty">未找到匹配「<mark>${escapeHtml(q)}</mark>」的报告 · 调整搜索或筛选条件</div>`
+            : '<div class="queue-empty">暂无匹配报告 · 调整筛选条件</div>';
           container.innerHTML = emptyMsg;
         } else {
           container.innerHTML = filtered
@@ -4770,7 +4930,7 @@
               const tone = statusToTagTone(r.status);
               const label = statusToLabel(r.status);
               const selected = r.path === _selectedReportPath ? " selected" : "";
-              const titleHtml = highlightMatch(r.title || "—", _currentReportSearch);
+              const titleHtml = highlightMatch(localizeReportTitle(r.title || "—"), _currentReportSearch);
               const pathHtml = highlightMatch(r.path || "", _currentReportSearch);
               return `
               <div class="queue-item clickable${selected}" data-report-path="${escapeHtml(r.path)}" role="button" tabindex="0">
@@ -4778,7 +4938,7 @@
                   <div class="queue-title">${titleHtml}</div>
                   <div class="queue-meta">
                     <span class="tag ${tone}">${label}</span>
-                    <span class="tag">${escapeHtml(r.type)}</span>
+                    <span class="tag">${escapeHtml(reportTypeLabel(r.type))}</span>
                     <span>${escapeHtml(r.date || "—")}</span>
                     <span>${formatBytes(r.size_bytes)}</span>
                   </div>
@@ -4796,7 +4956,7 @@
           if (q) {
             matchHint.textContent = `${filtered.length} / ${total} 项匹配「${q}」`;
           } else if (_currentReportFilter !== "all") {
-            matchHint.textContent = `${filtered.length} / ${total} 项 (${_currentReportFilter})`;
+            matchHint.textContent = `${filtered.length} / ${total} 项（${reportFilterLabel(_currentReportFilter)}）`;
           } else {
             matchHint.textContent = `${total} 项`;
           }
@@ -4809,7 +4969,7 @@
         });
         const hint = document.getElementById("reports-filter-hint");
         if (hint && _currentReportFilter === "spike") {
-          hint.textContent = "spike 详情 · 点击条目加载预览";
+          hint.textContent = "实验详情 · 点击条目加载预览";
         } else if (hint) {
           hint.textContent = "点击条目预览 · 支持搜索";
         }
@@ -4870,22 +5030,22 @@
           ]);
           _apiOnline = true;
           renderStatus(status);
-          renderTasks(tasks, "来自本地只读 API");
+          renderTasks(tasks, "来自本地只读接口");
           renderExtendedViews(outbox, notes, finance, true);
-          renderReports(reports, "本地只读 API · 文件系统扫描");
-          renderAudits(audits, "本地只读 API · audit 落档列表");
-          setText("today-source", "今日工作 · 本地 API 已连接");
-          setApiState(true, "API 已连接");
-          setText("footer-dry-run", "ApprovalGate dry-run wired · write_executed=false");
+          renderReports(reports, "本地只读接口 · 文件系统扫描");
+          renderAudits(audits, "本地只读接口 · 审计落档列表");
+          setText("today-source", "今日工作 · 本地接口已连接");
+          setApiState(true, "接口已连接");
+          setText("footer-dry-run", "审批门预演已接入 · 未执行真实写入");
         } catch (_err) {
           _apiOnline = false;
           renderOfflineApprovalState();
           renderTasks(fallbackTasks, "静态兜底数据");
           renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");
-          renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "API 离线兜底");
-          setText("today-source", "今日工作 · API 离线，使用只读兜底");
-          setApiState(false, "API 离线");
+          renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "接口离线兜底");
+          setText("today-source", "今日工作 · 接口离线，使用只读兜底");
+          setApiState(false, "接口离线");
         }
       }
 
