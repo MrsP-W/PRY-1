@@ -16,6 +16,7 @@ import pytest
 from my_ai_employee.dashboard.context import DashboardContext, QualityGateSnapshot
 from my_ai_employee.dashboard.handlers import handler_factory
 from my_ai_employee.dashboard.responses import (
+    build_daily_news_payload,
     build_finance_anomalies_payload,
     build_notes_pending_payload,
     build_outbox_payload,
@@ -300,6 +301,39 @@ def test_build_finance_anomalies_payload_items(dashboard_ctx: DashboardContext) 
     payload = build_finance_anomalies_payload(dashboard_ctx)
     assert payload["count"] == 1
     assert payload["items"][0]["counterparty"] == "支付宝"
+
+
+def test_build_daily_news_payload_reads_local_cache_only(
+    dashboard_ctx: DashboardContext, tmp_path: Path
+) -> None:
+    from my_ai_employee.news import FileNewsStore, NewsService
+
+    store = FileNewsStore(tmp_path / "news" / "latest.json")
+    store.write(
+        {
+            "schema_version": 1,
+            "generated_at": "2026-07-19T10:00:00Z",
+            "items": [
+                {
+                    "id": "news-1",
+                    "title": "AI Agent update",
+                    "url": "https://example.com/ai-agent",
+                    "region": "global",
+                    "kind": "event",
+                }
+            ],
+            "sources": [],
+            "coverage": {},
+        }
+    )
+
+    payload = build_daily_news_payload(
+        dashboard_ctx.with_news_service(NewsService(store, sources=()))
+    )
+
+    assert payload["read_only"] is True
+    assert payload["available"] is True
+    assert payload["items"][0]["title"] == "AI Agent update"
 
 
 def test_parse_limit_clamps() -> None:
@@ -777,6 +811,28 @@ def test_http_api_finance_anomalies(running_server: str) -> None:
     assert status == 200
     assert body["count"] == 1
     assert body["items"][0]["amount"] == 1299
+
+
+def test_http_api_daily_news_empty_cache_is_read_only(tmp_path: Path) -> None:
+    from my_ai_employee.news import FileNewsStore, NewsService
+
+    context = DashboardContext().with_news_service(
+        NewsService(FileNewsStore(tmp_path / "missing.json"), sources=())
+    )
+    server = create_server(context, host="127.0.0.1", port=0)
+    _host, port = server.server_address[:2]
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        status, body = _fetch_json(f"http://127.0.0.1:{port}/api/news/daily")
+    finally:
+        server.shutdown()
+        thread.join(timeout=2.0)
+
+    assert status == 200
+    assert body["read_only"] is True
+    assert body["available"] is False
+    assert body["state"] == "not_refreshed"
 
 
 def test_http_api_not_found(running_server: str) -> None:

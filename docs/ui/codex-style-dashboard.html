@@ -614,6 +614,18 @@
         white-space: nowrap;
       }
 
+      .queue-title-link {
+        display: block;
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .queue-title-link:hover,
+      .queue-title-link:focus-visible {
+        color: var(--blue);
+        text-decoration: underline;
+      }
+
       .queue-meta {
         margin-top: 5px;
         color: var(--muted);
@@ -3189,10 +3201,10 @@
           <path d="M6 3h9l3 3v15H6z"></path>
           <path d="M15 3v4h4M9 11h6m-6 4h6m-6 4h4"></path>
         </symbol>
-        <symbol id="ti-finance" viewBox="0 0 24 24">
-          <path d="M4 4v16h17"></path>
-          <path d="m7 16 4-5 3 2 5-7"></path>
-          <circle cx="7" cy="16" r="1"></circle><circle cx="11" cy="11" r="1"></circle><circle cx="19" cy="6" r="1"></circle>
+        <symbol id="ti-news" viewBox="0 0 24 24">
+          <rect x="4" y="4" width="16" height="16" rx="3"></rect>
+          <path d="M8 8h8M8 12h8M8 16h5"></path>
+          <path d="M18 4v5h-5"></path>
         </symbol>
         <symbol id="ti-calendar" viewBox="0 0 24 24">
           <rect x="3" y="5" width="18" height="16" rx="3"></rect>
@@ -3286,7 +3298,7 @@
             <button class="active" data-view="today" aria-current="page"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-overview"></use></svg></span>总览</span><span class="badge" id="badge-today">6</span></button>
             <button data-view="mail"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-mail"></use></svg></span>邮件</span><span class="badge" id="badge-mail">3</span></button>
             <button data-view="notes"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-note"></use></svg></span>笔记</span><span class="badge" id="badge-notes">2</span></button>
-            <button data-view="finance"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-finance"></use></svg></span>财务</span><span class="badge" id="badge-finance">1</span></button>
+            <button data-view="news"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-news"></use></svg></span>每日新闻</span><span class="badge" id="badge-news">--</span></button>
             <button data-view="calendar"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-calendar"></use></svg></span>日程</span><span class="badge">0</span></button>
             <button data-view="reports"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-report"></use></svg></span>报告</span><span class="badge" id="badge-reports">8</span></button>
             <button data-view="system"><span class="nav-label"><span class="nav-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-system"></use></svg></span>系统</span><span class="badge">7/8</span></button>
@@ -3296,7 +3308,7 @@
           <div class="side-card">
             <h3>今日重点</h3>
             <div class="tiny">
-              审核邮件草稿、复核财务异常、确认笔记候选。
+              审核邮件草稿、确认笔记候选、跟进 AI 情报台高优先级信号。
             </div>
           </div>
 
@@ -3327,8 +3339,8 @@
                     <div class="metric-label">笔记候选</div>
                   </div>
                   <div class="metric">
-                    <div class="metric-value" id="metric-finance">1</div>
-                    <div class="metric-label">财务异常</div>
+                    <div class="metric-value" id="metric-news">--</div>
+                    <div class="metric-label">今日 AI 情报</div>
                   </div>
                   <div class="metric">
                     <div class="metric-value" id="metric-readiness">7/8</div>
@@ -3341,7 +3353,7 @@
                 <div class="gate-list">
                   <div class="gate"><strong>真实邮件发送</strong><span class="tag red" id="gate-smtp">禁用</span></div>
                   <div class="gate"><strong>审批门</strong><span class="tag red" id="gate-approval">禁写</span></div>
-                  <div class="gate"><strong>账单导入</strong><span class="tag green">只读预览</span></div>
+                  <div class="gate"><strong>新闻数据</strong><span class="tag green">本地只读缓存</span></div>
                   <div class="gate"><strong>钥匙串凭据</strong><span class="tag red" id="gate-keychain">缺失</span></div>
                 </div>
               </div>
@@ -3356,7 +3368,7 @@
                     <span>用户指令</span>
                     <span class="tiny">09:40</span>
                   </div>
-                  <div>处理今天邮件、笔记候选和财务异常；高风险动作先给计划，等待确认。</div>
+                  <div>处理今天邮件、笔记候选，并查看 AI 情报台；高风险动作先给计划，等待确认。</div>
                 </div>
                 </div>
                 <div class="step">
@@ -3366,7 +3378,7 @@
                     <span>计划</span>
                     <span class="tag">等待审批</span>
                   </div>
-                  <div>先审最高风险邮件草稿 → 复核账单异常 → 确认笔记候选 → 输出今日摘要。</div>
+                  <div>先审最高风险邮件草稿 → 确认笔记候选 → 提炼 AI 情报台高优信号 → 输出今日摘要。</div>
                   <div class="chips">
                     <span class="chip ok">不真实发送</span>
                     <span class="chip ok">不写入钥匙串</span>
@@ -3391,10 +3403,10 @@
                     </div>
                     <div class="queue-item">
                       <div>
-                        <div class="queue-title">支付宝异常支出 ¥1,299.00</div>
-                        <div class="queue-meta">高于历史均值 2.8 倍，需要人工标记</div>
+                        <div class="queue-title">会议纪要待归档</div>
+                        <div class="queue-meta">笔记候选待确认；确认前不写入二级记忆</div>
                       </div>
-                      <span class="tag red">风险</span>
+                      <span class="tag">确认</span>
                     </div>
                   </div>
                 </div>
@@ -3424,15 +3436,15 @@
               <div class="queue" id="mail-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">供应商付款确认 · 紧急</div>
-                    <div class="queue-meta">收件人：finance-vendor@example.com · 服务商：微软邮箱 · 优先级：高</div>
+                    <div class="queue-title">项目协作确认 · 紧急</div>
+                    <div class="queue-meta">收件人：project-partner@example.com · 服务商：微软邮箱 · 优先级：高</div>
                   </div>
                   <span class="tag">待审批</span>
                 </div>
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">月结资料补充 · 待办</div>
-                    <div class="queue-meta">收件人：accounting@example.com · 服务商：腾讯邮箱 · 优先级：普通</div>
+                    <div class="queue-title">知识库资料补充 · 待办</div>
+                    <div class="queue-meta">收件人：team@example.com · 服务商：腾讯邮箱 · 优先级：普通</div>
                   </div>
                   <span class="tag green">可保存</span>
                 </div>
@@ -3519,7 +3531,7 @@
                 <div class="gate-list">
                   <div class="gate"><strong>钥匙串写入</strong><span class="tag red">需确认</span></div>
                   <div class="gate"><strong>系统服务重启</strong><span class="tag red">需确认</span></div>
-                  <div class="gate"><strong>真实账单导入</strong><span class="tag">仅人工触发</span></div>
+                  <div class="gate"><strong>新闻来源配置</strong><span class="tag green">白名单 HTTPS</span></div>
                 </div>
               </div>
               <div class="card card-pad" id="audit-card">
@@ -3564,20 +3576,33 @@
             </div>
           </section>
 
-          <section id="finance" class="view">
+          <section id="news" class="view">
             <div class="card card-pad">
               <div class="section-heading">
-                <p class="section-kicker" id="finance-source">财务工作台 · 异常复核</p>
-                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-finance"></use></svg></span><span class="page-title-text">财务异常复核</span></h1>
-                <p class="section-summary">异常可标记；真实账单导入仍受安全门控保护。</p>
+                <p class="section-kicker" id="news-source">AI 每日情报 · 等待首次本地刷新</p>
+                <h1 class="headline page-title"><span class="page-title-icon" aria-hidden="true"><svg class="tech-icon"><use href="#ti-news"></use></svg></span><span class="page-title-text">每日 AI 情报台</span></h1>
+                <p class="section-summary">按小时设计聚合国内、国际 AI 大事件与可追溯公开发言；只展示原文链接和已核验的官方摘录，不生成无出处引语。</p>
               </div>
-              <div class="queue" id="finance-queue" style="margin-top: 16px">
+              <div class="gate-list" style="margin-top: 12px">
+                <div class="gate"><strong>更新调度</strong><span class="tag" id="news-refresh-mode">每小时刷新待部署</span></div>
+                <div class="gate"><strong>来源健康</strong><span class="tag" id="news-source-health">等待刷新</span></div>
+                <div class="gate"><strong>覆盖范围</strong><span class="tag" id="news-coverage">国内 0 · 国际 0 · 发言 0</span></div>
+                <div class="gate"><strong>覆盖验收</strong><span class="tag" id="news-coverage-status">等待首次刷新</span></div>
+              </div>
+              <div class="filter-row" id="news-filter-row" style="margin-top: 14px" aria-label="AI 情报筛选">
+                <button class="filter active" type="button" data-news-filter="all" aria-pressed="true">全部</button>
+                <button class="filter" type="button" data-news-filter="domestic" aria-pressed="false">国内</button>
+                <button class="filter" type="button" data-news-filter="international" aria-pressed="false">国际</button>
+                <button class="filter" type="button" data-news-filter="statements" aria-pressed="false">已核验原话</button>
+                <button class="filter" type="button" data-news-filter="clues" aria-pressed="false">发言线索</button>
+              </div>
+              <div class="queue" id="news-queue" style="margin-top: 16px">
                 <div class="queue-item">
                   <div>
-                    <div class="queue-title">支付宝 ¥1,299.00</div>
-                    <div class="queue-meta">2026-06-25 · 金额突增</div>
+                    <div class="queue-title">尚未完成首次 AI 情报刷新</div>
+                    <div class="queue-meta">刷新器会写入本地只读缓存；网络不可用时保留最近一次成功结果。</div>
                   </div>
-                  <span class="tag red">风险</span>
+                  <span class="tag gray">待刷新</span>
                 </div>
               </div>
             </div>
@@ -3607,7 +3632,7 @@
                 <p class="section-summary">集中查看质量门、运行证据与阶段产出。</p>
               </div>
 
-              <div class="filter-row" style="margin-top: 12px">
+              <div class="filter-row" id="reports-filter-row" style="margin-top: 12px">
                 <input
                   id="reports-search"
                   class="search-input"
@@ -3663,7 +3688,7 @@
           <div class="inspector-section">
             <h3>智能建议</h3>
             <div class="tiny">
-              先复核财务异常，再处理需要审批的邮件草稿。
+              先处理需要审批的邮件草稿，再查看 AI 情报台中的高优先级信号。
             </div>
           </div>
 
@@ -3774,11 +3799,10 @@
       });
 
       const fallbackTasks = {
-        total: 6,
+        total: 5,
         tasks: [
           { id: "mail_drafts", count: 3 },
           { id: "notes_confirm", count: 2 },
-          { id: "finance_anomaly", count: 1 },
         ],
       };
 
@@ -3787,18 +3811,18 @@
         items: [
           {
             outbox_id: 1,
-            subject: "供应商付款确认 · 紧急",
+            subject: "项目协作确认 · 紧急",
             status: "pending_send",
             priority: "urgent",
-            to: "finance-vendor@example.com",
+            to: "project-partner@example.com",
             provider: "outlook",
           },
           {
             outbox_id: 2,
-            subject: "月结资料补充 · 待办",
+            subject: "知识库资料补充 · 待办",
             status: "draft",
             priority: "normal",
-            to: "accounting@example.com",
+            to: "team@example.com",
             provider: "qq",
           },
         ],
@@ -3812,16 +3836,20 @@
         ],
       };
 
-      const fallbackFinance = {
-        count: 1,
-        items: [
-          {
-            date: "2026-06-25",
-            counterparty: "支付宝",
-            amount: 1299,
-            kinds: "金额突增",
-          },
-        ],
+      const fallbackNews = {
+        available: false,
+        state: "not_refreshed",
+        count: 0,
+        items: [],
+        sources: [],
+        coverage: {
+          domestic: 0,
+          international: 0,
+          leader_statements: 0,
+          leader_clues: 0,
+          successful_sources: 0,
+          total_sources: 0,
+        },
       };
 
       // ===== v0.2.53.9 报告页 fallback 数据 =====
@@ -4025,14 +4053,39 @@
         return labels[String(value ?? "").toLowerCase()] ?? "未知状态";
       }
 
-      function financeKindLabel(value) {
+      function newsRegionLabel(value) {
+        return String(value) === "cn" ? "国内" : "国际";
+      }
+
+      function newsKindLabel(value) {
         const labels = {
-          amount_spike: "金额突增",
-          duplicate: "重复记录",
-          unusual_vendor: "异常供应商",
+          event: "AI 事件",
+          leader_statement: "已核验原话",
+          leader_clue: "发言线索",
+          official_voice: "官方视频",
         };
-        const key = String(value ?? "");
-        return labels[key] ?? (key || "财务异常");
+        return labels[String(value ?? "")] ?? "AI 动态";
+      }
+
+      function formatNewsTime(value) {
+        const timestamp = Date.parse(String(value ?? ""));
+        if (Number.isNaN(timestamp)) return "时间未标注";
+        return new Intl.DateTimeFormat("zh-CN", {
+          month: "numeric",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }).format(new Date(timestamp));
+      }
+
+      function safeExternalUrl(value) {
+        try {
+          const url = new URL(String(value ?? ""));
+          return url.protocol === "https:" ? url.href : "";
+        } catch (_error) {
+          return "";
+        }
       }
 
       function reportTypeLabel(value) {
@@ -4050,7 +4103,6 @@
           "outbox.approve": "批准邮件草稿",
           "outbox.cancel": "取消邮件草稿",
           "notes.confirm": "确认笔记候选",
-          "finance.dismiss_anomaly": "忽略财务异常",
           approve: "批准",
           reject: "拒绝",
         };
@@ -4127,13 +4179,6 @@
         return text;
       }
 
-      function formatAmount(amount) {
-        if (typeof amount === "number") {
-          return `¥${amount.toLocaleString("zh-CN")}`;
-        }
-        return escapeHtml(amount);
-      }
-
       function setText(id, value) {
         const el = document.getElementById(id);
         if (el) {
@@ -4171,17 +4216,18 @@
         const tasks = payload.tasks ?? fallbackTasks.tasks;
         const mail = taskCount(tasks, "mail_drafts");
         const notes = taskCount(tasks, "notes_confirm");
-        const finance = taskCount(tasks, "finance_anomaly");
-        const total = payload.total ?? mail + notes + finance;
+        // AI 新闻是信息流，不混入需要人工处理的邮件/笔记待办总数。
+        const total = mail + notes;
         setText("total-tasks", String(total));
         setText("metric-mail", String(mail));
         setText("metric-notes", String(notes));
-        setText("metric-finance", String(finance));
         setText("badge-today", String(total));
         setText("badge-mail", String(mail));
         setText("badge-notes", String(notes));
-        setText("badge-finance", String(finance));
-        setText("risk-summary", finance > 0 ? `${finance} 个需要先看风险` : "暂无高风险项");
+        setText(
+          "risk-summary",
+          mail > 0 ? `${mail} 封邮件等待审批` : notes > 0 ? `${notes} 条笔记待确认` : "待办队列已清空",
+        );
         setText("result-source", sourceLabel);
       }
 
@@ -4222,11 +4268,28 @@
         return `<div class="queue-item" data-approval-action="notes.confirm" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(item.title ?? "笔记候选")}"><div><div class="queue-title">${escapeHtml(item.title ?? "无标题")}</div><div class="queue-meta">${escapeHtml(`${folder}待确认`)}</div></div><div class="queue-actions"><span class="tag">确认</span><button type="button" class="btn btn-sm dry-run-btn">预演确认</button></div></div>`;
       }
 
-      function renderFinanceItem(item) {
-        const title = `${item.counterparty ?? "未知"} ${formatAmount(item.amount)}`;
-        const meta = [item.date, financeKindLabel(item.kinds)].filter(Boolean).join(" · ") || "财务异常";
-        const targetId = [item.date, item.counterparty, item.amount].filter((v) => v !== undefined && v !== null && v !== "").join("|");
-        return `<div class="queue-item" data-approval-action="finance.dismiss_anomaly" data-target-id="${escapeHtml(targetId)}" data-approval-label="${escapeHtml(title)}"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(meta)}</div></div><div class="queue-actions"><span class="tag red">风险</span><button type="button" class="btn btn-sm dry-run-btn">预演忽略</button></div></div>`;
+      function renderNewsItem(item) {
+        const url = safeExternalUrl(item.url);
+        const title = escapeHtml(item.title ?? "无标题 AI 动态");
+        const titleHtml = url
+          ? `<a class="queue-title queue-title-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+          : `<div class="queue-title">${title}</div>`;
+        const topics = Array.isArray(item.topics) ? item.topics.filter(Boolean).join(" / ") : "AI 动态";
+        const isVerbatim = item.kind === "leader_statement" && item.verbatim === true && item.quote;
+        const meta = [
+          newsRegionLabel(item.region),
+          formatNewsTime(item.published_at),
+          isVerbatim && item.speaker ? `发言人：${item.speaker}` : "",
+          item.source ?? "来源未标注",
+          topics,
+        ].filter(Boolean).join(" · ");
+        const quote = isVerbatim
+          ? `<div class="queue-meta">官方原文摘录：${escapeHtml(item.quote)}</div>`
+          : item.summary
+            ? `<div class="queue-meta">${escapeHtml(item.summary)}</div>`
+            : "";
+        const tagClass = item.kind === "leader_statement" ? "green" : item.kind === "leader_clue" ? "blue" : "";
+        return `<div class="queue-item"><div>${titleHtml}<div class="queue-meta">${escapeHtml(meta)}</div>${quote}</div><span class="tag ${tagClass}">${escapeHtml(newsKindLabel(item.kind))}</span></div>`;
       }
 
       function renderTodayQueueItem(kind, item) {
@@ -4236,14 +4299,12 @@
         if (kind === "notes") {
           return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(item.title ?? "笔记候选")}</div><div class="queue-meta">${escapeHtml(item.folder ?? "待确认")}</div></div><span class="tag">确认</span></div>`;
         }
-        const title = `${item.counterparty ?? "异常"} ${formatAmount(item.amount)}`;
-        return `<div class="queue-item"><div><div class="queue-title">${escapeHtml(title)}</div><div class="queue-meta">${escapeHtml(financeKindLabel(item.kinds))}</div></div><span class="tag red">风险</span></div>`;
+        return "";
       }
 
-      function renderTodayQueue(outbox, notes, finance) {
+      function renderTodayQueue(outbox, notes) {
         const mixed = [];
         (outbox.items ?? []).slice(0, 2).forEach((item) => mixed.push(renderTodayQueueItem("mail", item)));
-        (finance.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("finance", item)));
         (notes.items ?? []).slice(0, 1).forEach((item) => mixed.push(renderTodayQueueItem("notes", item)));
         const container = document.getElementById("today-queue");
         if (!container) {
@@ -4251,25 +4312,107 @@
         }
         if (mixed.length === 0) {
           container.innerHTML =
-            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">发件箱、笔记和财务队列均为空</div></div></div>';
+            '<div class="queue-item"><div><div class="queue-title">暂无待处理项</div><div class="queue-meta">邮件与笔记队列均为空</div></div></div>';
           return;
         }
         container.innerHTML = mixed.join("");
       }
 
-      function renderExtendedViews(outbox, notes, finance, fromApi) {
+      function filterNewsItems(items) {
+        return items.filter((item) => {
+          if (_currentNewsFilter === "domestic") return item.region === "cn";
+          if (_currentNewsFilter === "international") return item.region === "global";
+          if (_currentNewsFilter === "statements") {
+            return item.kind === "leader_statement" && item.verbatim === true;
+          }
+          if (_currentNewsFilter === "clues") {
+            return item.kind === "leader_clue" || item.kind === "official_voice";
+          }
+          return true;
+        });
+      }
+
+      function newsCoverageStatus(domestic, international, statements, available) {
+        if (!available) return { text: "等待首次刷新", tone: "" };
+        const missing = [];
+        if (domestic < 4) missing.push(`国内 ${domestic}/4`);
+        if (international < 8) missing.push(`国际 ${international}/8`);
+        if (statements < 1) missing.push(`已核验原话 ${statements}/1`);
+        return missing.length === 0
+          ? { text: "覆盖达标", tone: "green" }
+          : { text: `覆盖待补全：${missing.join(" · ")}`, tone: "yellow" };
+      }
+
+      function renderNews(news, fromApi) {
+        const payload = news ?? fallbackNews;
+        _currentNewsPayload = payload;
+        _currentNewsFromApi = fromApi;
+        const coverage = payload.coverage ?? {};
+        const totalSources = Number(coverage.total_sources ?? 0);
+        const successfulSources = Number(coverage.successful_sources ?? 0);
+        const domestic = Number(coverage.domestic ?? 0);
+        const international = Number(coverage.international ?? 0);
+        const statements = Number(coverage.leader_statements ?? 0);
+        const clues = Number(coverage.leader_clues ?? 0);
+        const stateLabels = {
+          fresh: "数据新鲜",
+          stale: "缓存已过期",
+          degraded: "上次刷新降级",
+          empty: "本轮无合格内容",
+          not_refreshed: "等待首次刷新",
+          invalid_snapshot: "缓存格式无效",
+        };
+        const state = String(payload.state ?? "not_refreshed");
+        const partialFailure = totalSources > 0 && successfulSources < totalSources;
+        const sourceLabel = partialFailure && state === "fresh"
+          ? "数据新鲜（部分来源失败）"
+          : stateLabels[state] ?? "来源状态未知";
+        const age = Number.isFinite(Number(payload.age_minutes)) ? `${payload.age_minutes} 分钟前` : "尚未刷新";
+        setText("news-source", `AI 每日情报 · ${sourceLabel} · ${age}`);
+        setTag(
+          "news-source-health",
+          totalSources > 0 ? `${successfulSources}/${totalSources} 个来源可用` : "等待刷新",
+          totalSources === 0 ? "" : partialFailure || state === "degraded" ? "yellow" : "green",
+        );
+        setText("news-coverage", `国内 ${domestic} · 国际 ${international} · 已核验原话 ${statements} · 发言线索 ${clues}`);
+        const items = Array.isArray(payload.items) ? payload.items : [];
+        const coverageStatus = newsCoverageStatus(domestic, international, statements, payload.available === true);
+        setTag("news-coverage-status", coverageStatus.text, coverageStatus.tone);
+        setText("metric-news", payload.available === true ? String(items.length) : "--");
+        setText("badge-news", payload.available === true ? String(items.length) : "--");
+        const container = document.getElementById("news-queue");
+        if (!container) return;
+        if (items.length === 0) {
+          const message = fromApi && state === "not_refreshed"
+            ? "尚未完成首次 AI 情报刷新"
+            : state === "stale" || state === "empty"
+              ? "最近缓存没有可展示的 AI 情报"
+              : "AI 情报暂不可用";
+          const detail = fromApi
+            ? "刷新器会保留最近一次成功缓存；媒体报道不作为大佬原话展示。"
+            : "本地接口离线，无法读取 AI 情报缓存。";
+          container.innerHTML = `<div class="queue-item"><div><div class="queue-title">${escapeHtml(message)}</div><div class="queue-meta">${escapeHtml(detail)}</div></div><span class="tag gray">只读</span></div>`;
+          return;
+        }
+        const filteredItems = filterNewsItems(items);
+        if (filteredItems.length === 0) {
+          container.innerHTML = '<div class="queue-item"><div><div class="queue-title">当前筛选没有匹配的 AI 情报</div><div class="queue-meta">只显示有一手来源证据的原话；媒体转述会保留为发言线索。</div></div><span class="tag gray">筛选</span></div>';
+          return;
+        }
+        container.innerHTML = filteredItems.map(renderNewsItem).join("");
+      }
+
+      function renderExtendedViews(outbox, notes, news, fromApi) {
         const sourceSuffix = fromApi ? "来自本地只读接口" : "静态兜底";
         setText("mail-source", `邮件审批 · 差异 + 审批 · ${sourceSuffix}`);
         setText("notes-source", `笔记待确认 · ${sourceSuffix}`);
-        setText("finance-source", `财务异常 · ${sourceSuffix}`);
         renderList("mail-queue", outbox.items ?? [], renderOutboxItem, "暂无邮件草稿");
         renderList("notes-queue", notes.items ?? [], renderNotesItem, "暂无笔记候选");
-        renderList("finance-queue", finance.items ?? [], renderFinanceItem, "暂无财务异常");
-        renderTodayQueue(outbox, notes, finance);
+        renderNews(news, fromApi);
+        renderTodayQueue(outbox, notes);
         if (fromApi) {
           setText("badge-mail", String(outbox.count ?? (outbox.items ?? []).length));
           setText("badge-notes", String(notes.count ?? (notes.items ?? []).length));
-          setText("badge-finance", String(finance.count ?? (finance.items ?? []).length));
         }
       }
 
@@ -4682,6 +4825,9 @@
       let _currentReportFilter = "all";
       let _currentReportSearch = "";
       let _selectedReportPath = "";
+      let _currentNewsPayload = fallbackNews;
+      let _currentNewsFromApi = false;
+      let _currentNewsFilter = "all";
       let _apiOnline = false;
 
       function statusToTagTone(status) {
@@ -4975,14 +5121,27 @@
         }
       }
 
-      document.querySelectorAll(".filter-row .filter").forEach((btn) => {
+      document.querySelectorAll("#reports-filter-row .filter").forEach((btn) => {
         btn.addEventListener("click", () => {
           document
-            .querySelectorAll(".filter-row .filter")
+            .querySelectorAll("#reports-filter-row .filter")
             .forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           _currentReportFilter = btn.dataset.filter || "all";
           renderReportsList();
+        });
+      });
+
+      document.querySelectorAll("#news-filter-row .filter").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll("#news-filter-row .filter").forEach((b) => {
+            b.classList.remove("active");
+            b.setAttribute("aria-pressed", "false");
+          });
+          btn.classList.add("active");
+          btn.setAttribute("aria-pressed", "true");
+          _currentNewsFilter = btn.dataset.newsFilter || "all";
+          renderNews(_currentNewsPayload, _currentNewsFromApi);
         });
       });
 
@@ -5019,19 +5178,19 @@
 
       async function hydrateDashboard() {
         try {
-          const [status, tasks, outbox, notes, finance, reports, audits] = await Promise.all([
+          const [status, tasks, outbox, notes, news, reports, audits] = await Promise.all([
             fetchJson("/api/status"),
             fetchJson("/api/tasks/today"),
             fetchJson("/api/outbox?limit=10"),
             fetchJson("/api/notes/pending?limit=10"),
-            fetchJson("/api/finance/anomalies?limit=10"),
+            fetchJson("/api/news/daily"),
             fetchJson("/api/reports?limit=50"),
             fetchJson("/api/approval-gate/audits?limit=10"),
           ]);
           _apiOnline = true;
           renderStatus(status);
           renderTasks(tasks, "来自本地只读接口");
-          renderExtendedViews(outbox, notes, finance, true);
+          renderExtendedViews(outbox, notes, news, true);
           renderReports(reports, "本地只读接口 · 文件系统扫描");
           renderAudits(audits, "本地只读接口 · 审计落档列表");
           setText("today-source", "今日工作 · 本地接口已连接");
@@ -5041,11 +5200,20 @@
           _apiOnline = false;
           renderOfflineApprovalState();
           renderTasks(fallbackTasks, "静态兜底数据");
-          renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackFinance, false);
+          renderExtendedViews(fallbackOutbox, fallbackNotes, fallbackNews, false);
           renderReports(fallbackReports, "静态兜底 · 演示数据");
           renderAudits({ read_only: true, enabled: false, count: 0, items: [] }, "接口离线兜底");
           setText("today-source", "今日工作 · 接口离线，使用只读兜底");
           setApiState(false, "接口离线");
+        }
+      }
+
+      async function refreshNewsFromLocalCache() {
+        try {
+          const news = await fetchJson("/api/news/daily");
+          renderNews(news, true);
+        } catch (_error) {
+          // 保留上一次可见新闻，避免短暂本地接口波动清空信息流。
         }
       }
 
@@ -5086,6 +5254,12 @@
       bindApprovalDryRunClick();
       bindApprovalDecideClick();
       hydrateDashboard();
+      window.setInterval(() => {
+        if (!document.hidden) refreshNewsFromLocalCache();
+      }, 5 * 60 * 1000);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshNewsFromLocalCache();
+      });
     </script>
   </body>
 </html>
