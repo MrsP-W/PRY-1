@@ -114,7 +114,7 @@
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
 | **质量基线** | **3145 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **291 files** / MD lint **295 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · AgentRun + P3 journal/report + NotesCipher v3) |
-| **下一棒** | P3 首个完整 UTC 日报核验 → 7d/30d；AgentRun 已落地（默认不 SMTP）；v1.0 默认不打；Mac 重启/注销恢复另需授权 |
+| **下一棒** | **PR #3 已合入 main**（`ff23e93`）· PR #2 已关；最早 **2026-07-22T00:00Z** 核验首份 UTC 日报 → 约 07-28/08-20 判 7d/30d；不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
 | **P1-3 #98 修复(本次 commit `f188d13`)** | `fix(launchd): #98 P1-3 修复 legacy retirement 仅 install 模式执行 + K5 回归测试`(2026-07-10 · 8 files / +78 -27 · **撞坑 #98 P1 审查发现**:原 5.5 段顺序有 bug,deploy-only 早退前 legacy retirement 会被执行,违反"只部署、不改变运行态"安全语义;**修复**:`launchd_install.sh` deploy-only 退出从 5.6 移到 5.5(NEW 段号),legacy retirement 移到 5.6(后置)· **K5 回归测试**:`tests/scripts/test_launchd_install.py` 新增 `test_k5_deploy_only_does_not_trigger_legacy_retirement`(5.5 段代码必不含 launchctl unload/bootout/my-ai-employee-start;5.5 必在 5.6 之前 → deploy-only 不退役 legacy)· K1/K3 段号 5.5→5.6 同步修正 · 5件套 baseline 同步 2936/1/89.12/290 → 2937/1/89.10/291(K5 +1 test, ruff format +0 MD)· 9/9 质量门全绿 2937 passed / 1 skipped / 89.10% / 291 MD / mypy 257 files · 默认不 push · 等 push 授权后启动 P0-4 24h 观察) |
@@ -6450,3 +6450,23 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **质量证据**：`make test` **3145 passed / 1 skipped / 90.26%**；mypy **291 files**；MD lint **295**
 - **下一棒**：P3 首个完整 UTC 日报；AgentRun 真 classifier/drafter 接线可选延后
+
+---
+
+### 2026-07-20 [PR #3 合入 main] — docs 收口
+
+#### 1. 本次修改内容
+
+- **合入**：[PR #3](https://github.com/MrsP-W/PRY-1/pull/3) → `main` merge commit `ff23e93`（含 P1–P3 + AgentRun 共 5 commits）
+- **关闭重叠**：[PR #2](https://github.com/MrsP-W/PRY-1/pull/2)（commits 已随 #3 落地，GitHub 记为 MERGED）
+- **本地**：`main` fast-forward 至 `origin/main`；P3 Day0 仍为 `2026-07-20T19:04:33Z`
+
+#### 2. 风险点
+
+- 首份 UTC 日报最早 **2026-07-22T00:00Z** 后才可核验；此前 `collecting` / 日报计数 0 属正常
+- 不做 SMTP 真发、Mac 重启/注销演练、v1.0 tag
+
+#### 3. 当前项目整体总结
+
+- **HEAD**：`main` @ `ff23e93`（以 `git rev-parse` 为准）
+- **下一棒**：2026-07-22 后核验首份 UTC 日报 → 约 07-28 / 08-20 判 7d/30d
