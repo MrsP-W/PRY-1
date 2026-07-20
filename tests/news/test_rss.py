@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
 from my_ai_employee.news.models import FeedSource
 from my_ai_employee.news.rss import deduplicate_and_sort, parse_feed
 
@@ -130,6 +132,12 @@ def test_media_source_with_required_ai_match_filters_unrelated_entries() -> None
     items = parse_feed(_source(origin="media", require_ai_match=True), payload, now=NOW)
 
     assert [item.title for item in items] == ["Chinese AI model release"]
+
+
+def test_parse_feed_rejects_invalid_xml() -> None:
+    """P2：坏 XML 抛 ValueError，供 service 层按源隔离。"""
+    with pytest.raises(ValueError, match="Feed XML 格式无效"):
+        parse_feed(_source(), b"<rss><channel><item></broken", now=NOW)
 
 
 def test_parse_rejects_non_https_item_link() -> None:

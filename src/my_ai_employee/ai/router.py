@@ -98,6 +98,7 @@ class LLMRouter:
     def __init__(self) -> None:
         self._breakers: dict[str, CircuitBreaker] = {}
         self._stats = RouterStats()
+        self._last_trace: dict[str, Any] = {}
 
     def _breaker(self, full_id: str) -> CircuitBreaker:
         """获取/创建单 provider 的熔断器(惰性创建)."""
@@ -111,6 +112,7 @@ class LLMRouter:
         messages: list[dict[Any, Any]],
         temperature: float = 0.3,
         max_tokens: int = 1024,
+        trace_id: str | None = None,
     ) -> LLMResponse:
         """主入口: 按 task_type 路由 + fallback 链.
 
@@ -119,6 +121,7 @@ class LLMRouter:
             messages: OpenAI 风格 messages
             temperature: 用户指定温度(0.0-1.0, reasoning 模型会被强制 1.0)
             max_tokens: 输出上限
+            trace_id: 可选 AgentRun/观测关联 ID（写入 last_trace，不破坏 stats()）
 
         Returns:
             LLMResponse(首个成功的响应)
@@ -129,6 +132,11 @@ class LLMRouter:
         chain = get_chain(task_type)
         start = time.time()
         last_error: Exception | None = None
+        self._last_trace = {
+            "trace_id": trace_id,
+            "task_type": task_type.value,
+            "attempts": [],
+        }
 
         for tier_name, full_id in (
             ("primary", chain.primary),
@@ -197,10 +205,23 @@ class LLMRouter:
                 else:
                     self._stats.fallback_successes += 1
                 self._stats.total_latency_ms += int((time.time() - start) * 1000)
+                self._last_trace["attempts"].append(
+                    {
+                        "tier": tier_name,
+                        "model": full_id,
+                        "provider": full_id.split(":", 1)[0] if ":" in full_id else full_id,
+                        "ok": True,
+                        "fallback_used": tier_name != "primary",
+                        "latency_ms": response.latency_ms,
+                        "input_tokens": response.input_tokens,
+                        "output_tokens": response.output_tokens,
+                    }
+                )
+                self._last_trace["ok"] = True
                 logger.info(
                     f"[router] {tier_name}={full_id} 成功 | "
                     f"latency={response.latency_ms}ms | "
-                    f"task_type={task_type.value}"
+                    f"task_type={task_type.value}" + (f" | trace_id={trace_id}" if trace_id else "")
                 )
                 return response
             except LLMError as e:
@@ -209,6 +230,15 @@ class LLMRouter:
                 # 让调用方知道是"代码 bug"而非"网络问题"(D3.3.3 教训).
                 breaker.record_failure()
                 last_error = e
+                self._last_trace["attempts"].append(
+                    {
+                        "tier": tier_name,
+                        "model": full_id,
+                        "ok": False,
+                        "fallback_used": tier_name != "primary",
+                        "error_code": type(e).__name__,
+                    }
+                )
                 logger.warning(
                     f"[router] {tier_name}={full_id} 失败: {e!r} | task_type={task_type.value}"
                 )
@@ -218,6 +248,7 @@ class LLMRouter:
         # 业务方 except LLMError 即可覆盖,不再逃逸到分类器/Adapter 外
         self._stats.failures += 1
         self._stats.total_latency_ms += int((time.time() - start) * 1000)
+        self._last_trace["ok"] = False
         raise LLMAllFallbacksError(
             task_type=task_type.value,
             primary=chain.primary,
@@ -225,6 +256,10 @@ class LLMRouter:
             tertiary=chain.tertiary,
             last_error=last_error,
         )
+
+    def last_trace(self) -> dict[str, Any]:
+        """最近一次 route() 的脱敏 trace 片段（可含 trace_id）。"""
+        return dict(self._last_trace)
 
     def stats(self) -> dict[str, Any]:
         """路由统计(可观测性, 对外暴露)."""

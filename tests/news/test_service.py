@@ -92,6 +92,58 @@ def test_all_source_failures_keep_previous_snapshot(tmp_path: Path) -> None:
     assert NewsService(store, sources=()).build_payload(now=NOW)["state"] == "degraded"
 
 
+def test_refresh_isolates_invalid_xml_from_one_source(tmp_path: Path) -> None:
+    """P2：单源坏 XML 不阻塞其它源写 snapshot。"""
+    sources = (_source("official"), _source("broken_xml"))
+    store = FileNewsStore(tmp_path / "latest.json")
+    service = NewsService(store, sources=sources)
+
+    def fetcher(source: FeedSource) -> bytes:
+        if source.source_id == "broken_xml":
+            return b"<not-valid-xml"
+        return RSS
+
+    result = service.refresh(fetcher=fetcher, now=NOW)
+
+    assert result.success is True
+    assert result.wrote_snapshot is True
+    assert result.item_count == 1
+    statuses = {status.source_id: status.status for status in result.source_statuses}
+    assert statuses["official"] == "ok"
+    assert statuses["broken_xml"] == "error"
+    payload = service.build_payload(now=NOW + timedelta(minutes=5))
+    assert payload["state"] == "fresh"
+    assert payload["coverage"]["successful_sources"] == 1
+
+
+def test_build_payload_skips_malformed_cached_items(tmp_path: Path) -> None:
+    """P2：缓存里坏 item 字段被跳过，不炸 Dashboard payload。"""
+    store = FileNewsStore(tmp_path / "latest.json")
+    store.write(
+        {
+            "schema_version": 1,
+            "generated_at": "2026-07-19T09:50:00Z",
+            "items": [
+                {"id": 123, "title": "bad-id-type"},
+                {
+                    "id": "good-news",
+                    "title": "Valid AI update",
+                    "url": "https://example.com/good",
+                    "region": "global",
+                    "kind": "event",
+                },
+            ],
+            "sources": [],
+            "coverage": {},
+        }
+    )
+
+    payload = NewsService(store, sources=()).build_payload(now=NOW)
+
+    assert payload["available"] is True
+    assert [item["id"] for item in payload["items"]] == ["good-news"]
+
+
 def test_empty_successful_refresh_keeps_previous_nonempty_snapshot(tmp_path: Path) -> None:
     store = FileNewsStore(tmp_path / "latest.json")
     previous = {

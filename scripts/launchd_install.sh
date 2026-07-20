@@ -69,31 +69,46 @@ SOURCE_PLIST="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.agent.plist"
 SOURCE_PLIST_IMAP="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.imap-sync.plist"
 SOURCE_PLIST_MENUBAR="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.menu-bar.plist"
 SOURCE_PLIST_DASHBOARD="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.dashboard.plist"
+SOURCE_PLIST_HEALTH_MONITOR="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.health-monitor.plist"
+SOURCE_PLIST_NEWS_REFRESH="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.news-refresh.plist"
+SOURCE_PLIST_BURN_IN_REPORT="${PROJECT_ROOT}/launchd_plist/com.myaiemployee.burn-in-report.plist"
 SOURCE_SYNC_IMAP="${PROJECT_ROOT}/scripts/sync_imap.py"
+SOURCE_HEALTH_MONITOR="${PROJECT_ROOT}/scripts/monitor_launchd_health.py"
+SOURCE_NEWS_REFRESH="${PROJECT_ROOT}/scripts/refresh_daily_news.py"
+SOURCE_BURN_IN_REPORT="${PROJECT_ROOT}/scripts/p3_burn_in_report.py"
 
 HOME_BIN="${HOME}/bin"
 TARGET_SCRIPT="${HOME_BIN}/my-ai-employee-monthly-report"
 TARGET_IMAP_SCRIPT="${HOME_BIN}/my-ai-employee-imap-sync"
 TARGET_MENUBAR_WRAPPER="${HOME_BIN}/my-ai-employee-menu-bar-runner"
 TARGET_DASHBOARD_WRAPPER="${HOME_BIN}/my-ai-employee-dashboard-runner"
+TARGET_HEALTH_MONITOR_WRAPPER="${HOME_BIN}/my-ai-employee-health-monitor-runner"
+TARGET_NEWS_REFRESH_WRAPPER="${HOME_BIN}/my-ai-employee-news-refresh-runner"
+TARGET_BURN_IN_REPORT_WRAPPER="${HOME_BIN}/my-ai-employee-burn-in-report-runner"
 LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
 TARGET_PLIST="${LAUNCH_AGENTS_DIR}/com.myaiemployee.agent.plist"
 TARGET_PLIST_IMAP="${LAUNCH_AGENTS_DIR}/com.myaiemployee.imap-sync.plist"
 TARGET_PLIST_MENUBAR="${LAUNCH_AGENTS_DIR}/com.myaiemployee.menu-bar.plist"
 TARGET_PLIST_DASHBOARD="${LAUNCH_AGENTS_DIR}/com.myaiemployee.dashboard.plist"
+TARGET_PLIST_HEALTH_MONITOR="${LAUNCH_AGENTS_DIR}/com.myaiemployee.health-monitor.plist"
+TARGET_PLIST_NEWS_REFRESH="${LAUNCH_AGENTS_DIR}/com.myaiemployee.news-refresh.plist"
+TARGET_PLIST_BURN_IN_REPORT="${LAUNCH_AGENTS_DIR}/com.myaiemployee.burn-in-report.plist"
 LOG_DIR="${HOME}/Library/Logs/MyAIEmployee"
 
 # 撞坑 #92 修复(2026-07-09):runtime .env / data/ 路径迁出 ~/Documents/ iCloud 同步目录
 APP_SUPPORT_DIR="${HOME}/Library/Application Support/MyAIEmployee"
 APP_SUPPORT_ENV="${APP_SUPPORT_DIR}/.env"
 
-# Day 14 (撞坑 #95 修复 2026-07-10):4 job label(月报 / IMAP 同步 / 菜单栏 / Dashboard 独立)
+# P3:7 job label(月报 / IMAP 同步 / 菜单栏 / Dashboard / 健康巡检 / 新闻刷新 / burn-in 报告)
 #   取代原 3 job 模式:com.myaiemployee.digital-employee(父子进程 + ProcessType=Background)被拆
 LAUNCHD_LABELS=(
     "com.myaiemployee.agent"
     "com.myaiemployee.imap-sync"
     "com.myaiemployee.menu-bar"
     "com.myaiemployee.dashboard"
+    "com.myaiemployee.health-monitor"
+    "com.myaiemployee.news-refresh"
+    "com.myaiemployee.burn-in-report"
 )
 
 # launchctl list 每行格式为 PID Status Label；仅精确匹配末列，避免 label 中的点号被 grep 当作正则。
@@ -106,7 +121,7 @@ launchctl_list_has_label() {
 # ===== uninstall 流程(2026-06-15 D10.5.3 新增,沿 Spike A 手动 cleanup 4 步范本) =====
 if [[ "${MODE}" == "uninstall" ]]; then
     echo "===== uninstall 流程 ====="
-    # 1. launchctl unload(5 label — Day 14 #95 修复后:menu-bar + dashboard 独立 + legacy digital-employee)
+    # 1. launchctl unload(8 label — P1/P3 one-shot + legacy digital-employee)
     LC_OUT_UNINSTALL="$(mktemp -t launchctl_list_uninstall.XXXXXX)"
     trap 'rm -f "${LC_OUT_UNINSTALL:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
     for label in \
@@ -114,6 +129,9 @@ if [[ "${MODE}" == "uninstall" ]]; then
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
         com.myaiemployee.dashboard \
+        com.myaiemployee.health-monitor \
+        com.myaiemployee.news-refresh \
+        com.myaiemployee.burn-in-report \
         com.myaiemployee.digital-employee; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
@@ -131,12 +149,15 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  ${label} 未注册,跳过 unload"
         fi
     done
-    # 2. 删 plist(5 label · 含 legacy digital-employee)
+    # 2. 删 plist(8 label · 含 health/news/burn-in one-shot / legacy digital-employee)
     for label in \
         com.myaiemployee.agent \
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
         com.myaiemployee.dashboard \
+        com.myaiemployee.health-monitor \
+        com.myaiemployee.news-refresh \
+        com.myaiemployee.burn-in-report \
         com.myaiemployee.digital-employee; do
         target_plist="${LAUNCH_AGENTS_DIR}/${label}.plist"
         if [[ -f "${target_plist}" ]]; then
@@ -146,12 +167,15 @@ if [[ "${MODE}" == "uninstall" ]]; then
             echo "ℹ️  plist 不存在,跳过: ${target_plist}"
         fi
     done
-    # 3. 删 ~/bin/ 脚本(5 wrapper — 撞坑 #95 修复:拆 menu-bar + dashboard 独立 runner + legacy start)
+    # 3. 删 ~/bin/ 脚本(8 wrapper — 含 P1/P3 one-shot + legacy start)
     for script in \
         "${HOME_BIN}/my-ai-employee-monthly-report" \
         "${HOME_BIN}/my-ai-employee-imap-sync" \
         "${HOME_BIN}/my-ai-employee-menu-bar-runner" \
         "${HOME_BIN}/my-ai-employee-dashboard-runner" \
+        "${HOME_BIN}/my-ai-employee-health-monitor-runner" \
+        "${HOME_BIN}/my-ai-employee-news-refresh-runner" \
+        "${HOME_BIN}/my-ai-employee-burn-in-report-runner" \
         "${HOME_BIN}/my-ai-employee-start"; do
         if [[ -f "${script}" ]]; then
             rm -f "${script}"
@@ -167,13 +191,16 @@ if [[ "${MODE}" == "uninstall" ]]; then
     else
         echo "ℹ️  日志目录不存在,跳过"
     fi
-    # 5. 验证无残留(5 label · 含 legacy digital-employee)
+    # 5. 验证无残留(8 label · 含 P1/P3 one-shot / legacy digital-employee)
     launchctl list > "${LC_OUT_UNINSTALL}" 2>&1 || true
     for label in \
         com.myaiemployee.agent \
         com.myaiemployee.imap-sync \
         com.myaiemployee.menu-bar \
         com.myaiemployee.dashboard \
+        com.myaiemployee.health-monitor \
+        com.myaiemployee.news-refresh \
+        com.myaiemployee.burn-in-report \
         com.myaiemployee.digital-employee; do
         if launchctl_list_has_label "${label}" "${LC_OUT_UNINSTALL}"; then
             echo "❌ 验证失败:launchctl list 仍见 ${label}" >&2
@@ -210,8 +237,32 @@ if [[ ! -f "${SOURCE_PLIST_DASHBOARD}" ]]; then
     echo "❌ 源 plist 不存在: ${SOURCE_PLIST_DASHBOARD}" >&2
     exit 1
 fi
+if [[ ! -f "${SOURCE_PLIST_HEALTH_MONITOR}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_HEALTH_MONITOR}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_PLIST_NEWS_REFRESH}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_NEWS_REFRESH}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_PLIST_BURN_IN_REPORT}" ]]; then
+    echo "❌ 源 plist 不存在: ${SOURCE_PLIST_BURN_IN_REPORT}" >&2
+    exit 1
+fi
 if [[ ! -f "${SOURCE_SYNC_IMAP}" ]]; then
     echo "❌ 源脚本不存在: ${SOURCE_SYNC_IMAP}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_HEALTH_MONITOR}" ]]; then
+    echo "❌ 源脚本不存在: ${SOURCE_HEALTH_MONITOR}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_NEWS_REFRESH}" ]]; then
+    echo "❌ 源脚本不存在: ${SOURCE_NEWS_REFRESH}" >&2
+    exit 1
+fi
+if [[ ! -f "${SOURCE_BURN_IN_REPORT}" ]]; then
+    echo "❌ 源脚本不存在: ${SOURCE_BURN_IN_REPORT}" >&2
     exit 1
 fi
 
@@ -332,12 +383,58 @@ EOF
 chmod +x "${TARGET_DASHBOARD_WRAPPER}"
 echo "✅ ${TARGET_DASHBOARD_WRAPPER} 部署完成"
 
-# ===== 4. 复制 plist(替换 $USER 占位符 · 撞坑 #95 修复:4 job) =====
+echo "📋 部署 ${TARGET_HEALTH_MONITOR_WRAPPER}(P1 · 15 分钟只读 health monitor)"
+# P1:绝对脚本路径避免 launchd WorkingDirectory=$HOME 时的模块路径漂移；
+# monitor 只采样/写本地脱敏 JSON，不执行服务启停。
+cat << EOF > "${TARGET_HEALTH_MONITOR_WRAPPER}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+set -euo pipefail
+export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
+export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
+export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/monitor_launchd_health.py"
+EOF
+chmod +x "${TARGET_HEALTH_MONITOR_WRAPPER}"
+echo "✅ ${TARGET_HEALTH_MONITOR_WRAPPER} 部署完成"
+
+echo "📋 部署 ${TARGET_NEWS_REFRESH_WRAPPER}(AI 新闻 · 每小时 one-shot)"
+# 新闻刷新仅抓取白名单公开 HTTPS Feed，原子写入本地缓存；绝不启停业务服务。
+cat << EOF > "${TARGET_NEWS_REFRESH_WRAPPER}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+set -euo pipefail
+export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
+export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
+export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/refresh_daily_news.py" --format json
+EOF
+chmod +x "${TARGET_NEWS_REFRESH_WRAPPER}"
+echo "✅ ${TARGET_NEWS_REFRESH_WRAPPER} 部署完成"
+
+echo "📋 部署 ${TARGET_BURN_IN_REPORT_WRAPPER}(P3 长稳日报/周报 one-shot)"
+# 报告器只汇总本地脱敏 JSONL；Day0 marker 由显式 start 创建，runner 不重置窗口。
+cat << EOF > "${TARGET_BURN_IN_REPORT_WRAPPER}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+set -euo pipefail
+export MY_AI_EMPLOYEE_PROJECT_ROOT="${PROJECT_ROOT}"
+export MY_AI_EMPLOYEE_APP_SUPPORT_DIR="${APP_SUPPORT_DIR}"
+export MY_AI_EMPLOYEE_ENV_FILE="${APP_SUPPORT_ENV}"
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/p3_burn_in_report.py" report
+EOF
+chmod +x "${TARGET_BURN_IN_REPORT_WRAPPER}"
+echo "✅ ${TARGET_BURN_IN_REPORT_WRAPPER} 部署完成"
+
+# ===== 4. 复制 plist(替换 $USER 占位符 · P3:7 job) =====
 for src_plist in \
     "${SOURCE_PLIST}" \
     "${SOURCE_PLIST_IMAP}" \
     "${SOURCE_PLIST_MENUBAR}" \
-    "${SOURCE_PLIST_DASHBOARD}"; do
+    "${SOURCE_PLIST_DASHBOARD}" \
+    "${SOURCE_PLIST_HEALTH_MONITOR}" \
+    "${SOURCE_PLIST_NEWS_REFRESH}" \
+    "${SOURCE_PLIST_BURN_IN_REPORT}"; do
     base_name="$(basename "${src_plist}")"
     target_plist="${LAUNCH_AGENTS_DIR}/${base_name}"
     echo "📋 复制 ${src_plist} → ${target_plist}"
@@ -346,12 +443,15 @@ for src_plist in \
     echo "✅ ${target_plist} 部署完成"
 done
 
-# ===== 5. 确保日志目录存在(撞坑 #95 修复:4 job 日志) =====
+# ===== 5. 确保日志目录存在(P3:7 job 日志) =====
 mkdir -p "${LOG_DIR}"
 touch "${LOG_DIR}/agent.out.log" "${LOG_DIR}/agent.err.log"
 touch "${LOG_DIR}/imap-sync.out.log" "${LOG_DIR}/imap-sync.err.log"
 touch "${LOG_DIR}/menu-bar.out.log" "${LOG_DIR}/menu-bar.err.log"
 touch "${LOG_DIR}/dashboard.out.log" "${LOG_DIR}/dashboard.err.log"
+touch "${LOG_DIR}/health-monitor.out.log" "${LOG_DIR}/health-monitor.err.log"
+touch "${LOG_DIR}/news-refresh.out.log" "${LOG_DIR}/news-refresh.err.log"
+touch "${LOG_DIR}/burn-in-report.out.log" "${LOG_DIR}/burn-in-report.err.log"
 echo "✅ ${LOG_DIR}/ 日志目录就绪"
 
 # ===== 5.5 deploy-only 早退(2026-07-10 P1-3 修复):legacy retirement 必须在 install 模式执行 =====
@@ -362,11 +462,17 @@ echo "✅ ${LOG_DIR}/ 日志目录就绪"
 #   launchctl load 之前(仅 install 模式执行)。
 if [[ "${DEPLOY_ONLY}" == "true" ]]; then
     echo ""
-    echo "🎉 deploy-only 完成(未调用 launchctl load -w · 撞坑 #95 修复:4 job 部署 · 撞坑 #98 P1-3 修复:不退役 legacy)"
+    echo "🎉 deploy-only 完成(未调用 launchctl load -w · P3:7 job 部署 · 撞坑 #98 P1-3 修复:不退役 legacy)"
     echo "  已更新 wrapper:${TARGET_MENUBAR_WRAPPER}"
     echo "  已更新 wrapper:${TARGET_DASHBOARD_WRAPPER}"
+    echo "  已更新 wrapper:${TARGET_HEALTH_MONITOR_WRAPPER}"
+    echo "  已更新 wrapper:${TARGET_NEWS_REFRESH_WRAPPER}"
+    echo "  已更新 wrapper:${TARGET_BURN_IN_REPORT_WRAPPER}"
     echo "  已更新 plist:${TARGET_PLIST_MENUBAR}"
     echo "  已更新 plist:${TARGET_PLIST_DASHBOARD}"
+    echo "  已更新 plist:${TARGET_PLIST_HEALTH_MONITOR}"
+    echo "  已更新 plist:${TARGET_PLIST_NEWS_REFRESH}"
+    echo "  已更新 plist:${TARGET_PLIST_BURN_IN_REPORT}"
     echo "  下一步如需真实加载,需用户单独授权 launchctl load -w"
     echo "  ⚠️  deploy-only 不 retire 旧 digital-employee(仅 install 模式才 retire)"
     exit 0
@@ -424,14 +530,17 @@ if launchctl_list_has_label "${LEGACY_LABEL}" "${LC_OUT_LEGACY}"; then
 fi
 echo "✅ legacy retirement 完成(无残留)"
 
-# ===== 6. launchctl load(4 job · 撞坑 #95 修复:menu-bar + dashboard 独立) =====
+# ===== 6. launchctl load(7 job · P1 health monitor + P1.5 新闻刷新 + P3 burn-in 报告) =====
 LC_OUT_LOAD="$(mktemp -t launchctl_list_load.XXXXXX)"
 trap 'rm -f "${LC_OUT_LEGACY:-}" "${LC_OUT_LOAD:-}" "${LC_OUT:-}"' EXIT
 for target_plist in \
     "${TARGET_PLIST}" \
     "${TARGET_PLIST_IMAP}" \
     "${TARGET_PLIST_MENUBAR}" \
-    "${TARGET_PLIST_DASHBOARD}"; do
+    "${TARGET_PLIST_DASHBOARD}" \
+    "${TARGET_PLIST_HEALTH_MONITOR}" \
+    "${TARGET_PLIST_NEWS_REFRESH}" \
+    "${TARGET_PLIST_BURN_IN_REPORT}"; do
     label="$(basename "${target_plist}" .plist)"
     launchctl list > "${LC_OUT_LOAD}" 2>&1 || true
     if launchctl_list_has_label "${label}" "${LC_OUT_LOAD}"; then
@@ -451,7 +560,7 @@ for target_plist in \
     fi
 done
 
-# ===== 7. 5 源验证(4 job · 撞坑 #95 修复) =====
+# ===== 7. 5 源验证(7 job · P1/P3 one-shot) =====
 echo ""
 echo "===== 5 源验证 ====="
 [[ -d "${HOME_BIN}" ]] && echo "✅ 源 1(目录): ${HOME_BIN}/ 存在" || echo "❌ 源 1: 缺失"
@@ -471,23 +580,26 @@ for i in 1 2 3 4 5; do
     done
     if [[ "${missing}" -eq 0 ]]; then
         LAUNCHCTL_OK=1
-        echo "✅ 源 4(launchctl list): 4 job 已注册(retry ${i}/5)"
+        echo "✅ 源 4(launchctl list): 7 job 已注册(retry ${i}/5)"
         break
     fi
 done
 if [[ "${LAUNCHCTL_OK}" -eq 0 ]]; then
-    echo "❌ 源 4: launchctl list 未见全部 4 job(retry 5 次)" >&2
+    echo "❌ 源 4: launchctl list 未见全部 7 job(retry 5 次)" >&2
     cat "${LC_OUT}" >&2 || true
     exit 3
 fi
 [[ -w "${LOG_DIR}/agent.out.log" ]] && echo "✅ 源 5(日志): ${LOG_DIR}/agent.out.log 可写" || echo "❌ 源 5: 日志不可写"
 
 echo ""
-echo "🎉 launchd 部署完成(4 job · 撞坑 #95 修复)!"
+echo "🎉 launchd 部署完成(7 job · 含 P1 health monitor + AI 新闻刷新 + P3 报告)!"
 echo "  月报:每月 1 号 09:00 · 动态月份 wrapper"
 echo "  IMAP:每日 07:00 · 读 .env IMAP_USER"
 echo "  菜单栏:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard)"
 echo "  Dashboard:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard · 127.0.0.1:8765)"
+echo "  Health monitor:RunAtLoad + 每 15 分钟 · 只读 one-shot (KeepAlive=false)"
+echo "  AI 新闻:RunAtLoad + 每小时 · 白名单 HTTPS 刷新 one-shot (KeepAlive=false)"
+echo "  P3 报告:RunAtLoad + 每日 02:10 · 仅汇总已完整 UTC 周期(KeepAlive=false)"
 
 # 显式 exit 0(供测试 grep 验证,也是 bash 严格模式的明确结束)
 exit 0

@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import abc
+import contextlib
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
@@ -176,3 +177,109 @@ class MockTransport(Transport):
             yield self
         finally:
             self.close()
+
+
+# === 本机 stdio 白名单实现 ===
+
+
+class StdioTransport(Transport):
+    """本机 JSON-RPC over stdio（newline-delimited）。
+
+    红线：
+      - command[0] 必须是绝对路径且在 allowlist
+      - 禁止 /bin/sh、/bin/bash、env 等 shell 包装
+    """
+
+    _SHELL_BASENAMES = frozenset({"sh", "bash", "zsh", "fish", "dash", "env", "sudo"})
+
+    def __init__(
+        self,
+        server_name: str,
+        command: list[str],
+        *,
+        allowlist: list[str] | frozenset[str] | set[str],
+        timeout_seconds: float = 5.0,
+    ) -> None:
+        super().__init__(server_name=server_name)
+        if not command:
+            raise ValueError("command 不能为空")
+        self._command = list(command)
+        self._allowlist = frozenset(allowlist)
+        self._timeout_seconds = timeout_seconds
+        self._proc: Any = None
+        self._validate_command()
+
+    def _validate_command(self) -> None:
+        import os
+        from pathlib import Path
+
+        exe = self._command[0]
+        if not os.path.isabs(exe):
+            raise MCPConnectionError(f"stdio 命令必须是绝对路径: {exe!r}")
+        if exe not in self._allowlist:
+            raise MCPConnectionError(f"stdio 命令不在白名单: {exe!r}")
+        if Path(exe).name in self._SHELL_BASENAMES:
+            raise MCPConnectionError(f"禁止 shell 包装命令: {exe!r}")
+
+    def start(self) -> None:
+        import subprocess
+
+        if self.connected:
+            return
+        try:
+            self._proc = subprocess.Popen(
+                self._command,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1,
+            )
+        except OSError as exc:
+            raise MCPConnectionError(f"stdio 启动失败: {exc!r}") from exc
+        self.connected = True
+
+    def send(self, request: dict[str, Any]) -> dict[str, Any]:
+        import json
+        import select
+
+        if not self.connected or self._proc is None:
+            raise MCPConnectionError(f"StdioTransport {self.server_name} 未连接")
+        if self._proc.stdin is None or self._proc.stdout is None:
+            raise MCPConnectionError("stdio 管道不可用")
+        self._send_log.append(request)
+        line = json.dumps(request, ensure_ascii=False) + "\n"
+        try:
+            self._proc.stdin.write(line)
+            self._proc.stdin.flush()
+        except BrokenPipeError as exc:
+            raise MCPConnectionError("stdio stdin 已断开") from exc
+
+        ready, _, _ = select.select([self._proc.stdout], [], [], self._timeout_seconds)
+        if not ready:
+            raise MCPTimeoutError(f"StdioTransport {self.server_name} 调用超时")
+        raw = self._proc.stdout.readline()
+        if not raw:
+            raise MCPConnectionError("stdio stdout EOF")
+        try:
+            payload = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise MCPProtocolError(f"stdio 响应非 JSON: {raw[:120]!r}") from exc
+        if not isinstance(payload, dict):
+            raise MCPProtocolError("stdio 响应非 object")
+        if "result" not in payload and "error" not in payload:
+            raise MCPResponseError("stdio 响应缺 result/error")
+        if "error" in payload:
+            raise MCPResponseError(f"stdio 工具错误: {payload['error']!r}")
+        return payload
+
+    def close(self) -> None:
+        if self._proc is not None:
+            with contextlib.suppress(Exception):
+                if self._proc.stdin:
+                    self._proc.stdin.close()
+            with contextlib.suppress(Exception):
+                self._proc.terminate()
+                self._proc.wait(timeout=2)
+            self._proc = None
+        self.connected = False

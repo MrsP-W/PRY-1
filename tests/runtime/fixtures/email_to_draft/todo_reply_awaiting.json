@@ -1,0 +1,11 @@
+{
+  "name": "todo_reply_awaiting",
+  "email": {
+    "id": "fix-001",
+    "subject": "Please review the Q3 plan",
+    "from": "colleague@example.com",
+    "body": "Can you reply with comments by Friday?"
+  },
+  "expected_steps": ["plan", "classify", "draft", "await_approval"],
+  "expected_status": "awaiting_approval"
+}

@@ -1,0 +1,12 @@
+{
+  "name": "urgent_approve",
+  "email": {
+    "id": "fix-002",
+    "subject": "URGENT: production outage",
+    "from": "ops@example.com",
+    "body": "Need acknowledgement."
+  },
+  "approval_decision": "approve",
+  "expected_steps": ["plan", "classify", "draft", "await_approval", "finalize"],
+  "expected_status": "succeeded"
+}

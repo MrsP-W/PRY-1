@@ -96,6 +96,14 @@ class EventType(enum.StrEnum):
         "note.structured.l2_candidate"  # v0.2.2 P0 接入:UI 层 1-click 确认定位用
     )
 
+    # AgentRun 最小闭环（runtime，非角色 Markdown）
+    AGENT_RUN_STARTED = "agent.run.started"
+    AGENT_RUN_STEP = "agent.run.step"
+    AGENT_RUN_CHECKPOINT = "agent.run.checkpoint"
+    AGENT_RUN_AWAITING_APPROVAL = "agent.run.awaiting_approval"
+    AGENT_RUN_SUCCEEDED = "agent.run.succeeded"
+    AGENT_RUN_FAILED = "agent.run.failed"
+
 
 class EventStatus(enum.StrEnum):
     """事件状态 — 7 枚举 (g004 不变量 2).

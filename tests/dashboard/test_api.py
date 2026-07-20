@@ -564,6 +564,13 @@ def test_http_api_status(running_server: str) -> None:
     assert "quality_gates" in body
 
 
+def test_http_health_endpoint_is_small_and_read_only(running_server: str) -> None:
+    status, body = _fetch_json(f"{running_server}/health")
+
+    assert status == 200
+    assert body == {"ok": True, "read_only": True}
+
+
 def test_http_api_tasks_today(running_server: str) -> None:
     status, body = _fetch_json(f"{running_server}/api/tasks/today")
     assert status == 200
