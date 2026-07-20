@@ -133,7 +133,7 @@ def test_alembic_version_records_current_revision(
     alembic_cfg: AlembicConfig,
     patched_database_open: Path,
 ) -> None:
-    """alembic_version 表记录当前 head revision = 0017_codex_conversation_notes。
+    """alembic_version 表记录当前 head revision = 0018_agent_runs。
 
     历史 head 演进:
       - D4.8 锁定时 head=0004_outbox
@@ -150,6 +150,7 @@ def test_alembic_version_records_current_revision(
       - v0.2.53.16 加 0015_anomaly_dismissal(head 推到 0015)
       - v0.2.53.51 加 0016_approval_gate_audits(head 推到 0016)
       - Codex 对话笔记加 0017_codex_conversation_notes(head 推到 0017)
+      - AgentRun 最小闭环加 0018_agent_runs(head 推到 0018)
     """
     from alembic import command
 
@@ -161,7 +162,7 @@ def test_alembic_version_records_current_revision(
         with engine.connect() as conn:
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
         assert version is not None
-        assert version[0] == "0017_codex_conversation_notes"
+        assert version[0] == "0018_agent_runs"
     finally:
         db.close()
 
@@ -296,6 +297,7 @@ def test_orm_metadata_tables_match_alembic_tables(
     )
     from my_ai_employee.db.notes import Note  # noqa: F401  # notes 表 (D9.1)
     from my_ai_employee.db.transactions import Transaction  # noqa: F401  # transactions 表
+    from my_ai_employee.runtime.models import AgentRunRecord  # noqa: F401  # agent_runs
 
     # 0) 显式 import 各表 ORM 模型让 Base.metadata 注册表
     #    (沿 D4.3.2 复检发现: core/models.py 不 import 各表模块)
@@ -399,7 +401,7 @@ def test_0003_migration_replaces_4_field_unique_with_global_fingerprint(
             # 3b) alembic_version 已记录当前 head
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0017_codex_conversation_notes"
+            assert version[0] == "0018_agent_runs"
     finally:
         db.close()
 
@@ -433,7 +435,7 @@ def test_0003_migration_is_idempotent_for_new_0002_path(
 
             version = conn.exec_driver_sql("SELECT version_num FROM alembic_version").fetchone()
             assert version is not None
-            assert version[0] == "0017_codex_conversation_notes"
+            assert version[0] == "0018_agent_runs"
     finally:
         db.close()
 

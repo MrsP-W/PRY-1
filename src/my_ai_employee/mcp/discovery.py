@@ -70,6 +70,24 @@ def _default_transport(server_name: str, tools: list[str]) -> Transport:
     return MockTransport(server_name=server_name, tools=tools)
 
 
+def make_stdio_transport(
+    *,
+    server_name: str,
+    command: list[str],
+    allowlist: list[str] | frozenset[str] | set[str],
+    timeout_seconds: float = 5.0,
+) -> Transport:
+    """构造本机白名单 StdioTransport（生产/实验用；测试默认仍走 Mock）。"""
+    from .transport import StdioTransport
+
+    return StdioTransport(
+        server_name=server_name,
+        command=command,
+        allowlist=allowlist,
+        timeout_seconds=timeout_seconds,
+    )
+
+
 def get_server_config(name: str) -> ServerConfig:
     """按名取 server 配置.
 

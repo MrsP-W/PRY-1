@@ -104,8 +104,8 @@ def session_factory(db_with_schema: Database) -> Any:
 # ===== Metadata / 6 个 Model 注册 =====
 
 
-def test_fourteen_models_registered_in_metadata() -> None:
-    """Base.metadata 注册了 14 个表 (6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile + 1 v0.2.53.16 anomaly_dismissals + 1 v0.2.53.51 approval_gate_audits, mirror schema.sql)。"""
+def test_fifteen_models_registered_in_metadata() -> None:
+    """Base.metadata 注册了 15 个表 (14 既有 + agent_runs)。"""
     from my_ai_employee.core.models import (
         ApprovalGateAudit,  # noqa: F401  # 触发 approval_gate_audits 表注册(v0.2.53.51)
     )
@@ -120,6 +120,9 @@ def test_fourteen_models_registered_in_metadata() -> None:
     )
     from my_ai_employee.events.models import (
         Event,  # noqa: F401  # 触发 events 表注册(D4.3)
+    )
+    from my_ai_employee.runtime.models import (
+        AgentRunRecord,  # noqa: F401  # 触发 agent_runs 表注册
     )
 
     tables = list_tables()
@@ -139,6 +142,7 @@ def test_fourteen_models_registered_in_metadata() -> None:
             "merchant_profile",
             "anomaly_dismissals",
             "approval_gate_audits",
+            "agent_runs",
         ]
     )
 

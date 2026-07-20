@@ -31,7 +31,7 @@ from .report import (
     McpErrorSurface,
     McpServerStatus,
 )
-from .transport import MockTransport, Transport
+from .transport import MockTransport, StdioTransport, Transport
 
 __all__ = [
     # 客户端
@@ -49,6 +49,7 @@ __all__ = [
     "McpServerStatus",
     # Transport
     "MockTransport",
+    "StdioTransport",
     "Transport",
     # Discovery
     "discover_servers",

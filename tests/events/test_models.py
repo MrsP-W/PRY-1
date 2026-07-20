@@ -47,11 +47,15 @@ class TestMetadataRegistration:
         from my_ai_employee.db.merchant_profile import (
             MerchantProfile,  # noqa: F401  # 触发 merchant_profile 表注册(D8.1)
         )
+        from my_ai_employee.runtime.models import (
+            AgentRunRecord,  # noqa: F401  # 触发 agent_runs 表注册
+        )
 
         tables = sorted(Base.metadata.tables.keys())
         assert "events" in tables
-        # 14 张表 = 6 D3 + 1 D4.3 events + 1 D4.8 outbox + 1 D6.4 transactions + 1 D9.1 notes + 1 B4.1 recipient_blacklist + 1 D8.1 merchant_profile + 1 v0.2.53.16 anomaly_dismissals + 1 v0.2.53.51 approval_gate_audits
-        assert len(tables) == 14
+        assert "agent_runs" in tables
+        # 15 张表 = 14 既有 + agent_runs
+        assert len(tables) == 15
 
     def test_events_table_has_7_columns(self) -> None:
         """events 表 7 字段 (id + event + status + source + subject_id + fingerprint + event_metadata + created_at)."""
@@ -104,19 +108,22 @@ class TestMetadataRegistration:
 
 
 class TestEnums:
-    def test_event_type_has_14_values(self) -> None:
-        """EventType 14 枚举 (4 LLM + 3 MCP + 2 email + 2 draft + 2 policy + 1 note).
+    def test_event_type_has_20_values(self) -> None:
+        """EventType 20 枚举 (原 14 + 6 agent.run.*)。
 
         v0.2.2 P0 新增 1 note 事件: note.structured.l2_candidate(UI 层 1-click 确认定位用).
+        AgentRun 最小闭环新增 6 个 agent.run.* 事件。
         """
         values = [e.value for e in EventType]
-        assert len(values) == 14
+        assert len(values) == 20
         # g004 风格命名(2+ 段, 主要 3 段; 4 段如 email.classify.failed 允许子动作细分)
         assert all("." in v for v in values)
         assert all(v.count(".") >= 2 for v in values)
         # D4.4 新增 2 policy 事件
         assert "policy.decision.made" in values
         assert "policy.decision.degraded" in values
+        assert "agent.run.started" in values
+        assert "agent.run.succeeded" in values
 
     def test_event_status_has_7_values(self) -> None:
         """EventStatus 7 枚举 (started / succeeded / failed / degraded / skipped / blocked / cancelled)."""
