@@ -251,9 +251,9 @@ spike-d8-anomaly: ## v0.2 D8.4 — S11 智能财务异常检测真链路 spike(3
 
 # ===== 9 质量门补齐(v0.2 B-5 + D8 实施前置)=====
 
-# P0-4/P1/P1.5 launchd one-shot 脚本位于 scripts/，不纳入历史 CLI/spike 脚本范围；
+# P0-4/P1/P1.5/P3 launchd one-shot 脚本位于 scripts/，不纳入历史 CLI/spike 脚本范围；
 # 因此在常规 Ruff、format 与 mypy 门中显式覆盖，避免质量漂移漏检。
-LAUNCHD_ONE_SHOT_SCRIPTS := scripts/sample_launchd_health.py scripts/monitor_launchd_health.py scripts/refresh_daily_news.py
+LAUNCHD_ONE_SHOT_SCRIPTS := scripts/sample_launchd_health.py scripts/monitor_launchd_health.py scripts/refresh_daily_news.py scripts/p3_burn_in_report.py
 
 .PHONY: mypy
 mypy: ## 9 质量门 — mypy 类型检查(严格模式 `--strict`,沿 v0.2.42 范本:43 errors 清零 + 失败即阻塞)

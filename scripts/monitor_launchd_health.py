@@ -160,6 +160,36 @@ def _safe_pid(value: object) -> int | None:
     return value
 
 
+def _safe_log_metadata(value: object) -> dict[str, dict[str, bool | int | None]]:
+    """保留 stderr 的 stat 元数据，不保留路径或任何日志正文。"""
+
+    source = value if isinstance(value, dict) else {}
+    metadata: dict[str, dict[str, bool | int | None]] = {}
+    for name in ("menu_bar", "dashboard"):
+        raw_entry = source.get(name)
+        entry = raw_entry if isinstance(raw_entry, dict) else {}
+        size_bytes = entry.get("size_bytes")
+        mtime_epoch = entry.get("mtime_epoch")
+        metadata[name] = {
+            "exists": entry.get("exists") is True,
+            "size_bytes": (
+                size_bytes
+                if isinstance(size_bytes, int)
+                and not isinstance(size_bytes, bool)
+                and size_bytes >= 0
+                else None
+            ),
+            "mtime_epoch": (
+                mtime_epoch
+                if isinstance(mtime_epoch, int)
+                and not isinstance(mtime_epoch, bool)
+                and mtime_epoch >= 0
+                else None
+            ),
+        }
+    return metadata
+
+
 def _unique_reasons(reasons: Sequence[str]) -> list[str]:
     return list(dict.fromkeys(reasons))
 
@@ -171,7 +201,7 @@ def sanitise_snapshot(
     endpoint_reason: str | None,
     observed_at: datetime,
 ) -> dict[str, Any]:
-    """只保留 P1 告警决策需要的时间、状态、label/PID 与 loopback 端口。"""
+    """只保留 P1/P3 决策需要的脱敏健康状态与 stderr stat 元数据。"""
 
     captured_at = snapshot.get("captured_at")
     if not isinstance(captured_at, str) or not captured_at:
@@ -216,6 +246,7 @@ def sanitise_snapshot(
             "pids": [pid for pid in listener_pids if pid is not None],
         },
         "dashboard_health": {"ok": endpoint_healthy, "read_only": endpoint_healthy},
+        "error_log_metadata": _safe_log_metadata(snapshot.get("error_log_metadata")),
     }
 
 

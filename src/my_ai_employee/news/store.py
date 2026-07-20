@@ -9,10 +9,14 @@ from __future__ import annotations
 import json
 import os
 import tempfile
-from collections.abc import Generator
+from collections.abc import Generator, Iterable, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+
+_RUN_OUTCOMES = frozenset({"success", "degraded", "all_sources_failed", "overlap", "runtime_error"})
+_SOURCE_STATUSES = frozenset({"ok", "error"})
+_RUN_SCHEMA_VERSION = 1
 
 
 def default_news_cache_path() -> Path:
@@ -29,6 +33,11 @@ class FileNewsStore:
 
     def __init__(self, path: Path | None = None) -> None:
         self.path = path or default_news_cache_path()
+
+    @property
+    def runs_path(self) -> Path:
+        """返回与缓存同目录的脱敏刷新运行回执路径。"""
+        return self.path.parent / "runs.jsonl"
 
     def read(self) -> dict[str, Any] | None:
         """读取 JSON 对象；缺失、损坏或异常一律降级为 ``None``。"""
@@ -60,6 +69,42 @@ class FileNewsStore:
             temporary_path.unlink(missing_ok=True)
             raise
 
+    def append_run(
+        self,
+        *,
+        at: str,
+        outcome: str,
+        success: bool,
+        degraded: bool,
+        item_count: int,
+        source_statuses: Iterable[Mapping[str, object]],
+    ) -> None:
+        """追加一条 P3 可用的脱敏刷新回执，并同步落盘。
+
+        回执严格只保留运行状态和每个来源的计数，不保存新闻标题、URL 或原始异常文本。
+        默认路径为 ``Application Support/MyAIEmployee/news/runs.jsonl``。
+        """
+        record = {
+            "schema_version": _RUN_SCHEMA_VERSION,
+            "at": at if isinstance(at, str) else "",
+            "outcome": outcome if outcome in _RUN_OUTCOMES else "runtime_error",
+            "success": bool(success),
+            "degraded": bool(degraded),
+            "item_count": _safe_item_count(item_count),
+            "sources": [_sanitise_source_status(status) for status in source_statuses],
+        }
+        runs_path = self.runs_path
+        _ensure_private_directory(runs_path.parent)
+        encoded = json.dumps(record, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+        descriptor = os.open(runs_path, os.O_APPEND | os.O_CREAT | os.O_WRONLY, 0o600)
+        with os.fdopen(descriptor, "a", encoding="utf-8") as handle:
+            # 文件可能由早期版本或手工创建；每次写入时收紧权限。
+            os.fchmod(handle.fileno(), 0o600)
+            handle.write(encoded)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
     @contextmanager
     def refresh_lock(self) -> Generator[bool, None, None]:
         """非阻塞的跨进程刷新锁，防止 launchd 重叠运行。"""
@@ -77,3 +122,25 @@ class FileNewsStore:
                 yield True
             finally:
                 fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
+def _ensure_private_directory(path: Path) -> None:
+    """创建或收紧承载新闻运行数据的目录权限。"""
+    path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    os.chmod(path, 0o700)
+
+
+def _safe_item_count(value: object) -> int:
+    """只允许非负整数计数，避免 bool 或异常对象进入回执。"""
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 0 else 0
+
+
+def _sanitise_source_status(status: Mapping[str, object]) -> dict[str, object]:
+    """白名单化单来源回执，显式丢弃 ``error``、名称和内容字段。"""
+    source_id = status.get("source_id")
+    outcome = status.get("status")
+    return {
+        "source_id": source_id if isinstance(source_id, str) else "unknown",
+        "status": outcome if outcome in _SOURCE_STATUSES else "error",
+        "item_count": _safe_item_count(status.get("item_count")),
+    }

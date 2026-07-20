@@ -30,6 +30,7 @@ LAUNCHD_ONE_SHOT_SCRIPTS = (
     "scripts/sample_launchd_health.py",
     "scripts/monitor_launchd_health.py",
     "scripts/refresh_daily_news.py",
+    "scripts/p3_burn_in_report.py",
 )
 
 
@@ -44,7 +45,7 @@ class EntryLineCheck:
 
 
 def count_mypy_source_files(root: Path = ROOT) -> int:
-    """mypy src/tests 与 P0-4/P1/P1.5 one-shot 脚本计数(与 make mypy 一致)."""
+    """mypy src/tests 与 P0-4/P1/P1.5/P3 one-shot 脚本计数(与 make mypy 一致)."""
     result = subprocess.run(
         ["uv", "run", "mypy", "--strict", "src", "tests", *LAUNCHD_ONE_SHOT_SCRIPTS],
         cwd=root,

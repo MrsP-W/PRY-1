@@ -29,6 +29,7 @@ PLIST_MENUBAR_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.menu-bar
 PLIST_DASHBOARD_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.dashboard.plist"
 PLIST_HEALTH_MONITOR_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.health-monitor.plist"
 PLIST_NEWS_REFRESH_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.news-refresh.plist"
+PLIST_BURN_IN_REPORT_PATH = PROJECT_ROOT / "launchd_plist" / "com.myaiemployee.burn-in-report.plist"
 INSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_install.sh"
 UNINSTALL_SH = PROJECT_ROOT / "scripts" / "launchd_uninstall.sh"
 KICKSTART_SEAL_SH = PROJECT_ROOT / "scripts" / "launchd_kickstart_and_seal.sh"
@@ -385,8 +386,8 @@ def test_f7_install_sh_supports_deploy_only_without_launchctl_load():
     assert "deploy-only | no-load)" in text
     assert "DEPLOY_ONLY=true" in text
     deploy_exit = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
-    # P1.5:launchctl load 段为 6 job(含独立 one-shot health monitor 与新闻刷新)
-    load_section = text.index("# ===== 6. launchctl load(6 job")
+    # P3:launchctl load 段为 7 job(含 health/news/report 三个 one-shot)
+    load_section = text.index("# ===== 6. launchctl load(7 job")
     assert deploy_exit < load_section
     deploy_block = text[deploy_exit:load_section]
     assert "exit 0" in deploy_block
@@ -583,8 +584,8 @@ def test_i4_deploy_only_imap_wrapper_also_uses_absolute_path():
     # 全文只有一处 IMAP wrapper heredoc
     imap_block_start = text.index("📋 部署 ${TARGET_IMAP_SCRIPT}")
     imap_block_end = text.index("✅ ${TARGET_IMAP_SCRIPT} 部署完成")
-    # 该段在 install flow 内(在 # ===== 6. launchctl load 之前 · P1/P1.5 后 6 job)
-    load_section_start = text.index("# ===== 6. launchctl load(6 job")
+    # 该段在 install flow 内(在 # ===== 6. launchctl load 之前 · P3 后 7 job)
+    load_section_start = text.index("# ===== 6. launchctl load(7 job")
     deploy_only_check = text.index('if [[ "${DEPLOY_ONLY}" == "true" ]]')
     # imap_block 必在 load_section 之前(沿 deploy-only 退出前)
     assert imap_block_start < load_section_start
@@ -717,8 +718,8 @@ def test_j3_install_sh_uses_independent_menu_bar_and_dashboard_wrappers():
     )
 
 
-def test_j4_install_sh_deploy_only_loads_6_jobs():
-    """J4/P1.5:deploy-only 部署 6 plist，install 模式才加载 6 个 job。"""
+def test_j4_install_sh_deploy_only_loads_7_jobs() -> None:
+    """J4/P3:deploy-only 部署 7 plist，install 模式才加载 7 个 job。"""
     text = INSTALL_SH.read_text(encoding="utf-8")
     # 6 plist 必都被 install.sh 部署(deploy-only 不改变运行态)
     assert "TARGET_PLIST_MENUBAR" in text, (
@@ -729,7 +730,8 @@ def test_j4_install_sh_deploy_only_loads_6_jobs():
     )
     assert "TARGET_PLIST_HEALTH_MONITOR" in text, "P1:install.sh 必含 health monitor plist 目标"
     assert "TARGET_PLIST_NEWS_REFRESH" in text, "P1.5:install.sh 必含 news refresh plist 目标"
-    # 6 wrapper 必都被 install.sh 部署
+    assert "TARGET_PLIST_BURN_IN_REPORT" in text, "P3:install.sh 必含 burn-in report plist 目标"
+    # 7 wrapper 必都被 install.sh 部署
     assert "TARGET_MENUBAR_WRAPPER" in text, (
         "撞坑 #95 修复:install.sh 必含 TARGET_MENUBAR_WRAPPER 部署目标"
     )
@@ -738,7 +740,8 @@ def test_j4_install_sh_deploy_only_loads_6_jobs():
     )
     assert "TARGET_HEALTH_MONITOR_WRAPPER" in text, "P1:install.sh 必含 health monitor wrapper"
     assert "TARGET_NEWS_REFRESH_WRAPPER" in text, "P1.5:install.sh 必含 news refresh wrapper"
-    # launchctl load 段必含 menu-bar、dashboard、monitor 与新闻 plist
+    assert "TARGET_BURN_IN_REPORT_WRAPPER" in text, "P3:install.sh 必含 burn-in report wrapper"
+    # launchctl load 段必含 menu-bar、dashboard、monitor、新闻与报告 plist
     load_section_start = text.index("# ===== 6. launchctl load")
     load_section_end = text.index("# ===== 7. 5 源验证")
     load_section = text[load_section_start:load_section_end]
@@ -750,6 +753,7 @@ def test_j4_install_sh_deploy_only_loads_6_jobs():
     )
     assert "TARGET_PLIST_HEALTH_MONITOR" in load_section, "P1:launchctl load 段必含 monitor plist"
     assert "TARGET_PLIST_NEWS_REFRESH" in load_section, "P1.5:launchctl load 段必含 news plist"
+    assert "TARGET_PLIST_BURN_IN_REPORT" in load_section, "P3:launchctl load 段必含 report plist"
 
 
 def test_p1_health_monitor_plist_is_safe_one_shot() -> None:
@@ -812,6 +816,34 @@ def test_p1_5_news_wrapper_uses_absolute_refresh_script_without_service_controls
 
     assert 'python "${PROJECT_ROOT}/scripts/refresh_daily_news.py" --format json' in wrapper
     assert "exec /opt/homebrew/bin/uv run --project" in wrapper
+    code_lines = [line for line in wrapper.splitlines() if not line.lstrip().startswith("#")]
+    code = "\n".join(code_lines)
+    for forbidden in ("launchctl", "kickstart", "bootout", "SMTP", "IMAP"):
+        assert forbidden not in code
+
+
+def test_p3_burn_in_report_plist_and_wrapper_are_safe_one_shot() -> None:
+    """P3:报告只汇总完整周期，既不重置 Day0 也不控制任何业务服务。"""
+    assert PLIST_BURN_IN_REPORT_PATH.exists()
+    with PLIST_BURN_IN_REPORT_PATH.open("rb") as f:
+        data = plistlib.load(f)
+
+    assert data["Label"] == "com.myaiemployee.burn-in-report"
+    assert data["ProgramArguments"] == ["/Users/$USER/bin/my-ai-employee-burn-in-report-runner"]
+    assert data["RunAtLoad"] is True
+    assert data["StartCalendarInterval"] == {"Hour": 2, "Minute": 10}
+    assert "StartInterval" not in data
+    assert data["KeepAlive"] is False
+    assert data["ProcessType"] == "Background"
+    assert data["Nice"] == 1
+    assert "burn-in-report.out.log" in data["StandardOutPath"]
+    assert "burn-in-report.err.log" in data["StandardErrorPath"]
+
+    text = INSTALL_SH.read_text(encoding="utf-8")
+    start = text.index('cat << EOF > "${TARGET_BURN_IN_REPORT_WRAPPER}"')
+    end = text.index('chmod +x "${TARGET_BURN_IN_REPORT_WRAPPER}"')
+    wrapper = text[start:end]
+    assert 'python "${PROJECT_ROOT}/scripts/p3_burn_in_report.py" report' in wrapper
     code_lines = [line for line in wrapper.splitlines() if not line.lstrip().startswith("#")]
     code = "\n".join(code_lines)
     for forbidden in ("launchctl", "kickstart", "bootout", "SMTP", "IMAP"):
@@ -1009,12 +1041,14 @@ def test_k6_deploy_only_modes_leave_legacy_files_and_launchctl_untouched(
         home / "bin/my-ai-employee-dashboard-runner",
         home / "bin/my-ai-employee-health-monitor-runner",
         home / "bin/my-ai-employee-news-refresh-runner",
+        home / "bin/my-ai-employee-burn-in-report-runner",
         home / "Library/LaunchAgents/com.myaiemployee.agent.plist",
         home / "Library/LaunchAgents/com.myaiemployee.imap-sync.plist",
         home / "Library/LaunchAgents/com.myaiemployee.menu-bar.plist",
         home / "Library/LaunchAgents/com.myaiemployee.dashboard.plist",
         home / "Library/LaunchAgents/com.myaiemployee.health-monitor.plist",
         home / "Library/LaunchAgents/com.myaiemployee.news-refresh.plist",
+        home / "Library/LaunchAgents/com.myaiemployee.burn-in-report.plist",
     ):
         assert path.exists(), f"撞坑 #98 P1-3 修复:{mode} 必部署当前文件 {path}"
     calls = launchctl_calls.read_text(encoding="utf-8") if launchctl_calls.exists() else ""

@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  P3 长稳证据汇总 — 独立 one-shot LaunchAgent
+
+  - RunAtLoad + 每日本地 02:10：只汇总已经完整结束的 UTC 自然日；每轮补齐已完成的 ISO 周
+  - KeepAlive=false：报告失败不触发热循环；下一个日界按正常计划重试
+  - 不采集网络、不读 stderr 正文、不控制 launchd/业务服务、不发送 SMTP
+  - P3 Day0 marker 必须由人工显式 `p3_burn_in_report.py start` 创建，避免登录即重置窗口
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.myaiemployee.burn-in-report</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/$USER/bin/my-ai-employee-burn-in-report-runner</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/$USER/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/$USER</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>2</integer>
+        <key>Minute</key>
+        <integer>10</integer>
+    </dict>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>1</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/burn-in-report.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/burn-in-report.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/$USER</string>
+</dict>
+</plist>

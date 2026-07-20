@@ -128,6 +128,44 @@ def test_failed_first_attempt_retries_once_and_recovers(tmp_path: Path) -> None:
     assert sample["recovered_by_retry"] is True
 
 
+def test_sample_keeps_only_safe_stderr_stat_metadata(tmp_path: Path) -> None:
+    """P3 需要检测 stderr 文件变化，但 journal 绝不保留路径或正文。"""
+    snapshot = _snapshot(healthy=True)
+    snapshot["error_log_metadata"] = {
+        "menu_bar": {
+            "exists": True,
+            "size_bytes": 128,
+            "mtime_epoch": 1_784_000_000,
+            "path": "/private/logs/menu-bar.err.log",
+            "contents": "private traceback",
+        },
+        "dashboard": {
+            "exists": True,
+            "size_bytes": "not-an-int",
+            "mtime_epoch": -1,
+        },
+        "other": {"exists": True, "size_bytes": 42, "mtime_epoch": 42},
+    }
+
+    result = monitor.run_monitor(
+        state_dir=tmp_path / "health",
+        collect_snapshot_fn=_collector(snapshot),
+        health_probe=_health_probe,
+        now_fn=lambda: NOW,
+    )
+
+    assert result.healthy is True
+    journal = _read_jsonl(tmp_path / "health" / "samples.jsonl")[0]
+    sample = cast(dict[str, object], journal["sample"])
+    assert sample["error_log_metadata"] == {
+        "menu_bar": {"exists": True, "size_bytes": 128, "mtime_epoch": 1_784_000_000},
+        "dashboard": {"exists": True, "size_bytes": None, "mtime_epoch": None},
+    }
+    rendered = json.dumps(journal, ensure_ascii=False)
+    assert "/private/logs" not in rendered
+    assert "private traceback" not in rendered
+
+
 def test_three_failed_cycles_open_one_structured_alert(tmp_path: Path) -> None:
     state_dir = tmp_path / "health"
     failed = _snapshot(healthy=False, reasons=["dashboard_listener_missing"])
