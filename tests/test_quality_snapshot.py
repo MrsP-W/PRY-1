@@ -305,7 +305,7 @@ def test_check_state_entries_script_exits_zero(
             "--strict",
             "src",
             "tests",
-            *state_script.LAUNCHD_HEALTH_SCRIPTS,
+            *state_script.LAUNCHD_ONE_SHOT_SCRIPTS,
         ]
     ]
 

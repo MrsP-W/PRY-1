@@ -113,8 +113,8 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3104 passed / 1 skipped** / **90.36%** / mypy --strict 0 / **278 files** / MD lint **293 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 L3 只读兼容) |
-| **下一棒** | AI 新闻 hourly one-shot（P1 15min 健康巡检已 PASS：连续失败才本地告警·不 SMTP/不循环重启）→ P2 数据链路 → P3 7d/30d；v1.0 默认不打；Mac 重启/注销恢复另需授权 |
+| **质量基线** | **3109 passed / 1 skipped** / **90.36%** / mypy --strict 0 / **279 files** / MD lint **293 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 AES-GCM 新写入 + v2 L3 只读兼容) |
+| **下一棒** | P2 数据链路幂等/坏数据隔离 → P3 7d/30d；P1.5 新闻 hourly one-shot 已 PASS（RunAtLoad 首轮 48 条本地缓存、exit 0；不 SMTP/不服务控制）；v1.0 默认不打；Mac 重启/注销恢复另需授权 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
 | **P1-3 #98 修复(本次 commit `f188d13`)** | `fix(launchd): #98 P1-3 修复 legacy retirement 仅 install 模式执行 + K5 回归测试`(2026-07-10 · 8 files / +78 -27 · **撞坑 #98 P1 审查发现**:原 5.5 段顺序有 bug,deploy-only 早退前 legacy retirement 会被执行,违反"只部署、不改变运行态"安全语义;**修复**:`launchd_install.sh` deploy-only 退出从 5.6 移到 5.5(NEW 段号),legacy retirement 移到 5.6(后置)· **K5 回归测试**:`tests/scripts/test_launchd_install.py` 新增 `test_k5_deploy_only_does_not_trigger_legacy_retirement`(5.5 段代码必不含 launchctl unload/bootout/my-ai-employee-start;5.5 必在 5.6 之前 → deploy-only 不退役 legacy)· K1/K3 段号 5.5→5.6 同步修正 · 5件套 baseline 同步 2936/1/89.12/290 → 2937/1/89.10/291(K5 +1 test, ruff format +0 MD)· 9/9 质量门全绿 2937 passed / 1 skipped / 89.10% / 291 MD / mypy 257 files · 默认不 push · 等 push 授权后启动 P0-4 24h 观察) |
@@ -6374,3 +6374,24 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - **运行验收**：修复后的独立 Job `runs=2`、`last exit code=0`、`run interval=900 seconds`；RunAtLoad 与 T+15 自动采样均 `healthy=true`，`failure_streak=0`、`alert_open=false`。menu-bar PID `34582`、Dashboard PID `34591`、listener PID `34594` 与 `127.0.0.1:8765/health` 均正常。
 - **质量证据**：定向 launchd/Dashboard 回归 **126 passed**；全量 `make test` **3104 passed / 1 skipped / 90.36%**；mypy **278 files**、Ruff、format、Markdown lint **293 files**、Alembic SQL 与 `uv build` 均通过。
 - **下一棒**：AI 新闻 hourly one-shot；之后为 P2 数据链路幂等/坏数据隔离与 P3 长稳验收。v1.0 默认不打。
+
+---
+
+### 2026-07-20 [P1.5 AI 新闻 hourly one-shot] — 收口
+
+#### 1. 本次修改内容
+
+- **feat(ops)**：新增独立 `com.myaiemployee.news-refresh` LaunchAgent 与 wrapper；`RunAtLoad=true`、`StartInterval=3600`、`KeepAlive=false`、`ProcessType=Background`。安装/卸载链完整覆盖该 Job，常规 mypy/Ruff/format 显式覆盖真实 CLI 入口。
+- **test(ops)**：新增无网络 CLI 回归，覆盖成功 JSON、全源失败保留旧缓存与并发刷新跳过；补强 install/uninstall 与 deploy-only 契约，确保新闻 one-shot 不含服务控制。
+- **deploy**：先运行 `bash scripts/launchd_install.sh deploy-only`，再仅 bootstrap 新闻 Job；未 reload menu-bar、Dashboard、agent、IMAP 或 health-monitor。
+
+#### 2. 运行验收与边界
+
+- **首轮**：`news-refresh` 的 `runs=1`、`last exit code=0`、`run interval=3600 seconds`；首次从无缓存写入 48 条，stdout 显示 12 个公开来源均完成，stderr 为 0 字节。
+- **Dashboard**：`GET /api/news/daily` 返回 `refresh_state=fresh`；缓存采用既有跨进程锁、原子替换与失败保留，不会因单源失败阻塞。
+- **边界**：只发起白名单 HTTPS GET；不读账号/Keychain、IMAP 或业务日志正文，不调用 LLM，不发 SMTP，不重启或控制任何业务服务。`3600` 为约每小时，不承诺整点。
+
+#### 3. 当前项目整体总结
+
+- **质量证据**：定向新闻/launchd/快照回归 **89 passed**；`make test` **3109 passed / 1 skipped / 90.36%**；mypy **279 files**、Ruff、format、Markdown lint **293 files**、`make check-snapshot`、Alembic SQL 与 `uv build` 均通过。
+- **下一棒**：P2 数据链路幂等与坏数据隔离；随后 P3 7 天 burn-in / 30 天无 P0/P1 与自动周报。v1.0 默认不打。

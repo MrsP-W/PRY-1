@@ -1,8 +1,8 @@
 """刷新 AI 每日情报的本地只读缓存。
 
 此脚本只发起白名单 HTTPS GET，不读取账号/Keychain，不调用 LLM，也不发送任何
-内容到外部。未来由独立的 one-shot LaunchAgent 每小时调用；当前 P0-4 观察期不
-安装或启用该 LaunchAgent。
+内容到外部。由独立的 one-shot LaunchAgent 每小时调用；本脚本本身不启停任何
+业务服务。
 """
 
 from __future__ import annotations

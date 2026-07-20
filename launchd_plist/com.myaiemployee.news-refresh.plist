@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  AI 每日情报 — 独立 one-shot LaunchAgent
+
+  - RunAtLoad + StartInterval=3600：登录后刷新一次，此后每小时刷新一次公开 Feed
+  - KeepAlive=false：来源失败不触发 launchd 热循环；下个整小时按正常计划重试
+  - ProcessType=Background：仅抓取白名单 HTTPS Feed，原子写入本地 Application Support 缓存
+  - 不替代 Dashboard；不执行业务服务启停、不访问 IMAP/Keychain、不发送 SMTP
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.myaiemployee.news-refresh</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/$USER/bin/my-ai-employee-news-refresh-runner</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/Users/$USER/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+        <key>HOME</key>
+        <string>/Users/$USER</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StartInterval</key>
+    <integer>3600</integer>
+
+    <key>KeepAlive</key>
+    <false/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>Nice</key>
+    <integer>1</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/news-refresh.out.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/$USER/Library/Logs/MyAIEmployee/news-refresh.err.log</string>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/$USER</string>
+</dict>
+</plist>
