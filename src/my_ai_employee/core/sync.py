@@ -7,7 +7,8 @@
     - **增量策略**：`SyncState.last_uid` 记录上次同步的最大 UID，
       下次只拉 > last_uid 的邮件（避免重复入库）
     - **批量入库**：每 100 封 `session.commit()` 一次（避免 SQLite 长事务锁）
-    - **失败隔离**：单封失败不阻塞后续（per-batch try/except + 跳过 + 计数）
+    - **失败隔离**：单批失败不阻塞后续批（per-batch try/except + 跳过 + 计数；
+      envelope 级坏数据隔离在 `IMAPConnector.fetch`）
     - **received_at 缺失 fallback** 到 `fetched_at`（D3.1.1 决策 — 入库映射层落实）
     - **JSON 字段**：`JSONList TypeDecorator`（D3.2.3）— 写 `recipients=[]` / `labels=[]` 直生效
     - **关系双轨**：本模块只写 JSON 字段 `Email.labels`（D3 阶段快速过滤），
@@ -52,7 +53,7 @@ class SyncResult:
     total_fetched: int  # safe_fetch 返回的原始邮件数
     inserted: int  # 实际写入 DB 的新邮件数
     skipped: int  # 已存在 (UNIQUE 冲突) 跳过的
-    failed: int  # 失败隔离的（单封异常不阻塞）
+    failed: int  # 失败隔离的（单批异常不阻塞后续批）
     new_last_uid: int  # 同步后 SyncState 更新到的新 last_uid
     duration_seconds: float  # 端到端耗时
 
@@ -89,7 +90,7 @@ class IMAPSync:
             2. safe_fetch(since) 拉取（失败隔离由 safe_fetch 负责）
             3. 按 uid 升序排序（IMAP UID 是单调递增的整数）
             4. 过滤掉 uid <= last_uid 的（旧邮件）
-            5. 100/批 commit ORM 入库（每批独立 try/except — 单封失败不阻塞）
+            5. 100/批 commit ORM 入库（每批独立 try/except — 单批失败不阻塞后续批）
             6. 更新 SyncState.last_uid + last_sync_at + last_status
         """
         t0 = time.perf_counter()
@@ -166,7 +167,7 @@ class IMAPSync:
     ) -> tuple[int, int, int]:
         """单批入库 — 返回 (inserted, skipped, max_uid)。
 
-        单封失败时整批继续（try/except 在外层 — 这里只接受整批 OK 或全失败）。
+        本方法只接受整批 OK 或全失败；envelope 级坏数据已在 connector.fetch 隔离。
         """
         inserted = 0
         skipped = 0

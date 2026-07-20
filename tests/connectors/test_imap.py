@@ -209,6 +209,29 @@ def test_fetch_returns_envelope_dicts(
     assert subjects == {"First", "Second"}
 
 
+def test_fetch_skips_malformed_envelope_keeps_siblings(
+    installed_connector: IMAPConnector, mock_client: MockIMAPClient
+) -> None:
+    """P2：单封坏 envelope 跳过，兄弟 UID 仍返回。"""
+
+    class _BrokenEnvelope:
+        @property
+        def subject(self) -> str:
+            raise TypeError("mock broken envelope")
+
+    mock_client.search_uids = [1, 2]
+    mock_client.fetch_data = {
+        1: {b"ENVELOPE": _BrokenEnvelope(), b"RFC822.SIZE": 10},
+        **make_envelope(2, subject="Survivor", sender="ok@example.com"),
+    }
+    since = datetime.now(UTC) - timedelta(days=1)
+    result = asyncio.run(installed_connector.fetch(since))
+
+    assert len(result) == 1
+    assert result[0]["uid"] == 2
+    assert result[0]["subject"] == "Survivor"
+
+
 def test_safe_fetch_isolates_failure(monkeypatch: Any) -> None:
     """fetch 抛异常 → safe_fetch 返回空 list，不传染。"""
     mock = MockIMAPClient()

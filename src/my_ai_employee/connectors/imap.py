@@ -195,16 +195,25 @@ class IMAPConnector(BaseConnector):
             raise ConnectionError(f"IMAP fetch 失败: {e!r}") from e
 
         results: list[dict[str, Any]] = []
+        skipped_bad = 0
         for uid, data in fetch_data.items():
             envelope = data.get(b"ENVELOPE")
             size = data.get(b"RFC822.SIZE", 0)
             if not envelope:
                 continue
-            results.append(self._envelope_to_dict(uid, envelope, size))
+            # P2：单封坏 envelope 不拖垮整次 fetch（兄弟 UID 仍可入库）
+            try:
+                results.append(self._envelope_to_dict(uid, envelope, size))
+            except Exception as e:
+                skipped_bad += 1
+                logger.warning(
+                    f"IMAP envelope 解析跳过: provider={self._provider} uid={uid!r} err={e!r}"
+                )
 
         logger.info(
             f"IMAP fetch 完成: provider={self._provider} "
-            f"uids={len(uids)} returned={len(results)} since={since_naive}"
+            f"uids={len(uids)} returned={len(results)} skipped_bad={skipped_bad} "
+            f"since={since_naive}"
         )
         return results
 
