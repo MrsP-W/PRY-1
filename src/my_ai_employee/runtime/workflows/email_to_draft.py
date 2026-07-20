@@ -1,4 +1,7 @@
-"""邮件→草稿 AgentRun 工作流（默认可 dry-run，默认不 SMTP）。"""
+"""邮件→草稿 AgentRun 工作流（默认可 dry-run，默认不 SMTP）。
+
+默认接真 EmailClassifier / EmailDrafter；测试可注入 classify_fn/draft_fn 覆盖。
+"""
 
 from __future__ import annotations
 
@@ -43,18 +46,111 @@ class EmailToDraftResult:
     error_code: str | None = None
 
 
-def _default_classify(email: dict[str, Any]) -> dict[str, Any]:
+def _email_fields(email: dict[str, Any]) -> tuple[str, str, str]:
+    subject = str(email.get("subject") or "")
+    sender = str(email.get("sender") or email.get("from") or "")
+    body = str(email.get("body_excerpt") or email.get("body") or email.get("body_text") or "")
+    return subject, sender, body
+
+
+def stub_classify_fn(email: dict[str, Any]) -> dict[str, Any]:
+    """本地 stub 分类（单测 / --stub-ai）。"""
     subject = str(email.get("subject") or "")
     category = "URGENT" if "urgent" in subject.lower() else "TODO"
-    return {"category": category, "confidence": 0.9}
+    return {"category": category, "confidence": 0.9, "model_full_id": "stub:classify"}
 
 
-def _default_draft(email: dict[str, Any], classification: dict[str, Any]) -> dict[str, Any]:
+def stub_draft_fn(email: dict[str, Any], classification: dict[str, Any]) -> dict[str, Any]:
+    """本地 stub 草稿（单测 / --stub-ai）。"""
     return {
         "subject": f"Re: {email.get('subject', '')}".strip(),
         "body": f"[draft] category={classification.get('category')}",
         "tone": "FORMAL",
+        "model_full_id": "stub:draft",
+        "blocked": False,
     }
+
+
+def make_classify_fn(*, classifier: Any | None = None) -> ClassifyFn:
+    """包装 EmailClassifier → ClassifyFn。"""
+
+    def _classify(email: dict[str, Any]) -> dict[str, Any]:
+        from my_ai_employee.ai.classifier import EmailClassifier
+
+        inst = classifier if classifier is not None else EmailClassifier()
+        subject, sender, body = _email_fields(email)
+        result = inst.classify(subject=subject, sender=sender, body_excerpt=body)
+        category = result.category
+        category_value = category.value if hasattr(category, "value") else str(category)
+        return {
+            "category": category_value,
+            "confidence": float(result.confidence),
+            "model_full_id": str(result.model_full_id),
+            "latency_ms": int(result.latency_ms),
+        }
+
+    return _classify
+
+
+def make_draft_fn(*, drafter: Any | None = None) -> DraftFn:
+    """包装 EmailDrafter → DraftFn；SPAM / system sender 不调 LLM。"""
+
+    def _draft(email: dict[str, Any], classification: dict[str, Any]) -> dict[str, Any]:
+        from my_ai_employee.ai.drafter import EmailDrafter, SpamBlockedError
+        from my_ai_employee.ai.safety import is_system_sender
+
+        subject, sender, body = _email_fields(email)
+        category = str(classification.get("category") or "")
+
+        if category == "SPAM":
+            return {
+                "subject": "",
+                "body": "",
+                "tone": "FORMAL",
+                "model_full_id": "gate:spam_skip",
+                "blocked": True,
+                "block_reason": "spam",
+            }
+        if is_system_sender(sender):
+            return {
+                "subject": "",
+                "body": "",
+                "tone": "FORMAL",
+                "model_full_id": "gate:system_sender_skip",
+                "blocked": True,
+                "block_reason": "system_sender",
+            }
+
+        inst = drafter if drafter is not None else EmailDrafter()
+        try:
+            result = inst.draft(
+                subject=subject,
+                sender=sender,
+                body_excerpt=body,
+                email_category=category or None,
+            )
+        except SpamBlockedError:
+            return {
+                "subject": "",
+                "body": "",
+                "tone": "FORMAL",
+                "model_full_id": "gate:spam_blocked",
+                "blocked": True,
+                "block_reason": "spam_blocked",
+            }
+
+        tone = result.tone
+        tone_value = tone.value if hasattr(tone, "value") else str(tone)
+        return {
+            "subject": str(result.subject),
+            "body": str(result.body),
+            "tone": tone_value,
+            "model_full_id": str(result.model_full_id),
+            "latency_ms": int(result.latency_ms),
+            "blocked": False,
+        }
+
+    return _draft
 
 
 def _emit(
@@ -89,16 +185,20 @@ def run_email_to_draft(
     event_store: EventStore | None = None,
     classify_fn: ClassifyFn | None = None,
     draft_fn: DraftFn | None = None,
+    classifier: Any | None = None,
+    drafter: Any | None = None,
     outbox_insert_fn: OutboxInsertFn | None = None,
     existing_run_id: str | None = None,
 ) -> EmailToDraftResult:
     """执行或恢复邮件→草稿闭环。
 
+    默认接真 EmailClassifier / EmailDrafter；传入 classify_fn/draft_fn 可覆盖。
     dry_run=True：不写 Outbox，仍走到 awaiting_approval（演示审批门）。
     approval_decision：若提供则 finalize；否则停在 awaiting_approval。
     """
-    classify = classify_fn or _default_classify
-    draft = draft_fn or _default_draft
+    classify = classify_fn if classify_fn is not None else make_classify_fn(classifier=classifier)
+    draft = draft_fn if draft_fn is not None else make_draft_fn(drafter=drafter)
+    using_live_ai = classify_fn is None and draft_fn is None
     steps: list[str] = []
 
     if existing_run_id:
@@ -157,8 +257,8 @@ def run_email_to_draft(
             scope=["email", "outbox"],
             resources=["classifier", "drafter", "approval_gate"],
             acceptance_criteria=["draft_ready_for_approval", "no_smtp_unless_authorized"],
-            model="local-stub",
-            provider="stub",
+            model="router" if using_live_ai else "local-stub",
+            provider="live" if using_live_ai else "stub",
             permission_profile=PermissionProfile.READ_ONLY.value,
             recovery_policy=RecoveryPolicy.RETRY_ON_TRANSIENT.value,
         )
@@ -209,6 +309,7 @@ def run_email_to_draft(
                     "classification": {
                         "category": classification.get("category"),
                         "confidence": classification.get("confidence"),
+                        "model_full_id": classification.get("model_full_id"),
                     },
                 },
             )
@@ -218,7 +319,11 @@ def run_email_to_draft(
                 status=EventStatus.SUCCEEDED,
                 trace_id=trace_id,
                 run_id=run_id,
-                extra={"step": "classify", "tool_sequence": list(tool_sequence)},
+                extra={
+                    "step": "classify",
+                    "tool_sequence": list(tool_sequence),
+                    "model_full_id": classification.get("model_full_id"),
+                },
             )
         else:
             classification = dict(checkpoint.get("classification") or {"category": "TODO"})
@@ -230,7 +335,8 @@ def run_email_to_draft(
             steps.append("draft")
             completed.append("draft")
             tool_sequence.append("draft")
-            if not payload.dry_run:
+            blocked = bool(draft_payload.get("blocked"))
+            if not payload.dry_run and not blocked:
                 if email_id is None:
                     if outbox_insert_fn is None:
                         email_id = str(
@@ -253,6 +359,13 @@ def run_email_to_draft(
                     "tool_sequence": tool_sequence,
                     "email_id": email_id,
                     "last_tool": "draft",
+                    "draft": {
+                        "subject": draft_payload.get("subject"),
+                        "tone": draft_payload.get("tone"),
+                        "model_full_id": draft_payload.get("model_full_id"),
+                        "blocked": blocked,
+                        "block_reason": draft_payload.get("block_reason"),
+                    },
                 },
             )
             _emit(
@@ -265,6 +378,8 @@ def run_email_to_draft(
                     "step": "draft",
                     "tool_sequence": list(tool_sequence),
                     "email_id": email_id,
+                    "blocked": blocked,
+                    "model_full_id": draft_payload.get("model_full_id"),
                 },
             )
         else:
@@ -399,5 +514,9 @@ def _finalize_approval(
 __all__ = [
     "EmailToDraftInput",
     "EmailToDraftResult",
+    "make_classify_fn",
+    "make_draft_fn",
     "run_email_to_draft",
+    "stub_classify_fn",
+    "stub_draft_fn",
 ]

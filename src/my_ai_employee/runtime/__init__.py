@@ -13,7 +13,11 @@ from my_ai_employee.runtime.store import (
 from my_ai_employee.runtime.workflows.email_to_draft import (
     EmailToDraftInput,
     EmailToDraftResult,
+    make_classify_fn,
+    make_draft_fn,
     run_email_to_draft,
+    stub_classify_fn,
+    stub_draft_fn,
 )
 
 __all__ = [
@@ -25,5 +29,9 @@ __all__ = [
     "AgentRunStore",
     "EmailToDraftInput",
     "EmailToDraftResult",
+    "make_classify_fn",
+    "make_draft_fn",
     "run_email_to_draft",
+    "stub_classify_fn",
+    "stub_draft_fn",
 ]

@@ -14,7 +14,12 @@ from sqlalchemy.orm import sessionmaker
 from my_ai_employee.core.models import Base
 from my_ai_employee.runtime.models import AgentRunRecord  # noqa: F401 — register metadata
 from my_ai_employee.runtime.store import AgentRunStore
-from my_ai_employee.runtime.workflows.email_to_draft import EmailToDraftInput, run_email_to_draft
+from my_ai_employee.runtime.workflows.email_to_draft import (
+    EmailToDraftInput,
+    run_email_to_draft,
+    stub_classify_fn,
+    stub_draft_fn,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +37,11 @@ def main(argv: list[str] | None = None) -> int:
         "--write-outbox",
         action="store_true",
         help="非 dry-run：允许调用 outbox 插入钩子（本 CLI 默认仍用 stub id）",
+    )
+    parser.add_argument(
+        "--stub-ai",
+        action="store_true",
+        help="用本地 stub 分类/草稿（默认接真 EmailClassifier/EmailDrafter）",
     )
     args = parser.parse_args(argv)
 
@@ -52,6 +62,11 @@ def main(argv: list[str] | None = None) -> int:
     elif args.cancel:
         decision = "cancel"
 
+    ai_kwargs: dict[str, object] = {}
+    if args.stub_ai:
+        ai_kwargs["classify_fn"] = stub_classify_fn
+        ai_kwargs["draft_fn"] = stub_draft_fn
+
     result = run_email_to_draft(
         store,
         EmailToDraftInput(
@@ -60,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             approval_decision=decision,
         ),
         existing_run_id=args.resume,
+        **ai_kwargs,  # type: ignore[arg-type]
     )
     print(json.dumps(result.__dict__, ensure_ascii=False))
     return 0

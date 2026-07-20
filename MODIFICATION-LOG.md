@@ -113,7 +113,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3145 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **291 files** / MD lint **295 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · AgentRun + P3 journal/report + NotesCipher v3) |
+| **质量基线** | **3148 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **291 files** / MD lint **295 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · AgentRun 真 AI 接线 + P3 journal/report + NotesCipher v3) |
 | **下一棒** | **PR #3 已合入 main**（`ff23e93`）· PR #2 已关；最早 **2026-07-22T00:00Z** 核验首份 UTC 日报 → 约 07-28/08-20 判 7d/30d；不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -6470,3 +6470,24 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 - **HEAD**：`main` @ `ff23e93`（以 `git rev-parse` 为准）
 - **下一棒**：2026-07-22 后核验首份 UTC 日报 → 约 07-28 / 08-20 判 7d/30d
+
+---
+
+### 2026-07-20 [AgentRun 真 classifier/drafter 接线] — 收口
+
+#### 1. 本次修改内容
+
+- `email_to_draft` 默认经 `make_classify_fn` / `make_draft_fn` 接真 `EmailClassifier` / `EmailDrafter`
+- SPAM / system sender / `SpamBlockedError` → `draft.blocked`，不写 outbox
+- CLI `--stub-ai`；单测显式 stub；mock router 回归 +3 tests
+- 仍默认 dry-run、不 SMTP
+
+#### 2. 风险点
+
+- 无 API key 时默认 live 路径会失败并 CHECKPOINTED（可 `--stub-ai`）
+- 不重置 P3 Day0；不真发邮件
+
+#### 3. 当前项目整体总结
+
+- **质量证据**：`make test` **3148 passed / 1 skipped / 90.26%**
+- **下一棒**：2026-07-22T00:00Z 后核验首份 UTC 日报
