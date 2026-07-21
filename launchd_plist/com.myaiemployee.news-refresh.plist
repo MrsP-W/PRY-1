@@ -3,10 +3,11 @@
 <!--
   AI 每日情报 — 独立 one-shot LaunchAgent
 
-  - RunAtLoad + StartInterval=3600：登录后刷新一次，此后每小时刷新一次公开 Feed
-  - KeepAlive=false：来源失败不触发 launchd 热循环；下个整小时按正常计划重试
-  - ProcessType=Background：仅抓取白名单 HTTPS Feed，原子写入本地 Application Support 缓存
+  - RunAtLoad + StartInterval=3600：登录后刷新一次，此后约每小时刷新公开 Feed
+  - KeepAlive=false：来源失败不触发 launchd 热循环
+  - ProcessType=Standard：禁止 Background（节流会把 1h 拖到 2–3h，撞 P3 news_run_gap）
   - 不替代 Dashboard；不执行业务服务启停、不访问 IMAP/Keychain、不发送 SMTP
+  - 系统睡眠仍会冻结 StartInterval；P3 长稳需机器保持醒着或另行 caffeinate
 -->
 <plist version="1.0">
 <dict>
@@ -36,10 +37,7 @@
     <false/>
 
     <key>ProcessType</key>
-    <string>Background</string>
-
-    <key>Nice</key>
-    <integer>1</integer>
+    <string>Standard</string>
 
     <key>StandardOutPath</key>
     <string>/Users/$USER/Library/Logs/MyAIEmployee/news-refresh.out.log</string>

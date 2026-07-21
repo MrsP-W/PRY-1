@@ -1,7 +1,7 @@
 # SESSION-STATE — v0.2.78 P0-3 caffeinate 1h 观察与 #97/#98 修复收口 ✅(2026-07-10) + `v0.2.1` 正式 tag 维持期
 
 > **最后更新**:2026-07-20 · **P3-A 下一棒推进**:v0.2.73 deploy-only + v0.2.74 #92 修复 B + v0.2.74.1 巡检 + v0.2.75 #93 launchd uv PATH + v0.2.76 T3 L4 #93 实战验证 + v0.2.77 T3 L4 #94 B 路径实战验证 ✅ + **v0.2.78 P0-3 caffeinate 1h 观察撞坑 #95 完全修复 ✅**(`commit 74d1d65` 拆 menu-bar + Dashboard 为 2 独立 LaunchAgent · `ProcessType=Standard` + `KeepAlive=true` · caffeinate -i -t 3600 · menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · 清理退役 digital-employee plist) + **撞坑 #97 NEW**(`SQLCipher` 跨线程 close 报错 · dashboard 30→60min +38 traceback · close-time 报错但非 fatal · 路径 A `check_same_thread=False` + `StaticPool` 推荐) · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准
-> **当前状态（2026-07-21，优先于下方历史详述）**：旧 P3 epoch 已归档（Mac 重启中断，永不记 PASS）；**新 Day0=`2026-07-21T06:48:48Z`**，`status=collecting`，`attention=[]`。首份日报门槛 **2026-07-23T00:00Z**。**3154 passed / 1 skipped / 90.26%** / lint **295** / mypy **291 files**。**下一棒**：P3 新 epoch 长稳收集；约 07-28/08-20 再判 7d/30d（相对新 Day0）；不做 SMTP / 额外重启演练 / v1.0。
+> **当前状态（2026-07-21，优先于下方历史详述）**：P3 新窗再次 `attention`（间隔失准）。根因：health/news `ProcessType=Background` 被节流（~50min / ~3h）+ 系统 `sleep=1`。已改为 `Standard` + health `StartInterval=600`；受控间隔验证进行中；**暂不重开第三 epoch**。**3155 passed / 1 skipped / 90.26%** / lint **295** / mypy **291 files**。不做 SMTP / 额外重启演练 / v1.0。
 >
 > **状态**:🟡 → 🟢 **Day 14 + P0-3 caffeinate 1h 观察撞坑 #95 完全修复** + P1-1/P1-2 收口 + P1-4/P1-5 #98 行为回归 — **P0-3.1-3.3 收口**(launchctl load -w 4 plist · 退役 digital-employee plist 清理 · caffeinate -i -t 3600 启动) · **T0/T+15/T+30/T+45/T+60 全部 4 PID 持续 1h 1min 23s 零重启**(menu-bar 11404 + dashboard 11406 + agent + imap-sync) · **127.0.0.1:8765 持续 LISTEN** · **HTTP 404 4ms** 探针响应 · 撞坑 #95 完全修复证据落地(`docs/v0.2.78-#95-1h-verify.md`)· 代码审查 2 P1 → **P1-1 修 #97** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 `NullPool`,非 StaticPool,2 回归测试 5 passed)· **P1-2 修 #98 launchd 升级场景旧 digital-employee 迁移缺口** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · 删 plist/wrapper/2 log · 验证 list 无残留 · 幂等 · K1-K4 4 回归测试 4 passed)· **质量门**:**3074 passed / 1 skipped** / 90.39% / lint **293** / mypy **273 files**(NotesCipher v3 AES-GCM 写入 + v2 只读兼容 · +3 tests)· **完成度**:整体 ~94% /可无人值守 ~78%(↑ 4pp · #97 修复 + #98 迁移补全)/v1.0 ~84%(↑ 2pp)· **下一棒**:P0-4 24h 完整观察窗(锚 menu-bar + dashboard 24h 0 重启 · stderr 无 #97 traceback)→ P0-5 v1.0 tag 评估(默认不打)· 撞坑 #90 launchd 持久化方案 D-step 评估(沿 4 候选)继续延后。
 >
@@ -15,7 +15,7 @@
 
 ## 🎯 端午不休息(6/19-22)策略 — 继续推进
 
-**当前启动候选（2026-07-21）**：`v0.2.1` tag 已落地；P0–P2 ✅；**P3 新 epoch collecting**（Day0=`2026-07-21T06:48:48Z`；旧 epoch 已归档不记 PASS）。**3154 passed / 1 skipped** / **90.26%** / MD lint **295** / mypy **291 files**；v1.0 默认不打。
+**当前启动候选（2026-07-21）**：`v0.2.1` tag 已落地；P0–P2 ✅；**P3 新 epoch collecting**（Day0=`2026-07-21T06:48:48Z`；旧 epoch 已归档不记 PASS）。**3155 passed / 1 skipped** / **90.26%** / MD lint **295** / mypy **291 files**；v1.0 默认不打。
 
 **当前启动候选**:**`v0.2.1` tag 已落地(`71b4602`)** + **Day 14 + P3-A T3 L4 #95 修复(`74d1d65`) ✅ + P0-3 caffeinate 1h 验证 ✅ + P1-1 修 #97 NullPool + P1-2 修 #98 launchd legacy retirement + P1-4 K6 + P1-5 K7 install 行为回归** — outbox 2 条已 `cancelled` · 未 SMTP 外发;4 个 plist 已部署，但 GUI launchd 域当前未注册（恢复需单独授权）· **3074 passed / 1 skipped** / 90.39% / MD lint **293** / mypy **273 files**。**下一棒**:P0-4 24h 完整观察窗(锚 stderr 无 #97 traceback · legacy 已 retire)→ P0-5 v1.0 tag 评估;v1.0 tag 默认不打。
 
@@ -30,7 +30,7 @@
 | v0.2.2 #5 commit 5 收口锚 | `6a0549e feat(deps): v0.2.2 #5 OAuth 2.0 Phase 2 commit 5/5 pyproject 加 msal+google-auth+google-auth-oauthlib` |
 | 当前 HEAD | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | 分支 | `main` |
-| 当前质量门（2026-07-21） | **3154 passed / 1 skipped** · **90.26%** coverage · mypy --strict 0 errors(**291 files**) · MD lint **295 files** 0 errors；P3 新 Day0 collecting（旧 epoch 已归档）；AgentRun 真 AI 接线仍在；Codex 对话笔记仅显式本地导入。 |
+| 当前质量门（2026-07-21） | **3155 passed / 1 skipped** · **90.26%** coverage · mypy --strict 0 errors(**291 files**) · MD lint **295 files** 0 errors；P3 新 Day0 collecting（旧 epoch 已归档）；AgentRun 真 AI 接线仍在；Codex 对话笔记仅显式本地导入。 |
 | 工作区 | 以 `git status --short` 为准 |
 | Tag | `v0.1.0 = 2af775f`(anchor 永不动)+ `v0.2.1-rc1 = b0e7f94`(维持期历史快照)+ **`v0.2.1 = 71b4602` annotated(撞坑 #60 反转 · 2026-07-01 已落地)** |
 | 核心质量门 | **3074 passed / 1 skipped** · **90.39%** coverage · mypy --strict 0 errors(**273 files**) · MD lint **293 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · NotesCipher v3 + v2 兼容) |

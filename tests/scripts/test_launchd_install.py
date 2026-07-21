@@ -757,7 +757,7 @@ def test_j4_install_sh_deploy_only_loads_7_jobs() -> None:
 
 
 def test_p1_health_monitor_plist_is_safe_one_shot() -> None:
-    """P1:巡检独立运行，每 15 分钟采样且失败不由 KeepAlive 热循环。"""
+    """P1:巡检独立运行，约每 10 分钟采样且失败不由 KeepAlive 热循环。"""
     assert PLIST_HEALTH_MONITOR_PATH.exists()
     with PLIST_HEALTH_MONITOR_PATH.open("rb") as f:
         data = plistlib.load(f)
@@ -765,10 +765,10 @@ def test_p1_health_monitor_plist_is_safe_one_shot() -> None:
     assert data["Label"] == "com.myaiemployee.health-monitor"
     assert data["ProgramArguments"] == ["/Users/$USER/bin/my-ai-employee-health-monitor-runner"]
     assert data["RunAtLoad"] is True
-    assert data["StartInterval"] == 900
+    assert data["StartInterval"] == 600
     assert data["KeepAlive"] is False
-    assert data["ProcessType"] == "Background"
-    assert data["Nice"] == 1
+    assert data["ProcessType"] == "Standard"
+    assert "Nice" not in data
     assert "/usr/sbin" in data["EnvironmentVariables"]["PATH"]
     assert "health-monitor.out.log" in data["StandardOutPath"]
     assert "health-monitor.err.log" in data["StandardErrorPath"]
@@ -800,8 +800,8 @@ def test_p1_5_news_refresh_plist_is_safe_hourly_one_shot() -> None:
     assert data["RunAtLoad"] is True
     assert data["StartInterval"] == 3600
     assert data["KeepAlive"] is False
-    assert data["ProcessType"] == "Background"
-    assert data["Nice"] == 1
+    assert data["ProcessType"] == "Standard"
+    assert "Nice" not in data
     assert "/usr/sbin" in data["EnvironmentVariables"]["PATH"]
     assert "news-refresh.out.log" in data["StandardOutPath"]
     assert "news-refresh.err.log" in data["StandardErrorPath"]

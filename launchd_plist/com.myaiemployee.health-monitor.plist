@@ -3,10 +3,11 @@
 <!--
   P1 运行巡检 — 独立 one-shot LaunchAgent
 
-  - RunAtLoad + StartInterval=900：登录后立即采样，此后每 15 分钟一次
+  - RunAtLoad + StartInterval=600：登录后立即采样，此后约每 10 分钟一次
   - KeepAlive=false：业务不健康不触发 launchd 重启热循环
-  - ProcessType=Background：仅做短时只读采样，单轮上限小于 45 秒
+  - ProcessType=Standard：禁止 Background（App Nap/节流会把 15min 拖到 ~50min，撞 P3 health_sample_gap）
   - 不替代 menu-bar / Dashboard 的 KeepAlive；不执行任何服务启停
+  - 系统睡眠仍会冻结 StartInterval；P3 长稳需机器保持醒着或另行 caffeinate
 -->
 <plist version="1.0">
 <dict>
@@ -30,16 +31,13 @@
     <true/>
 
     <key>StartInterval</key>
-    <integer>900</integer>
+    <integer>600</integer>
 
     <key>KeepAlive</key>
     <false/>
 
     <key>ProcessType</key>
-    <string>Background</string>
-
-    <key>Nice</key>
-    <integer>1</integer>
+    <string>Standard</string>
 
     <key>StandardOutPath</key>
     <string>/Users/$USER/Library/Logs/MyAIEmployee/health-monitor.out.log</string>
