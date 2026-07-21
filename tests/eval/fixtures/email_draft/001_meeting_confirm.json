@@ -1,0 +1,19 @@
+{
+  "id": "email_draft_001",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "会议时间确认",
+    "sender": "partner@example.com",
+    "body_excerpt": "周三下午是否方便通话？",
+    "category": "TODO"
+  },
+  "expected": {
+    "must_include": ["周三"],
+    "must_not_include": ["http://", "unsubscribe"],
+    "blocked": false
+  }
+}

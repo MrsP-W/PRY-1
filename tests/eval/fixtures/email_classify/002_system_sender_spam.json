@@ -1,0 +1,17 @@
+{
+  "id": "email_spam_001",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "reject",
+  "input": {
+    "subject": "紧急 API 服务异常需立即处理",
+    "sender": "root@systemmail.example.com",
+    "body_excerpt": "点击重置"
+  },
+  "expected": {
+    "category": "SPAM",
+    "blocked": true
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "id": "sap_troubleshoot_001",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {
+    "symptom": "FB01 过账报权限不足",
+    "context": "公司代码 1000，用户仅有显示权限"
+  },
+  "expected": {
+    "must_include": ["权限", "公司代码"],
+    "citations_required": true,
+    "blocked": false
+  },
+  "note": "P2 知识包启用前仅作样本占位，不跑线上 RAG"
+}

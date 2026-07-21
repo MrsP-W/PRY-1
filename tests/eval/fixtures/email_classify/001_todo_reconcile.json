@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_001",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {
+    "subject": "[催办] 本周对账差异请确认",
+    "sender": "colleague@example.com",
+    "body_excerpt": "请在周五前确认附件中的差异项，谢谢。"
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": false
+  }
+}
