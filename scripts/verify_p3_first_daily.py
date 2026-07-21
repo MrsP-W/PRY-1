@@ -56,20 +56,26 @@ def verify_first_daily(
     epoch = report.epoch_started_at.isoformat() if report.epoch_started_at else None
     day0_ok = bool(epoch and epoch.startswith(EXPECTED_DAY0_PREFIX))
     daily_ok = report.daily_written >= 1
-    ok = bool(report.started and day0_ok and daily_ok)
+    attention = list(report.attention)
+    attention_ok = len(attention) == 0 and report.status != "attention"
+    ok = bool(report.started and day0_ok and daily_ok and attention_ok)
+    result = "pass" if ok else "fail"
+    if not attention_ok and report.started:
+        result = "fail_attention"
     return {
         "schema_version": 1,
         "action": "verify_first_daily",
-        "result": "pass" if ok else "fail",
+        "result": result,
         "ok": ok,
         "gate": FIRST_DAILY_GATE.isoformat(),
         "now": current.isoformat(),
         "day0_ok": day0_ok,
+        "attention_ok": attention_ok,
         "epoch_started_at": epoch,
         "daily_written": report.daily_written,
         "weekly_written": report.weekly_written,
         "status": report.status,
-        "attention": list(report.attention),
+        "attention": attention,
         "report": report.to_dict(),
     }
 

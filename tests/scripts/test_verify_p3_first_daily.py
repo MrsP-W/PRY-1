@@ -71,6 +71,36 @@ def _news(at: datetime) -> dict[str, Any]:
     }
 
 
+def _write_dense_journals(
+    *,
+    health: Path,
+    news: Path,
+    start: datetime,
+    end: datetime,
+) -> None:
+    health.mkdir(parents=True, exist_ok=True)
+    news.mkdir(parents=True, exist_ok=True)
+    samples: list[dict[str, Any]] = []
+    runs: list[dict[str, Any]] = []
+    cursor = start
+    while cursor <= end:
+        samples.append(_health(cursor))
+        if (cursor - start).total_seconds() % 3600 < 900:
+            runs.append(_news(cursor))
+        cursor += timedelta(minutes=15)
+    if not runs:
+        runs.append(_news(start))
+    (health / "samples.jsonl").write_text(
+        "".join(json.dumps(r, sort_keys=True) + "\n" for r in samples),
+        encoding="utf-8",
+    )
+    (health / "alerts.jsonl").write_text("", encoding="utf-8")
+    (news / "runs.jsonl").write_text(
+        "".join(json.dumps(r, sort_keys=True) + "\n" for r in runs),
+        encoding="utf-8",
+    )
+
+
 def test_too_early_before_gate(tmp_path: Path) -> None:
     early = FIRST_DAILY_GATE - timedelta(hours=1)
     out = verify_first_daily(now=early, force=False, state_dir=tmp_path / "burn-in")
@@ -84,31 +114,10 @@ def test_pass_after_gate_with_complete_utc_day(tmp_path: Path) -> None:
     health = app / "health"
     news = app / "news"
     day0 = datetime(2026, 7, 20, 19, 4, 33, 499091, tzinfo=UTC)
-    _seed_epoch(state, day0)
-    health.mkdir(parents=True)
-    news.mkdir(parents=True)
-    samples = [
-        _health(day0 + timedelta(minutes=15)),
-        _health(datetime(2026, 7, 21, 1, 0, tzinfo=UTC)),
-        _health(datetime(2026, 7, 21, 12, 0, tzinfo=UTC)),
-        _health(datetime(2026, 7, 21, 23, 0, tzinfo=UTC)),
-    ]
-    (health / "samples.jsonl").write_text(
-        "".join(json.dumps(r, sort_keys=True) + "\n" for r in samples),
-        encoding="utf-8",
-    )
-    (health / "alerts.jsonl").write_text("", encoding="utf-8")
-    runs = [
-        _news(day0 + timedelta(minutes=30)),
-        _news(datetime(2026, 7, 21, 2, 0, tzinfo=UTC)),
-        _news(datetime(2026, 7, 21, 14, 0, tzinfo=UTC)),
-    ]
-    (news / "runs.jsonl").write_text(
-        "".join(json.dumps(r, sort_keys=True) + "\n" for r in runs),
-        encoding="utf-8",
-    )
-
     after = datetime(2026, 7, 22, 0, 5, tzinfo=UTC)
+    _seed_epoch(state, day0)
+    _write_dense_journals(health=health, news=news, start=day0, end=after)
+
     out = verify_first_daily(
         now=after,
         force=False,
@@ -119,8 +128,49 @@ def test_pass_after_gate_with_complete_utc_day(tmp_path: Path) -> None:
     )
     assert out["result"] == "pass"
     assert out["ok"] is True
+    assert out["attention_ok"] is True
     assert out["daily_written"] >= 1
     assert out["day0_ok"] is True
+
+
+def test_fail_attention_even_with_daily_report(tmp_path: Path) -> None:
+    app = tmp_path / "app"
+    state = app / "burn-in"
+    health = app / "health"
+    news = app / "news"
+    day0 = datetime(2026, 7, 20, 19, 4, 33, 499091, tzinfo=UTC)
+    after = datetime(2026, 7, 22, 0, 5, tzinfo=UTC)
+    _seed_epoch(state, day0)
+    health.mkdir(parents=True)
+    news.mkdir(parents=True)
+    # 故意留下超大间隔 → health_sample_gap / news_run_gap
+    samples = [
+        _health(day0 + timedelta(minutes=15)),
+        _health(datetime(2026, 7, 21, 12, 0, tzinfo=UTC)),
+    ]
+    (health / "samples.jsonl").write_text(
+        "".join(json.dumps(r, sort_keys=True) + "\n" for r in samples),
+        encoding="utf-8",
+    )
+    (health / "alerts.jsonl").write_text("", encoding="utf-8")
+    (news / "runs.jsonl").write_text(
+        json.dumps(_news(day0 + timedelta(minutes=30)), sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    out = verify_first_daily(
+        now=after,
+        force=False,
+        app_support_dir=app,
+        state_dir=state,
+        health_dir=health,
+        news_dir=news,
+    )
+    assert out["ok"] is False
+    assert out["result"] == "fail_attention"
+    assert out["attention_ok"] is False
+    assert out["daily_written"] >= 1
+    assert "health_sample_gap" in out["attention"]
 
 
 def test_cli_too_early_exit_code() -> None:
