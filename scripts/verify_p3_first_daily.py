@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""核验 P3 首份完整 UTC 日报（最早 2026-07-22T00:00Z）。
+"""核验 P3 首份完整 UTC 日报。
 
-默认 fail-closed：未到窗口直接退出，不重置 Day0，不触碰 SMTP。
+门槛 = Day0 日期 + 2 天的 00:00Z（首个完整 UTC 日结束后）。
+有 attention 时 fail-closed；不重置 Day0，不触碰 SMTP。
 """
 
 from __future__ import annotations
@@ -9,7 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,8 +21,12 @@ if str(_ROOT) not in sys.path:
 
 from scripts import p3_burn_in_report as burn_in  # noqa: E402
 
-FIRST_DAILY_GATE = datetime(2026, 7, 22, 0, 0, tzinfo=UTC)
-EXPECTED_DAY0_PREFIX = "2026-07-20T19:04:33"
+
+def first_daily_gate_for_epoch(epoch: datetime) -> datetime:
+    """首个完整 UTC 日结束后才可核验（epoch.date()+1 为完整日，+2 日 00:00Z 开窗）。"""
+
+    epoch = burn_in._normalise_utc(epoch)
+    return datetime.combine(epoch.date() + timedelta(days=2), datetime.min.time(), tzinfo=UTC)
 
 
 def verify_first_daily(
@@ -36,16 +41,6 @@ def verify_first_daily(
     """返回结构化核验结果；未到窗口且未 force 时 result=too_early。"""
 
     current = burn_in._normalise_utc(now or burn_in._now_utc())
-    if not force and current < FIRST_DAILY_GATE:
-        return {
-            "schema_version": 1,
-            "action": "verify_first_daily",
-            "result": "too_early",
-            "gate": FIRST_DAILY_GATE.isoformat(),
-            "now": current.isoformat(),
-            "ok": False,
-        }
-
     report = burn_in.run_report(
         app_support_dir=app_support_dir,
         state_dir=state_dir,
@@ -53,8 +48,40 @@ def verify_first_daily(
         news_dir=news_dir,
         now_fn=lambda: current,
     )
-    epoch = report.epoch_started_at.isoformat() if report.epoch_started_at else None
-    day0_ok = bool(epoch and epoch.startswith(EXPECTED_DAY0_PREFIX))
+    if not report.started or report.epoch_started_at is None:
+        return {
+            "schema_version": 1,
+            "action": "verify_first_daily",
+            "result": "not_started",
+            "ok": False,
+            "now": current.isoformat(),
+            "gate": None,
+            "epoch_started_at": None,
+        }
+
+    epoch = burn_in._normalise_utc(report.epoch_started_at)
+    gate = first_daily_gate_for_epoch(epoch)
+    if not force and current < gate:
+        return {
+            "schema_version": 1,
+            "action": "verify_first_daily",
+            "result": "too_early",
+            "gate": gate.isoformat(),
+            "now": current.isoformat(),
+            "ok": False,
+            "epoch_started_at": epoch.isoformat(),
+        }
+
+    # Re-run with the evaluation clock so daily artifacts use the same `now`.
+    report = burn_in.run_report(
+        app_support_dir=app_support_dir,
+        state_dir=state_dir,
+        health_dir=health_dir,
+        news_dir=news_dir,
+        now_fn=lambda: current,
+    )
+    epoch_iso = report.epoch_started_at.isoformat() if report.epoch_started_at else None
+    day0_ok = bool(epoch_iso)
     daily_ok = report.daily_written >= 1
     attention = list(report.attention)
     attention_ok = len(attention) == 0 and report.status != "attention"
@@ -67,11 +94,11 @@ def verify_first_daily(
         "action": "verify_first_daily",
         "result": result,
         "ok": ok,
-        "gate": FIRST_DAILY_GATE.isoformat(),
+        "gate": gate.isoformat(),
         "now": current.isoformat(),
         "day0_ok": day0_ok,
         "attention_ok": attention_ok,
-        "epoch_started_at": epoch,
+        "epoch_started_at": epoch_iso,
         "daily_written": report.daily_written,
         "weekly_written": report.weekly_written,
         "status": report.status,
@@ -85,7 +112,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--force",
         action="store_true",
-        help="忽略 2026-07-22T00:00Z 窗口（仅调试；生产核验不要用）",
+        help="忽略首份日报时间门（仅调试；生产核验不要用）",
     )
     parser.add_argument("--app-support-dir", type=Path, default=None)
     parser.add_argument("--state-dir", type=Path, default=None)
@@ -103,6 +130,8 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
     if payload["result"] == "too_early":
         return 3
+    if payload["result"] == "not_started":
+        return 2
     return 0 if payload.get("ok") else 1
 
 

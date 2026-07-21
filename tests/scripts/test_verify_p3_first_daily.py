@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from scripts import p3_burn_in_report as burn_in
-from scripts.verify_p3_first_daily import FIRST_DAILY_GATE, main, verify_first_daily
+from scripts.verify_p3_first_daily import first_daily_gate_for_epoch, main, verify_first_daily
 
 
 def _seed_epoch(state_dir: Path, started_at: datetime) -> None:
@@ -102,10 +102,14 @@ def _write_dense_journals(
 
 
 def test_too_early_before_gate(tmp_path: Path) -> None:
-    early = FIRST_DAILY_GATE - timedelta(hours=1)
+    day0 = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    gate = first_daily_gate_for_epoch(day0)
+    _seed_epoch(tmp_path / "burn-in", day0)
+    early = gate - timedelta(hours=1)
     out = verify_first_daily(now=early, force=False, state_dir=tmp_path / "burn-in")
     assert out["result"] == "too_early"
     assert out["ok"] is False
+    assert out["gate"] == gate.isoformat()
 
 
 def test_pass_after_gate_with_complete_utc_day(tmp_path: Path) -> None:
@@ -113,8 +117,8 @@ def test_pass_after_gate_with_complete_utc_day(tmp_path: Path) -> None:
     state = app / "burn-in"
     health = app / "health"
     news = app / "news"
-    day0 = datetime(2026, 7, 20, 19, 4, 33, 499091, tzinfo=UTC)
-    after = datetime(2026, 7, 22, 0, 5, tzinfo=UTC)
+    day0 = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    after = first_daily_gate_for_epoch(day0) + timedelta(minutes=5)
     _seed_epoch(state, day0)
     _write_dense_journals(health=health, news=news, start=day0, end=after)
 
@@ -138,15 +142,14 @@ def test_fail_attention_even_with_daily_report(tmp_path: Path) -> None:
     state = app / "burn-in"
     health = app / "health"
     news = app / "news"
-    day0 = datetime(2026, 7, 20, 19, 4, 33, 499091, tzinfo=UTC)
-    after = datetime(2026, 7, 22, 0, 5, tzinfo=UTC)
+    day0 = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    after = first_daily_gate_for_epoch(day0) + timedelta(minutes=5)
     _seed_epoch(state, day0)
     health.mkdir(parents=True)
     news.mkdir(parents=True)
-    # 故意留下超大间隔 → health_sample_gap / news_run_gap
     samples = [
         _health(day0 + timedelta(minutes=15)),
-        _health(datetime(2026, 7, 21, 12, 0, tzinfo=UTC)),
+        _health(day0 + timedelta(days=1, hours=12)),
     ]
     (health / "samples.jsonl").write_text(
         "".join(json.dumps(r, sort_keys=True) + "\n" for r in samples),
@@ -173,5 +176,14 @@ def test_fail_attention_even_with_daily_report(tmp_path: Path) -> None:
     assert "health_sample_gap" in out["attention"]
 
 
-def test_cli_too_early_exit_code() -> None:
-    assert main([]) == 3
+def test_cli_too_early_exit_code(tmp_path: Path, monkeypatch: Any) -> None:
+    day0 = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    _seed_epoch(tmp_path / "burn-in", day0)
+    monkeypatch.setenv("HOME", str(tmp_path))
+    # CLI uses default app support under HOME; point via --state-dir
+    assert main(["--state-dir", str(tmp_path / "burn-in")]) == 3
+
+
+def test_gate_formula() -> None:
+    epoch = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    assert first_daily_gate_for_epoch(epoch) == datetime(2026, 7, 23, 0, 0, tzinfo=UTC)

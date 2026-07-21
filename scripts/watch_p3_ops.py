@@ -21,7 +21,10 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 from scripts import p3_burn_in_report as burn_in  # noqa: E402
-from scripts.verify_p3_first_daily import FIRST_DAILY_GATE, verify_first_daily  # noqa: E402
+from scripts.verify_p3_first_daily import (  # noqa: E402
+    first_daily_gate_for_epoch,
+    verify_first_daily,
+)
 
 _PATTERN = re.compile(r"(?i)(traceback|exception|error|sqlalchemy|runtimeerror|operationalerror)")
 _LOG_NAMES = ("dashboard.err.log", "menu-bar.err.log")
@@ -125,13 +128,25 @@ def watch_once(
     health = _probe_health()
     delta = _compare_baseline(log_scan, baseline)
 
-    hours_to_gate = (FIRST_DAILY_GATE - now).total_seconds() / 3600.0
+    gate: datetime | None = None
+    if report.epoch_started_at is not None:
+        gate = first_daily_gate_for_epoch(report.epoch_started_at)
+    elif isinstance(verify.get("gate"), str):
+        try:
+            gate = datetime.fromisoformat(str(verify["gate"]))
+        except ValueError:
+            gate = None
+    hours_to_gate = (
+        (gate - now).total_seconds() / 3600.0 if gate is not None else None
+    )
     return {
         "schema_version": 1,
         "action": "watch_p3_ops",
         "captured_at": now.isoformat(),
-        "hours_until_first_daily_gate": round(hours_to_gate, 2),
-        "first_daily_gate": FIRST_DAILY_GATE.isoformat(),
+        "hours_until_first_daily_gate": (
+            round(hours_to_gate, 2) if hours_to_gate is not None else None
+        ),
+        "first_daily_gate": gate.isoformat() if gate is not None else None,
         "verify_first_daily": {
             "result": verify.get("result"),
             "ok": verify.get("ok"),
