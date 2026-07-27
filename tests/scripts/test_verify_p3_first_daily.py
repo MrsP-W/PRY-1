@@ -177,7 +177,11 @@ def test_fail_attention_even_with_daily_report(tmp_path: Path) -> None:
 
 
 def test_cli_too_early_exit_code(tmp_path: Path, monkeypatch: Any) -> None:
-    day0 = datetime(2026, 7, 21, 6, 48, 48, tzinfo=UTC)
+    # 锚 today UTC midnight 作 day0,gate = day0.date()+2 days at 00:00Z,
+    # 对 runner 的 wall-clock now 必是未来 → too_early → exit 3.
+    # (2026-07-27 撞坑笔记:固定 day0=2026-07-21T06:48:48Z 已被 wall-clock 推过 gate,
+    # 当时序 hard-code 时,单测随 wall-clock 推进偶发退化。)
+    day0 = datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
     _seed_epoch(tmp_path / "burn-in", day0)
     monkeypatch.setenv("HOME", str(tmp_path))
     # CLI uses default app support under HOME; point via --state-dir
