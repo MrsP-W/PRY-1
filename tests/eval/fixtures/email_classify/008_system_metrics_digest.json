@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_008",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "Daily System Metrics 2026-07-27",
+    "sender": "monitoring@infra.example.com",
+    "body_excerpt": "P99 latency 220ms, error rate 0.02%。"
+  },
+  "expected": {
+    "category": "FYI",
+    "blocked": false
+  }
+}

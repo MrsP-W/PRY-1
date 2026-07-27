@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_005",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "reject",
+  "input": {
+    "subject": "限免云存储升级通知",
+    "sender": "noreply@vendor.example.com",
+    "body_excerpt": "立刻升级享 50% off,点此领取..."
+  },
+  "expected": {
+    "category": "NEWSLETTER",
+    "blocked": true
+  }
+}

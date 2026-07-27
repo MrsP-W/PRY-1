@@ -1,0 +1,18 @@
+{
+  "id": "email_draft_004",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "subject": "Invoice INV-2026-07-5678 核对请求",
+    "sender": "billing@partner.example.com",
+    "body_excerpt": "请核对附件金额,如有疑问请回复。"
+  },
+  "expected": {
+    "must_include": ["金额", "核对"],
+    "must_not_include": ["立即支付", "今晚"],
+    "blocked": false
+  }
+}

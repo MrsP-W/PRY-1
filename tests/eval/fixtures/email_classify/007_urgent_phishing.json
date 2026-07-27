@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_007",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "reject",
+  "input": {
+    "subject": "[紧急] 您的账户即将被冻结",
+    "sender": "security-alert@badsite.example.com",
+    "body_excerpt": "请点击链接验证身份,否则账户将被永久冻结。"
+  },
+  "expected": {
+    "category": "SPAM",
+    "blocked": true
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_003",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {
+    "subject": "Fwd: 周三方案评估请知悉",
+    "sender": "teammate@example.com",
+    "body_excerpt": "已转发给相关方,请查阅附件。"
+  },
+  "expected": {
+    "category": "FYI",
+    "blocked": false
+  }
+}

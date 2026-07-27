@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_006",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "subject": "Invoice INV-2026-07-1234 款项确认",
+    "sender": "billing@partner.example.com",
+    "body_excerpt": "请安排本月末前完成转账。"
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": false
+  }
+}

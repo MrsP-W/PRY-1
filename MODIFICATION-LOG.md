@@ -115,7 +115,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3164 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **292 files** / MD lint **299 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 NEW 质量基线 MD 同步 docs-only) |
+| **质量基线** | **3178 passed / 1 skipped** / **90.26%** / mypy --strict 0 / **292 files** / MD lint **301 files** 0 errors(以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀**) |
 | **下一棒** | **P3 新 Day0 观察期**(Day0=`2026-07-27T05:34:24Z` `collecting` · 首份日报门槛 2026-07-29T00:00Z · 7d 2026-08-03 · 30d 2026-08-26)· 旧 epoch `fail_attention` 已归档;扩评测样本至 30+ 脱敏;**不改 LaunchAgent/调度**;不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -153,6 +153,24 @@
 ---
 
 ## 📋 累计记录(时间倒序 · 2026-06-18 起)
+
+### 2026-07-27 [P3 Claude Code 编排插件] — 可用，调度模板未安装
+
+**1. 本次修改内容**
+
+- 新增 `plugins/p3-ops-claude/`：`/p3-watch` 默认只读巡检、`/p3-rollover` 受控执行 epoch 切换；不控制 Cursor GUI。
+- 新增 `scripts/p3_rollover_epoch.py`，内置禁止 `--force`、首日报门、归档目标防覆盖、旧 epoch 移动后新 Day0 初始化与 report/watch 回验；新增 3 个回归测试。
+- 增加 `ops/run-claude-p3-watch.sh` 和未安装的两小时 LaunchAgent 示例模板；P3 定向测试 **12 passed**。
+
+**2. 风险点**
+
+- 模板尚未 load；定时执行采用 `dontAsk`，只允许巡检和诊断，不会自动改代码或外部状态。
+- `/p3-watch --repair` 只能在交互式用户显式调用时执行，且仍禁止改 LaunchAgent、SMTP、P3 状态目录或 Cursor GUI。
+
+**3. 当前项目整体总结**
+
+- P3 新 Day0=`2026-07-27T05:34:24Z`，首日报门槛=`2026-07-29T00:00Z`；本次 rollover 实测返回 `too_early`，未移动任何目录。
+- 下一步：用户确认后再安装两小时模板；P3 观察期和既有质量基线不变，未 commit/push。
 
 ### 2026-07-19 [菜单栏紧凑控制台化与重复项修复] — 收口
 

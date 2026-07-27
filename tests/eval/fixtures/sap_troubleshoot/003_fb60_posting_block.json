@@ -1,0 +1,18 @@
+{
+  "id": "sap_troubleshoot_003",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "symptom": "FB60 录入发票过账时提示特殊总账标记缺失",
+    "context": "供应商含特约业务,需勾选特殊总账标识"
+  },
+  "expected": {
+    "must_include": ["FB60", "特殊总账"],
+    "citations_required": true,
+    "blocked": false
+  },
+  "note": "P2 知识包启用前仅作样本占位,不跑线上 RAG"
+}

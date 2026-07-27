@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_004",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "建议将例会改至周二下午",
+    "sender": "colleague@example.com",
+    "body_excerpt": "本周五与另一会议时间冲突,可否调整。"
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": false
+  }
+}
