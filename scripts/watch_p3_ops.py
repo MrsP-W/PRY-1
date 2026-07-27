@@ -45,7 +45,9 @@ def _default_baseline_path() -> Path:
     )
 
 
-def _probe_health(url: str = "http://127.0.0.1:8765/health", timeout: float = 2.0) -> dict[str, Any]:
+def _probe_health(
+    url: str = "http://127.0.0.1:8765/health", timeout: float = 2.0
+) -> dict[str, Any]:
     try:
         with urlopen(url, timeout=timeout) as resp:  # noqa: S310 — loopback only
             body = resp.read().decode("utf-8", errors="replace")
@@ -136,9 +138,7 @@ def watch_once(
             gate = datetime.fromisoformat(str(verify["gate"]))
         except ValueError:
             gate = None
-    hours_to_gate = (
-        (gate - now).total_seconds() / 3600.0 if gate is not None else None
-    )
+    hours_to_gate = (gate - now).total_seconds() / 3600.0 if gate is not None else None
     return {
         "schema_version": 1,
         "action": "watch_p3_ops",
@@ -189,10 +189,14 @@ def main(argv: list[str] | None = None) -> int:
     )
     print(json.dumps(payload, ensure_ascii=False, sort_keys=True))
 
-    # 观察脚本默认 exit 0；仅当健康探针失败或出现新增 recent hit 时 exit 1
+    # `too_early` 是首份日报门槛前的预期状态；其他核验结果均需显式失败。
+    # attention 也不能因 /health 当前正常而被自动化静默忽略。
     health_ok = bool(payload.get("dashboard_health", {}).get("ok"))
     new_hits = payload.get("stderr", {}).get("delta_vs_baseline", {}).get("new_recent_hits") or []
-    if not health_ok or new_hits:
+    attention = payload.get("burn_in", {}).get("attention") or []
+    verify_result = payload.get("verify_first_daily", {}).get("result")
+    verification_failed = verify_result not in {"pass", "too_early"}
+    if not health_ok or new_hits or attention or verification_failed:
         return 1
     return 0
 

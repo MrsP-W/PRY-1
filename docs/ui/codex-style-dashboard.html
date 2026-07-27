@@ -1587,9 +1587,10 @@
 
       .shell {
         grid-template-rows: 74px minmax(0, 1fr) 50px;
+        background-color: #071426;
         background:
-          radial-gradient(circle at 72% 4%, rgb(255 255 255 / 88%), transparent 28rem),
-          linear-gradient(150deg, #f8f9fb 0%, #eef2f6 58%, #e7ecf2 100%);
+          linear-gradient(150deg, rgb(2 12 28 / 8%), rgb(12 42 74 / 18%)),
+          url("./assets/ai-workbench-globe-v4.png") center / cover no-repeat;
       }
 
       header {
@@ -1904,20 +1905,20 @@
 
       /* Quiet Sci‑Fi：在 Apple 低彩度基础上增加精密网格、HUD 边角与数据微光。 */
       :root {
-        --tech-cyan: #6f9eb3;
-        --tech-blue: #788fae;
-        --tech-glow: rgb(91 153 180 / 46%);
-        --tech-line: rgb(88 137 159 / 15%);
+        --tech-cyan: #64cbe2;
+        --tech-blue: #77a9d4;
+        --tech-glow: rgb(82 201 226 / 54%);
+        --tech-line: rgb(119 202 225 / 18%);
         --font-mono: "SFMono-Regular", "Roboto Mono", Consolas, monospace;
       }
 
       .shell {
         position: relative;
         isolation: isolate;
+        background-color: #071426;
         background:
-          radial-gradient(circle at 78% 6%, rgb(230 247 255 / 46%), transparent 27rem),
-          radial-gradient(circle at 18% 92%, rgb(220 231 246 / 38%), transparent 30rem),
-          linear-gradient(150deg, #f8fafc 0%, #edf2f6 58%, #e6ecf2 100%);
+          linear-gradient(150deg, rgb(2 12 28 / 8%), rgb(12 42 74 / 18%)),
+          url("./assets/ai-workbench-globe-v4.png") center / cover no-repeat;
       }
 
       .shell::before,
@@ -1937,7 +1938,7 @@
           linear-gradient(90deg, rgb(78 126 150 / 8%) 1px, transparent 1px);
         background-size: 96px 96px, 96px 96px, 24px 24px, 24px 24px;
         mask-image: radial-gradient(ellipse at 62% 42%, #000 0%, rgb(0 0 0 / 54%) 48%, transparent 88%);
-        opacity: 0.52;
+        opacity: 0.38;
       }
 
       .shell::after {
@@ -1969,7 +1970,8 @@
       header {
         overflow: hidden;
         border-color: rgb(169 206 220 / 38%);
-        background: linear-gradient(110deg, rgb(255 255 255 / 76%), rgb(241 248 251 / 62%));
+        background: linear-gradient(110deg, rgb(255 255 255 / 90%), rgb(236 247 252 / 80%));
+        backdrop-filter: blur(20px) saturate(112%);
         box-shadow:
           0 12px 30px rgb(39 65 82 / 9%),
           inset 0 1px 0 rgb(255 255 255 / 96%),
@@ -2102,8 +2104,9 @@
       aside {
         border-color: rgb(163 204 220 / 34%);
         background:
-          radial-gradient(circle at 22% 8%, rgb(188 231 245 / 20%), transparent 11rem),
-          linear-gradient(180deg, rgb(250 254 255 / 64%), rgb(222 234 243 / 36%));
+          radial-gradient(circle at 22% 8%, rgb(188 231 245 / 14%), transparent 11rem),
+          linear-gradient(180deg, rgb(250 254 255 / 88%), rgb(225 237 245 / 78%));
+        backdrop-filter: blur(22px) saturate(96%);
         box-shadow:
           0 20px 42px rgb(35 62 79 / 12%),
           inset 0 1px 0 rgb(255 255 255 / 96%),
@@ -2165,6 +2168,7 @@
       .flow-card,
       .inspector {
         border-color: rgb(162 202 218 / 30%);
+        backdrop-filter: blur(18px) saturate(94%);
         box-shadow:
           0 18px 38px rgb(34 61 78 / 9%),
           0 2px 7px rgb(34 61 78 / 4%),
@@ -2365,7 +2369,7 @@
         position: relative;
         background:
           linear-gradient(90deg, rgb(174 222 238 / 9%), transparent 12%),
-          linear-gradient(160deg, rgb(251 254 255 / 80%), rgb(235 245 249 / 74%));
+          linear-gradient(160deg, rgb(251 254 255 / 92%), rgb(235 245 249 / 86%));
       }
 
       .inspector::before {
@@ -2398,7 +2402,8 @@
       footer {
         overflow: hidden;
         border-color: rgb(151 196 213 / 30%);
-        background: linear-gradient(90deg, rgb(248 253 255 / 72%), rgb(232 244 248 / 58%));
+        background: linear-gradient(90deg, rgb(248 253 255 / 90%), rgb(232 244 248 / 78%));
+        backdrop-filter: blur(18px) saturate(105%);
       }
 
       footer::before {
@@ -3424,6 +3429,540 @@
           top: 26px;
           right: -3px;
           width: 6px;
+        }
+      }
+
+      /*
+       * Relief Globe Workbench：参考浅色浮雕数据地球风格。
+       * 无背景模糊；白色薄层、深靛文字、紫蓝信号与柔和悬浮阴影。
+       */
+      :root {
+        --bg: #edf0f7;
+        --surface: rgb(255 255 255 / 66%);
+        --surface-subtle: rgb(255 255 255 / 46%);
+        --surface-strong: rgb(247 248 254 / 76%);
+        --line: rgb(103 98 168 / 13%);
+        --line-strong: rgb(103 98 168 / 22%);
+        --text: #292b58;
+        --muted: #747891;
+        --faint: #9b9fb2;
+        --blue: #6656ef;
+        --blue-soft: rgb(102 86 239 / 10%);
+        --green: #27aa6a;
+        --green-soft: rgb(39 170 106 / 10%);
+        --yellow: #d39a38;
+        --yellow-soft: rgb(247 183 71 / 13%);
+        --red: #e36f79;
+        --red-soft: rgb(227 111 121 / 11%);
+        --tech-cyan: #53c8ed;
+        --tech-blue: #7667f2;
+        --tech-glow: rgb(105 88 244 / 42%);
+        --tech-line: rgb(100 86 220 / 8%);
+      }
+
+      body {
+        color: var(--text);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      .shell {
+        grid-template-rows: 72px minmax(0, 1fr) 46px;
+        background:
+          linear-gradient(120deg, rgb(241 243 249 / 20%), rgb(255 255 255 / 4%)),
+          url("./assets/ai-workbench-globe-v4.png") center / cover no-repeat !important;
+      }
+
+      .shell::before {
+        inset: 10px;
+        border: 1px solid rgb(255 255 255 / 90%);
+        border-radius: 26px;
+        background: none;
+        box-shadow:
+          inset 0 0 0 1px rgb(110 105 178 / 6%),
+          0 28px 70px rgb(61 61 103 / 10%);
+        mask-image: none;
+        opacity: 1;
+      }
+
+      .shell::after {
+        display: none;
+      }
+
+      header,
+      aside,
+      footer,
+      .card,
+      .thread,
+      .draft,
+      .flow-card,
+      .inspector {
+        border-color: rgb(255 255 255 / 88%) !important;
+        background: linear-gradient(145deg, rgb(255 255 255 / 72%), rgb(249 249 255 / 54%)) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        box-shadow:
+          0 15px 34px rgb(53 52 92 / 9%),
+          0 2px 7px rgb(53 52 92 / 4%),
+          inset 0 1px 0 rgb(255 255 255 / 96%) !important;
+      }
+
+      header {
+        grid-template-columns: 198px minmax(0, 1fr) auto;
+        min-height: 54px;
+        margin: 12px 16px 0;
+        border: 1px solid rgb(255 255 255 / 88%);
+        border-radius: 18px;
+        padding: 0 16px;
+        overflow: visible;
+      }
+
+      header::before,
+      footer::before {
+        background: linear-gradient(90deg, #745cf1, #55c9ee, transparent);
+        box-shadow: none;
+      }
+
+      .workspace {
+        grid-template-columns: 198px minmax(520px, 1fr) 300px;
+        gap: 14px;
+        padding: 14px 16px;
+      }
+
+      main {
+        padding: 0;
+        background: transparent;
+      }
+
+      aside {
+        position: relative;
+        border: 1px solid rgb(255 255 255 / 90%);
+        border-radius: 22px;
+        padding: 18px 12px;
+        color: var(--text);
+      }
+
+      aside::after {
+        display: none;
+      }
+
+      footer {
+        min-height: 34px;
+        margin: 0 16px 12px;
+        border: 1px solid rgb(255 255 255 / 86%);
+        border-radius: 14px;
+      }
+
+      .avatar,
+      .hero-core,
+      .page-title-icon {
+        border-color: rgb(255 255 255 / 76%) !important;
+        background:
+          radial-gradient(circle at 35% 28%, rgb(255 255 255 / 62%), transparent 30%),
+          linear-gradient(145deg, #7a5cf2, #9c4ee8 56%, #53c8ed) !important;
+        box-shadow:
+          0 9px 20px rgb(111 79 229 / 24%),
+          inset 0 1px 0 rgb(255 255 255 / 48%) !important;
+        color: #fff;
+      }
+
+      .avatar::before,
+      .hero-core::before,
+      .page-title-icon::before {
+        border-color: rgb(255 255 255 / 45%);
+      }
+
+      .avatar::after,
+      .hero-core::after,
+      .page-title-icon::after {
+        background: #fff;
+        box-shadow: 0 0 8px rgb(255 255 255 / 76%);
+      }
+
+      .brand-title,
+      .side-card h3,
+      .headline,
+      .headline span,
+      .headline span:last-child,
+      .hero > .card:first-child .headline,
+      .hero > .card:first-child .headline #total-tasks,
+      .hero > .card:first-child .headline .headline-label,
+      .section-heading .headline,
+      .card h2,
+      .card h3,
+      .flow-card h2,
+      .inspector h3,
+      .gate strong,
+      .queue-title,
+      .step-title,
+      .metric-value,
+      #notes-queue .queue-title {
+        color: #292b58 !important;
+        text-shadow: none !important;
+      }
+
+      header *,
+      aside *,
+      main *,
+      .inspector *,
+      footer * {
+        text-shadow: none !important;
+      }
+
+      .brand-subtitle,
+      .tiny,
+      .priority-eyebrow,
+      .priority-risk,
+      .section-kicker,
+      .section-summary,
+      .metric-label,
+      .queue-meta,
+      .process-flow li,
+      .hud-clock,
+      .hud-clock strong,
+      footer .log {
+        color: #777b92 !important;
+      }
+
+      .nav-title {
+        color: #a0a3b5;
+        letter-spacing: 0.09em;
+      }
+
+      .nav button {
+        min-height: 42px;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        color: #7c8096;
+      }
+
+      .nav button:hover {
+        border-color: rgb(255 255 255 / 82%);
+        background: rgb(255 255 255 / 52%) !important;
+        color: #514b99;
+        box-shadow: 0 7px 16px rgb(75 71 122 / 7%);
+      }
+
+      .nav button.active {
+        border-color: rgb(112 91 239 / 16%) !important;
+        background: linear-gradient(135deg, rgb(255 255 255 / 90%), rgb(241 239 255 / 78%)) !important;
+        color: #5e50d4;
+        box-shadow:
+          0 10px 22px rgb(89 74 190 / 12%),
+          inset 3px 0 0 #7059ed;
+      }
+
+      .nav-icon {
+        border-color: rgb(109 103 166 / 12%);
+        background: rgb(255 255 255 / 50%);
+        color: #84869d;
+        box-shadow: inset 0 1px 0 #fff;
+      }
+
+      .nav-icon > .tech-icon {
+        color: #777b95;
+      }
+
+      .nav-icon::before {
+        border-color: rgb(111 91 235 / 18%);
+      }
+
+      .nav-icon::after {
+        background: #735cf0;
+        box-shadow: 0 0 7px rgb(115 92 240 / 34%);
+      }
+
+      .nav button.active .nav-icon {
+        border-color: transparent;
+        background: linear-gradient(145deg, #755cf0, #56c8ed);
+        color: #fff;
+        box-shadow: 0 7px 16px rgb(100 83 216 / 22%);
+      }
+
+      .nav button.active .nav-icon > .tech-icon {
+        color: #fff;
+        filter: none;
+      }
+
+      .nav button .badge {
+        border-color: rgb(111 103 166 / 10%);
+        background: rgb(255 255 255 / 56%);
+        color: #8c8fa3;
+      }
+
+      .nav button.active .badge {
+        border-color: rgb(111 91 235 / 15%);
+        background: rgb(111 91 235 / 9%);
+        color: #6253d6;
+      }
+
+      .hero {
+        grid-template-columns: minmax(0, 1fr) 292px;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .card,
+      .thread,
+      .draft,
+      .flow-card {
+        border-radius: 20px;
+      }
+
+      .hero > .card:first-child {
+        background:
+          linear-gradient(120deg, rgb(255 255 255 / 72%), rgb(255 255 255 / 34%)) !important;
+      }
+
+      .hero > .card:first-child::before {
+        display: none !important;
+      }
+
+      .hero > .card:last-child {
+        background:
+          linear-gradient(155deg, rgb(255 255 255 / 76%), rgb(247 247 255 / 48%)) !important;
+      }
+
+      .headline {
+        font-weight: 640;
+        letter-spacing: -0.045em;
+      }
+
+      .priority-eyebrow::before,
+      .section-kicker::before {
+        background: linear-gradient(90deg, #755cf0, #53c8ed, transparent);
+        box-shadow: none;
+      }
+
+      .summary-grid {
+        gap: 10px;
+      }
+
+      .metric,
+      .gate,
+      .queue,
+      .queue-item,
+      .dry-run-panel,
+      .report-preview,
+      .inspector-section:first-child,
+      .evidence a,
+      .evidence span,
+      #mail-queue .queue-actions,
+      #notes-queue .queue-item,
+      #notes-queue .queue-actions {
+        border-color: rgb(255 255 255 / 82%) !important;
+        background: rgb(255 255 255 / 52%) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        box-shadow:
+          0 9px 22px rgb(65 61 111 / 7%),
+          inset 0 1px 0 rgb(255 255 255 / 92%) !important;
+      }
+
+      .metric {
+        min-height: 96px;
+        border-radius: 15px;
+      }
+
+      .metric::before {
+        color: rgb(93 79 196 / 42%);
+      }
+
+      .metric::after {
+        height: 3px;
+        background: linear-gradient(90deg, #765cef, #53c8ed);
+        box-shadow: none;
+        opacity: 0.8;
+      }
+
+      .metric:nth-child(2)::after {
+        background: linear-gradient(90deg, #53c8ed, #8cdbf4);
+      }
+
+      .metric:nth-child(3)::after {
+        background: linear-gradient(90deg, #f3ac65, #ee7d8b);
+      }
+
+      .metric:nth-child(4)::after {
+        background: linear-gradient(90deg, #38b977, #74d4a1);
+      }
+
+      .metric-value {
+        color: #34336b !important;
+      }
+
+      .gate:hover,
+      .queue-item.clickable:hover,
+      .queue-item.selected {
+        border-color: rgb(113 91 236 / 18%) !important;
+        background: rgb(249 248 255 / 72%) !important;
+        box-shadow:
+          0 10px 24px rgb(81 70 160 / 10%),
+          inset 3px 0 0 #755cf0 !important;
+      }
+
+      .step-icon,
+      .flow-stage,
+      #notes-queue .note-candidate-icon {
+        border-color: rgb(255 255 255 / 90%);
+        background: linear-gradient(145deg, rgb(255 255 255 / 92%), rgb(239 240 250 / 74%));
+        box-shadow:
+          0 8px 16px rgb(70 67 111 / 10%),
+          inset 0 1px 0 #fff;
+        color: #696691;
+      }
+
+      .process-flow li.active .flow-stage {
+        border-color: rgb(255 255 255 / 52%);
+        background: linear-gradient(145deg, #755cf0, #6079ee 55%, #53c8ed);
+        box-shadow:
+          0 14px 22px rgb(93 75 203 / 22%),
+          0 3px 0 #5542bd,
+          inset 0 1px 0 rgb(255 255 255 / 26%);
+        color: #fff;
+      }
+
+      .flow-card {
+        background:
+          radial-gradient(circle at 82% 28%, rgb(119 91 239 / 8%), transparent 13rem),
+          linear-gradient(145deg, rgb(255 255 255 / 68%), rgb(248 248 255 / 42%)) !important;
+      }
+
+      .flow-card h2::after {
+        color: rgb(100 83 204 / 48%);
+      }
+
+      .process-flow li:not(:last-child)::after {
+        background: linear-gradient(90deg, rgb(111 91 236 / 48%), rgb(83 200 237 / 18%));
+        box-shadow: none;
+      }
+
+      .inspector {
+        border: 1px solid rgb(255 255 255 / 88%);
+        border-radius: 22px;
+        padding: 14px;
+      }
+
+      .inspector::before {
+        background: linear-gradient(180deg, transparent, #755cf0, #53c8ed, transparent);
+        box-shadow: none;
+      }
+
+      .inspector-section:first-child {
+        background:
+          linear-gradient(145deg, rgb(255 255 255 / 70%), rgb(241 240 255 / 46%)) !important;
+      }
+
+      .inspector h3::before {
+        color: #7058e7;
+        text-shadow: none;
+      }
+
+      .pill,
+      .btn,
+      .motion-toggle,
+      .filter-row .filter,
+      .search-input,
+      .chip,
+      .tag,
+      #mail-queue .queue-actions .tag,
+      #mail-queue .queue-actions .tag.green,
+      #mail-queue .queue-actions .btn,
+      #notes-queue .queue-actions .tag {
+        border-color: rgb(103 98 168 / 13%) !important;
+        background: rgb(255 255 255 / 58%) !important;
+        -webkit-backdrop-filter: none !important;
+        backdrop-filter: none !important;
+        color: #6f728b;
+        box-shadow: inset 0 1px 0 rgb(255 255 255 / 88%);
+      }
+
+      .pill.live,
+      .filter-row .filter.active,
+      .btn.primary {
+        border-color: rgb(105 86 235 / 20%) !important;
+        background: linear-gradient(135deg, rgb(117 92 240 / 14%), rgb(83 200 237 / 10%)) !important;
+        color: #5f50cf !important;
+      }
+
+      .btn:hover:not(:disabled) {
+        border-color: rgb(105 86 235 / 26%) !important;
+        background: rgb(255 255 255 / 82%) !important;
+        color: #5548bc;
+      }
+
+      .btn.danger,
+      .btn.decide-btn.reject {
+        border-color: rgb(227 111 121 / 20%) !important;
+        background: rgb(255 241 243 / 72%) !important;
+        color: #c95d67 !important;
+      }
+
+      .btn.decide-btn,
+      #notes-queue .queue-actions .dry-run-btn {
+        border-color: rgb(104 81 223 / 20%) !important;
+        background: linear-gradient(135deg, #765cf0, #6577ed 58%, #54c7ec) !important;
+        color: #fff !important;
+        box-shadow:
+          0 8px 16px rgb(101 79 219 / 18%),
+          inset 0 1px 0 rgb(255 255 255 / 24%) !important;
+      }
+
+      .tag.green,
+      .chip.ok {
+        border-color: rgb(39 170 106 / 18%) !important;
+        background: rgb(233 250 241 / 72%) !important;
+        color: #238a59 !important;
+      }
+
+      .tag.red {
+        border-color: rgb(227 111 121 / 18%) !important;
+        background: rgb(255 239 241 / 72%) !important;
+        color: #c85b66 !important;
+      }
+
+      .chip.warn {
+        border-color: rgb(225 157 48 / 18%) !important;
+        background: rgb(255 247 226 / 74%) !important;
+        color: #b77c22 !important;
+      }
+
+      .tag.blue {
+        border-color: rgb(102 86 239 / 17%) !important;
+        background: rgb(239 237 255 / 72%) !important;
+        color: #6152d2 !important;
+      }
+
+      .tag:not(.green):not(.red):not(.blue):not(.gray),
+      .chip.warn {
+        color: #b77c22;
+      }
+
+      .search-input,
+      .draft pre,
+      .report-preview pre {
+        color: #3d3d67 !important;
+      }
+
+      .search-input::placeholder {
+        color: #a0a3b5;
+      }
+
+      .evidence a,
+      .evidence span {
+        color: #646880;
+      }
+
+      .reports-summary {
+        background: transparent !important;
+      }
+
+      @media (max-width: 1280px) and (min-width: 1161px) {
+        .workspace {
+          grid-template-columns: 188px minmax(0, 1fr);
+        }
+
+        header {
+          grid-template-columns: 188px minmax(0, 1fr) auto;
         }
       }
     </style>

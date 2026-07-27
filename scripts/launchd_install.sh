@@ -383,7 +383,7 @@ EOF
 chmod +x "${TARGET_DASHBOARD_WRAPPER}"
 echo "✅ ${TARGET_DASHBOARD_WRAPPER} 部署完成"
 
-echo "📋 部署 ${TARGET_HEALTH_MONITOR_WRAPPER}(P1 · 15 分钟只读 health monitor)"
+echo "📋 部署 ${TARGET_HEALTH_MONITOR_WRAPPER}(P1 · 10 分钟只读 health monitor)"
 # P1:绝对脚本路径避免 launchd WorkingDirectory=$HOME 时的模块路径漂移；
 # monitor 只采样/写本地脱敏 JSON，不执行服务启停。
 cat << EOF > "${TARGET_HEALTH_MONITOR_WRAPPER}"
@@ -597,7 +597,7 @@ echo "  月报:每月 1 号 09:00 · 动态月份 wrapper"
 echo "  IMAP:每日 07:00 · 读 .env IMAP_USER"
 echo "  菜单栏:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard)"
 echo "  Dashboard:RunAtLoad + KeepAlive · 独立 LaunchAgent (ProcessType=Standard · 127.0.0.1:8765)"
-echo "  Health monitor:RunAtLoad + 每 15 分钟 · 只读 one-shot (KeepAlive=false)"
+echo "  Health monitor:RunAtLoad + 每 10 分钟 · 只读 one-shot (KeepAlive=false)"
 echo "  AI 新闻:RunAtLoad + 每小时 · 白名单 HTTPS 刷新 one-shot (KeepAlive=false)"
 echo "  P3 报告:RunAtLoad + 每日 02:10 · 仅汇总已完整 UTC 周期(KeepAlive=false)"
 

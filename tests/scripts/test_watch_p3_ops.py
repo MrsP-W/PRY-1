@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
-from scripts.watch_p3_ops import watch_once
+from scripts.watch_p3_ops import main, watch_once
 
 
 class _FakeReport:
@@ -16,6 +17,15 @@ class _FakeReport:
     daily_written = 0
     weekly_written = 0
     progress: dict[str, Any] = {}
+
+
+class _AttentionReport(_FakeReport):
+    status = "attention"
+    attention = ("news_run_gap",)
+
+
+class _StartedReport(_FakeReport):
+    epoch_started_at = datetime(2026, 7, 27, tzinfo=UTC)
 
 
 def test_watch_once_writes_baseline_and_compares(tmp_path: Path) -> None:
@@ -44,3 +54,69 @@ def test_watch_once_writes_baseline_and_compares(tmp_path: Path) -> None:
         second = watch_once(logs_dir=logs, baseline_path=baseline, write_baseline=False)
         assert "dashboard.err.log" in second["stderr"]["delta_vs_baseline"]["grown"]
         assert "dashboard.err.log" in second["stderr"]["delta_vs_baseline"]["new_recent_hits"]
+
+
+def test_main_returns_nonzero_for_burn_in_attention(tmp_path: Path) -> None:
+    with (
+        patch("scripts.watch_p3_ops.burn_in.run_report", return_value=_AttentionReport()),
+        patch(
+            "scripts.watch_p3_ops.verify_first_daily",
+            return_value={"result": "too_early", "ok": False},
+        ),
+        patch("scripts.watch_p3_ops._probe_health", return_value={"ok": True}),
+    ):
+        assert (
+            main(
+                [
+                    "--logs-dir",
+                    str(tmp_path / "logs"),
+                    "--baseline-path",
+                    str(tmp_path / "baseline.json"),
+                ]
+            )
+            == 1
+        )
+
+
+def test_main_returns_nonzero_when_epoch_is_not_started(tmp_path: Path) -> None:
+    with (
+        patch("scripts.watch_p3_ops.burn_in.run_report", return_value=_FakeReport()),
+        patch(
+            "scripts.watch_p3_ops.verify_first_daily",
+            return_value={"result": "not_started", "ok": False},
+        ),
+        patch("scripts.watch_p3_ops._probe_health", return_value={"ok": True}),
+    ):
+        assert (
+            main(
+                [
+                    "--logs-dir",
+                    str(tmp_path / "logs"),
+                    "--baseline-path",
+                    str(tmp_path / "baseline.json"),
+                ]
+            )
+            == 1
+        )
+
+
+def test_main_allows_too_early_first_daily_gate(tmp_path: Path) -> None:
+    with (
+        patch("scripts.watch_p3_ops.burn_in.run_report", return_value=_StartedReport()),
+        patch(
+            "scripts.watch_p3_ops.verify_first_daily",
+            return_value={"result": "too_early", "ok": False},
+        ),
+        patch("scripts.watch_p3_ops._probe_health", return_value={"ok": True}),
+    ):
+        assert (
+            main(
+                [
+                    "--logs-dir",
+                    str(tmp_path / "logs"),
+                    "--baseline-path",
+                    str(tmp_path / "baseline.json"),
+                ]
+            )
+            == 0
+        )

@@ -7,6 +7,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,13 @@ from typing import Any
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
+
+NowFn = Callable[[], datetime]
+SleepFn = Callable[[float], None]
+
+
+def _now_utc() -> datetime:
+    return datetime.now(UTC)
 
 
 def _parse_ats(path: Path, *, key: str = "at") -> list[datetime]:
@@ -35,6 +43,12 @@ def _gaps_minutes(ats: list[datetime]) -> list[float]:
     return [(b - a).total_seconds() / 60.0 for a, b in zip(ats, ats[1:], strict=False)]
 
 
+def _tail_age_minutes(ats: list[datetime], *, ended: datetime) -> float | None:
+    if not ats:
+        return None
+    return max(0.0, (ended - ats[-1]).total_seconds() / 60.0)
+
+
 def observe(
     *,
     app_support: Path,
@@ -42,13 +56,15 @@ def observe(
     wait_seconds: int,
     health_max_gap_min: float,
     news_max_gap_min: float,
+    now_fn: NowFn = _now_utc,
+    sleep_fn: SleepFn = time.sleep,
 ) -> dict[str, Any]:
     health_path = app_support / "health" / "samples.jsonl"
     news_path = app_support / "news" / "runs.jsonl"
-    started = datetime.now(UTC)
+    started = now_fn()
     if wait_seconds > 0:
-        time.sleep(wait_seconds)
-    ended = datetime.now(UTC)
+        sleep_fn(wait_seconds)
+    ended = now_fn()
 
     health_ats = [t for t in _parse_ats(health_path) if t >= since]
     news_ats = [t for t in _parse_ats(news_path) if t >= since]
@@ -62,14 +78,20 @@ def observe(
 
     health_gaps = _gaps_minutes(health_window)
     news_gaps = _gaps_minutes(news_window)
-    health_ok = bool(health_window) and (
-        not health_gaps or max(health_gaps) <= health_max_gap_min
+    health_tail_age = _tail_age_minutes(health_window, ended=ended)
+    news_tail_age = _tail_age_minutes(news_window, ended=ended)
+    health_ok = (
+        bool(health_window)
+        and (not health_gaps or max(health_gaps) <= health_max_gap_min)
+        and health_tail_age is not None
+        and health_tail_age <= health_max_gap_min
     )
-    # News may not fire in a short wait; only judge if >=2 samples in window/since.
-    news_ok = True
+    # 一条旧回执不能证明调度仍在工作；无论样本数都要校验“当前→最新”的尾部新鲜度。
+    news_ok = bool(news_window) and news_tail_age is not None and news_tail_age <= news_max_gap_min
     if len(news_window) >= 2:
-        news_ok = max(news_gaps) <= news_max_gap_min
+        news_ok = news_ok and max(news_gaps) <= news_max_gap_min
     elif wait_seconds >= 3700:
+        # 等过一个完整小时仍只有一条，不能证明 hourly interval。
         news_ok = False
 
     return {
@@ -83,6 +105,7 @@ def observe(
             "samples": [t.isoformat() for t in health_window],
             "gaps_min": [round(g, 2) for g in health_gaps],
             "max_gap_min": round(max(health_gaps), 2) if health_gaps else None,
+            "tail_age_min": round(health_tail_age, 2) if health_tail_age is not None else None,
             "ok": health_ok,
             "limit_min": health_max_gap_min,
         },
@@ -90,6 +113,7 @@ def observe(
             "runs": [t.isoformat() for t in news_window],
             "gaps_min": [round(g, 2) for g in news_gaps],
             "max_gap_min": round(max(news_gaps), 2) if news_gaps else None,
+            "tail_age_min": round(news_tail_age, 2) if news_tail_age is not None else None,
             "ok": news_ok,
             "limit_min": news_max_gap_min,
         },
