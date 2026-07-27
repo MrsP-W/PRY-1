@@ -1,0 +1,40 @@
+task_id: TASK-20260728-001
+objective: "完成 D6.10.2 的 docs-only stash/collect 漂移范本，并明确运行时检测延后"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+  - "memory/pitfall-105-docs-fixture-compound-drift.md"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260728-001-d6102-stash-collect.yaml"
+  - "docs/superpowers/d6-stash-collect-pitfalls.md"
+  - "memory/pitfall-103-stash-collected-drift.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+acceptance_commands:
+  - "git diff --check"
+  - "npx --no-install markdownlint docs/superpowers/d6-stash-collect-pitfalls.md docs/v1.1-p3-observation-d-step-plan.md"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: done
+
+result:
+  summary: "D6.10.2 文档范本与 #103 记忆沉淀已完成，运行时脚本候选依 P3 冻结延后。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260728-001-d6102-stash-collect.yaml"
+    - "docs/superpowers/d6-stash-collect-pitfalls.md"
+    - "docs/v1.1-p3-observation-d-step-plan.md"
+    - "memory/pitfall-103-stash-collected-drift.md"
+  verification:
+    - "git diff --check: passed"
+    - "markdownlint（两份 Markdown）：passed"
+  risks:
+    - "仅文档约束，未实现 stash 自动警告。"
+  unresolved:
+    - "P3 资格通过后再评估 scripts/check_quality_snapshot.py 的 stash 警告实现。"
+  next_agent: "codex（等待 2026-07-29 D6.10.3 只读验证）"
