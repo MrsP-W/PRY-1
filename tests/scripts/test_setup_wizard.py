@@ -179,16 +179,21 @@ class TestSetupWizardModule:
         assert s3.skipped is True
 
     def test_setup_wizard_load_env_called_once(self) -> None:
-        """幂等 load_env 严判(撞坑 #18 override=False 范本)。"""
-        # 测试 core/config.py 的 _ENV_LOADED 标志
+        """幂等 load_env 严判(撞坑 #18 override=False 范本)。
+
+        沿 [config.py:60-63](../src/my_ai_employee/core/config.py) 契约:
+        "无 .env 文件是正常情况(凭据走 Keychain / CI 用 export)"。
+        首次 load_env 返回 bool(取决于是否有 .env),二次调用因 _ENV_LOADED=True 返 False。
+        """
         from my_ai_employee.core import config  # noqa: E402
 
         # 重置状态(测试间隔离)
         config._ENV_LOADED = False
         first = config.load_env()
         second = config.load_env()
-        # 第二次应该是幂等返 False(不重复 load_dotenv)
-        assert first is True
+        # 首次可为 True(有 .env 加载成功)或 False(无 .env / 无 python-dotenv,沿契约"正常情况")
+        assert first in (True, False)
+        # 第二次必为 False(幂等,不重复 load_dotenv)
         assert second is False
 
 
