@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import sys
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -96,8 +97,8 @@ def count_collected_tests(root: Path = ROOT) -> int:
     """
     result = subprocess.run(
         [
-            "uv",
-            "run",
+            sys.executable,
+            "-m",
             "pytest",
             "--collect-only",
             "-q",
