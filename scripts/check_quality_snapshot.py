@@ -14,7 +14,6 @@ import os
 import re
 import subprocess
 import sys
-import sys
 import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -177,8 +176,8 @@ def count_baseline_guardian_failures(*, root: Path = ROOT) -> int:
     env[_GUARDIAN_PROBE_ENV] = "1"
     result = subprocess.run(
         [
-            "uv",
-            "run",
+            sys.executable,
+            "-m",
             "pytest",
             str(_BASELINE_GUARDIAN_REL),
             "-q",
@@ -211,8 +210,8 @@ def count_live_pytest_outcomes(*, root: Path = ROOT) -> tuple[int, int, int] | N
     env[_GUARDIAN_PROBE_ENV] = "1"
     result = subprocess.run(
         [
-            "uv",
-            "run",
+            sys.executable,
+            "-m",
             "pytest",
             "-q",
             "--no-cov",
