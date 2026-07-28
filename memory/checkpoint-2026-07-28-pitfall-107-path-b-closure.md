@@ -58,28 +58,34 @@ metadata:
 **顺序不可改 · 撞坑 #107 fix 必须先 tracked commit + 干净 `make ci`,再单独授权 rollover**
 
 **关键语义澄清(用户 2026-07-28)**:
+- ✅ Step 1 = "报告生成与核验":`p3_burn_in_report.py report` 会写入 `daily/2026-07-28.{json,md}`(**非严格只读**)· 但不动 epoch
 - ❌ Step 4 = "已 tracked 之后再 rollover" → **错误**:会让 Step 4 提前触发 Step 5 的状态写入
-- ✅ Step 4 = "B1 tracked 后,只做 tracked 版本校验 + 命令预览 + dry-run,**不执行 rollover**"
+- ✅ Step 4 = "B1 tracked 后,只做 tracked 版本校验 + 命令预览 + drill,**不执行生产路径 rollover**"
 - ✅ Step 5 = "收到单独的 `rollover` 授权后,执行 `p3_rollover_epoch.py`(该命令本身同时完成 epoch 归档 + Day0 创建)"
+- ✅ 真实默认路径 `p3_rollover_epoch.py` 只能在 Step 5 收到 `rollover` 关键词后执行
 
-1. **2026-07-29 08:00(北京)**:只读首份日报核验
-   - `p3_burn_in_report.py report` 读取 `verify_first_daily.py` 输出 `result=fail_attention` + `daily_written>=1`
-   - **不执行 rollover** · 仅核验状态 · 不动业务
+1. **2026-07-29 08:00(北京)**:报告生成与核验
+   - `p3_burn_in_report.py report` 会写入 `daily/2026-07-28.{json,md}`(**非严格只读**)
+   - 读取 `verify_first_daily.py` 输出 `result=fail_attention` + `daily_written>=1`
+   - **不动 epoch**(`burn-in/` / `burn-in-archive/` 维持) · 仅日报文件生成
 2. **从最新 `6ce1e5f` 创建全新 worktree**
    - **不要基于旧 `/tmp/my-ai-employee-rollover-fix-v2`**(基于 `883ab3d`,会丢 `84cb563` baseline revert + `6ce1e5f` memory 沉淀)
    - 新 worktree 名:`/tmp/my-ai-employee-rollover-fix-v3` 或 `branch=codex/pitfall-107-fix-v3`
    - `git worktree add -b codex/pitfall-107-fix-v3 /tmp/my-ai-employee-rollover-fix-v3 6ce1e5f`
 3. **B1 tracked commit + 基线同步 + 干净 `make ci`**
    - 移植 P1#2 + P2#3 修复 + **改写 `post_state_check` 仅保留"阶段 + 异常类型",去除 `{exc}` 原始异常文本(隐私红线,避免日志泄露本机路径)**
-   - 新增回归测试(从 worktree v2 的 9 tests 同步)
+   - **新增显式 `--dry-run` 参数 + 补测试**(支持 Step 4 drill 演练;当前候选无 `--dry-run`,B1 必加)
+   - 新增回归测试(从 worktree v2 的 9 tests 同步 + `--dry-run` 测试)
    - 5件套 sync(撞坑 #107 fix 入 tracked,baseline 3182→3191 或 3185 等新值,9 件套全绿)
-   - `make ci` 全绿后 commit(独立 commit,主题分明:`fix(scripts): 撞坑 #107 P1#2 gating 改 allow-list + P2#3 后置异常 + privacy redaction`)
-4. **tracked 版本校验 + 命令预览 + dry-run**(**不执行 rollover**)
+   - `make ci` 全绿后 commit(独立 commit,主题分明:`fix(scripts): 撞坑 #107 P1#2 gating 改 allow-list + P2#3 后置异常 + privacy redaction + --dry-run`)
+4. **tracked 版本校验 + 命令预览 + drill**(**不执行生产路径 rollover**)
    - 校验已 tracked 的 `scripts/p3_rollover_epoch.py`:`git log --oneline -- scripts/p3_rollover_epoch.py` + `git diff main..HEAD -- scripts/p3_rollover_epoch.py`
    - 命令预览:`cat scripts/p3_rollover_epoch.py | head -60` 看主流程
-   - dry-run:沿用 `p3_burn_in_report.py` 接口 mock `verify_first_daily` 校验门控,不调真 `os.replace` / `start_burn_in`
-   - **不动生产状态** · **不写 `burn-in-archive/`** · **不开新 Day0**
-5. **Step 5(单独 `rollover` 授权后)**:执行 `p3_rollover_epoch.py`
+   - drill 模式(用户 2026-07-28 反馈):二选一
+     - (a) **临时 `app-support-dir` 演练**:`MY_AI_EMPLOYEE_APP_SUPPORT_DIR=/tmp/rollover-drill-$$ python scripts/p3_rollover_epoch.py --dry-run`(`--dry-run` 由 B1 新增)
+     - (b) **`--dry-run` 路径**(B1 必加):`python scripts/p3_rollover_epoch.py --dry-run` 返回结构化验证(门控 + post_state_check 模拟)· 不调 `os.replace` / `start_burn_in`
+   - **不动生产默认路径**(`~/Library/Application Support/MyAIEmployee/`)· **不写 `burn-in-archive/`** · **不开新 Day0**
+5. **Step 5(单独 `rollover` 授权后)**:执行 `p3_rollover_epoch.py`(默认生产路径)
    - 用户显式 `rollover` 关键词授权(类似 `push` 关键词模式)
    - 该命令本身同时完成:**epoch 归档(`os.replace(source, archive)`)** + **新 Day0 创建(`burn_in.start_burn_in`)**
    - 验证 `result=rolled_over` + `post_state_check=ok`
@@ -101,11 +107,11 @@ metadata:
 ## 后续 — Step 3 序列执行
 
 🔴 等首份日报门 **2026-07-29T00:00:00Z**(北京 07-29 08:00)开窗
-🔴 Step 3-1 只读首日报核验(`p3_burn_in_report.py report`,不执行 rollover)
+🔴 Step 3-1 报告生成与核验(`p3_burn_in_report.py report` 写 `daily/2026-07-28.{json,md}` · 不动 epoch)
 🔴 Step 3-2 从 `6ce1e5f` 创建新 worktree(不要基于旧 `/tmp/my-ai-employee-rollover-fix-v2`)
-🔴 Step 3-3 B1 tracked commit(post_state_check 隐私 redaction + 5件套 sync + make ci 全绿)
-🔴 Step 3-4 tracked 版本校验 + 命令预览 + dry-run(**不执行 rollover**)
-🔴 Step 3-5 等单独 `rollover` 关键词授权后执行 `p3_rollover_epoch.py`(归档 + Day0 创建同时完成)
+🔴 Step 3-3 B1 tracked commit(post_state_check 隐私 redaction + `--dry-run` 新参数 + 5件套 sync + make ci 全绿)
+🔴 Step 3-4 tracked 版本校验 + 命令预览 + drill(临时 `app-support-dir` 或 `--dry-run` · 不执行生产路径)
+🔴 Step 3-5 等单独 `rollover` 关键词授权后执行 `p3_rollover_epoch.py`(默认生产路径 · 归档 + Day0 创建同时完成)
 
 ## 红线全维持
 
@@ -122,5 +128,7 @@ metadata:
 - ❌ Feature Flag / 15→30 样本扩展 / Claude LaunchAgent 安装 / 删除旧 worktree 一律不做
 - ❌ **新加**:不允许先运行未跟踪脚本再补提交(B1 顺序锁)
 - ❌ **新加**:payload 字段禁止内嵌 raw exception text(撞坑 #107 fix 入库前必改)
-- ❌ **新加**:Step 4 不执行 rollover(只校验 + 预览 + dry-run)
+- ❌ **新加**:Step 4 不执行生产路径 rollover(只校验 + 预览 + drill on 临时 `app-support-dir` 或 `--dry-run`)
+- ❌ **新加**:B1 必加 `--dry-run` 参数 + 补测试(支持 Step 4 drill 演练)
 - ❌ **新加**:`rollover` 需 user 显式 `rollover` 关键词授权(类似 `push` 关键词模式)
+- ❌ **新加**:真实默认路径 `~/Library/Application Support/MyAIEmployee/` 只在 Step 5 `rollover` 授权后由 `p3_rollover_epoch.py` 写入
