@@ -55,7 +55,12 @@ metadata:
 
 ## Step 3 序列(用户 2026-07-28 反馈锁定 · 撞坑 #107 B1 路径)
 
-**顺序不可改 · 撞坑 #107 fix 必须先 tracked commit + 干净 `make ci`,再执行 rollover**
+**顺序不可改 · 撞坑 #107 fix 必须先 tracked commit + 干净 `make ci`,再单独授权 rollover**
+
+**关键语义澄清(用户 2026-07-28)**:
+- ❌ Step 4 = "已 tracked 之后再 rollover" → **错误**:会让 Step 4 提前触发 Step 5 的状态写入
+- ✅ Step 4 = "B1 tracked 后,只做 tracked 版本校验 + 命令预览 + dry-run,**不执行 rollover**"
+- ✅ Step 5 = "收到单独的 `rollover` 授权后,执行 `p3_rollover_epoch.py`(该命令本身同时完成 epoch 归档 + Day0 创建)"
 
 1. **2026-07-29 08:00(北京)**:只读首份日报核验
    - `p3_burn_in_report.py report` 读取 `verify_first_daily.py` 输出 `result=fail_attention` + `daily_written>=1`
@@ -69,12 +74,15 @@ metadata:
    - 新增回归测试(从 worktree v2 的 9 tests 同步)
    - 5件套 sync(撞坑 #107 fix 入 tracked,baseline 3182→3191 或 3185 等新值,9 件套全绿)
    - `make ci` 全绿后 commit(独立 commit,主题分明:`fix(scripts): 撞坑 #107 P1#2 gating 改 allow-list + P2#3 后置异常 + privacy redaction`)
-4. **再使用已跟踪版本执行 rollover**(tracked 后才允许)
-   - **不能先运行未跟踪脚本再补提交**(撞坑 #107 的本质教训:working tree ≠ tracked 必须 commit 之后再跑)
-   - `python scripts/p3_rollover_epoch.py`(从已 tracked commit 起 new worktree)
+4. **tracked 版本校验 + 命令预览 + dry-run**(**不执行 rollover**)
+   - 校验已 tracked 的 `scripts/p3_rollover_epoch.py`:`git log --oneline -- scripts/p3_rollover_epoch.py` + `git diff main..HEAD -- scripts/p3_rollover_epoch.py`
+   - 命令预览:`cat scripts/p3_rollover_epoch.py | head -60` 看主流程
+   - dry-run:沿用 `p3_burn_in_report.py` 接口 mock `verify_first_daily` 校验门控,不调真 `os.replace` / `start_burn_in`
+   - **不动生产状态** · **不写 `burn-in-archive/`** · **不开新 Day0**
+5. **Step 5(单独 `rollover` 授权后)**:执行 `p3_rollover_epoch.py`
+   - 用户显式 `rollover` 关键词授权(类似 `push` 关键词模式)
+   - 该命令本身同时完成:**epoch 归档(`os.replace(source, archive)`)** + **新 Day0 创建(`burn_in.start_burn_in`)**
    - 验证 `result=rolled_over` + `post_state_check=ok`
-5. **epoch 归档 + Day0 重开 单独授权**
-   - 撞坑 #107 fix 入 tracked + 干净 `make ci` + rollover 成功后,**epoch 归档与 Day0 重开仍需用户单独授权**(沿红线"不抢控制权")
    - 归档路径:`burn-in-archive/epoch-2026-07-27T05-34-24Z/`(沿用 #107 P1#2 fail_attention + daily_written>=1 双门判)
 
 ## 撞坑 #107 fix 候选 → B1 入 tracked 前必改(用户 2026-07-28 反馈)
@@ -96,8 +104,8 @@ metadata:
 🔴 Step 3-1 只读首日报核验(`p3_burn_in_report.py report`,不执行 rollover)
 🔴 Step 3-2 从 `6ce1e5f` 创建新 worktree(不要基于旧 `/tmp/my-ai-employee-rollover-fix-v2`)
 🔴 Step 3-3 B1 tracked commit(post_state_check 隐私 redaction + 5件套 sync + make ci 全绿)
-🔴 Step 3-4 已 tracked 后执行 rollover
-🔴 Step 3-5 epoch 归档 + Day0 重开 单独授权
+🔴 Step 3-4 tracked 版本校验 + 命令预览 + dry-run(**不执行 rollover**)
+🔴 Step 3-5 等单独 `rollover` 关键词授权后执行 `p3_rollover_epoch.py`(归档 + Day0 创建同时完成)
 
 ## 红线全维持
 
@@ -114,3 +122,5 @@ metadata:
 - ❌ Feature Flag / 15→30 样本扩展 / Claude LaunchAgent 安装 / 删除旧 worktree 一律不做
 - ❌ **新加**:不允许先运行未跟踪脚本再补提交(B1 顺序锁)
 - ❌ **新加**:payload 字段禁止内嵌 raw exception text(撞坑 #107 fix 入库前必改)
+- ❌ **新加**:Step 4 不执行 rollover(只校验 + 预览 + dry-run)
+- ❌ **新加**:`rollover` 需 user 显式 `rollover` 关键词授权(类似 `push` 关键词模式)
