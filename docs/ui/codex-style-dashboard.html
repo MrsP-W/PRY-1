@@ -3907,6 +3907,25 @@
           inset 0 1px 0 rgb(255 255 255 / 24%) !important;
       }
 
+      /*
+       * 邮件批准按钮必须使用与队列通用白底规则相同或更高的选择器优先级。
+       * 否则通用规则会保留白底，而 decide-btn 只留下白字，造成文字不可见。
+       */
+      #mail-queue .queue-actions .btn.decide-btn:not(.reject) {
+        border-color: #5848c1 !important;
+        background: linear-gradient(135deg, #6753d9, #4f61c5) !important;
+        color: #fff !important;
+        box-shadow:
+          0 8px 16px rgb(83 69 180 / 22%),
+          inset 0 1px 0 rgb(255 255 255 / 28%) !important;
+      }
+
+      #mail-queue .queue-actions .btn.decide-btn:not(.reject) .action-icon,
+      #mail-queue .queue-actions .btn.decide-btn:not(.reject) > span {
+        color: #fff !important;
+        opacity: 1 !important;
+      }
+
       .tag.green,
       .chip.ok {
         border-color: rgb(39 170 106 / 18%) !important;
