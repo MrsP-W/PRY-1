@@ -399,7 +399,9 @@ chmod +x "${TARGET_HEALTH_MONITOR_WRAPPER}"
 echo "✅ ${TARGET_HEALTH_MONITOR_WRAPPER} 部署完成"
 
 echo "📋 部署 ${TARGET_NEWS_REFRESH_WRAPPER}(AI 新闻 · 每小时 one-shot)"
-# 新闻刷新仅抓取白名单公开 HTTPS Feed，原子写入本地缓存；绝不启停业务服务。
+# 新闻刷新链路:白名单公开 HTTPS Feed → 现有 LLM Router 仅翻译国际 title/summary
+# → 原子写入本地缓存；quote/url/source 不作为独立模型字段，翻译失败回退英文。
+# 本注释不改变既有 LaunchAgent/plist/运行参数，刷新器仍绝不启停业务服务。
 cat << EOF > "${TARGET_NEWS_REFRESH_WRAPPER}"
 #!/usr/bin/env bash
 # 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh

@@ -10,11 +10,16 @@ from typing import Any, Final
 from urllib.parse import urljoin, urlparse
 
 import httpx
+from loguru import logger
 
 from my_ai_employee.news.models import FeedSource, NewsItem, RefreshResult, SourceRefreshStatus
 from my_ai_employee.news.rss import deduplicate_and_sort, parse_feed
 from my_ai_employee.news.sources import DEFAULT_FEED_SOURCES
 from my_ai_employee.news.store import FileNewsStore
+from my_ai_employee.news.translation import (
+    NewsTranslator,
+    is_reusable_translation,
+)
 
 FeedFetcher = Callable[[FeedSource], bytes]
 _REQUEST_TIMEOUT_SECONDS: Final = 5.0
@@ -24,6 +29,7 @@ _MAX_RESPONSE_BYTES: Final = 2 * 1024 * 1024
 _REFRESH_INTERVAL_MINUTES: Final = 60
 _FRESH_AFTER_MINUTES: Final = 90
 _MAX_REDIRECTS: Final = 2
+_TRANSLATION_BATCH_SIZE: Final = 8
 
 
 class NewsService:
@@ -34,9 +40,11 @@ class NewsService:
         store: FileNewsStore | None = None,
         *,
         sources: tuple[FeedSource, ...] = DEFAULT_FEED_SOURCES,
+        translator: NewsTranslator | None = None,
     ) -> None:
         self.store = store or FileNewsStore()
         self.sources = sources
+        self.translator = translator
 
     def refresh(
         self,
@@ -173,13 +181,18 @@ class NewsService:
                 source_statuses=ordered_statuses,
                 degraded=True,
             )
+        serialized_items = _translate_global_items(
+            items,
+            previous_items=previous_items,
+            translator=self.translator,
+        )
         snapshot = {
             "schema_version": 1,
             "generated_at": moment.isoformat().replace("+00:00", "Z"),
             "last_attempt_at": moment.isoformat().replace("+00:00", "Z"),
             "refresh_state": "fresh" if items else "empty",
             "refresh_interval_minutes": _REFRESH_INTERVAL_MINUTES,
-            "items": [item.to_dict() for item in items],
+            "items": serialized_items,
             "sources": [status.to_dict() for status in ordered_statuses],
             "coverage": _coverage(items, ordered_statuses),
         }
@@ -252,6 +265,67 @@ def _empty_payload(state: str) -> dict[str, Any]:
             "total_sources": 0,
         },
     }
+
+
+def _translate_global_items(
+    items: list[NewsItem],
+    *,
+    previous_items: list[dict[str, object]],
+    translator: NewsTranslator | None,
+) -> list[dict[str, object]]:
+    """复用未变化译文，仅把新增或变化的国际新闻分批送翻译器。"""
+    serialized = [item.to_dict() for item in items]
+    rendered_by_id = {
+        item.item_id: rendered for item, rendered in zip(items, serialized, strict=True)
+    }
+    previous_by_id = {
+        item_id: previous
+        for previous in previous_items
+        if isinstance((item_id := previous.get("id")), str)
+    }
+    pending: list[NewsItem] = []
+
+    for item in items:
+        if item.region != "global":
+            continue
+        previous = previous_by_id.get(item.item_id)
+        if (
+            previous is not None
+            and previous.get("title") == item.title
+            and previous.get("summary") == item.summary
+            and is_reusable_translation(
+                title_zh=previous.get("title_zh"),
+                summary_zh=previous.get("summary_zh"),
+                original_title=item.title,
+                original_summary=item.summary,
+            )
+        ):
+            rendered_by_id[item.item_id]["title_zh"] = previous["title_zh"]
+            rendered_by_id[item.item_id]["summary_zh"] = previous["summary_zh"]
+            continue
+        pending.append(item)
+
+    if translator is None:
+        return serialized
+
+    for offset in range(0, len(pending), _TRANSLATION_BATCH_SIZE):
+        batch = pending[offset : offset + _TRANSLATION_BATCH_SIZE]
+        try:
+            translations = translator.translate(batch)
+        except Exception as exc:  # noqa: BLE001 — 翻译失败不得阻断公开 Feed 刷新
+            logger.warning(
+                "[news] 国际新闻翻译批次失败，回退英文 | batch_size={} | error_type={}",
+                len(batch),
+                type(exc).__name__,
+            )
+            continue
+        for item in batch:
+            translated = translations.get(item.item_id)
+            if translated is None:
+                continue
+            rendered_by_id[item.item_id]["title_zh"] = translated.title_zh
+            rendered_by_id[item.item_id]["summary_zh"] = translated.summary_zh
+    return serialized
 
 
 def _coverage(items: list[NewsItem], statuses: tuple[SourceRefreshStatus, ...]) -> dict[str, int]:
@@ -370,6 +444,8 @@ def _safe_items(value: object) -> list[dict[str, object]]:
         "speaker",
         "quote",
         "verbatim",
+        "title_zh",
+        "summary_zh",
     }
     items: list[dict[str, object]] = []
     for raw in value:
@@ -384,7 +460,19 @@ def _safe_items(value: object) -> list[dict[str, object]]:
             or not url.startswith("https://")
         ):
             continue
-        items.append({key: raw[key] for key in allowed if key in raw})
+        item = {key: raw[key] for key in allowed if key in raw}
+        summary = raw.get("summary")
+        if not isinstance(summary, str):
+            summary = ""
+        if not is_reusable_translation(
+            title_zh=item.get("title_zh"),
+            summary_zh=item.get("summary_zh"),
+            original_title=title,
+            original_summary=summary,
+        ):
+            item.pop("title_zh", None)
+            item.pop("summary_zh", None)
+        items.append(item)
     return items
 
 

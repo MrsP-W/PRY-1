@@ -26,12 +26,13 @@ P0 原型用于验证"我的AI员工"是否应该升级为 Codex 式本地工作
 
 ## AI 每日情报台
 
-- **刷新链路**:受控 HTTPS Feed → 本地 `Application Support/MyAIEmployee/news/latest.json` 原子缓存 → `GET /api/news/daily` → Dashboard；API 请求从不访问外网，页面每 5 分钟只重读本地 API 以看见新的缓存。
+- **刷新链路**:受控 HTTPS Feed → 现有 LLM Router 批量翻译国际新闻 `title/summary` → 本地 `Application Support/MyAIEmployee/news/latest.json` 原子缓存 → `GET /api/news/daily` → Dashboard；API 请求从不访问外网，页面每 5 分钟只重读本地 API 以看见新的缓存。
+- **翻译边界**:模型输入只含批内临时 key 与公开 `title/summary`，持久化 item_id 不外发；`quote/url/source` 不作为独立字段发送，summary 中与已核验 quote 完全重叠的文本先替换为固定占位。Dashboard 优先显示 `title_zh/summary_zh`，同时保留英文原文链接；官方 quote 保持原文单列。
 - **内容层级**:国内 AI 大事件、国际 AI 大事件、官方模型/产品发布、AI 大佬公开发言；优先标注 SAP、企业 AI、Agent、RAG、MCP、开发工具与安全治理。
 - **来源分层**:OpenAI、Google AI、Hugging Face、NVIDIA Newsroom 与 OpenAI 官方视频为一手发布；Google 新闻、36氪、TechCrunch、VentureBeat、The Verge 仅作事件发现并保留原文链接。
-- **AI 大佬发言**:当前自动核验源为 NVIDIA Newsroom RSS；仅当官方正文同时存在受白名单约束的说话人、紧邻的明确归因与逐字引号时显示“已核验原话”。普通动态窗口为 72 小时，已核验原话保留 7 天并在 48 条上限中预留最多 4 条。媒体转述只标为“发言线索”，不加引号、不由模型改写。国内尚未发现等价的官方 RSS 逐字来源，先不自动生成国内引语；未来仅可加入人工审核的一手逐字稿清单。
+- **AI 大佬发言**:当前自动核验源为 NVIDIA Newsroom RSS；仅当官方正文同时存在受白名单约束的说话人、紧邻的明确归因与逐字引号时显示“已核验原话”。普通动态窗口为 72 小时，已核验原话保留 7 天并在 48 条上限中预留最多 4 条。媒体转述只标为“发言线索”，不加引号、不由模型生成或补写内容；中文显示只翻译已有 `title/summary`。国内尚未发现等价的官方 RSS 逐字来源，先不自动生成国内引语；未来仅可加入人工审核的一手逐字稿清单。
 - **筛选与覆盖**:页面提供全部 / 国内 / 国际 / 已核验原话 / 发言线索五类筛选；刷新后显示来源健康与软验收（国内 ≥4、国际 ≥8、已核验原话 ≥1），不足时提示覆盖待补全而不虚构内容。
-- **失败降级**:单一来源失败不阻塞其他来源；所有来源失败或全部解析为空时，原子保留最后一份非空内容、记录本次来源状态并显示“上次刷新降级”；首次刷新前明确显示空态。
+- **失败降级**:单一来源失败不阻塞其他来源；翻译批次失败时该批保留英文，已成功批次仍写入中文；所有来源失败或全部解析为空时，原子保留最后一份非空内容、记录本次来源状态并显示“上次刷新降级”；首次刷新前明确显示空态。
 - **网络边界**:采集器只接受白名单 HTTPS 初始 URL；重定向最多两跳，且必须同一 HTTPS origin，拒绝跨域、HTTP、非标准端口、localhost 与私网 IP。
 - **调度状态**:当前可手动运行刷新器，尚未部署每小时 LaunchAgent。P0-4 通过和 GUI 域授权后，才新增独立 one-shot 任务（`StartInterval=3600`、`RunAtLoad=true`、无 `KeepAlive`）。
 - **待办边界**:新闻是信息流，不计入邮件与 Notes 的人工待办总数。

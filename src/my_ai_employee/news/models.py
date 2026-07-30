@@ -44,6 +44,8 @@ class NewsItem:
     speaker: str | None = None
     quote: str | None = None
     verbatim: bool = False
+    title_zh: str | None = None
+    summary_zh: str | None = None
 
     def to_dict(self) -> dict[str, object]:
         """转换成 JSON 兼容字典。"""
@@ -63,6 +65,8 @@ class NewsItem:
             "speaker": self.speaker,
             "quote": self.quote,
             "verbatim": self.verbatim,
+            "title_zh": self.title_zh,
+            "summary_zh": self.summary_zh,
         }
 
 

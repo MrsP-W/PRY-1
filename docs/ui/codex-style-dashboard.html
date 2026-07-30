@@ -5074,12 +5074,14 @@
 
       function renderNewsItem(item) {
         const url = safeExternalUrl(item.url);
-        const title = escapeHtml(item.title ?? "无标题 AI 动态");
+        const title = escapeHtml(item.title_zh || item.title || "无标题 AI 动态");
+        const originalLinkLabel = item.title_zh ? "查看英文原文" : "查看新闻原文";
         const titleHtml = url
-          ? `<a class="queue-title queue-title-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${title}</a>`
+          ? `<a class="queue-title queue-title-link" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" title="${originalLinkLabel}">${title}</a>`
           : `<div class="queue-title">${title}</div>`;
         const topics = Array.isArray(item.topics) ? item.topics.filter(Boolean).join(" / ") : "AI 动态";
         const isVerbatim = item.kind === "leader_statement" && item.verbatim === true && item.quote;
+        const summaryText = item.summary_zh || item.summary;
         const meta = [
           newsRegionLabel(item.region),
           formatNewsTime(item.published_at),
@@ -5087,13 +5089,14 @@
           item.source ?? "来源未标注",
           topics,
         ].filter(Boolean).join(" · ");
+        const summary = summaryText
+          ? `<div class="queue-meta">${escapeHtml(summaryText)}</div>`
+          : "";
         const quote = isVerbatim
-          ? `<div class="queue-meta">官方原文摘录：${escapeHtml(item.quote)}</div>`
-          : item.summary
-            ? `<div class="queue-meta">${escapeHtml(item.summary)}</div>`
-            : "";
+          ? `<div class="queue-meta">${item.region === "global" ? "官方英文原文摘录" : "官方原文摘录"}：${escapeHtml(item.quote)}</div>`
+          : "";
         const tagClass = item.kind === "leader_statement" ? "green" : item.kind === "leader_clue" ? "blue" : "";
-        return `<div class="queue-item"><div>${titleHtml}<div class="queue-meta">${escapeHtml(meta)}</div>${quote}</div><span class="tag ${tagClass}">${escapeHtml(newsKindLabel(item.kind))}</span></div>`;
+        return `<div class="queue-item"><div>${titleHtml}<div class="queue-meta">${escapeHtml(meta)}</div>${summary}${quote}</div><span class="tag ${tagClass}">${escapeHtml(newsKindLabel(item.kind))}</span></div>`;
       }
 
       function renderTodayQueueItem(kind, item) {
