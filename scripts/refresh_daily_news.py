@@ -1,20 +1,25 @@
-"""刷新 AI 每日情报的本地只读缓存。
+"""刷新 AI 每日情报的本地缓存。
 
-此脚本只发起白名单 HTTPS GET，不读取账号/Keychain，不调用 LLM，也不发送任何
-内容到外部。由独立的 one-shot LaunchAgent 每小时调用；本脚本本身不启停任何
-业务服务。
+此脚本抓取白名单 HTTPS Feed，并把国际新闻的公开标题、摘要经现有 LLM Router
+翻译为中文。quote、URL、来源等字段不会作为独立模型输入；持久化 item_id 会在
+进程内映射成批内临时 key。由独立的 one-shot LaunchAgent 每小时调用；本脚本
+本身不启停任何业务服务。
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from my_ai_employee.ai.router import get_router
+from my_ai_employee.core.config import load_env
 from my_ai_employee.news import FileNewsStore, NewsService
 from my_ai_employee.news.models import RefreshResult
+from my_ai_employee.news.translation import RouterNewsTranslator
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -40,7 +45,11 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     store = FileNewsStore(args.output) if args.output else FileNewsStore()
     try:
-        result = NewsService(store=store).refresh()
+        _load_runtime_env()
+        result = NewsService(
+            store=store,
+            translator=RouterNewsTranslator(get_router()),
+        ).refresh()
     except Exception:  # noqa: BLE001 — one-shot 必须留下可用回执而不泄露异常内容
         _append_runtime_error(store)
         return _emit_runtime_error(args.format)
@@ -67,6 +76,22 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print("AI 每日情报刷新跳过：已有刷新进程在运行")
     return 0 if result.success else 2
+
+
+def _load_runtime_env() -> bool:
+    """优先加载 launchd/App Support 运行时 .env，不覆盖已有环境变量。"""
+    configured = os.environ.get("MY_AI_EMPLOYEE_ENV_FILE", "").strip()
+    if configured:
+        return load_env(Path(configured))
+
+    configured_app_support = os.environ.get("MY_AI_EMPLOYEE_APP_SUPPORT_DIR", "").strip()
+    app_support = (
+        Path(configured_app_support)
+        if configured_app_support
+        else Path.home() / "Library/Application Support/MyAIEmployee"
+    )
+    app_support_env = app_support / ".env"
+    return load_env(app_support_env) if app_support_env.exists() else load_env()
 
 
 def _append_result(store: FileNewsStore, result: RefreshResult) -> None:

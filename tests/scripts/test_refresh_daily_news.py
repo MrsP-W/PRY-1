@@ -26,10 +26,17 @@ class _FakeNewsService:
         source_statuses=(),
     )
     received_stores: ClassVar[list[FileNewsStore | None]] = []
+    received_translators: ClassVar[list[object | None]] = []
     error: ClassVar[Exception | None] = None
 
-    def __init__(self, store: FileNewsStore | None = None) -> None:
+    def __init__(
+        self,
+        store: FileNewsStore | None = None,
+        *,
+        translator: object | None = None,
+    ) -> None:
         _FakeNewsService.received_stores.append(store)
+        _FakeNewsService.received_translators.append(translator)
 
     def refresh(self) -> RefreshResult:
         if _FakeNewsService.error is not None:
@@ -43,6 +50,7 @@ def _stub_refresh(
 ) -> None:
     _FakeNewsService.result = result
     _FakeNewsService.received_stores = []
+    _FakeNewsService.received_translators = []
     _FakeNewsService.error = None
     monkeypatch.setattr(refresh_script, "NewsService", _FakeNewsService)
 
@@ -103,6 +111,7 @@ def test_cli_json_success_writes_only_local_result(
     assert payload["item_count"] == 12
     assert _FakeNewsService.received_stores[0] is not None
     assert _FakeNewsService.received_stores[0].path == output
+    assert _FakeNewsService.received_translators[0] is not None
     assert set(payload) == {
         "success",
         "wrote_snapshot",
@@ -267,3 +276,73 @@ def test_cli_source_keeps_one_shot_non_service_control_boundary() -> None:
 
     for forbidden in ("launchctl", "kickstart", "bootout", "SMTP", "IMAP"):
         assert forbidden not in source
+
+
+def test_runtime_env_uses_explicit_launchd_env_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    env_file = tmp_path / "runtime.env"
+    env_file.write_text("MINIMAX_API_KEY=do-not-print\n", encoding="utf-8")
+    received: list[Path | None] = []
+
+    def fake_load_env(path: Path | None = None) -> bool:
+        received.append(path)
+        return True
+
+    monkeypatch.setenv("MY_AI_EMPLOYEE_ENV_FILE", str(env_file))
+    monkeypatch.setattr(refresh_script, "load_env", fake_load_env)
+
+    assert refresh_script._load_runtime_env() is True
+    assert received == [env_file]
+
+
+@pytest.mark.parametrize("use_configured_app_support", (True, False))
+def test_runtime_env_uses_existing_app_support_env_when_explicit_file_is_unset(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    use_configured_app_support: bool,
+) -> None:
+    app_support = tmp_path / "app-support"
+    app_support.mkdir()
+    env_file = app_support / ".env"
+    env_file.write_text("MINIMAX_API_KEY=do-not-print\n", encoding="utf-8")
+    received: list[Path | None] = []
+
+    monkeypatch.delenv("MY_AI_EMPLOYEE_ENV_FILE", raising=False)
+    if use_configured_app_support:
+        monkeypatch.setenv("MY_AI_EMPLOYEE_APP_SUPPORT_DIR", str(app_support))
+    else:
+        monkeypatch.delenv("MY_AI_EMPLOYEE_APP_SUPPORT_DIR", raising=False)
+        monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
+        default_env = tmp_path / "Library/Application Support/MyAIEmployee/.env"
+        default_env.parent.mkdir(parents=True)
+        default_env.write_text("MINIMAX_API_KEY=do-not-print\n", encoding="utf-8")
+        env_file = default_env
+
+    def fake_load_env(path: Path | None = None) -> bool:
+        received.append(path)
+        return False
+
+    monkeypatch.setattr(refresh_script, "load_env", fake_load_env)
+
+    assert refresh_script._load_runtime_env() is False
+    assert received == [env_file]
+
+
+def test_runtime_env_falls_back_to_project_env_when_app_support_env_is_missing(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    received: list[Path | None] = []
+    monkeypatch.delenv("MY_AI_EMPLOYEE_ENV_FILE", raising=False)
+    monkeypatch.setenv("MY_AI_EMPLOYEE_APP_SUPPORT_DIR", str(tmp_path / "missing"))
+
+    def fake_load_env(path: Path | None = None) -> bool:
+        received.append(path)
+        return False
+
+    monkeypatch.setattr(refresh_script, "load_env", fake_load_env)
+
+    assert refresh_script._load_runtime_env() is False
+    assert received == [None]

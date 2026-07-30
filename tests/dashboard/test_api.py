@@ -317,6 +317,9 @@ def test_build_daily_news_payload_reads_local_cache_only(
                 {
                     "id": "news-1",
                     "title": "AI Agent update",
+                    "title_zh": "人工智能智能体更新",
+                    "summary": "Agent workflow update.",
+                    "summary_zh": "智能体工作流更新。",
                     "url": "https://example.com/ai-agent",
                     "region": "global",
                     "kind": "event",
@@ -334,6 +337,20 @@ def test_build_daily_news_payload_reads_local_cache_only(
     assert payload["read_only"] is True
     assert payload["available"] is True
     assert payload["items"][0]["title"] == "AI Agent update"
+    assert payload["items"][0]["title_zh"] == "人工智能智能体更新"
+    assert payload["items"][0]["summary_zh"] == "智能体工作流更新。"
+
+
+def test_dashboard_news_renderer_prefers_chinese_and_keeps_original_link() -> None:
+    dashboard_html = (
+        Path(__file__).resolve().parents[2] / "docs/ui/codex-style-dashboard.html"
+    ).read_text(encoding="utf-8")
+
+    assert "item.title_zh || item.title" in dashboard_html
+    assert "item.summary_zh || item.summary" in dashboard_html
+    assert 'href="${escapeHtml(url)}"' in dashboard_html
+    assert 'item.title_zh ? "查看英文原文" : "查看新闻原文"' in dashboard_html
+    assert "官方英文原文摘录" in dashboard_html
 
 
 def test_parse_limit_clamps() -> None:

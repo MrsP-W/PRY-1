@@ -1,0 +1,86 @@
+task_id: TASK-20260730-001
+objective: "国际新闻在 Dashboard 优先显示中文标题和摘要；刷新时复用现有 LLM 路由批量翻译，失败安全回退英文原文。"
+task_type: feature
+owner: cursor
+reviewers:
+  - claude
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "src/my_ai_employee/news/models.py"
+  - "src/my_ai_employee/news/service.py"
+  - "src/my_ai_employee/ai/router.py"
+  - "scripts/refresh_daily_news.py"
+  - "docs/ui/codex-style-dashboard.html"
+  - "docs/ui/codex-style-dashboard.md"
+  - "docs/v0.2-launch-plan.md"
+  - "scripts/launchd_install.sh"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260730-001-news-zh.yaml"
+  - "README.md"
+  - "CLAUDE.md"
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "src/my_ai_employee/news/"
+  - "src/my_ai_employee/quality_snapshot.py"
+  - "scripts/refresh_daily_news.py"
+  - "scripts/launchd_install.sh"
+  - "docs/ui/codex-style-dashboard.html"
+  - "docs/ui/codex-style-dashboard.md"
+  - "docs/v0.2-launch-plan.md"
+  - "tests/news/"
+  - "tests/scripts/test_refresh_daily_news.py"
+  - "tests/dashboard/test_api.py"
+acceptance_commands:
+  - "uv run pytest --no-cov tests/news/test_translation.py tests/news/test_service.py tests/scripts/test_refresh_daily_news.py tests/dashboard/test_api.py"
+  - "uv run ruff check src/my_ai_employee/news scripts/refresh_daily_news.py tests/news tests/scripts/test_refresh_daily_news.py tests/dashboard/test_api.py"
+  - "git diff --check"
+risk_level: medium
+requires_approval: true
+approval:
+  granted_by: user
+  granted_at: "2026-07-30"
+  scope: "允许 news-refresh 将公开国际新闻标题和摘要发送给现有模型翻译，并允许修改业务代码"
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: ready_to_merge
+
+result:
+  summary: "国际新闻刷新已接入现有 LLM Router 批量中文翻译；模型侧仅见批内 opaque key 与公开 title/summary，持久化 item_id 在进程内映射；按 id+原 title+原 summary 复用旧译文，单批失败回退英文；Dashboard 优先中文且保留原文链接和未翻译官方 quote。"
+  changed_files:
+    - "CLAUDE.md"
+    - "MODIFICATION-LOG.md"
+    - "README.md"
+    - "SESSION-STATE.md"
+    - "docs/agent-team/tasks/TASK-20260730-001-news-zh.yaml"
+    - "docs/ui/codex-style-dashboard.html"
+    - "docs/ui/codex-style-dashboard.md"
+    - "docs/v0.2-launch-plan.md"
+    - "scripts/launchd_install.sh"
+    - "scripts/refresh_daily_news.py"
+    - "src/my_ai_employee/news/models.py"
+    - "src/my_ai_employee/news/service.py"
+    - "src/my_ai_employee/news/translation.py"
+    - "src/my_ai_employee/quality_snapshot.py"
+    - "tests/dashboard/test_api.py"
+    - "tests/news/test_service.py"
+    - "tests/news/test_translation.py"
+    - "tests/scripts/test_refresh_daily_news.py"
+  verification:
+    - "PASS: uv run pytest --no-cov tests/news/test_translation.py tests/news/test_service.py tests/scripts/test_refresh_daily_news.py tests/dashboard/test_api.py (72 passed)"
+    - "PASS: uv run ruff check src/my_ai_employee/news scripts/refresh_daily_news.py tests/news tests/scripts/test_refresh_daily_news.py tests/dashboard/test_api.py"
+    - "PASS: git diff --check"
+    - "PASS: bash -n scripts/launchd_install.sh"
+    - "PASS: make mypy (295 source files)"
+    - "PASS: PATH=<主工作树 node_modules/.bin>:$PATH make ci（9 质量门全绿；未安装依赖）"
+    - "PASS: 全量 pytest 3200 passed, 1 skipped；coverage 90.29%；Markdown lint 307 files / 0 errors"
+    - "PASS: check-snapshot（3200/1、307 MD、quality_snapshot mypy_files=294）与 5 件套状态一致"
+    - "PASS: 真实 MiniMax 最小验证仅发送 1 条公开新闻 title/summary，返回有效中文；未写新闻缓存"
+    - "INFO: 本任务累计新增 21 个测试 case；第 2 轮新增 4 个 case（多批部分失败 1、App Support/default/fallback env 3）。"
+  risks:
+    - "news-refresh 会把公开国际新闻的 title/summary 与批内临时 key 发送给现有模型并产生模型调用成本；持久化 item_id 不外发，quote/URL/来源/凭据不作为独立字段进入 prompt。"
+    - "若已核验 quote 文本与 summary 完全重叠会先替换为占位；title 仍按公开来源标题原样翻译，因此文档只承诺 quote 字段不序列化，不承诺标题中偶然重叠的文字永不出现。"
+    - "模型响应异常或整批截断时该批回退英文；后续刷新会再次尝试未获得有效译文的条目。"
+  unresolved: []
+  next_agent: "等待用户显式 commit；push、合并与生产新闻刷新仍分别需要授权。"
