@@ -1,0 +1,55 @@
+task_id: TASK-20260730-002
+objective: "以运行态证据校准 Step 2–5：记录已部署的新闻中文显示、失败 epoch 归档与新 Day0；明确 7 天观察门与日报自动化边界。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "README.md"
+  - "CLAUDE.md"
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "docs/v0.2-launch-plan.md"
+  - "scripts/check_state_entries.py"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260730-002-p3-step5-state.yaml"
+  - "README.md"
+  - "CLAUDE.md"
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "docs/v0.2-launch-plan.md"
+acceptance_commands:
+  - "uv run python scripts/check_state_entries.py"
+  - "npx --no-install markdownlint README.md CLAUDE.md SESSION-STATE.md MODIFICATION-LOG.md docs/v0.2-launch-plan.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 30
+depends_on:
+  - "Step 2：Dashboard/news-refresh 部署与运行验收"
+  - "Step 4：失败 epoch 归档与新 Day0 创建"
+status: ready_to_merge
+
+result:
+  summary: "五件套已以运行态证据校准 Step 2–5：新闻中文显示已部署，失败 epoch 已归档，新 Day0 已创建，7d 观察已启动；同时明确日报器未加载，避免把 p3-awake 误记为日报调度。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260730-002-p3-step5-state.yaml"
+    - "README.md"
+    - "CLAUDE.md"
+    - "SESSION-STATE.md"
+    - "MODIFICATION-LOG.md"
+    - "docs/v0.2-launch-plan.md"
+  verification:
+    - "PASS: Dashboard /api/news/daily = 48 条；title_zh=21、summary_zh=21。"
+    - "PASS: 当前 epoch started_at=2026-07-30T07:04:45.527698Z；旧 epoch 2026-07-27T05:34:24Z 已位于 burn-in-archive。"
+    - "PASS: UV_PROJECT_ENVIRONMENT=<主工作树既有 .venv> uv run --no-sync python scripts/check_state_entries.py。"
+    - "PASS: 使用主工作树既有 node_modules 的 markdownlint 校验五件套。"
+    - "PASS: git diff --check。"
+  risks:
+    - "com.myaiemployee.p3-burn-in-report 当前未加载；p3-awake 仅保持唤醒，日报须手动核验或另获授权加载。"
+    - "新 worktree 默认 uv 环境未含 mypy；本次未安装依赖，状态校验复用既有锁定工具链。"
+  unresolved:
+    - "新 Day0 尚无日报，7d/30d 资格尚不可判定。"
+    - "P3 rollover 候选不在 tracked main；不得把本状态同步视作治理代码入库。"
+  next_agent: "等待用户显式 commit；push、日报器加载与任何 P3 运行时改动仍需分别授权。"
