@@ -105,7 +105,7 @@ def build_entry_checks(
         ),
         EntryLineCheck(
             "CLAUDE.md",
-            18,
+            20,
             required=(
                 f"{passed} passed",
                 gates.coverage,
@@ -121,13 +121,13 @@ def build_entry_checks(
         ),
         EntryLineCheck(
             "SESSION-STATE.md",
-            20,
+            22,
             required=(f"MD lint **{md_count}**",),
             forbidden=(f"MD lint **{stale_md}**",),
         ),
         EntryLineCheck(
             "SESSION-STATE.md",
-            35,
+            37,
             required=(
                 gates.pytest,
                 gates.coverage,
@@ -138,7 +138,7 @@ def build_entry_checks(
         ),
         EntryLineCheck(
             "MODIFICATION-LOG.md",
-            118,
+            120,
             required=(
                 gates.pytest,
                 gates.coverage,
@@ -149,7 +149,7 @@ def build_entry_checks(
         ),
         EntryLineCheck(
             "docs/v0.2-launch-plan.md",
-            264,
+            266,
             required=(
                 gates.pytest,
                 gates.coverage,
