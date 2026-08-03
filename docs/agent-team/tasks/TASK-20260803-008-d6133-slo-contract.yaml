@@ -1,0 +1,45 @@
+task_id: TASK-20260803-008
+objective: "为 v1.1-A 起草纯设计态 SLO contract：固定 5 个维度、可计算 SLI/阈值、告警事件契约与 fail-closed 边界，不接入任何运行时。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+  - "docs/v1.1-evolution-foundation.md"
+  - "scripts/p3_burn_in_report.py"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml"
+  - "docs/v1.1-slo-contract.md"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/v1.1-slo-contract.md"
+  - "npx --no-install markdownlint-cli2 MODIFICATION-LOG.md"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; yaml.safe_load(pathlib.Path(\"docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml\").read_text())'"
+  - "git diff --check"
+  - "git diff --name-only 566c1a8f944c4f74144d7ec575ea7671cf47acd7"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: review
+
+result:
+  summary: "完成 v1.1 design-only SLO 契约：固定 5 个维度、三态/激活规则、阈值、统一告警 schema 与 P3 fail-closed 边界。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml"
+    - "docs/v1.1-slo-contract.md"
+  verification:
+    - "markdownlint-cli2 docs/v1.1-slo-contract.md：0 issues"
+    - "task-contract YAML：解析通过"
+    - "git diff --check：通过"
+    - "语义检查：SLO 维度恰好 5 个；边界内文件恰好 2 个"
+  risks:
+    - "全部阈值仍是 inactive 设计稿；P3 内不得把它们标成已监测或接入告警运行时。"
+    - "Claude/MiniMax 首次实施调用 error_during_execution 且未落盘；Codex 已按降级规则接管，没有第二个并行实施者。"
+  unresolved:
+    - "只有 P3 30 天资格通过且用户授权后，才可另开任务评估只读聚合或看板实现。"
+  next_agent: "codex：交叉验收、补 MODIFICATION-LOG，并在全部质量门通过后提交专用分支。"
