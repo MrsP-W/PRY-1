@@ -18,17 +18,19 @@ acceptance_commands:
   - "npx --no-install markdownlint-cli2 docs/v1.1-slo-contract.md"
   - "npx --no-install markdownlint-cli2 MODIFICATION-LOG.md"
   - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; yaml.safe_load(pathlib.Path(\"docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml\").read_text())'"
-  - "git diff --check"
-  - "git diff --name-only 566c1a8f944c4f74144d7ec575ea7671cf47acd7"
+  - "git merge-base 566c1a8f944c4f74144d7ec575ea7671cf47acd7 HEAD"
+  - "git diff --check 566c1a8f944c4f74144d7ec575ea7671cf47acd7...HEAD"
+  - "git diff --name-only 566c1a8f944c4f74144d7ec575ea7671cf47acd7...HEAD"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import subprocess; actual=subprocess.check_output([\"git\",\"diff\",\"--name-only\",\"566c1a8f944c4f74144d7ec575ea7671cf47acd7...HEAD\"],text=True).splitlines(); expected={\"MODIFICATION-LOG.md\",\"docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml\",\"docs/v1.1-slo-contract.md\"}; assert len(actual)==3 and set(actual)==expected, (actual,expected); print(\"whitelist: ok\")'"
 risk_level: low
 requires_approval: false
 max_attempts: 2
 max_runtime_minutes: 45
 depends_on: []
-status: ready_to_merge
+status: review
 
 result:
-  summary: "完成 v1.1 design-only SLO 契约：固定 5 个维度、三态/激活规则、阈值、统一告警 schema 与 P3 fail-closed 边界。"
+  summary: "已按交叉审查修复 v1.1 design-only SLO 契约：安全门覆盖、latency p99、freshness 边界和告警状态口径自洽；等待 Codex 复验。"
   changed_files:
     - "MODIFICATION-LOG.md"
     - "docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml"
@@ -37,12 +39,14 @@ result:
     - "markdownlint-cli2 docs/v1.1-slo-contract.md：0 issues"
     - "markdownlint-cli2 MODIFICATION-LOG.md：0 issues"
     - "task-contract YAML：解析通过"
-    - "git diff --check：通过"
-    - "语义检查：SLO 维度恰好 5 个；边界内文件恰好 2 个"
+    - "ref-bound git diff --check：通过"
+    - "精确白名单：相对 566c1a8 仅 3 个 docs 文件"
+    - "语义检查：SLO 维度恰好 5 个；目标、breach、unknown 与窗口边界一致"
   risks:
     - "全部阈值仍是 inactive 设计稿；P3 内不得把它们标成已监测或接入告警运行时。"
-    - "Claude/MiniMax 首次实施调用 error_during_execution 且未落盘；Codex 已按降级规则接管，没有第二个并行实施者。"
+    - "原候选曾被交叉审查判 FAIL；本修复仍是 inactive 设计稿，复验通过前不得进入 ready_to_merge。"
   unresolved:
+    - "由 Codex 重新交叉验收修复分支；只有复验 PASS 才可恢复 ready_to_merge。"
     - "只有 P3 30 天资格通过且用户授权后，才可另开任务评估只读聚合或看板实现。"
-    - "候选分支未合并 main、未 push。"
-  next_agent: "codex/人工：审查专用分支后决定是否集成；本自动化不合并、不 push。"
+    - "修复分支未合并 main、未 push。"
+  next_agent: "codex：对修复分支做 ref-bound 复验；本自动化不合并、不 push。"
