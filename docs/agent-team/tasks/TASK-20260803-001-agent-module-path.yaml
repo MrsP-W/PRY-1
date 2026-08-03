@@ -1,0 +1,47 @@
+task_id: TASK-20260803-001
+objective: "修复 agent 月报 wrapper 在 launchd WorkingDirectory=$HOME 下的 scripts 模块解析失败。"
+task_type: bugfix
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "scripts/launchd_install.sh"
+  - "tests/scripts/test_launchd_install.py"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260803-001-agent-module-path.yaml"
+  - "scripts/launchd_install.sh"
+  - "tests/scripts/test_launchd_install.py"
+acceptance_commands:
+  - "uv run pytest --no-cov tests/scripts/test_launchd_install.py"
+  - "bash -n scripts/launchd_install.sh"
+  - "git diff --check"
+risk_level: medium
+requires_approval: true
+approval:
+  granted_by: user
+  granted_at: "2026-08-03"
+  scope: "允许中断 P3，修改并重载 com.myaiemployee.agent LaunchAgent 以修复模块解析故障。"
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: done
+
+result:
+  summary: "月报 wrapper 改为直接执行绝对脚本路径，消除 launchd 的 WorkingDirectory=$HOME 对 scripts 模块解析的依赖。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260803-001-agent-module-path.yaml"
+    - "scripts/launchd_install.sh"
+    - "tests/scripts/test_launchd_install.py"
+  verification:
+    - "PASS: /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/pytest --no-cov tests/scripts/test_launchd_install.py (75 passed)"
+    - "PASS: bash -n scripts/launchd_install.sh"
+    - "PASS: git diff --check"
+    - "PASS: launchd 最小环境下以绝对脚本路径运行 monthly_report.py validate（模板 11 个占位符通过）"
+    - "PASS: 已部署 wrapper 不再使用 python -m scripts.monthly_report"
+  risks:
+    - "手动 kickstart 发生在每月 1 日之外，既有“昨日所属月份”规则选择 2026-08；该月尚无交易，monthly_report 按既有业务契约返回 exit 2。"
+  unresolved:
+    - "P3 attention 不会因本修复立即清除；需在正常月初调度窗口观察，或另行审批评估空月是否应视为健康。"
+  next_agent: "codex（仅在用户授权下评估空月 exit 2 与 P3 health 规则）"

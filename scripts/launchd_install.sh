@@ -304,13 +304,14 @@ fi
 
 # ===== 3. 部署 ~/bin/ wrapper 脚本 =====
 echo "📋 部署 ${TARGET_SCRIPT}(动态月份)"
-{
-    echo "#!/usr/bin/env bash"
-    echo "# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh"
-    echo "MONTH=\$(date -v-1d +%Y-%m 2>/dev/null || date -d 'last month' +%Y-%m)"
-    # 撞坑 #93 修复(2026-07-09):launchd 子进程 PATH 不含 /opt/homebrew/bin(uv 安装位置),用绝对路径
-    echo "exec /opt/homebrew/bin/uv run --project \"${PROJECT_ROOT}\" python -m scripts.monthly_report generate --month \"\${MONTH}\""
-} > "${TARGET_SCRIPT}"
+cat << EOF > "${TARGET_SCRIPT}"
+#!/usr/bin/env bash
+# 部署于 $(date '+%Y-%m-%d %H:%M:%S') by scripts/launchd_install.sh
+# launchd WorkingDirectory=\$HOME 时，模块形式无法保证项目根目录在 sys.path；
+# 直接执行绝对脚本路径，沿 IMAP wrapper 的 #96 已验证模式，避免模块解析依赖 CWD。
+MONTH=\$(date -v-1d +%Y-%m 2>/dev/null || date -d 'last month' +%Y-%m)
+exec /opt/homebrew/bin/uv run --project "${PROJECT_ROOT}" python "${PROJECT_ROOT}/scripts/monthly_report.py" generate --month "\${MONTH}"
+EOF
 chmod +x "${TARGET_SCRIPT}"
 echo "✅ ${TARGET_SCRIPT} 部署完成"
 

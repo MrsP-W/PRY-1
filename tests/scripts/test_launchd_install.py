@@ -490,6 +490,10 @@ def test_h3_install_sh_monthly_report_wrapper_uses_absolute_uv_path():
     assert "/opt/homebrew/bin/uv run --project" in monthly_block, (
         f"撞坑 #93 修复:monthly-report wrapper 必用绝对路径,实际 block:\n{monthly_block}"
     )
+    assert 'python "${PROJECT_ROOT}/scripts/monthly_report.py"' in monthly_block, (
+        "monthly-report wrapper 必须直接执行绝对脚本路径，避免 launchd CWD 下 "
+        "`python -m scripts.monthly_report` 的模块解析失败"
+    )
 
 
 def test_h4_install_sh_imap_wrapper_uses_absolute_uv_path():
@@ -1051,6 +1055,9 @@ def test_k6_deploy_only_modes_leave_legacy_files_and_launchctl_untouched(
         home / "Library/LaunchAgents/com.myaiemployee.burn-in-report.plist",
     ):
         assert path.exists(), f"撞坑 #98 P1-3 修复:{mode} 必部署当前文件 {path}"
+    monthly_wrapper = (home / "bin/my-ai-employee-monthly-report").read_text(encoding="utf-8")
+    assert f'python "{PROJECT_ROOT}/scripts/monthly_report.py"' in monthly_wrapper
+    assert "python -m scripts.monthly_report" not in monthly_wrapper
     calls = launchctl_calls.read_text(encoding="utf-8") if launchctl_calls.exists() else ""
     assert not re.search(r"^(?:unload|bootout|load)\b", calls, re.MULTILINE), (
         f"撞坑 #98 P1-3 修复:{mode} 不得改变 launchd 运行态,实际调用={calls}"
