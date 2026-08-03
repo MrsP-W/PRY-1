@@ -1,0 +1,40 @@
+task_id: TASK-20260803-015-d6151-v11-a-readiness
+objective: "D6.15.1 v1.1-A 启动门槛核对：docs-only 审计 4 必须门槛。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+  - "docs/v1.0-launch-evaluation-2026-08.md"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260803-015-d6151-v11-a-readiness.yaml"
+  - "docs/v1.1-a-readiness-2026-08-03.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/v1.1-a-readiness-2026-08-03.md"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260803-015-d6151-v11-a-readiness.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: done
+
+result:
+  summary: "D6.15.1 v1.1-A 启动门槛核对完成：4 必须门 2 PASS / 2 FAIL（7d/30d 时间+attention 不达标），v1.1-A 当前不可解锁。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260803-015-d6151-v11-a-readiness.yaml"
+    - "docs/v1.1-a-readiness-2026-08-03.md"
+  verification:
+    - "markdownlint-cli2 docs/v1.1-a-readiness-2026-08-03.md：0 issues"
+    - "task-contract YAML：解析通过"
+    - "git diff --check：通过"
+    - "暂存白名单仅 2 个 docs 文件"
+  risks:
+    - "未触碰 v1.1-A 启动、运行时、ENABLE_* 或远程。"
+  unresolved:
+    - "com.myaiemployee.agent 非零退出根因待诊断；30d 计时需等 2026-08-26T05:34:24Z。"
+  next_agent: "codex：继续安全 docs/tests；不调用 Claude/MiniMax。"
