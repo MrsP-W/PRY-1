@@ -25,15 +25,17 @@ requires_approval: false
 max_attempts: 2
 max_runtime_minutes: 45
 depends_on: []
-status: review
+status: ready_to_merge
 
 result:
   summary: "完成 v1.1 design-only SLO 契约：固定 5 个维度、三态/激活规则、阈值、统一告警 schema 与 P3 fail-closed 边界。"
   changed_files:
+    - "MODIFICATION-LOG.md"
     - "docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml"
     - "docs/v1.1-slo-contract.md"
   verification:
     - "markdownlint-cli2 docs/v1.1-slo-contract.md：0 issues"
+    - "markdownlint-cli2 MODIFICATION-LOG.md：0 issues"
     - "task-contract YAML：解析通过"
     - "git diff --check：通过"
     - "语义检查：SLO 维度恰好 5 个；边界内文件恰好 2 个"
@@ -42,4 +44,5 @@ result:
     - "Claude/MiniMax 首次实施调用 error_during_execution 且未落盘；Codex 已按降级规则接管，没有第二个并行实施者。"
   unresolved:
     - "只有 P3 30 天资格通过且用户授权后，才可另开任务评估只读聚合或看板实现。"
-  next_agent: "codex：交叉验收、补 MODIFICATION-LOG，并在全部质量门通过后提交专用分支。"
+    - "候选分支未合并 main、未 push。"
+  next_agent: "codex/人工：审查专用分支后决定是否集成；本自动化不合并、不 push。"

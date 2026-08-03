@@ -6655,6 +6655,27 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 ---
 
+
+### 2026-08-03 [D6.13.3 v1.1 SLO 设计契约] — 候选收口
+
+#### 1. 本次修改内容
+
+- **候选 commit**：`558f924`；新增 `docs/v1.1-slo-contract.md` 与任务包，共 5 个 SLO 维度
+- 固定 SLI、窗口、阈值、三态/激活规则、统一告警 schema、去重/冷却/恢复和 P3 fail-closed 边界
+- 仅 docs-only；未接运行时、通知、LaunchAgent、SMTP、Feature Flag、`ENABLE_*` 或真实业务数据
+
+#### 2. 风险点
+
+- 5 个 SLO 当前全部为 `inactive` 设计稿；不得标成已监测，阈值仍需后续冻结版本验证
+- P3 资格不因本文变化；历史 attention、输入缺失或不完整窗口均不得解释为 PASS
+
+#### 3. 当前项目整体总结
+
+- **质量证据**：Markdown lint 0 issue；任务 YAML 可解析；5 维度语义检查与 `git diff --check` 通过
+- **下一棒**：只审查候选分支；P3 30 天资格通过且用户授权前，不实现 SLO 聚合或看板
+
+---
+
 ### 2026-08-04 [D6.11.2 Feature Flag 只读 readiness 审计] — 收口
 
 #### 1. 本次修改内容
