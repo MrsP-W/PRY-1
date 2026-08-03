@@ -27,10 +27,10 @@ requires_approval: false
 max_attempts: 2
 max_runtime_minutes: 45
 depends_on: []
-status: review
+status: ready_to_merge
 
 result:
-  summary: "已按交叉审查修复 v1.1 design-only SLO 契约：安全门覆盖、latency p99、freshness 边界和告警状态口径自洽；等待 Codex 复验。"
+  summary: "已修复并通过 ref-bound 复验：安全门覆盖、latency p99、freshness 边界和告警状态口径自洽；恢复 ready_to_merge。"
   changed_files:
     - "MODIFICATION-LOG.md"
     - "docs/agent-team/tasks/TASK-20260803-008-d6133-slo-contract.yaml"
@@ -42,11 +42,11 @@ result:
     - "ref-bound git diff --check：通过"
     - "精确白名单：相对 566c1a8 仅 3 个 docs 文件"
     - "语义检查：SLO 维度恰好 5 个；目标、breach、unknown 与窗口边界一致"
+    - "复验：decision coverage、窗口两端 interval、p99 breach、三态 evaluation_status 均命中契约断言"
   risks:
     - "全部阈值仍是 inactive 设计稿；P3 内不得把它们标成已监测或接入告警运行时。"
-    - "原候选曾被交叉审查判 FAIL；本修复仍是 inactive 设计稿，复验通过前不得进入 ready_to_merge。"
+    - "原候选曾被交叉审查判 FAIL；本修复已通过 docs-only 复验，但 5 项仍全部 inactive。"
   unresolved:
-    - "由 Codex 重新交叉验收修复分支；只有复验 PASS 才可恢复 ready_to_merge。"
     - "只有 P3 30 天资格通过且用户授权后，才可另开任务评估只读聚合或看板实现。"
     - "修复分支未合并 main、未 push。"
-  next_agent: "codex：对修复分支做 ref-bound 复验；本自动化不合并、不 push。"
+  next_agent: "codex/人工：决定是否集成 ready_to_merge 候选；本自动化不合并、不 push。"
