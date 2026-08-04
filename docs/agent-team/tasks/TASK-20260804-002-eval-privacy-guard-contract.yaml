@@ -1,0 +1,40 @@
+task_id: TASK-20260804-002-eval-privacy-guard-contract
+objective: "docs-only：修正 TASK-20260804-001 的验收解释器路径，使独立 worktree 可复现。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
+  - "docs/agent-team/tasks/TASK-20260804-002-eval-privacy-guard-contract.yaml"
+acceptance_commands:
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-002-eval-privacy-guard-contract.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on:
+  - TASK-20260804-001-eval-privacy-guard
+status: done
+
+result:
+  summary: "修正 TASK-20260804-001 的两个 Python 验收命令为项目共享解释器绝对路径，避免独立 worktree 因缺少 .venv 而不可复现。"
+  changed_files:
+    - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
+    - "docs/agent-team/tasks/TASK-20260804-002-eval-privacy-guard-contract.yaml"
+  verification:
+    - "相关 pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov：54 passed"
+    - "两个 task-contract YAML：解析通过，验收命令路径检查通过"
+    - "git diff --check：通过"
+  risks:
+    - "仅修正 docs 任务契约，不改变测试实现、业务代码或运行时。"
+    - "解释器路径绑定当前项目本机绝对路径；这是现有项目任务包的执行约定。"
+  unresolved:
+    - "未运行全仓库 make ci；本任务仅验证相关契约测试。"
+  next_agent: "codex：只读复核后决定是否集成两个本地提交；不自动合并或 push。"

@@ -13,8 +13,8 @@ writable_paths:
   - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
   - "tests/eval/test_eval_fixtures_schema.py"
 acceptance_commands:
-  - ".venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
-  - ".venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
   - "git diff --check"
 risk_level: low
 requires_approval: false
