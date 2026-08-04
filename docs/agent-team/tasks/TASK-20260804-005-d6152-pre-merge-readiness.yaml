@@ -27,7 +27,7 @@ max_attempts: 1
 max_runtime_minutes: 30
 depends_on:
   - "TASK-20260804-004-d6152-feedback-readiness"
-status: ready_to_merge
+status: done
 
 result:
   summary: |

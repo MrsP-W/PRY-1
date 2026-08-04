@@ -30,7 +30,7 @@ requires_approval: false
 max_attempts: 1
 max_runtime_minutes: 30
 depends_on: []
-status: ready_to_merge
+status: done
 
 result:
   summary: "只读审计 D6.11.2 设计大纲：文档成熟度高，集成仍被 5 个 Q + P3 7d 双重门控；建议保持 design-only 状态至 P3 7d 通过后再拍板 Q1/Q4 启动 P2 代码骨架候选。"

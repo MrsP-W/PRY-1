@@ -26,7 +26,7 @@ max_runtime_minutes: 30
 depends_on:
   - "TASK-20260804-003-d6112-feature-flag-readiness"
   - "TASK-20260804-004-d6152-feedback-readiness"
-status: ready_to_merge
+status: done
 
 # 实施完成后回填；不得省略验证证据。
 result:
