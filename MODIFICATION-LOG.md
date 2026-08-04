@@ -6737,3 +6737,25 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 #### 3. 当前项目整体总结
 - HEAD=`ce975f5` ahead origin 1；未 push
+
+---
+
+### 2026-08-04 [D6.15.2 Feedback schema 只读 readiness 审计] — 收口
+
+#### 1. 本次修改内容
+
+- 新增 `tests/eval/audit/feedback-schema-readiness-20260804.md`：D6.15.2 设计契约只读 readiness 审计
+- 新增 `docs/agent-team/tasks/TASK-20260804-004-d6152-feedback-readiness.yaml`：任务契约
+- MODIFICATION-LOG：本条
+
+#### 2. 风险点
+
+- **候选在 `claude/d6152-feedback-schema-20260803` 分支**：本轮不动候选原文，仅产出独立审计报告
+- **摘要密钥生命周期未设计**：未来密钥操作必须走独立凭据审批任务，不得随集成一并实施
+- **P3 7d 未通过前不得实施落库/采集器**：即便审计通过，仍需等待时间窗
+
+#### 3. 当前项目整体总结
+
+- 审计结论：设计成熟度高（11 节 + 11/11 验收勾选）；集成仍被摘要密钥生命周期 + P3 7d 双重门控
+- 下一棒：等待用户决定是否集成本审计报告；可选另开凭据审批任务评估密钥生命周期
+- 主工作树 `main = 7b6c0c1`，ahead origin/main 6，13 项用户未跟踪 WIP 完整保留

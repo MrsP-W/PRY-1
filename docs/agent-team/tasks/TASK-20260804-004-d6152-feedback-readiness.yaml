@@ -1,0 +1,57 @@
+task_id: TASK-20260804-004
+objective: "为 v1.1-A / Step 6 起草 D6.15.2 Feedback schema 设计契约的只读 readiness 审计报告：核对结构完整性、四态语义、隐私边界、闭环设计、P3 安全门一致性与集成前阻塞；不修改设计文档本身，不实施落库、采集器、UI 或摘要密钥，不读写真实数据。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "docs/v1.1-evolution-foundation.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+  - "docs/v1.1-slo-contract.md"
+  - "docs/v0.2-D6.11.2-feature-flag-design-outline.md"
+  - "tests/eval/audit/feature-flag-readiness-20260804.md"
+  - "CLAUDE.md"
+  - "SESSION-STATE.md"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-004-d6152-feedback-readiness.yaml"
+  - "tests/eval/audit/feedback-schema-readiness-20260804.md"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 tests/eval/audit/feedback-schema-readiness-20260804.md"
+  - "npx --no-install markdownlint-cli2 MODIFICATION-LOG.md"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; yaml.safe_load(pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-004-d6152-feedback-readiness.yaml\").read_text())'"
+  - "git merge-base 7b6c0c1 HEAD"
+  - "git diff --check 7b6c0c1...HEAD"
+  - "git diff --name-only 7b6c0c1...HEAD"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import subprocess; actual=subprocess.check_output([\"git\",\"diff\",\"--name-only\",\"7b6c0c1...HEAD\"],text=True).splitlines(); expected={\"MODIFICATION-LOG.md\",\"docs/agent-team/tasks/TASK-20260804-004-d6152-feedback-readiness.yaml\",\"tests/eval/audit/feedback-schema-readiness-20260804.md\"}; assert len(actual)==3 and set(actual)==expected, (actual,expected); print(\"whitelist: ok\")'"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib; body=pathlib.Path(\"tests/eval/audit/feedback-schema-readiness-20260804.md\").read_text(); assert \"adopt\" in body and \"modify\" in body and \"reject\" in body and \"unknown\" in body, \"missing 4-state\"; assert \"fail-closed\" in body or \"fail_closed\" in body, \"missing fail-closed\"; assert \"append-only\" in body or \"append\" in body, \"missing append\"; assert \"P3\" in body and \"7d\" in body, \"missing P3 plan\"; print(\"semantic: ok\")'"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on: []
+status: ready_to_merge
+
+result:
+  summary: "只读审计 D6.15.2 Feedback schema 设计契约：文档成熟度高、11 节 + 11/11 验收勾选；集成仍被摘要密钥生命周期未设计 + P3 7d 双重门控；建议保持 design-only 至 P3 7d 通过后另开凭据审批任务评估密钥生命周期。"
+  changed_files:
+    - "MODIFICATION-LOG.md"
+    - "docs/agent-team/tasks/TASK-20260804-004-d6152-feedback-readiness.yaml"
+    - "tests/eval/audit/feedback-schema-readiness-20260804.md"
+  verification:
+    - "markdownlint-cli2 tests/eval/audit/feedback-schema-readiness-20260804.md：0 issues"
+    - "markdownlint-cli2 MODIFICATION-LOG.md：0 issues"
+    - "task-contract YAML：解析通过"
+    - "ref-bound git diff --check：通过"
+    - "精确白名单：相对 7b6c0c1 仅 3 个 docs 文件"
+    - "语义检查：4 态 + fail-closed + append-only + P3/7d 均命中"
+  risks:
+    - "摘要密钥生命周期、轮换、旧摘要兼容均未设计；凭据操作必须走独立人工审批任务。"
+    - "P3 attention 仍非空；7d 通过前提不可被审计结果覆盖。"
+    - "文档本身在候选分支 `claude/d6152-feedback-schema-20260803`；本轮不修改候选原文。"
+  unresolved:
+    - "等用户决定是否集成本审计报告（commit 待生成）；后续需另开凭据审批任务评估密钥生命周期。"
+    - "审计报告分支未合并 main、未 push；保留 ready_to_merge 等待集成审批。"
+  next_agent: "codex/人工：决定是否集成 ready_to_merge 候选；本自动化不合并、不 push。"
