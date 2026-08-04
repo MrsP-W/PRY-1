@@ -1,0 +1,46 @@
+task_id: TASK-20260804-003-eval-fixture-id-guard
+objective: "tests-only：统一 email_classify fixture ID，并以 schema 契约强制 ID 包含 suite 前缀。"
+task_type: tests
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "tests/eval/SCHEMA.md"
+  - "tests/eval/test_eval_fixtures_schema.py"
+  - "tests/eval/fixtures/email_classify/002_system_sender_spam.json"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-003-eval-fixture-id-guard.yaml"
+  - "tests/eval/test_eval_fixtures_schema.py"
+  - "tests/eval/fixtures/email_classify/002_system_sender_spam.json"
+acceptance_commands:
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/ruff check tests/eval/test_eval_fixtures_schema.py"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-003-eval-fixture-id-guard.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on:
+  - TASK-20260804-001-eval-privacy-guard
+  - TASK-20260804-002-eval-privacy-guard-contract
+status: done
+
+result:
+  summary: "统一 email_classify_002 fixture ID，并新增 schema 测试强制每个 fixture ID 使用对应 suite 前缀。"
+  changed_files:
+    - "tests/eval/fixtures/email_classify/002_system_sender_spam.json"
+    - "tests/eval/test_eval_fixtures_schema.py"
+    - "docs/agent-team/tasks/TASK-20260804-003-eval-fixture-id-guard.yaml"
+  verification:
+    - "pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov：69 passed"
+    - "ruff check tests/eval/test_eval_fixtures_schema.py：通过"
+    - "task-contract YAML：解析通过"
+    - "git diff --check：通过"
+  risks:
+    - "仅修改合成 fixture 与测试契约，不改变业务代码、运行时或真实数据。"
+  unresolved:
+    - "未运行全仓库 make ci；本原子任务仅验证相关 eval 套件。"
+  next_agent: "codex：只读复核后决定是否集成 b019043、02943f8 与本提交；不自动合并或 push。"

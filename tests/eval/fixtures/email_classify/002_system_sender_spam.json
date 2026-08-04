@@ -1,5 +1,5 @@
 {
-  "id": "email_spam_001",
+  "id": "email_classify_002",
   "suite": "email_classify",
   "capability_id": "ai.classifier",
   "desensitized": true,

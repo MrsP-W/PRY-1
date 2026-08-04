@@ -72,6 +72,15 @@ def test_eval_fixture_schema(path: Path) -> None:
 
 
 @pytest.mark.parametrize("path", _fixture_paths(), ids=lambda p: str(p.relative_to(FIXTURES_ROOT)))
+def test_eval_fixture_id_matches_suite(path: Path) -> None:
+    data = json.loads(path.read_text(encoding="utf-8"))
+    expected_prefix = f"{data['suite']}_"
+    assert data["id"].startswith(expected_prefix), (
+        f"{path.name} id must start with its suite prefix: {expected_prefix}"
+    )
+
+
+@pytest.mark.parametrize("path", _fixture_paths(), ids=lambda p: str(p.relative_to(FIXTURES_ROOT)))
 def test_eval_fixture_emails_use_reserved_domains(path: Path) -> None:
     data = json.loads(path.read_text(encoding="utf-8"))
     for value in _string_values(data):
