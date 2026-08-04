@@ -6708,3 +6708,18 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 审计结论：设计成熟度高（11/11 节完整）；集成仍被 5 Q + P3 7d 双重门控
 - 下一棒：等待用户决定是否集成本审计报告；可选拍板 Q1（JSON vs SQLCipher）+ Q4（健康度阈值）
 - 主工作树 `main = e502e40`，ahead origin/main 1，13 项用户未跟踪 WIP 完整保留
+
+## 2026-08-04 13:54
+
+- 产物：D6.13.3 SLO 从 design-only 切换到 active 的实施前置清单（docs-only）。
+- 范围：docs-only；不实施任何采集器、告警、看板、调度或写入；不修订 v1.1-slo-contract.md 5 维度定义。
+- 文件：
+  - tests/eval/audit/d6133-slo-active-prereqs-20260804.md（新增）
+  - docs/agent-team/tasks/TASK-20260804-006-d6133-slo-active-prereqs.yaml（新增）
+  - MODIFICATION-LOG.md（本条）
+- 验证：markdownlint 0 errors（待跑）；YAML 解析（待跑）；git diff --check（待跑）；3 文件白名单通过。
+- 分支：codex/ai-agent-d6133-slo-active-prereqs-20260804；基线 main=7b6c0c1；ahead=0。
+- 工作树：/tmp/wt-d6133-active；用户未跟踪 WIP 未触碰；未 push；未合并；未跨人工审批门。
+- 模型：gpt-5.6-luna 主 Agent；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；本前置清单不构成任何 active 切换的实施授权；切 active 必须新开任务包并经集成审批 + push 单独明确。
+- 下一棒：等待用户在 P3 7d 通过时点另开 SLO active 实施任务；或单独批准集成既有候选 `11f92ef` / `eba1050` / `69cbb2f`。

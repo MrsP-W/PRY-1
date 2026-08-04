@@ -1,0 +1,50 @@
+# D6.13.3 SLO 从 design-only 切换到 active 的实施前置清单（docs-only）
+task_id: TASK-20260804-006-d6133-slo-active-prereqs
+objective: |
+  列 D6.13.3 SLO 5 维度从 inactive 切到 active 的通用与维度独立前置、
+  阻断条件与不在评估范围；不实施任何采集器、告警、看板或写入。
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "docs/v1.1-slo-contract.md"
+  - "tests/eval/audit/feedback-schema-readiness-20260804.md"
+  - "tests/eval/audit/feedback-key-lifecycle-20260804.md"
+  - "tests/eval/audit/d6152-pre-merge-readiness-20260804.md"
+writable_paths:
+  - "tests/eval/audit/d6133-slo-active-prereqs-20260804.md"
+  - "docs/agent-team/tasks/TASK-20260804-006-d6133-slo-active-prereqs.yaml"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "cd /tmp/wt-d6133-active && /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c \"import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260804-006-d6133-slo-active-prereqs.yaml'))\""
+  - "cd /tmp/wt-d6133-active && git diff --check"
+  - "cd /tmp/wt-d6133-active && git status --porcelain | awk '{print $2}' | sort -u"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260803-008-d6133-slo-contract"
+status: ready_to_merge
+
+result:
+  summary: |
+    docs-only 实施前置清单完成：列 8 项通用前置 + 5 维度独立前置 +
+    6 项阻断条件；不实施任何采集/告警/看板/写入；不修订
+    docs/v1.1-slo-contract.md；不触动用户 WIP。
+  changed_files:
+    - "tests/eval/audit/d6133-slo-active-prereqs-20260804.md"
+    - "docs/agent-team/tasks/TASK-20260804-006-d6133-slo-active-prereqs.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "YAML 解析通过（绝对路径 .venv/bin/python）"
+    - "git diff --check 退出 0"
+    - "3 文件白名单严格符合"
+    - "markdownlint-cli2 0 errors（如可用）"
+  risks:
+    - "本文不构成任何 active 切换的实施授权；切 active 必须新开任务包 + 经集成审批 + push 单独明确"
+    - "本文与既有候选 11f92ef/eba1050/69cbb2f 兼容，不替代其集成路径"
+  unresolved:
+    - "SLO-4 capability latency 采集器当前未实施；属 future task，不在本评估范围"
+  next_agent: "等待用户在 P3 7d 通过时点另开 SLO active 实施任务；本文作为前置输入"
