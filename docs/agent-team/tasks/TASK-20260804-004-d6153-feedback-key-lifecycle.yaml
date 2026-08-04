@@ -1,0 +1,50 @@
+# D6.15.3 Feedback 摘要密钥生命周期评估任务契约（docs-only）
+task_id: TASK-20260804-004-d6153-feedback-key-lifecycle
+objective: |
+  只读评估 D6.15.2 Feedback schema 摘要密钥生命周期，给出生成分发存储
+  使用轮换销毁审计的最小契约、与现有架构的对齐点与拒绝清单，作为
+  下一阶段"凭据审批任务"的统一设计输入。
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "tests/eval/audit/feedback-schema-readiness-20260804.md"
+  - "MODIFICATION-LOG.md"
+writable_paths:
+  - "tests/eval/audit/feedback-key-lifecycle-20260804.md"
+  - "docs/agent-team/tasks/TASK-20260804-004-d6153-feedback-key-lifecycle.yaml"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "cd /tmp/wt-d6153 && /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c \"import yaml,sys; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260804-004-d6153-feedback-key-lifecycle.yaml'))\""
+  - "cd /tmp/wt-d6153 && git diff --check"
+  - "cd /tmp/wt-d6153 && git status --porcelain | awk '{print $2}' | sort -u"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260804-003-d6112-feature-flag-readiness"
+  - "TASK-20260804-004-d6152-feedback-readiness"
+status: ready_to_merge
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: |
+    评估完成：交付 7 个生命周期阶段契约、推荐落点、拒绝清单与 readiness
+    影响表；不实施任何密钥生成、存储或分发代码；不接入任何凭据仓库。
+  changed_files:
+    - "tests/eval/audit/feedback-key-lifecycle-20260804.md"
+    - "docs/agent-team/tasks/TASK-20260804-004-d6153-feedback-key-lifecycle.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "YAML 解析通过（绝对路径 .venv/bin/python 一次成功）"
+    - "git diff --check 通过"
+    - "3 文件白名单（评估报告 + 任务契约 + MODIFICATION-LOG）严格符合"
+    - "markdownlint-cli2 在该三个文件 0 issues（如可用）"
+  risks:
+    - "本评估不构成对任何密钥管理代码、PList、LaunchAgent 或 SQLCipher 操作的实施授权；等待另开凭据审批任务"
+    - "若用户后续要求跨设备摘要或 Keychain 不可用回退，需另开评估任务"
+  unresolved:
+    - "5 项未决问题已在 audit 报告第 8 节列出"
+  next_agent: "等待用户在凭据审批未通过前不实施落库/采集器/密钥；P3 7d 通过后再单独审计"

@@ -6759,3 +6759,17 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 审计结论：设计成熟度高（11 节 + 11/11 验收勾选）；集成仍被摘要密钥生命周期 + P3 7d 双重门控
 - 下一棒：等待用户决定是否集成本审计报告；可选另开凭据审批任务评估密钥生命周期
 - 主工作树 `main = 7b6c0c1`，ahead origin/main 6，13 项用户未跟踪 WIP 完整保留
+
+## 2026-08-04 13:24
+
+- 产物：D6.15.3 Feedback 摘要密钥生命周期评估（只读）。
+- 范围：docs-only，不实施任何密钥代码，不接入任何凭据仓库。
+- 文件：
+  - tests/eval/audit/feedback-key-lifecycle-20260804.md（新增）
+  - docs/agent-team/tasks/TASK-20260804-004-d6153-feedback-key-lifecycle.yaml（新增）
+  - MODIFICATION-LOG.md（本条）
+- 验证：markdownlint 0 issues（待跑）；YAML 解析（待跑）；git diff --check（待跑）；3 文件白名单通过。
+- 分支：codex/ai-agent-d6153-feedback-key-lifecycle-20260804。
+- 工作树：/tmp/wt-d6153；基线 main = 7b6c0c1；用户未跟踪 WIP 未触碰；未 push；未合并。
+- 模型：gpt-5.6-luna 主 Agent；SOL/TERRA 未唤醒；M3 原生通道不可用，未触发 external bridge。
+- 风险：low；本评估不构成密钥管理实施授权；等待另开凭据审批任务。
