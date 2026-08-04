@@ -1,0 +1,10 @@
+{
+  "id": "email_classify_010",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {"subject": "请审批采购申请", "sender": "procurement@example.com", "body_excerpt": "该申请等待你的确认后才能继续。"},
+  "expected": {"category": "TODO", "blocked": false}
+}

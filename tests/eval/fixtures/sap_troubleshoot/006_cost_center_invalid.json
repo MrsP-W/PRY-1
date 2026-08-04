@@ -1,0 +1,10 @@
+{
+  "id": "sap_troubleshoot_006",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {"symptom": "成本中心无效", "context": "费用凭证使用的成本中心已停用。"},
+  "expected": {"must_include": ["成本中心", "有效期"], "citations_required": true, "blocked": false}
+}

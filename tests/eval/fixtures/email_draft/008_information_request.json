@@ -1,0 +1,10 @@
+{
+  "id": "email_draft_008",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {"subject": "请提供接口说明", "sender": "colleague@example.com", "body_excerpt": "请分享当前接口字段定义。", "category": "REFERENCE"},
+  "expected": {"must_include": ["说明"], "must_not_include": ["密码", "token"], "blocked": false}
+}

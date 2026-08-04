@@ -1,0 +1,10 @@
+{
+  "id": "email_draft_005",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {"subject": "项目排期确认", "sender": "vendor@example.com", "body_excerpt": "请确认下周交付排期。", "category": "TODO"},
+  "expected": {"must_include": ["确认", "下周"], "must_not_include": ["http://", "银行卡"], "blocked": false}
+}

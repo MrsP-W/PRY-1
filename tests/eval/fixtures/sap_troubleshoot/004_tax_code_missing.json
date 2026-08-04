@@ -1,0 +1,10 @@
+{
+  "id": "sap_troubleshoot_004",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {"symptom": "FB60 提示税码不存在", "context": "公司代码 1000，录入进项税码时失败。"},
+  "expected": {"must_include": ["税码", "公司代码"], "citations_required": true, "blocked": false}
+}

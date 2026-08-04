@@ -1,0 +1,10 @@
+{
+  "id": "email_draft_009",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {"subject": "跟进上周问题", "sender": "partner@example.com", "body_excerpt": "请告知上周问题的处理进展。", "category": "TODO"},
+  "expected": {"must_include": ["进展", "感谢"], "must_not_include": ["http://"], "blocked": false}
+}

@@ -1,0 +1,10 @@
+{
+  "id": "email_classify_013",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {"subject": "周度系统状态摘要", "sender": "monitor@example.com", "body_excerpt": "本周任务均已完成，无需人工操作。"},
+  "expected": {"category": "REFERENCE", "blocked": false}
+}

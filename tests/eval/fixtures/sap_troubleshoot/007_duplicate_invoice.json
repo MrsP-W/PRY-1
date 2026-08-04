@@ -1,0 +1,10 @@
+{
+  "id": "sap_troubleshoot_007",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "reject",
+  "input": {"symptom": "供应商发票疑似重复", "context": "同一供应商与参考号已存在历史凭证。"},
+  "expected": {"must_include": ["重复", "参考号"], "citations_required": true, "blocked": true}
+}

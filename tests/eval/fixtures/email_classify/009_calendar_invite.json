@@ -1,0 +1,10 @@
+{
+  "id": "email_classify_009",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {"subject": "日历邀请：预算复盘", "sender": "planner@example.com", "body_excerpt": "已邀请你参加下周预算复盘会议。"},
+  "expected": {"category": "CALENDAR", "blocked": false}
+}

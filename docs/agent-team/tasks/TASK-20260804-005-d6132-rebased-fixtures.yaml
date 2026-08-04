@@ -1,0 +1,73 @@
+task_id: TASK-20260804-005-d6132-rebased-fixtures
+objective: "tests-only：以当前 main guards 为基线移植 D6.13.2 的 15 条新增 fixture，达到 30 条跨 suite 脱敏样本。"
+task_type: tests
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "tests/eval/SCHEMA.md"
+  - "tests/eval/test_eval_fixtures_schema.py"
+  - "tests/eval/fixtures/"
+  - "docs/agent-team/tasks/TASK-20260804-004-d6132-guard-audit.yaml"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-005-d6132-rebased-fixtures.yaml"
+  - "tests/eval/SCHEMA.md"
+  - "tests/eval/fixtures/email_classify/009_calendar_invite.json"
+  - "tests/eval/fixtures/email_classify/010_action_approval.json"
+  - "tests/eval/fixtures/email_classify/011_receipt_record.json"
+  - "tests/eval/fixtures/email_classify/012_password_reset_phishing.json"
+  - "tests/eval/fixtures/email_classify/013_status_digest.json"
+  - "tests/eval/fixtures/email_draft/005_vendor_schedule.json"
+  - "tests/eval/fixtures/email_draft/006_sensitive_payment_request.json"
+  - "tests/eval/fixtures/email_draft/007_meeting_reschedule.json"
+  - "tests/eval/fixtures/email_draft/008_information_request.json"
+  - "tests/eval/fixtures/email_draft/009_followup_reminder.json"
+  - "tests/eval/fixtures/sap_troubleshoot/004_tax_code_missing.json"
+  - "tests/eval/fixtures/sap_troubleshoot/005_period_closed.json"
+  - "tests/eval/fixtures/sap_troubleshoot/006_cost_center_invalid.json"
+  - "tests/eval/fixtures/sap_troubleshoot/007_duplicate_invoice.json"
+  - "tests/eval/fixtures/sap_troubleshoot/008_payment_block.json"
+acceptance_commands:
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/ruff check tests/eval/test_eval_fixtures_schema.py"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; root=pathlib.Path(\"tests/eval/fixtures\"); assert len(list(root.rglob(\"*.json\"))) == 30; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-005-d6132-rebased-fixtures.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"fixture-count-and-contract: ok\")'"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on:
+  - TASK-20260804-004-d6132-guard-audit
+status: done
+
+result:
+  summary: "以 main@6771036 的 privacy/ID guards 为基线移植 15 条新增 synthetic fixture，达到 30 条跨 3 suite 样本。"
+  changed_files:
+    - "tests/eval/SCHEMA.md"
+    - "tests/eval/fixtures/email_classify/009_calendar_invite.json"
+    - "tests/eval/fixtures/email_classify/010_action_approval.json"
+    - "tests/eval/fixtures/email_classify/011_receipt_record.json"
+    - "tests/eval/fixtures/email_classify/012_password_reset_phishing.json"
+    - "tests/eval/fixtures/email_classify/013_status_digest.json"
+    - "tests/eval/fixtures/email_draft/005_vendor_schedule.json"
+    - "tests/eval/fixtures/email_draft/006_sensitive_payment_request.json"
+    - "tests/eval/fixtures/email_draft/007_meeting_reschedule.json"
+    - "tests/eval/fixtures/email_draft/008_information_request.json"
+    - "tests/eval/fixtures/email_draft/009_followup_reminder.json"
+    - "tests/eval/fixtures/sap_troubleshoot/004_tax_code_missing.json"
+    - "tests/eval/fixtures/sap_troubleshoot/005_period_closed.json"
+    - "tests/eval/fixtures/sap_troubleshoot/006_cost_center_invalid.json"
+    - "tests/eval/fixtures/sap_troubleshoot/007_duplicate_invoice.json"
+    - "tests/eval/fixtures/sap_troubleshoot/008_payment_block.json"
+    - "docs/agent-team/tasks/TASK-20260804-005-d6132-rebased-fixtures.yaml"
+  verification:
+    - "pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov：129 passed"
+    - "ruff check tests/eval/test_eval_fixtures_schema.py：通过"
+    - "fixture count=30、task-contract YAML：通过"
+    - "git diff --check：通过"
+  risks:
+    - "仅新增 synthetic 脱敏 fixture 与 schema 规模说明，不修改业务代码、运行时或真实数据。"
+    - "新增 fixture 沿用候选内容，但已在当前 main guards 下重新验收。"
+  unresolved:
+    - "未运行全仓库 make ci；本原子任务仅验证 eval schema 套件。"
+  next_agent: "codex：只读复核候选后再申请集成审批；不自动合并或 push。"

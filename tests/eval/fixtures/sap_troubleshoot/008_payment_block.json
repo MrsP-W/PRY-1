@@ -1,0 +1,10 @@
+{
+  "id": "sap_troubleshoot_008",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "unknown",
+  "input": {"symptom": "付款建议未包含供应商项目", "context": "发票已过账但付款状态显示冻结。"},
+  "expected": {"must_include": ["付款冻结", "供应商"], "citations_required": true, "blocked": false}
+}

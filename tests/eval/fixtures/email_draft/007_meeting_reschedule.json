@@ -1,0 +1,10 @@
+{
+  "id": "email_draft_007",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {"subject": "调整会议时间", "sender": "teammate@example.com", "body_excerpt": "原定周二会议需要改期。", "category": "CALENDAR"},
+  "expected": {"must_include": ["时间", "方便"], "must_not_include": ["unsubscribe"], "blocked": false}
+}

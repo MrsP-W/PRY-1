@@ -1,0 +1,10 @@
+{
+  "id": "sap_troubleshoot_005",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {"symptom": "凭证过账提示期间已关闭", "context": "月结后补录供应商发票。"},
+  "expected": {"must_include": ["过账期间", "月结"], "citations_required": true, "blocked": false}
+}
