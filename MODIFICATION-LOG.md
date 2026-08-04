@@ -117,7 +117,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3200 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **310 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
+| **质量基线** | **3200 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **313 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
 | **下一棒** | **P3 新 Day0 观察期**(Day0=`2026-07-27T05:34:24Z` `collecting` · 首份日报门槛 2026-07-29T00:00Z · 7d 2026-08-03 · 30d 2026-08-26)· 旧 epoch `fail_attention` 已归档;扩评测样本至 30+ 脱敏;**不改 LaunchAgent/调度**;不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -6788,3 +6788,17 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 模型：gpt-5.6-luna 主 Agent；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge。
 - 风险：low；核验结果支持用户下一轮单独批准集成 `11f92ef`，不构成越权集成。
 - 下一棒：等待用户在下一轮单独批准"集成 `11f92ef`"或维持 PENDING；候选集成后 main 会 ahead=1，需要再次 push 明确。
+
+
+### 2026-08-04 [集成批准] Feedback 三候选 docs-only — 收口
+
+#### 1. 本次修改内容
+- 用户「继续」后 cherry-pick：`11f92ef` → `eba1050` → `69cbb2f`（仅 MODIFICATION-LOG 追加冲突，双方保留）
+- MD lint 310→313；pytest 基线仍 3200/1（#107）
+
+#### 2. 风险点
+- 仍为只读审计/评估，不实施 Feedback 写库、密钥接入或 Feature Flag
+- 未 push
+
+#### 3. 当前项目整体总结
+- HEAD 以 `git rev-parse --short HEAD` 为准；ahead origin 累计增加；SLO 仍 inactive
