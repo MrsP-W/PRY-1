@@ -1,0 +1,55 @@
+task_id: TASK-20260804-003
+objective: "为 v1.1-A / Step 6 起草 D6.11.2 Feature Flag 设计大纲的只读 readiness 审计报告：核对结构完整性、与撞坑保护红线的一致性、5 个未决问题的集成前阻塞、与 P3 分期纪律和 SLO/Feedback 顺序；不修改设计大纲本身，不接入运行时，不改 ENABLE_* 行为。"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "docs/v1.1-evolution-foundation.md"
+  - "docs/v1.1-p3-observation-d-step-plan.md"
+  - "docs/v0.2-D6.11.2-feature-flag-design-outline.md"
+  - "CLAUDE.md"
+  - "SESSION-STATE.md"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-003-d6112-feature-flag-readiness.yaml"
+  - "tests/eval/audit/feature-flag-readiness-20260804.md"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 tests/eval/audit/feature-flag-readiness-20260804.md"
+  - "npx --no-install markdownlint-cli2 MODIFICATION-LOG.md"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, yaml; yaml.safe_load(pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-003-d6112-feature-flag-readiness.yaml\").read_text())'"
+  - "git merge-base e502e40 HEAD"
+  - "git diff --check e502e40...HEAD"
+  - "git diff --name-only e502e40...HEAD"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import subprocess; actual=subprocess.check_output([\"git\",\"diff\",\"--name-only\",\"e502e40...HEAD\"],text=True).splitlines(); expected={\"MODIFICATION-LOG.md\",\"docs/agent-team/tasks/TASK-20260804-003-d6112-feature-flag-readiness.yaml\",\"tests/eval/audit/feature-flag-readiness-20260804.md\"}; assert len(actual)==3 and set(actual)==expected, (actual,expected); print(\"whitelist: ok\")'"
+  - "/Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c 'import pathlib, re; body=pathlib.Path(\"tests/eval/audit/feature-flag-readiness-20260804.md\").read_text(); assert \"Q1\" in body and \"Q2\" in body and \"Q3\" in body and \"Q4\" in body and \"Q5\" in body, \"missing Q\"; assert \"L0\" in body and \"L1\" in body and \"L2\" in body, \"missing L\"; assert \"P3\" in body and \"7d\" in body and \"30d\" in body, \"missing P3 plan\"; print(\"semantic: ok\")'"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on: []
+status: ready_to_merge
+
+result:
+  summary: "只读审计 D6.11.2 设计大纲：文档成熟度高，集成仍被 5 个 Q + P3 7d 双重门控；建议保持 design-only 状态至 P3 7d 通过后再拍板 Q1/Q4 启动 P2 代码骨架候选。"
+  changed_files:
+    - "MODIFICATION-LOG.md"
+    - "docs/agent-team/tasks/TASK-20260804-003-d6112-feature-flag-readiness.yaml"
+    - "tests/eval/audit/feature-flag-readiness-20260804.md"
+  verification:
+    - "markdownlint-cli2 tests/eval/audit/feature-flag-readiness-20260804.md：0 issues"
+    - "markdownlint-cli2 MODIFICATION-LOG.md：0 issues"
+    - "task-contract YAML：解析通过"
+    - "ref-bound git diff --check：通过"
+    - "精确白名单：相对 e502e40 仅 3 个 docs 文件"
+    - "语义检查：5 个 Q + L0/L1/L2 + P3/7d/30d 均命中"
+  risks:
+    - "未决问题 Q1-Q5 任何一项未拍板即启动 P2 代码骨架，会与设计自规定冲突。"
+    - "P3 attention 仍非空；7d 通过前提不可被审计结果覆盖。"
+    - "文档本身在用户 WIP 中；本轮不修改设计大纲原文。"
+  unresolved:
+    - "等用户拍板 Q1（JSON vs SQLCipher）+ Q4（自动回滚健康度阈值）后才进入 P2 代码骨架候选起草。"
+    - "审计报告分支未合并 main、未 push；保留 ready_to_merge 等待集成审批。"
+  next_agent: "codex/人工：决定是否集成 ready_to_merge 候选；本自动化不合并、不 push。"

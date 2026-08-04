@@ -6652,3 +6652,25 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 #### 3. 当前项目整体总结
 
 - P3 冻结窗只观察；下一棒 7d 后 Feature Flag + 反馈评测，30d 后知识包/Labs
+
+---
+
+### 2026-08-04 [D6.11.2 Feature Flag 只读 readiness 审计] — 收口
+
+#### 1. 本次修改内容
+
+- 新增 `tests/eval/audit/feature-flag-readiness-20260804.md`：D6.11.2 设计大纲只读 readiness 审计
+- 新增 `docs/agent-team/tasks/TASK-20260804-003-d6112-feature-flag-readiness.yaml`：任务契约
+- MODIFICATION-LOG：本条
+
+#### 2. 风险点
+
+- **设计大纲在用户 WIP**：本轮不动原文，仅产出独立审计报告
+- **5 个 Q + P3 7d 双重门控**：未拍板 Q1/Q4 不启动 P2 代码骨架
+- **不得启用任何 flag**：即便 P3 7d 通过，flag 默认 OFF
+
+#### 3. 当前项目整体总结
+
+- 审计结论：设计成熟度高（11/11 节完整）；集成仍被 5 Q + P3 7d 双重门控
+- 下一棒：等待用户决定是否集成本审计报告；可选拍板 Q1（JSON vs SQLCipher）+ Q4（健康度阈值）
+- 主工作树 `main = e502e40`，ahead origin/main 1，13 项用户未跟踪 WIP 完整保留
