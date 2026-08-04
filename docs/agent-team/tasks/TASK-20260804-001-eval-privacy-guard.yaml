@@ -1,0 +1,41 @@
+task_id: TASK-20260804-001-eval-privacy-guard
+objective: "tests-only：为离线评测 fixture schema 增加保留邮箱域与连续长数字敏感模式守卫。"
+task_type: tests
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "AGENTS.md"
+  - "docs/agent-team/README.md"
+  - "tests/eval/SCHEMA.md"
+  - "tests/eval/test_eval_fixtures_schema.py"
+writable_paths:
+  - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
+  - "tests/eval/test_eval_fixtures_schema.py"
+acceptance_commands:
+  - ".venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov"
+  - ".venv/bin/python -c 'import pathlib, yaml; p=pathlib.Path(\"docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml\"); d=yaml.safe_load(p.read_text()); assert d[\"risk_level\"] == \"low\" and d[\"max_attempts\"] == 2; print(\"task-contract: ok\")'"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: done
+
+result:
+  summary: "离线评测 fixture schema 现自动拒绝非保留邮箱域与连续 11 位以上数字敏感模式，并覆盖嵌套 JSON 字符串。"
+  changed_files:
+    - "tests/eval/test_eval_fixtures_schema.py"
+    - "docs/agent-team/tasks/TASK-20260804-001-eval-privacy-guard.yaml"
+  verification:
+    - "pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov：54 passed"
+    - "task-contract YAML：解析通过"
+    - "ruff check tests/eval/test_eval_fixtures_schema.py：通过"
+    - "git diff --check：通过"
+  risks:
+    - "只新增测试守卫，不改变业务代码、运行时或真实数据路径。"
+    - "独立 worktree 未安装单独 .venv；验收使用项目现有共享解释器，未安装依赖。"
+  unresolved:
+    - "未运行全仓库 make ci；本原子任务仅验证相关契约测试。"
+  next_agent: "codex：只读复核后决定是否集成；不自动合并或 push。"
