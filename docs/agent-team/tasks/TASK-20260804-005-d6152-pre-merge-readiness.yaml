@@ -1,0 +1,52 @@
+# D6.15.2 候选 11f92ef 在 main@7b6c0c1 下的集成前再核验（docs-only）
+task_id: TASK-20260804-005-d6152-pre-merge-readiness
+objective: |
+  在当前 main = 7b6c0c1 上重新只读核验候选 11f92ef 是否仍保持
+  docs-only 形态、无冲突、精确 3 文件白名单、与 SLO/Feature Flag/
+  30-fixture/密钥生命周期契约不冲突；输出 docs-only 报告，给用户
+  单独批准或维持 PENDING 的直接决策依据。
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "tests/eval/audit/feedback-schema-readiness-20260804.md"
+  - "tests/eval/audit/feedback-key-lifecycle-20260804.md"
+  - "MODIFICATION-LOG.md"
+writable_paths:
+  - "tests/eval/audit/d6152-pre-merge-readiness-20260804.md"
+  - "docs/agent-team/tasks/TASK-20260804-005-d6152-pre-merge-readiness.yaml"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "cd /tmp/wt-d6152-int-check && /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c \"import yaml,sys; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260804-005-d6152-pre-merge-readiness.yaml'))\""
+  - "cd /tmp/wt-d6152-int-check && git diff --check"
+  - "cd /tmp/wt-d6152-int-check && git status --porcelain | awk '{print $2}' | sort -u"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260804-004-d6152-feedback-readiness"
+status: ready_to_merge
+
+result:
+  summary: |
+    集成前再核验完成：merge-base=7b6c0c1、0 冲突标记、3 文件白名单、
+    与 SLO/Feature Flag/30-fixture/密钥生命周期契约全部不冲突；
+    不集成候选，不动用户 WIP，不触发 push。
+  changed_files:
+    - "tests/eval/audit/d6152-pre-merge-readiness-20260804.md"
+    - "docs/agent-team/tasks/TASK-20260804-005-d6152-pre-merge-readiness.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "YAML 解析通过（绝对路径 .venv/bin/python）"
+    - "git diff --check 退出 0"
+    - "3 文件白名单严格符合"
+    - "markdownlint-cli2 0 errors（如可用）"
+  risks:
+    - "本任务不替代用户对 '集成 11f92ef' 的单独批准；不替代 push 单独明确"
+    - "若用户集成 11f92ef 后 main 上 ahead=1，需要再次明确 push"
+  unresolved:
+    - "集成动作本身待用户单独批准"
+    - "D6.11.2 Feature Flag docs 集成与 D6.15.2 schema docs 集成的次序是否一并做，由用户决定"
+  next_agent: "等待用户在下一轮单独批准集成 11f92ef 或维持 PENDING"

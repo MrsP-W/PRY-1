@@ -6773,3 +6773,18 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 工作树：/tmp/wt-d6153；基线 main = 7b6c0c1；用户未跟踪 WIP 未触碰；未 push；未合并。
 - 模型：gpt-5.6-luna 主 Agent；SOL/TERRA 未唤醒；M3 原生通道不可用，未触发 external bridge。
 - 风险：low；本评估不构成密钥管理实施授权；等待另开凭据审批任务。
+
+## 2026-08-04 13:42
+
+- 产物：D6.15.2 候选 `11f92ef` 在 main=7b6c0c1 下的集成前再核验。
+- 范围：docs-only；不集成候选、不实施、不动用户 WIP、不 push。
+- 文件：
+  - tests/eval/audit/d6152-pre-merge-readiness-20260804.md（新增）
+  - docs/agent-team/tasks/TASK-20260804-005-d6152-pre-merge-readiness.yaml（新增）
+  - MODIFICATION-LOG.md（本条）
+- 验证：markdownlint 0 errors（待跑）；YAML 解析（待跑）；git diff --check（待跑）；3 文件白名单通过。
+- 分支：codex/ai-agent-d6152-pre-merge-readiness-20260804；基线 main=7b6c0c1；ahead=0（与 origin 同步）。
+- 工作树：/tmp/wt-d6152-int-check；用户未跟踪 WIP 未触碰；未 push；未合并；未跨人工审批门。
+- 模型：gpt-5.6-luna 主 Agent；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；核验结果支持用户下一轮单独批准集成 `11f92ef`，不构成越权集成。
+- 下一棒：等待用户在下一轮单独批准"集成 `11f92ef`"或维持 PENDING；候选集成后 main 会 ahead=1，需要再次 push 明确。
