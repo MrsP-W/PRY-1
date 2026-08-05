@@ -1,0 +1,55 @@
+id: TASK-20260805-005-d6182-p3-rollover-script-audit
+title: D6.18.2 P3 epoch rollover 脚本只读审计(docs-only)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: docs-only(read-only)
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+depends_on:
+  - 候选链 0bb7fba / 1a7dec1 / 6272eb8 / f2335d4(均为 ready_to_merge)
+inputs:
+  - scripts/p3_rollover_epoch.py(93 行,WIP,只读)
+  - tests/scripts/test_p3_rollover_epoch.py(63 行,WIP,只读)
+  - docs/v1.1-a-readiness-2026-08-05.md(1a7dec1,候选门槛 #8)
+  - docs/v1.1-a-launch-plan-2026-08-05.md(f2335d4,阶段 A2)
+outputs:
+  - tests/eval/audit/p3-rollover-script-readiness-20260805.md(新增)
+  - docs/agent-team/tasks/TASK-20260805-005-d6182-p3-rollover-script-audit.yaml(新增)
+  - MODIFICATION-LOG.md(追加)
+audit_scope:
+  read_only_objects:
+    - scripts/p3_rollover_epoch.py
+    - tests/scripts/test_p3_rollover_epoch.py
+  not_touched:
+    - 13 项用户未跟踪 WIP
+    - 既有 tests/eval/test_eval_fixtures_schema.py(129 passed 基线)
+    - 既有 tests/scripts/ 其他脚本
+    - scripts/p3_burn_in_report 等运行时模块
+  dimensions:
+    - 脚本设计概述
+    - 测试覆盖评估
+    - 与 v1.1-A readiness 7d/30d 时间窗绑定
+    - 隐私边界评估
+    - Feature Flag 接口解冻协同评估
+key_findings:
+  - 设计成熟度:中等(11 核心契约点全覆盖,安全门控到位)
+  - 测试覆盖:正向 + 拒绝路径已覆盖;失败路径有意未覆盖
+  - 集成阻断:R1 异常类型白名单 + R2 watch payload 脱敏 + R3 invalid_epoch 细分(均为可选补强)
+  - 集成就绪:docs-only 层面 ready_to_merge;实施层面仍需用户单独批准
+  - 与候选链无依赖,但与 scripts/ 现有运行时同目录,需评估合并冲突
+acceptance:
+  - markdownlint tests/eval/audit/p3-rollover-script-readiness-20260805.md:0 issues
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-005-d6182-p3-rollover-script-audit.yaml'))":解析通过
+  - git diff --check:通过
+  - 文件白名单:3 文件全部为 docs-only
+  - 不修改 scripts/ 或 tests/scripts/ 任何文件
+  - 不触碰 src/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push;不启用脚本
+  - 不修改 13 项用户未跟踪 WIP
+next_actions:
+  - 用户决定是否集成本审计报告
+  - 用户决定是否启动 R1/R2/R3 补强任务(可选)
+  - 用户决定是否集成 scripts/p3_rollover_epoch.py 到 main(独立 cherry-pick)
+  - 持续观察 P3 7d 时间窗(8/6 07:04 UTC)与 attention 状态
+  - 等待 GPT 额度恢复(预计 8/8)以启用 SOL 阶段 C 审核

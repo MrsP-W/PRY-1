@@ -6891,9 +6891,30 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不修改 13 项用户未跟踪 WIP
 * 阶段 C SOL 审核依赖 GPT 额度恢复(预计 8/8);阶段 B 解封依赖用户处理 com.myaiemployee.agent 根因
 
+
+### 2026-08-05 [执行建议] D6.18.2 P3 epoch rollover 脚本只读审计 — 收口
+
+#### 1. 本次修改内容
+
+* 新增 `tests/eval/audit/p3-rollover-script-readiness-20260805.md`:脚本设计概述 + 测试覆盖评估 + v1.1-A 时间窗绑定 + 隐私边界 + FF 协同
+* 新增 `docs/agent-team/tasks/TASK-20260805-005-d6182-p3-rollover-script-audit.yaml`:任务契约
+* 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6182-p3-rollover-audit-20260805`,分支 `codex/ai-agent-d6182-p3-rollover-audit-20260805`
+
+#### 2. 风险点
+
+* 仅 docs-only 只读审计;不修改 `scripts/p3_rollover_epoch.py` 或 `tests/scripts/test_p3_rollover_epoch.py`
+* 不集成候选链 `0bb7fba / 1a7dec1 / 6272eb8 / f2335d4`;不发起 push
+* 不修改 13 项用户未跟踪 WIP;不修改既有 tests/eval/test_eval_fixtures_schema.py
+* 集成阻断:R1 异常类型白名单 + R2 watch payload 脱敏 + R3 invalid_epoch 细分(均为可选补强,非阻断)
+
 #### 3. 当前项目整体总结
 
 * HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
+<<<<<<< HEAD
 * 候选清单:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ 本轮 plan
 * 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
 * 关键日期:8/6 P3 7d 入口;8/8 GPT 额度恢复 + SOL 审核;8/29 P3 30d 入口
+=======
+* 候选清单增至 5 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ 本轮审计
+* 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
+>>>>>>> a1953e5 (docs(eval): D6.18.2 P3 epoch rollover 脚本只读审计(v1.1-A 候选门槛 #8))
