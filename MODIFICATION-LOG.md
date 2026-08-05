@@ -6910,11 +6910,6 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 #### 3. 当前项目整体总结
 
 * HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
-<<<<<<< HEAD
-* 候选清单:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ 本轮 plan
+* 候选清单增至 6 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ `a1953e5`(审计)+ `b8af81d`(轮 2 任务包)
 * 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
 * 关键日期:8/6 P3 7d 入口;8/8 GPT 额度恢复 + SOL 审核;8/29 P3 30d 入口
-=======
-* 候选清单增至 5 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ 本轮审计
-* 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
->>>>>>> a1953e5 (docs(eval): D6.18.2 P3 epoch rollover 脚本只读审计(v1.1-A 候选门槛 #8))
