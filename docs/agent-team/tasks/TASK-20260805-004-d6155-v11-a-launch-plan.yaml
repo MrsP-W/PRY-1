@@ -1,0 +1,91 @@
+id: TASK-20260805-004-d6155-v11-a-launch-plan
+title: D6.15.5 v1.1-A 启动候选上线 plan 端到端路线图(docs-only)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: docs-only
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+depends_on:
+  - 候选链 0bb7fba / 1a7dec1 / 6272eb8(均为 ready_to_merge,需用户单独批准 cherry-pick)
+  - 用户对阶段 D Feature Flag 接口解冻条件的逐项拍板
+  - GPT 额度恢复(预计 2026-08-08)以启用 SOL 阶段 C 审核
+  - 用户对 com.myaiemployee.agent 根因的处理(阶段 B)
+inputs:
+  - docs/v1.1-a-readiness-2026-08-03.md(a46fe02)
+  - docs/v1.1-a-readiness-2026-08-05.md(1a7dec1,ready_to_merge)
+  - docs/eval-fixture-coverage-30-to-40-plan.md(0bb7fba,ready_to_merge)
+  - TASK-20260805-003-d6181-fixture-batch1(6272eb8,ready_to_merge,depends_on 0bb7fba)
+  - 5 docs-only design docs(SLO chain / Feature Flag / Feedback schema / 密钥生命周期 / SLO active 实施前置)
+outputs:
+  - docs/v1.1-a-launch-plan-2026-08-05.md(新增)
+  - docs/agent-team/tasks/TASK-20260805-004-d6155-v11-a-launch-plan.yaml(新增)
+  - MODIFICATION-LOG.md(追加)
+phases:
+  - id: A
+    title: 前置准备(8/5 - 8/7,docs-only / tests-only / 只读)
+    leader: LUNA(max)/ M3(若可桥接)
+    steps:
+      - A1 落地本 plan(本轮)
+      - A2 候选门槛 #8 P3 epoch rollover 脚本审计
+      - A3 候选链 cherry-pick 集成(待用户批准)
+      - A4 P3 7d 时间窗观察(2026-08-06T07:04:45Z)
+      - A5 30→40 扩样轮 1 实施(用户明确批准)
+      - A6 30→40 扩样轮 2 任务包起草
+  - id: B
+    title: 解封条件(异步,根因处理后)
+    leader: Codex + 用户
+    steps:
+      - B1 com.myaiemployee.agent 根因处理
+      - B2 新 epoch 启动
+      - B3 P3 30d 时间窗入口
+  - id: C
+    title: SOL 审核(8/8, GPT 额度恢复后)
+    leader: SOL(gpt-5.6-sol, ultra)
+    steps:
+      - C1 SOL 启用条件触发
+      - C2 跨模块 cross-review
+      - C3 报告与状态判定
+      - C4 额度未恢复时降级
+  - id: D
+    title: Feature Flag 接口解冻(用户授权)
+    leader: 用户授权
+    steps:
+      - D1 持久化方案选定(JSON vs SQLCipher)
+      - D2 ENABLE_* 兼容层
+      - D3 运行时调用点注入
+      - D4 集成顺序
+  - id: E
+    title: v1.1-A 启动候选 task-contract(8/29 后)
+    leader: Codex → SOL
+    steps:
+      - E1 触发条件(4 必须 + D + C + 30→40)
+      - E2 task-contract 起草
+      - E3 验收后合并
+  - id: F
+    title: push / tag(E 完成后)
+    leader: 用户单独批准
+    steps:
+      - F1 push 集成
+      - F2 v1.1-A tag(若适用)
+acceptance:
+  - markdownlint docs/v1.1-a-launch-plan-2026-08-05.md:0 issues
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-004-d6155-v11-a-launch-plan.yaml'))":解析通过
+  - git diff --check:通过
+  - 文件白名单:3 文件全部为 docs-only
+  - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push;不发起 v1.1-A 解锁
+  - 不修改 13 项用户未跟踪 WIP
+key_dates:
+  - 2026-08-06T07:04:45Z: P3 7d 时间窗入口
+  - 2026-08-08: 预期 GPT 额度恢复,启用 SOL 审核
+  - 2026-08-29T05:34:24Z: P3 30d 时间窗入口(若 Day0 未重置)
+hard_blocker:
+  - com.myaiemployee.agent 根因 needs_human;不解锁 v1.1-A
+next_actions:
+  - 用户决定是否集成候选链 0bb7fba → 1a7dec1 → 6272eb8
+  - 用户决定是否集成本 plan 文档
+  - 用户决定是否启动候选门槛 #8 审计(阶段 A2)
+  - 持续观察 P3 7d 时间窗与 attention 状态
+  - 等待 GPT 额度恢复(预计 8/8)以启用 SOL 阶段 C
+  - 等待 com.myaiemployee.agent 根因处理(阶段 B)

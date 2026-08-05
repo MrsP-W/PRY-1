@@ -6874,3 +6874,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
 - 候选清单:0bb7fba(30→40 计划)+ 1a7dec1(readiness 重核)+ 后续 1a7dec1+ task pack(本次)
 - 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
+
+
+### 2026-08-05 [上线 plan] D6.15.5 v1.1-A 端到端路线图 — 收口
+
+#### 1. 本次修改内容
+
+* 新增 `docs/v1.1-a-launch-plan-2026-08-05.md`:6 阶段 plan(8/5 - 8/29+)
+* 新增 `docs/agent-team/tasks/TASK-20260805-004-d6155-v11-a-launch-plan.yaml`:任务契约
+* 独立 worktree `/private/tmp/my-ai-employee-ai-agent-v11-a-launch-plan-20260805`,分支 `codex/ai-agent-v11-a-launch-plan-20260805`
+
+#### 2. 风险点
+
+* 仅 docs-only plan 文档;不启动 v1.1-A、不修改运行时/LaunchAgent/SMTP/真实数据
+* 不集成候选链 `0bb7fba / 1a7dec1 / 6272eb8`;不发起 push
+* 不修改 13 项用户未跟踪 WIP
+* 阶段 C SOL 审核依赖 GPT 额度恢复(预计 8/8);阶段 B 解封依赖用户处理 com.myaiemployee.agent 根因
+
+#### 3. 当前项目整体总结
+
+* HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
+* 候选清单:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ 本轮 plan
+* 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
+* 关键日期:8/6 P3 7d 入口;8/8 GPT 额度恢复 + SOL 审核;8/29 P3 30d 入口
