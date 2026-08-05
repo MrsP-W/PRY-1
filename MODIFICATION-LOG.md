@@ -6922,6 +6922,23 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不修改 13 项用户未跟踪 WIP
 * 任务包 depends_on 0bb7fba + 6272eb8(均 ready_to_merge,需先集成);三段链式依赖
 
+
+### 2026-08-05 [批准 A4 8/6] D6.15.6 P3 7d 时间窗进入观察任务准备 — 收口
+
+#### 1. 本次修改内容
+
+* 新增 `tests/eval/audit/p3-7d-window-watch-2026-08-05-prep.md`:观察任务预备文档(触发条件 + 检查清单 + 报告格式 + 风险红线)
+* 新增 `docs/agent-team/tasks/TASK-20260805-007-d6156-p3-7d-window-watch-prep.yaml`:任务契约(含触发条件 + 检查项 + 预期判定)
+* 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6156-p3-7d-window-watch-20260805`,分支 `codex/ai-agent-d6156-p3-7d-window-watch-20260805`
+
+#### 2. 风险点
+
+* 仅 docs-only 预备文档;8/6 时点前不执行实际观察
+* 不集成候选链;不发起 push
+* 不修改 13 项用户未跟踪 WIP
+* 8/6 时点观察动作(填报告)需下次自动化触发时执行,本任务仅准备
+* 预期 8/6 总判定:3 PASS / 1 FAIL(对比 8/5 的 2/2);v1.1-A 启动候选仍不可解锁
+
 #### 3. 当前项目整体总结
 
 * HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
