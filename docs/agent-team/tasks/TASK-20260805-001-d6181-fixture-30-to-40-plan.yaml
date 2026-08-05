@@ -1,0 +1,31 @@
+id: TASK-20260805-001-d6181-fixture-30-to-40-plan
+title: D6.18.1 评测样本 30→40 覆盖矩阵计划(docs-only)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: docs-only
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+inputs:
+  - docs/eval-fixture-coverage-15-to-30-plan.md
+  - tests/eval/test_eval_fixtures_schema.py(基线 129 passed)
+  - main 集成历史:b019043 / 02943f8 / 056efaa(guards)
+outputs:
+  - docs/eval-fixture-coverage-30-to-40-plan.md(新增)
+  - docs/agent-team/tasks/TASK-20260805-001-d6181-fixture-30-to-40-plan.yaml(新增)
+  - MODIFICATION-LOG.md(追加)
+acceptance:
+  - markdownlint-cli2 docs/eval-fixture-coverage-30-to-40-plan.md:0 issues
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-001-d6181-fixture-30-to-40-plan.yaml'))":解析通过
+  - git diff --check:通过
+  - 文件白名单:3 文件全部为 docs-only(不落 JSON、不动 tests)
+  - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push;不发起 v1.1-A 解锁
+non_goals:
+  - 不起草 40→50 扩样计划
+  - 不实施轮 1/轮 2 落地(本任务只出计划)
+  - 不修改现有 30 条 fixture
+next_actions:
+  - 用户批准后新建 TASK-20260805-002-d6181-fixture-batch1.yaml(轮 1,5 条 fixture)
+  - 轮 1 通过后新建 TASK-20260805-003-d6181-fixture-batch2.yaml(轮 2,5 条 fixture)
+  - 全部落地后另起 docs-only 复核任务跑 readiness #5 候选门槛自评

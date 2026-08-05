@@ -6816,3 +6816,22 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 
 #### 3. 当前项目整体总结
 - HEAD 以 `git rev-parse` 为准；默认不 push
+
+
+### 2026-08-05 [重启] D6.18.1 评测样本 30→40 覆盖矩阵计划 — 收口
+
+#### 1. 本次修改内容
+- 新增 `docs/eval-fixture-coverage-30-to-40-plan.md`：30→40 选题维度 + 配比设计 + 2 轮节奏 + 与 guards 兼容性
+- 新增 `docs/agent-team/tasks/TASK-20260805-001-d6181-fixture-30-to-40-plan.yaml`：任务契约
+- 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6181-fixture-30-40-plan-20260805`，分支 `codex/ai-agent-d6181-fixture-30-40-plan-20260805`
+
+#### 2. 风险点
+- 仅 docs-only 计划文档；不落 JSON fixture；不实施轮 1/轮 2 落地
+- 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+- 不集成到 main；不 push；不发起 v1.1-A 解锁
+- 现有 30 条 fixture 在 main `2f698802` 下仍 `129 passed`；新计划任务包 `ready_to_merge`
+
+#### 3. 当前项目整体总结
+- HEAD `2f698802`；ahead origin/main 2；自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
+- 协调主 Agent `gpt-5.6-luna`（max）；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge
+- v1.1-A readiness 仍 `NOT_UNLOCKED`（4 门 2 PASS/2 FAIL，7d/30d 时间未到 + attention 未消）
