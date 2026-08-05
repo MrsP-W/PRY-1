@@ -6907,9 +6907,24 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不修改 13 项用户未跟踪 WIP;不修改既有 tests/eval/test_eval_fixtures_schema.py
 * 集成阻断:R1 异常类型白名单 + R2 watch payload 脱敏 + R3 invalid_epoch 细分(均为可选补强,非阻断)
 
+
+### 2026-08-05 [按计划和建议推进] D6.18.1 30→40 扩样轮 2 任务包 — 收口
+
+#### 1. 本次修改内容
+
+* 新增 `docs/agent-team/tasks/TASK-20260805-006-d6181-fixture-batch2.yaml`:轮 2 5 条 fixture 详细设计 + guards 兼容性 + 验收命令
+* 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6181-fixture-batch2-20260805`,分支 `codex/ai-agent-d6181-fixture-batch2-20260805`
+
+#### 2. 风险点
+
+* 仅 docs-only 任务包;不落 JSON fixture;不实施 tests-only 修改
+* 不集成候选链 0bb7fba / 6272eb8;不发起 push
+* 不修改 13 项用户未跟踪 WIP
+* 任务包 depends_on 0bb7fba + 6272eb8(均 ready_to_merge,需先集成);三段链式依赖
+
 #### 3. 当前项目整体总结
 
 * HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
-* 候选清单增至 6 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ `a1953e5`(审计)+ `b8af81d`(轮 2 任务包)
+* 候选清单增至 7 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ `a1953e5`(审计)+ `b8af81d`(轮 2 任务包)+ `72e4091`(7d 预备)
 * 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
 * 关键日期:8/6 P3 7d 入口;8/8 GPT 额度恢复 + SOL 审核;8/29 P3 30d 入口

@@ -1,0 +1,103 @@
+id: TASK-20260805-006-d6181-fixture-batch2
+title: D6.18.1 评测样本 30→40 扩样轮 2(5 条 fixture 设计,docs-only)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: tests-only(design)
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+depends_on:
+  - TASK-20260805-001-d6181-fixture-30-to-40-plan(0bb7fba,ready_to_merge,需先集成)
+  - TASK-20260805-003-d6181-fixture-batch1(6272eb8,ready_to_merge,本轮 1 任务包)
+  - b019043(eval privacy guard)
+  - 056efaa(eval fixture id guard)
+inputs:
+  - docs/eval-fixture-coverage-30-to-40-plan.md(规划)
+  - tests/eval/test_eval_fixtures_schema.py(基线 129 passed)
+  - tests/eval/fixtures/ 现有 30 条 + 轮 1 5 条(待落地)
+outputs:
+  - docs/agent-team/tasks/TASK-20260805-006-d6181-fixture-batch2.yaml(新增,本任务契约)
+  - MODIFICATION-LOG.md(追加)
+fixture_designs:
+  - id: email_classify_016
+    suite: email_classify
+    theme: 看似紧急实为 phishing(伪 CEO 付款请求)
+    body_outline: |
+      From: ceo-name@company-example.com(注意相似域名 typo)
+      Subject: URGENT - wire transfer needed today before 5pm
+      Tone: 紧迫 + 绕过流程 + 要求保密
+      Body: 伪造 CEO 口吻,要求立即电汇;无 PII 但包含典型 phishing 信号(紧迫+绕过+保密)。
+    expected_label: urgent_phishing(与 007 同类;新增对抗混淆)
+    deidentify:
+      - 保留域 company-example.com(模拟 typo 域名)
+      - 无长数字;金额用 round 数字如 28500 USD
+      - 不含真实电汇路径 / SWIFT / 账号
+  - id: email_classify_017
+    suite: email_classify
+    theme: 自报手机号 + 身份证后 6 位(PII 风险)
+    body_outline: |
+      Body: 我手机 138-0000-1234,身份证后 6 位 123456;急需补办。
+      Signal: 自报 PII 触发隐私 guard;系统应识别为「内含 PII」而非直接行动
+    expected_label: todo_reconcile(与 001 同类;新增 PII 自报场景)
+    deidentify:
+      - 手机号 138-0000-1234(已脱敏,4 位分隔)
+      - 身份证后 6 位 123456(占位,非真实)
+      - 全数字段总长不超过 13 位,避开 11+ 长数字 guard
+  - id: email_draft_012
+    suite: email_draft
+    theme: 催办 + 礼貌边界(中文 tone 边界)
+    body_outline: |
+      Recipient: ops@vendor-example.com
+      Tone: 中文 + 礼貌 + 催办;边界处理「多次未回」场景
+      Body: 关于上周提到的对账单... 麻烦本周内回执,谢谢。
+    expected_tone: polite_reminder(新 tone 类别;新增催办 + 礼貌边界)
+    deidentify:
+      - 保留域 vendor-example.com
+      - 时间描述用「上周」「本周内」,避免具体长数字日期
+  - id: sap_troubleshoot_010
+    suite: sap_troubleshoot
+    theme: 跨模块 FB60 过账失败 + FBL5N 行项目对账建议
+    body_outline: |
+      Symptom: FB60 过账失败 M8 562(成本中心不匹配)+ 建议查 FBL5N 行项目对账
+      Short dump excerpt: 短文本,≤10 行
+      Recommendation: 提示跨模块检查(FB60 + FBL5N)
+    expected_action: 提示跨模块诊断;不直接修改生产配置
+    deidentify:
+      - 错误码 M8 562(占位)
+      - 成本中心不写明具体值;用 「某成本中心」 占位
+      - 转储文本不含客户名/凭证号
+  - id: sap_troubleshoot_011
+    suite: sap_troubleshoot
+    theme: 权限报头 no authorization 角色/权限缺失
+    body_outline: |
+      Symptom: 报头 "No authorization for ... in company code 1000"
+      Short dump excerpt: 短文本,≤10 行
+      Signal: 角色/权限缺失;非技术错误
+    expected_action: 提示联系 BASIS 或权限管理员;不直接修改角色
+    deidentify:
+      - 公司代码 1000(占位)
+      - 不写明具体角色名或用户名;用 「当前角色」 占位
+      - 转储文本不含真实用户名
+guards_compatibility:
+  - b019043 保留域:5 条均使用 example.com / vendor-example.com / company-example.com 类保留域
+  - b019043 长数字:5 条均无 11+ 位连续数字;手机号带分隔、身份证后 6 位单独出现(全数字段 <11 位)
+  - 056efaa ID 前缀:id 字段统一为 email_classify_016 / 017、email_draft_012、sap_troubleshoot_010 / 011
+  - D6.14.1 脱敏:无真实客户名、邮箱、凭证号、角色名;无真实附件内容
+acceptance:
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-006-d6181-fixture-batch2.yaml'))":解析通过
+  - markdownlint MODIFICATION-LOG.md:本节 0 issues
+  - git diff --check:通过
+  - 文件白名单:2 文件全部为 docs-only(任务包 + MODIFICATION-LOG)
+  - 不落 JSON fixture;不修改既有 30 条或轮 1 5 条
+  - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push
+non_goals:
+  - 不实施轮 2 落地(本任务只出任务包)
+  - 不起草 40→50 扩样计划
+  - 不修改 schema test
+next_actions:
+  - 用户批准 0bb7fba(30→40 计划)cherry-pick 到 main
+  - 用户单独批准 6272eb8(轮 1 任务包)cherry-pick
+  - 用户单独批准本任务包 TASK-20260805-006 cherry-pick
+  - 集成后按顺序:轮 1 实施 → 轮 2 实施 → readiness #5 自评
+  - 全部落地后再起 docs-only 复核任务跑 readiness #5 候选门槛自评
