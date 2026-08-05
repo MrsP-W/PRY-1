@@ -6853,4 +6853,24 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 #### 3. 当前项目整体总结
 - HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
 - v1.1-A readiness:2 PASS / 2 FAIL(30-fixture + 5 docs-only 已集成;7d/30d 时间未到 + attention 未消)
+
+
+### 2026-08-05 [按建议执行] D6.18.1 30→40 扩样轮 1 任务包 — 收口
+
+#### 1. 本次修改内容
+
+- 新增 `docs/agent-team/tasks/TASK-20260805-003-d6181-fixture-batch1.yaml`:轮 1 5 条 fixture 详细设计 + guards 兼容性 + 验收命令
+- 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6181-fixture-batch1-20260805`,分支 `codex/ai-agent-d6181-fixture-batch1-20260805`
+
+#### 2. 风险点
+
+- 仅 docs-only 任务包;不落 JSON fixture;不实施 tests-only 修改
+- 不集成 0bb7fba(30→40 计划)/ 1a7dec1(readiness 重核);不发起 push
+- 不修改 13 项用户未跟踪 WIP
+- 任务包 depends_on 0bb7fba(集成后才能落地轮 1);链式依赖需用户逐项批准
+
+#### 3. 当前项目整体总结
+
+- HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
+- 候选清单:0bb7fba(30→40 计划)+ 1a7dec1(readiness 重核)+ 后续 1a7dec1+ task pack(本次)
 - 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge

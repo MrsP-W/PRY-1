@@ -1,0 +1,104 @@
+id: TASK-20260805-003-d6181-fixture-batch1
+title: D6.18.1 评测样本 30→40 扩样轮 1(5 条 fixture 落地)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: tests-only
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+depends_on:
+  - TASK-20260805-001-d6181-fixture-30-to-40-plan(0bb7fba,ready_to_merge,需先集成)
+  - b019043(eval privacy guard)
+  - 056efaa(eval fixture id guard)
+inputs:
+  - docs/eval-fixture-coverage-30-to-40-plan.md(规划)
+  - tests/eval/test_eval_fixtures_schema.py(基线 129 passed)
+  - tests/eval/fixtures/ 现有 30 条(13/9/8)
+outputs:
+  - tests/eval/fixtures/email_classify/014_english_invoice_reminder_with_attachment.json(新增)
+  - tests/eval/fixtures/email_classify/015_re_fw_three_layer_meeting_reschedule.json(新增)
+  - tests/eval/fixtures/email_draft/010_english_vendor_delay_apology.json(新增)
+  - tests/eval/fixtures/email_draft/011_re_invoice_query_with_attachment_note.json(新增)
+  - tests/eval/fixtures/sap_troubleshoot/009_m8_113_account_error_short_dump.json(新增)
+  - docs/agent-team/tasks/TASK-20260805-003-d6181-fixture-batch1.yaml(新增,本任务契约)
+  - MODIFICATION-LOG.md(追加)
+fixture_designs:
+  - id: email_classify_014
+    suite: email_classify
+    theme: 英文 invoice reminder + 附件
+    body_outline: |
+      From: billing@vendor-example.com
+      Subject: Invoice INV-2026-0418 reminder - payment due in 7 days
+      Attachment: invoice_2026_0418.pdf(2.3 MB)
+      Body: 英文商务 invoice reminder;明确提到附件 invoice_2026_0418.pdf;无 PII。
+    expected_label: invoice_payment_request(与 006 同类;新增英文场景)
+    deidentify:
+      - 保留域 vendor-example.com
+      - invoice 号 INV-2026-XXXX(已脱敏)
+      - attachment 大小使用 round 数字(2.3 MB,无长数字)
+  - id: email_classify_015
+    suite: email_classify
+    theme: "Re: Fw: 三层链 meeting reschedule"
+    body_outline: |
+      Subject: "Re: Fw: [external] meeting reschedule - slot conflict Tue"
+      Body: "多轮 Re: Fw: chain,中文正文,提议改期;无 PII;中英混排。"
+    expected_label: meeting_reschedule_proposal(与 004 同类;新增多轮上下文)
+    deidentify:
+      - 保留域 example.com
+      - 无长数字(日期仅 ISO 简短形式)
+  - id: email_draft_010
+    suite: email_draft
+    theme: 英文 vendor delay apology
+    body_outline: |
+      Recipient: support@vendor-example.com
+      Tone: 英文正式道歉 + 解释延迟 + 给出新 ETA
+      Body: I apologize for the delay in delivery... new ETA is next Friday.
+    expected_tone: apology_late_reply(与 002 同类;新增英文场景)
+    deidentify:
+      - 保留域 vendor-example.com
+      - ETA 用 "next Friday",避免具体长数字日期
+  - id: email_draft_011
+    suite: email_draft
+    theme: "Re: invoice query with attachment note"
+    body_outline: |
+      Recipient: billing@vendor-example.com
+      Tone: "中文 + 礼貌 + 多轮 Re: + 附件说明"
+      Body: "Re: 关于 INV-2026-0418 的疑问... 请查收附件清单附件说明.pdf。"
+    expected_tone: invoice_query_polite(与 004 同类;新增多轮 + 附件说明)
+    deidentify:
+      - 保留域 vendor-example.com
+      - attachment 名称 附件说明.pdf(中文文件名,无长数字)
+  - id: sap_troubleshoot_009
+    suite: sap_troubleshoot
+    theme: M8 113 科目错误 + 短转储文本
+    body_outline: |
+      Symptom: 过账时报错 M8 113 "Account 670000 requires an assignment"
+      Short dump excerpt: short text only, ≤10 行;无完整转储内容;无客户名/凭证号。
+    expected_action: 提示检查科目 670000 分配/成本中心;不直接修改生产配置
+    deidentify:
+      - 科目 670000(占位)
+      - 转储文本不含客户名/凭证号
+      - 短转储控制在 ≤10 行
+guards_compatibility:
+  - b019043(保留域):5 条均使用 @example.com / @vendor-example.com / @example-test.cn 类保留域
+  - b019043(长数字):5 条均无 11+ 位连续数字;invoice 号、attachment 大小、日期全部使用 ≤10 位或带分隔
+  - 056efaa(ID 前缀):id 字段统一为 email_classify_014 / email_classify_015 / email_draft_010 / email_draft_011 / sap_troubleshoot_009
+  - D6.14.1(脱敏):无真实客户名、邮箱、凭证号;无真实附件内容
+acceptance:
+  - .venv/bin/python -m pytest tests/eval/test_eval_fixtures_schema.py -q:全绿,passed 数 ≥ 130(以实际新增 assertions 为准)
+  - .venv/bin/python -m ruff check tests/eval:all checks passed
+  - markdownlint MODIFICATION-LOG.md:0 issues
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-003-d6181-fixture-batch1.yaml'))":解析通过
+  - git diff --check:通过
+  - 不修改现有 30 条 fixture;仅新增 5 条
+  - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push
+non_goals:
+  - 不实施轮 2(5 条剩余)落地
+  - 不起草 40→50 扩样计划
+  - 不修改 schema test,仅新增 fixture 文件
+next_actions:
+  - 用户批准 0bb7fba(30→40 计划 docs-only)cherry-pick 到 main
+  - 用户单独批准本任务包 TASK-20260805-003 cherry-pick
+  - 轮 1 落地通过后新建 TASK-20260805-004-d6181-fixture-batch2(轮 2,5 条)
+  - 全部落地后另起 docs-only 复核任务跑 readiness #5 候选门槛自评
