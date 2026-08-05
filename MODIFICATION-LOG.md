@@ -6835,3 +6835,22 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - HEAD `2f698802`；ahead origin/main 2；自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
 - 协调主 Agent `gpt-5.6-luna`（max）；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge
 - v1.1-A readiness 仍 `NOT_UNLOCKED`（4 门 2 PASS/2 FAIL，7d/30d 时间未到 + attention 未消）
+
+
+### 2026-08-05 [按建议执行] D6.15.1 v1.1-A readiness 4 门槛重核 — 收口
+
+#### 1. 本次修改内容
+- 新增 `docs/v1.1-a-readiness-2026-08-05.md`:基于 main `2f698802` 的 4 门槛重核报告
+- 新增 `docs/agent-team/tasks/TASK-20260805-002-d6151-v11-a-readiness-current.yaml`:任务契约
+- 独立 worktree `/private/tmp/my-ai-employee-ai-agent-v11-a-readiness-current-20260805`,分支 `codex/ai-agent-v11-a-readiness-current-20260805`
+
+#### 2. 风险点
+- 仅 docs-only 重核,不修改 `src/`、`scripts/`、LaunchAgent、`ENABLE_*`
+- 不集成 30→40 计划 `0bb7fba`(上一轮候选);不发起 push
+- 不修改 13 项用户未跟踪 WIP
+- 硬卡点 `com.myaiemployee.agent` 根因仍 `needs_human`,不解锁 v1.1-A
+
+#### 3. 当前项目整体总结
+- HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
+- v1.1-A readiness:2 PASS / 2 FAIL(30-fixture + 5 docs-only 已集成;7d/30d 时间未到 + attention 未消)
+- 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge

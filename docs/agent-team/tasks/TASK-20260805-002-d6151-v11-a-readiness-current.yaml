@@ -1,0 +1,34 @@
+id: TASK-20260805-002-d6151-v11-a-readiness-current
+title: D6.15.1 v1.1-A 启动门槛 4 重核(2026-08-05 docs-only)
+status: ready_to_merge
+date: 2026-08-05
+owner: codex
+risk: low
+scope: docs-only
+base_commit: 2f69880217770fe472416b9e4f424e5ec5d42dab
+inputs:
+  - docs/v1.1-a-readiness-2026-08-03.md
+  - main 集成历史:7b6c0c1 / 41538b6 / f38b12d / c1157cc / ce975f5 / 69cbb2f / aefafde / cdf1042 / 2f69880
+  - 30→40 计划 docs-only 候选 0bb7fba(本自动化上一轮,独立 worktree)
+outputs:
+  - docs/v1.1-a-readiness-2026-08-05.md(新增)
+  - docs/agent-team/tasks/TASK-20260805-002-d6151-v11-a-readiness-current.yaml(新增)
+  - MODIFICATION-LOG.md(追加)
+acceptance:
+  - markdownlint docs/v1.1-a-readiness-2026-08-05.md:0 issues
+  - python -c "import yaml; yaml.safe_load(open('docs/agent-team/tasks/TASK-20260805-002-d6151-v11-a-readiness-current.yaml'))":解析通过
+  - git diff --check:通过
+  - 文件白名单:3 文件全部为 docs-only(不落 JSON、不动 tests)
+  - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
+  - 不集成到 main;不 push;不发起 v1.1-A 解锁
+  - 不修改 13 项用户未跟踪 WIP
+key_findings:
+  - 4 必须门槛:2 PASS(30-fixture + 5 docs-only)/ 2 FAIL(7d 时间未到 + 30d 时间未到 + attention 未消)
+  - 候选门槛 #5(30→40 计划)ready_to_merge;待 cherry-pick 单独批准
+  - 候选门槛 #8(P3 epoch rollover 脚本 docs)仍 WIP,需补设计说明
+  - 硬卡点 R1:com.myaiemployee.agent 根因 needs_human;不解锁 v1.1-A
+next_actions:
+  - 用户决定是否集成 0bb7fba(30→40 计划 docs-only)
+  - 用户单独批准 push 同步 ahead 2
+  - 持续观察 P3 7d 时间窗(2026-08-06T07:04:45Z)与 attention 状态
+  - 等待 com.myaiemployee.agent 根因处理结果
