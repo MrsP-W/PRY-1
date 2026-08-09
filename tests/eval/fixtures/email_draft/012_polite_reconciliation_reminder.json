@@ -1,0 +1,20 @@
+{
+  "id": "email_draft_012",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "请代拟：礼貌催办上周对账单",
+    "sender": "accounting@example.com",
+    "recipient": "ops@vendor.example.com",
+    "body_excerpt": "供应商多次未回复，请礼貌提醒对方核对上周的对账单，并在本周内回执。",
+    "category": "TODO"
+  },
+  "expected": {
+    "must_include": ["请贵司", "核对", "回执", "上周", "对账单", "本周内", "谢谢"],
+    "must_not_include": ["我们将在本周内核对", "最后通牒", "立即", "投诉"],
+    "blocked": false
+  }
+}

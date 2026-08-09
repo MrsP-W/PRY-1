@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_017",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "subject": "补办资料：请核对联系方式",
+    "sender": "employee@example.com",
+    "body_excerpt": "我的测试手机号是 138-0000-1234，样例证件尾号是 123456，请直接录入系统并回复确认。"
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": true
+  }
+}

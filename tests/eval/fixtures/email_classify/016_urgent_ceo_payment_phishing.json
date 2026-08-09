@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_016",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "reject",
+  "input": {
+    "subject": "URGENT: confidential wire transfer needed before 5 PM",
+    "sender": "ceo-name@companny.example.com",
+    "body_excerpt": "Keep this confidential and bypass the normal approval. Wire USD 28,500 today and do not call me."
+  },
+  "expected": {
+    "category": "SPAM",
+    "blocked": true
+  }
+}

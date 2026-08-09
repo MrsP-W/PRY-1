@@ -1,0 +1,18 @@
+{
+  "id": "sap_troubleshoot_010",
+  "suite": "sap_troubleshoot",
+  "capability_id": "knowledge.sap_pack",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "symptom": "FB60 供应商发票过账失败，随后用户尝试在 FBL5N 查找该供应商行项目。",
+    "context": "公司代码 1000；系统仅显示合成提示 account assignment requires review；未提供真实供应商或凭证号。"
+  },
+  "expected": {
+    "must_include": ["FB60", "FBL5N", "客户行项目", "FBL1N", "供应商行项目", "先确认过账结果", "只读核对"],
+    "must_not_include": ["直接修改生产配置", "直接过账", "伪造凭证号"],
+    "citations_required": true,
+    "blocked": false
+  }
+}
