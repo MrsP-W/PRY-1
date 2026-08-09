@@ -6945,3 +6945,36 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 候选清单增至 7 项:`0bb7fba`(30→40 计划)+ `1a7dec1`(readiness 重核)+ `6272eb8`(轮 1 任务包)+ `f2335d4`(plan)+ `a1953e5`(审计)+ `b8af81d`(轮 2 任务包)+ `72e4091`(7d 预备)
 * 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
 * 关键日期:8/6 P3 7d 入口;8/8 GPT 额度恢复 + SOL 审核;8/29 P3 30d 入口
+
+### 2026-08-09 [执行建议] TASK-20260809-001 fixture 40 条候选门槛 #5 自评 — 集中修订
+
+#### 1. 本次修改内容
+
+* 新增 `tests/eval/audit/d6183-fixture-40-readiness-20260809.md`:TASK-20260809-001 fixture 40 条候选门槛 #5 自评报告(路径与字段,不写动态行数/字节数避免漂移),含来源候选→整合提交映射、精确 fixture/whitelist 硬断言、pytest/ruff/4 项自动 guard 证据边界、coverage plan §3 来源、10.18d 时间口径、SOL 首轮 FAIL 等 8 个 findings 的集中修订。
+* 新增 `docs/agent-team/tasks/TASK-20260809-001-d6183-fixture-readiness.yaml`:任务契约;字段沿用当前仓库已跟踪 task YAML 的共同字段,兼容 `date`/`scope`/`base_commit`/`inputs`/`outputs`/`findings`/`non_goals`/`next_actions`;`task_id=TASK-20260809-001-fixture-readiness`;`acceptance_commands` 含精确 fixture 断言与精确 whitelist 断言。现有文件名中的 `d6183` 仅为未提交工作路径标识,不表示阶段编号。
+* 独立 worktree `/private/tmp/my-ai-employee-d6183-fixture-readiness-sol-20260809`,基线 `c7c9037`,与本地 `main` 一致;`git rev-list --left-right --count origin/main...HEAD` 实测 `0\t0`,即 **main = origin/main = c7c9037,无 ahead/behind**;**非「ahead origin/main 2」**(此前误写已删除)。
+* `changed_files` 字段仅列路径(不写动态行数/字节数),避免与实际写入漂移。
+* 注:owner 字段按用户澄清写 `claude`;本轮实际实施 Agent 为 `minimax-cn/MiniMax-M3`(max 档位,已认证外部 bridge 调用);已在任务包 `result.summary` 注明;TERRA/LUNA 待命;**SOL 首轮终审=FAIL(8 个 findings),本次集中修订后等待复审**;`status=ready_to_merge` 仅本地质量门通过的候选态,仍受 SOL 提交前终审硬门约束。
+
+#### 2. 风险点
+
+* 仅 docs-only 自评;**不修改** `tests/eval/fixtures/`(40 条 JSON 原样保留)、`tests/eval/test_eval_fixtures_schema.py`(131 行原样保留)、`tests/eval/SCHEMA.md`、`tests/eval/README.md`、`pyproject.toml` 覆盖率配置。
+* **不重复 cherry-pick 源候选**;7 个源哈希均不是 `c7c9037` 祖先。成果整合映射:`0bb7fba→a7c376a`、`1a7dec1→ea54d60`、`6272eb8→cc56e93`、`f2335d4→63d49cf`、`a1953e5→1901dfe`(另 `e529f96` 冲突收口)、`b8af81d→67611cb`、`72e4091→0657607`;不发起 push/merge/tag。
+* 不修改 13 项用户未跟踪 WIP;不触碰 `src/`、`scripts/`、`ops/`、`plugins/`、`.cursor/`、`ENABLE_*`、`LaunchAgent`、`launchd_plist/`、`flags` 表、SMTP、Notes、IMAP、CalDAV。
+* 候选门槛 #5 = **PASS**(9/9 维度),但**不修改 4 必须门槛**:#1 P3 7d FAIL,#2 P3 30d FAIL,#3 30-fixture PASS,#4 5 docs-only PASS → 规范计数 **2 PASS / 2 FAIL**;v1.1-A 仍 **NOT_UNLOCKED**(沿 `p3-7d-window-watch-20260808.md` 收官纠偏口径)。
+* pytest 首次原文命令(无 `--no-cov`)实测 exit=1;根因为 `pyproject.toml` `[tool.coverage.report]` 设 `fail_under=80` + `addopts` 含 `--cov=my_ai_employee`,本次单一契约测试无 `my_ai_employee` 包导入,触发 `Coverage failure: total of 0.0 is less than fail-under=80.0`;**169 passed,0 failed/error**,非断言失败;本任务**不改覆盖率配置**,仅用 `--no-cov` 作为本次目标验收门(实测 exit=0)。
+* ruff `tests/eval` 实测 exit=0 / `All checks passed!`,仅检查该目录下受支持 Python 文件;Markdown 由 markdownlint、JSON 由 pytest guards 验证。4 项自动 guard 仅证明 `desensitized` 标志、邮箱保留域、无 11+ 连续数字与 ID suite 前缀;不等价于通用 PII/账号/角色扫描,其他敏感类型依赖人工审阅。
+* 来源 commit `299aa79` / `c7c9037` commit message 均标注 SOL 审核(本任务**仅元数据级确认**,未重新审计 SOL 审核行为本身)。
+* 候选 #5 的 readiness 原文只定义「30+ 样本 2 轮扩」;40 条、guards、pytest/ruff 与 9/9 矩阵依据 `docs/eval-fixture-coverage-30-to-40-plan.md` §3 加本轮附加验证形成,9/9 不是 readiness 原文。
+* pytest 增量口径:30→40 新增 10 条 fixture × 4 类参数化测试 = 增加 40 个测试用例,因此 129→169。
+* 两项硬断言实测 exit=0:A)fixture 精确 40 且分布恰为 17/12/11;B)`git status --porcelain=v1 -uall` 精确等于 3 个白名单条目。
+* **markdownlint 实测口径**:`markdownlint-cli2 tests/eval/audit/d6183-fixture-40-readiness-20260809.md` → exit=0 / 0 errors(报告单文件);`sed` 按 `TASK-20260809-001` 标题锚点提取至 EOF 后输入 `markdownlint-cli2 -` → exit=0 / 0 errors(完整新增日志条目);`markdownlint-cli2 MODIFICATION-LOG.md` → exit=1 / **25 errors**,全部行号 6727–6925,均为本轮前历史积累(MD022 + MD012),**非本任务引入,属非阻断基线风险**;**本任务不清理历史段落以避免越权修改 WIP**。
+
+#### 3. 当前项目整体总结
+
+* HEAD `c7c9037`;worktree `/private/tmp/my-ai-employee-d6183-fixture-readiness-sol-20260809`;**main = origin/main = c7c9037,0\t0,无 ahead/behind**(此前「ahead origin/main 2」误写已删除)。
+* pytest 首次原文命令 exit=1(覆盖率);目标门 `--no-cov` exit=0 / 169 passed;ruff 对受支持 Python 文件 exit=0 / 0 issue;**报告单文件 lint exit=0 / 0 errors;完整新增日志条目 stdin lint exit=0 / 0 errors;整份 MODIFICATION-LOG.md lint exit=1 / 25 errors(行号 6727–6925,本轮前)**。
+* 候选门槛 #5 PASS(9/9),但不修改 v1.1-A 解锁结论;4 必须门槛 2 PASS / 2 FAIL,v1.1-A NOT_UNLOCKED。
+* 实施 Agent:本任务为 docs-only 原子任务,`minimax-cn/MiniMax-M3`(max 档位)主执行;TERRA/LUNA 待命;按用户澄清 owner 字段填 `claude`,已在任务包 `result.summary` 注明 M3 实际身份。
+* SOL 提交前终审硬门:**首轮 FAIL**,本次集中修订后等待只读复审;仅当 SOL 复审 PASS 后,才允许 `codex` 在任务分支提交本任务 3 文件;复审 FAIL 则继续回退修订;任何状态下均不 merge/push/tag;当前不得声称 PASS。
+* 报告时点 `2026-08-09T11:18:00Z` 相对 Day0 `2026-07-30T07:04:45.527698Z` 的 P3 elapsed ≈ **10.18d**(已过 7d,未到 30d);8/29 P3 30d 入口(若 Day0 未重置)。
