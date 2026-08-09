@@ -10,7 +10,7 @@ depends_on:
   - 候选链 0bb7fba / 1a7dec1 / 6272eb8 / f2335d4 / a1953e5 / b8af81d(均为 ready_to_merge)
 trigger:
   event: P3 7d time window opens
-  fire_at: 2026-08-06T07:04:45Z
+  fire_at: 2026-08-06T07:04:45.527698Z
   user_approval: A4 已批准
 inputs:
   - docs/v1.1-a-readiness-2026-08-05.md(1a7dec1)
@@ -25,7 +25,7 @@ future_outputs_at_trigger:
   - MODIFICATION-LOG.md(8/6 时点后追加)
 check_items:
   - id: time_window
-    description: 当前 UTC 时点 ≥ 2026-08-06T07:04:45Z
+    description: 当前 UTC 时点 ≥ 2026-08-06T07:04:45.527698Z
     expected_after_trigger: PASS
   - id: attention_state
     description: 最近 24h attention 是否非空(预期:仍非空,根因 needs_human)
@@ -35,7 +35,7 @@ check_items:
     expected_after_trigger: FAIL(attention 未消)
   - id: gate_2
     description: P3 30d eligibility
-    expected_after_trigger: FAIL(时间未到,2026-08-29T05:34:24Z 后)
+    expected_after_trigger: FAIL(时间未到,2026-08-29T07:04:45.527698Z 后)
   - id: gate_3
     description: 30-fixture PASS 不变
     expected_after_trigger: PASS
@@ -54,13 +54,13 @@ acceptance:
   - 不集成到 main;不 push;不发起 v1.1-A 解锁
   - 不修改 13 项用户未跟踪 WIP
 key_dates:
-  - 2026-08-06T07:04:45Z: P3 7d 时间窗入口(自动化触发 A4)
+  - 2026-08-06T07:04:45.527698Z: P3 7d 时间窗入口(自动化触发 A4)
   - 2026-08-08: 预期 GPT 额度恢复,启用 SOL 阶段 C 审核
-  - 2026-08-29T05:34:24Z: P3 30d 时间窗入口(若 Day0 未重置)
+  - 2026-08-29T07:04:45.527698Z: P3 30d 时间窗入口(若 Day0 未重置)
 hard_blocker:
   - com.myaiemployee.agent 根因 needs_human;不解锁 v1.1-A
 next_actions:
-  - 自动化在 2026-08-06T07:04:45Z 后触发 A4 执行
+  - 自动化在 2026-08-06T07:04:45.527698Z 后触发 A4 执行
   - 用户处理 com.myaiemployee.agent 根因(异步)
   - 用户单独批准候选链 cherry-pick(优先级高于 A4)
   - 持续观察 P3 7d 时间窗与 attention 状态
