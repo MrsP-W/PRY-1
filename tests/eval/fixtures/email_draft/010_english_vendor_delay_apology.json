@@ -1,0 +1,19 @@
+{
+  "id": "email_draft_010",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "Delivery delay requires a revised ETA",
+    "sender": "buyer@example.com",
+    "body_excerpt": "Your shipment missed the agreed date. Please explain the delay and confirm a revised ETA of next Friday.",
+    "category": "TODO"
+  },
+  "expected": {
+    "must_include": ["apologize", "delay", "next Friday"],
+    "must_not_include": ["guarantee", "immediately"],
+    "blocked": false
+  }
+}

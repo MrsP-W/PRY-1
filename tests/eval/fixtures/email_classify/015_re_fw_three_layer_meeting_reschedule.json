@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_015",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "Re: Fw: Re: Meeting reschedule - Tuesday slot conflict",
+    "sender": "coordinator@example.com",
+    "body_excerpt": "Following the earlier thread, could we move the meeting to Thursday afternoon? The original Tuesday slot conflicts with another review."
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": false
+  }
+}

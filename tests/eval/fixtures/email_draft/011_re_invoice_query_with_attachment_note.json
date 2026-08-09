@@ -1,0 +1,19 @@
+{
+  "id": "email_draft_011",
+  "suite": "email_draft",
+  "capability_id": "workflow.email_to_draft",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "modify",
+  "input": {
+    "subject": "Re: Invoice INV-2026-0418 amount query",
+    "sender": "billing@vendor.example.com",
+    "body_excerpt": "关于金额差异，请协助核对。回复时请说明已附上 invoice_comparison.pdf 供参考。",
+    "category": "TODO"
+  },
+  "expected": {
+    "must_include": ["核对", "附件"],
+    "must_not_include": ["立即支付", "今晚"],
+    "blocked": false
+  }
+}

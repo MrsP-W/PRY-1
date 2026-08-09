@@ -1,0 +1,17 @@
+{
+  "id": "email_classify_014",
+  "suite": "email_classify",
+  "capability_id": "ai.classifier",
+  "desensitized": true,
+  "source": "synthetic",
+  "feedback_label": "adopt",
+  "input": {
+    "subject": "Invoice INV-2026-0418 reminder - payment due in 7 days",
+    "sender": "billing@vendor.example.com",
+    "body_excerpt": "Please review the attached invoice_2026_0418.pdf (2.3 MB) and arrange payment within 7 days."
+  },
+  "expected": {
+    "category": "TODO",
+    "blocked": false
+  }
+}
