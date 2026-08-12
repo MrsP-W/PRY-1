@@ -1,0 +1,106 @@
+task_id: TASK-20260812-001-p3-recovery-status
+objective: |
+  将 2026-08-11 完成的 P3 恢复窗口 24 小时 PASS 固化到 v1.1-A readiness 文档，
+  同时明确该 PASS 不解锁 v1.1-A、旧 rollover 授权已失效且本轮不执行 rollover。
+task_type: docs
+owner: codex
+reviewers:
+  - sol
+context_files:
+  - docs/v1.1-a-readiness-2026-08-05.md
+  - tests/eval/audit/p3-7d-window-watch-20260808.md
+  - tests/eval/audit/d6183-fixture-40-readiness-20260809.md
+writable_paths:
+  - docs/v1.1-a-readiness-2026-08-05.md
+  - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+acceptance_commands:
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/node_modules/.bin/markdownlint-cli2
+    docs/v1.1-a-readiness-2026-08-05.md
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c
+    "import yaml; from pathlib import Path;
+    task=Path('docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml');
+    data=yaml.safe_load(task.read_text());
+    assert data['task_id']=='TASK-20260812-001-p3-recovery-status';
+    assert data['scope']=='docs-only';
+    assert data['status']=='ready_to_merge';
+    assert data['result']['decision']=='PASS';
+    assert data['result']['v11a']=='NOT_UNLOCKED';
+    print('task-contract OK')"
+  - git diff --check
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c
+    "import subprocess;
+    expected=['docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml',
+    'docs/v1.1-a-readiness-2026-08-05.md'];
+    actual=sorted(subprocess.check_output(['git','status','--porcelain=v1','-uall'],text=True)
+    .splitlines()); paths=sorted(line[3:] for line in actual);
+    assert paths==expected,(paths,expected); print('\n'.join(actual))"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+status: ready_to_merge
+date: 2026-08-12
+scope: docs-only
+base_commit: cfae507c7a95c772b77f04939e1741301565cb7d
+inputs:
+  - 2026-08-11 固定验收窗口 2026-08-10T05:21:20.671725Z 至 2026-08-11T05:26:14.466Z
+  - health 144 条、unhealthy=0、最大含边界间隔 635.001684s
+  - news 24 次、run 级失败=0、最大含边界间隔 3642.248597s
+  - openai-videos 3 次单来源错误，均为成功且未降级的 run
+  - health/state.json 为 healthy、reasons=[]、alert_open=false、failure_streak=0
+outputs:
+  - docs/v1.1-a-readiness-2026-08-05.md
+  - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+findings:
+  - P3 恢复窗口固定快照 PASS，只证明该 24.0816h 窗口连续健康
+  - 本次 PASS 不会反向改写当前 epoch 已生成的 attention 日报
+  - Day0 仍为 2026-07-30T07:04:45.527698Z，未发生 rollover
+  - 旧窗口的条件式 rollover 授权已随旧窗口 FAIL 失效；本次窗口没有 rollover 授权
+  - 4 必须门槛仍为 2 PASS / 2 FAIL，v1.1-A 仍 NOT_UNLOCKED
+  - fixture 候选门槛 #5 已由 main cfae507 收口，但候选门槛不替代 4 必须门槛
+  - p3-24h 与 ai-agent 自动任务均不存在
+non_goals:
+  - 不执行 rollover、restart 或 kickstart
+  - 不修改 src、scripts、ops、plugins、LaunchAgent、ENABLE_* 或运行时文件
+  - 不改写既有 attention 日报或 Day0
+  - 不修改主工作树的 13 项用户未跟踪 WIP
+  - 不 merge、push 或 tag
+next_actions:
+  - SOL 对本任务两文件执行提交前只读终审
+  - SOL PASS 后仅提交任务分支，不合并、不 push
+  - 如需 rollover，等待用户基于本次 PASS 重新明确授权
+result:
+  decision: PASS
+  v11a: NOT_UNLOCKED
+  summary: |
+    P3 恢复窗口 24 小时固定快照通过；readiness 已补充优先状态块。
+    本次仅校准文档，不授权或执行 rollover，不改变 4 必须门槛判定。
+  changed_files:
+    - docs/v1.1-a-readiness-2026-08-05.md
+    - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+  verification:
+    - command: markdownlint-cli2 docs/v1.1-a-readiness-2026-08-05.md
+      exit_code: 0
+      result: 0 errors
+    - command: YAML task-contract assertions
+      exit_code: 0
+      result: task-contract OK
+    - command: git diff --check
+      exit_code: 0
+      result: no diagnostics
+    - command: exact two-file whitelist assertion
+      exit_code: 0
+      result: readiness document plus this task-contract only
+    - command: whitespace and conflict marker scan
+      exit_code: 0
+      result: no matches
+  risks:
+    - 本次 24h PASS 不是 7d/30d unattended eligibility 的替代证据
+    - 任何 rollover 都会重置后续 7d/30d 计时，必须重新授权
+  unresolved:
+    - 门槛 #1 的当前 epoch attention 仍存在
+    - 门槛 #2 尚未形成通过证据
+  next_agent: sol
