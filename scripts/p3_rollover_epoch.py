@@ -71,7 +71,11 @@ def rollover_once(*, app_support_dir: Path | None = None) -> dict[str, Any]:
         }
 
     report = burn_in.run_report(app_support_dir=root).to_dict()
-    watch = watch_once(app_support_dir=root)
+    try:
+        # watch_once 不接受 app_support_dir（撞坑 #107）；失败不得回滚已成功的归档。
+        watch = watch_once()
+    except Exception as exc:
+        watch = {"status": "watch_failed", "error": type(exc).__name__}
     return {
         "action": "p3_rollover",
         "result": "rolled_over",

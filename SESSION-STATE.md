@@ -3,7 +3,7 @@
 ## 当前状态（2026-08-13 11:31–11:43 CST，优先于下方历史状态）
 
 - **发布结论**：v1.1-A 仍为 **NOT_UNLOCKED**。四项必须门槛维持
-  `#1 FAIL / #2 FAIL / #3 PASS / #4 PASS`，即 **2 PASS / 2 FAIL**。 · 质量基线 lint **323**
+  `#1 FAIL / #2 FAIL / #3 PASS / #4 PASS`，即 **2 PASS / 2 FAIL**。 · 质量基线 lint **324**
   40 条 fixture 候选门槛 #5 已 PASS，但不替代四项必须门槛。
 - **P3 证据须分层解读**：固定恢复窗口
   `2026-08-10T05:21:20.671725Z` 至 `2026-08-11T05:26:14.466Z`
@@ -17,9 +17,9 @@
   `2026-08-13T03:43:11Z` 的只读间隔检查显示 health PASS（`max_gap=10.0m`、
   `tail=1.75m`），但最近 4 次新闻运行的最大间隔为 99.33 分钟，超过 90 分钟
   阈值，news interval FAIL；health 状态为 `alert_open=false`、
-  `failure_streak=0`。当前 Day0 仍为
-  `2026-07-30T07:04:45.527698Z`，未执行 rollover；旧条件式授权已失效。
-- **Git 状态**：本地 `main` = `origin/main`（push 后）；MD lint **323**
+  `failure_streak=0`。当前 Day0 已 rollover 为
+  `2026-08-13T08:42:06.833689Z`；旧 epoch 已归档。
+- **Git 状态**：本地 `main` 待提交执行报告；MD lint **324**
   （`ls-remote` 已核验；ahead/behind 以 `git status` 为准；未跟踪 WIP 保留；未 push）。
 - **任务状态**：`TASK-20260813-001-p3-rollover-decision` 已 ff-only 合入本地 main，
   状态 `done`；`TASK-20260812-001-p3-recovery-status` 亦为 `done`。二者均尚未
@@ -30,13 +30,13 @@
 - **当前质量门**：fixture 契约 `169 passed`，`ruff check tests/eval` 通过，
   `git diff --check` 通过；本轮仅同步基线数字。
   （入口校验锚定行号：L6 lint / L22 MD lint / L37 项目基线。）
-  Day0=`2026-07-30T07:04:45.527698Z`；v1.1-A 仍 NOT_UNLOCKED；不执行 rollover。
-  `scripts/p3_rollover_epoch.py` 已入仓（§6.1 前置 1）；其余无关 WIP 仍维持不入库。
-  CONDITIONAL GO 成立；真实执行仍需用户「授权 rollover」关键词。
-  本轮：决策包已 push；§6.1 前置 1-3 落地；前置 4-5 未做。
-- **项目基线**：**3359 passed / 1 skipped** / **90.29%** / mypy **294 files** / MD lint **323 files**
-- **§6.1 进度**：前置 1-3 已落地（脚本+6 测入仓、tmp_path 预演 `rolled_over`）；前置 4-5（真实备份/回滚 SOP）与真实 rollover 仍待用户「授权 rollover」。
-- **继续冻结**：未经新的明确授权，不执行 push、tag、rollover、restart、
+  Day0=`2026-08-13T08:42:06.833689Z`；v1.1-A 仍 NOT_UNLOCKED。
+  `scripts/p3_rollover_epoch.py` 已执行一次；CLI 曾因 watch_once 参数崩溃，FS 已成功。
+  旧 epoch 归档为 `epoch-2026-07-30T07-04-45Z`；备份 `burn-in.backup-2026-08-13T08-42-00Z`。
+  本轮：执行报告入库；watch_once 参数已修；默认不 push。
+- **项目基线**：**3360 passed / 1 skipped** / **90.29%** / mypy **294 files** / MD lint **324 files**
+- **§6.1 进度**：五前置已完成；用户授权后已归档旧 epoch 并开新 Day0=`2026-08-13T08:42:06.833689Z`（`collecting` / `attention=[]`）。
+- **继续冻结**：未经新的明确授权，不执行 push、tag、二次 rollover、restart、
   kickstart、Feature Flag / `ENABLE_*` 变更、SMTP / Notes / SAP / 财务或其他
   真实外部写入。若 Day0 不变，30d 时间门最早于
   `2026-08-29T07:04:45.527698Z` 后重核；仍须同时取得 attention 正式清零证据。
