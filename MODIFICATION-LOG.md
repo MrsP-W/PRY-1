@@ -2,7 +2,7 @@
 
 > **当前状态（2026-07-28 03:42Z）**：WIP 7 files 已 commit/push（3 commits · `53c0df8 docs(state): sync baseline + P3 epoch 治理全环收口状态` + `8dfaab8 fix(ops+ui): WIP 撞坑 #95/#97/#98 P1-3 修复链 + UI v4 + 间隔校验` + `1b1f8dc feat(ui): docs/ui/assets v1-v4 background/globe PNG assets` · 用户授权 · 已 push 远端） · docs-only baseline 同步 3162/1/90.27% → 3175/1/90.26%(撞坑 #106 干净 worktree 修复) · 撞坑 #102(cli too_early 时序硬编码)已收口 + 撞坑 #103(stash 暂存测试 → collect 漂移)已沉淀 + **撞坑 #106 NEW**(`scripts/check_quality_snapshot.py:97` 子进程 `uv run pytest` → `sys.executable -m pytest` · 干净 worktree uv 环境无 pytest → 3173/2 fail → 修复后 3175/0 fail) · P3 epoch 治理全环收口(旧 epoch 已归档 + 新 Day0 锚 `2026-07-27T05:34:24Z` **`status=attention` · attention=["health_unhealthy_sample", "health_alert_opened"]**) · **Step 1-3 全环收口**:PR #4 squash merge `3c5f9ac` · Step 2 Dashboard 死锁修复 · Step 3 等首日报门 2026-07-29T00:00:00Z · 本地 main pull + 远程 `p0-minimal-fix` 分支已删 · 仅 1 untracked `docs/v1.1-p3-observation-d-step-plan.md`(观察期 7 周 D-step · 等授权 commit) · **本轮新增待 commit**:`scripts/check_quality_snapshot.py` 撞坑 #106 修复。
 >
-> **当前状态（2026-07-30 12:30Z）**：**邮件按钮修复 `3e8fc70` 已合并 main**(commit `537cace` · cherry-pick onto `ab807bb` · 0 冲突自动合并 · `docs/ui/codex-style-dashboard.html` +19 行 CSS · `#mail-queue .queue-actions .btn.decide-btn:not(.reject)` 高优先级选择器)。Step 1 全链收口 ✅:worktree `/tmp/my-ai-employee-3e8fc70-merge` + cherry-pick + 9/9 质量门全绿(`3200 passed / 1 skipped / 90.29%`) + push origin main `ab807bb..537cace` + ff-only merge。`main = origin/main = 537cace` · 16 untracked WIP 维持(撞坑 #103 红线)· 8 个 P3 epoch 文件不动(撞坑 #107)· 旧 rollover worktree 不删。**6 步行动**(用户 2026-07-30 排序):Step 1 ✅ → Step 2 ⏳ 等 `deploy` + `restart` 单独授权 → Step 3 rollover 候选升级 tracked → Step 4 `rollover` 授权归档 + 重开 Day0 → Step 5 7d 观察(门 ≈ 2026-08-06/07)→ Step 6 7d 全绿后评估。**红线全维持**:不抢控制权 / SMTP 需授权 / `ENABLE_PATH_4_WRITE=1` 不写 / `ENABLE_NOTES_ENCRYPTION=1` 不写 / v1.0 tag 不打 / git push 需 `push` 关键词 / launchctl load -w 需授权 / docs-only 期间不动业务代码 / 不动 P3 epoch 治理文件。
+> **当前状态（2026-07-30 12:30Z）**：**邮件按钮修复 `3e8fc70` 已合并 main**(commit `537cace` · cherry-pick onto `ab807bb` · 0 冲突自动合并 · `docs/ui/codex-style-dashboard.html` +19 行 CSS · `#mail-queue .queue-actions .btn.decide-btn:not(.reject)` 高优先级选择器)。Step 1 全链收口 ✅:worktree `/tmp/my-ai-employee-3e8fc70-merge` + cherry-pick + 9/9 质量门全绿(`3359 passed / 1 skipped / 90.29%`) + push origin main `ab807bb..537cace` + ff-only merge。`main = origin/main = 537cace` · 16 untracked WIP 维持(撞坑 #103 红线)· 8 个 P3 epoch 文件不动(撞坑 #107)· 旧 rollover worktree 不删。**6 步行动**(用户 2026-07-30 排序):Step 1 ✅ → Step 2 ⏳ 等 `deploy` + `restart` 单独授权 → Step 3 rollover 候选升级 tracked → Step 4 `rollover` 授权归档 + 重开 Day0 → Step 5 7d 观察(门 ≈ 2026-08-06/07)→ Step 6 7d 全绿后评估。**红线全维持**:不抢控制权 / SMTP 需授权 / `ENABLE_PATH_4_WRITE=1` 不写 / `ENABLE_NOTES_ENCRYPTION=1` 不写 / v1.0 tag 不打 / git push 需 `push` 关键词 / launchctl load -w 需授权 / docs-only 期间不动业务代码 / 不动 P3 epoch 治理文件。
 >
 > **项目**:我的AI员工
 > **创建时间**:2026-06-18 11:00(用户指令确立"每次修改必写 3 段"机制)
@@ -117,7 +117,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3200 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **323 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
+| **质量基线** | **3359 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **323 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
 | **下一棒** | **P3 新 Day0 观察期**(Day0=`2026-07-27T05:34:24Z` `collecting` · 首份日报门槛 2026-07-29T00:00Z · 7d 2026-08-03 · 30d 2026-08-26)· 旧 epoch `fail_attention` 已归档;扩评测样本至 30+ 脱敏;**不改 LaunchAgent/调度**;不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -7031,3 +7031,21 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 #### 3. 当前项目整体总结
 
 - 本地 `main` ahead origin；说 `push` 才推
+
+### 2026-08-13 [§6.1 前置 1-3] p3_rollover_epoch 入仓 + 测补全 + tmp 预演
+
+#### 1. 本次修改内容
+
+- 用户「按照建议执行」：已 `git push` `cfae507..7dcc90c`；本提交实施 §6.1 前置 1-3
+- 入仓 `scripts/p3_rollover_epoch.py` + `tests/scripts/test_p3_rollover_epoch.py`（6 tests，含 fail_attention / source_missing / archived_start_failed）
+- tmp_path 预演 `rollover_once` → `result=rolled_over`；未写真实 burn-in
+- 质量基线按 tracked 实跑对齐：**3359 passed / 1 skipped**（修正旧 3200 漂移 + 本批 +6）
+
+#### 2. 风险点
+
+- 前置 4-5 与真实执行仍需「授权 rollover」+ Day0 确认
+- 未改 LaunchAgent；未解锁 v1.1-A
+
+#### 3. 当前项目整体总结
+
+- `origin/main` 已含决策包；§6.1 代码前置待本提交；真实 rollover 仍冻结
