@@ -1,5 +1,48 @@
 # SESSION-STATE — v0.2.78 P0-3 caffeinate 1h 观察与 #97/#98 修复收口 ✅(2026-07-10) + `v0.2.1` 正式 tag 维持期
 
+## 当前状态（2026-08-13 11:31–11:43 CST，优先于下方历史状态）
+
+- **发布结论**：v1.1-A 仍为 **NOT_UNLOCKED**。四项必须门槛维持
+  `#1 FAIL / #2 FAIL / #3 PASS / #4 PASS`，即 **2 PASS / 2 FAIL**。
+  40 条 fixture 候选门槛 #5 已 PASS，但不替代四项必须门槛。
+- **P3 证据须分层解读**：固定恢复窗口
+  `2026-08-10T05:21:20.671725Z` 至 `2026-08-11T05:26:14.466Z`
+  已取得 24.0816h PASS；截至 `2026-08-13T03:31:25.921684Z` 的实时 health
+  样本也为 `healthy=true`、`reasons=[]`，Dashboard `ok=true`、
+  `read_only=true`。但最新完整日报 `2026-08-11.json` 仍为 `attention`，
+  原因为 `health_sample_gap`、`news_run_gap`、`news_failure`。实时绿点和固定
+  24h PASS 均不会反向改写该历史日报，不能据此把门槛 #1/#2 改为 PASS。
+- **运行点状态**：截至 `2026-08-13T03:05:44.165938Z`，最新新闻运行
+  `success=true`、`degraded=false`、`outcome=success`、`item_count=48`；
+  `2026-08-13T03:43:11Z` 的只读间隔检查显示 health PASS（`max_gap=10.0m`、
+  `tail=1.75m`），但最近 4 次新闻运行的最大间隔为 99.33 分钟，超过 90 分钟
+  阈值，news interval FAIL；health 状态为 `alert_open=false`、
+  `failure_streak=0`。当前 Day0 仍为
+  `2026-07-30T07:04:45.527698Z`，未执行 rollover；旧条件式授权已失效。
+- **Git 状态**：本地 `main=dd05d08`，远端 `origin/main=cfae507`（已通过
+  `ls-remote` 于本次校准中核验），本地 ahead 1 / behind 0；无 tracked 或
+  staged 修改。主树保留 16 个展开后的未跟踪 WIP 文件（紧凑状态 13 行），
+  本轮未修改、暂存、清理或 push。
+- **任务状态**：`TASK-20260812-001-p3-recovery-status` 已于
+  `2026-08-12 15:37:54 +0800` 经用户授权 fast-forward 到本地 main，现校准为
+  `done`；该提交尚未 push，不能表述为已进入远端 main。
+- **Worktree 维护**：用户授权后，先备份 `.git/worktrees` 元数据并严格核验
+  dry-run，再移除 123 条“gitdir 路径不存在”的失效登记。Git worktree 总条目
+  由 126 条降至 3 条，`.git/worktrees` linked 元数据目录由 125 个降至 2 个，
+  `prunable=0`、有效 worktree 仍为 3 条；128 个本地分支、主树 16 个 WIP
+  文件、存活副树 9 条 WIP 和本任务树状态前后完全一致。存活副树
+  `codex/d6102-stash-playbook@a1c8469` 继续保留，不执行 reset、stash 或清理。
+  首次 dry-run 的持久化文件因只捕获 stdout 而为空，不能作为证据；本次结论以
+  交互 dry-run 计数、123 行实际 prune 输出、元数据备份和前后 `cmp` 为依据。
+- **当前质量门**：fixture 契约 `169 passed`，`ruff check tests/eval` 通过，
+  `git diff --check` 通过。项目完整 Markdown lint 仍被
+  `MODIFICATION-LOG.md` 的 25 条 MD012/MD022 格式问题阻断；本任务不混入该
+  修复。
+- **继续冻结**：未经新的明确授权，不执行 push、tag、rollover、restart、
+  kickstart、Feature Flag / `ENABLE_*` 变更、SMTP / Notes / SAP / 财务或其他
+  真实外部写入。若 Day0 不变，30d 时间门最早于
+  `2026-08-29T07:04:45.527698Z` 后重核；仍须同时取得 attention 正式清零证据。
+
 > **当前状态（2026-07-23 19:59Z，优先于下方历史详述）**：P3 间隔复核全绿（health `max_gap=10.0m` / `tail=1.97m`；news `max_gap=60.05m` / `tail=3.88m`；Dashboard `/health=200`；stderr `new_recent_hits=[]`）。失败 epoch `2026-07-23T02:30:20.463342Z` 已完整移动到 `~/Library/Application Support/MyAIEmployee/burn-in-archive/epoch-2026-07-23T02-30-20Z/`，含延长前后 `p3-awake` 回滚证据；新 Day0=`2026-07-23T19:59:04.517676Z`，`collecting` / `attention=[]`，首份日报门槛=`2026-07-25T00:00:00Z`。`com.myaiemployee.p3-awake` 仅将临时 `caffeinate -i -t` 从 7 天延长为 9 天，未改 health/news/burn-in 调度。工作区保留原 6 个 P3 脚本/测试未提交改动、本轮 UI HTML + 4 个未跟踪资源及本次 4 个状态文档改动；**未提交**，不做 SMTP / v1.0 / Feature Flag。
 >
 > **最后更新**:2026-07-20 · **P3-A 下一棒推进**:v0.2.73 deploy-only + v0.2.74 #92 修复 B + v0.2.74.1 巡检 + v0.2.75 #93 launchd uv PATH + v0.2.76 T3 L4 #93 实战验证 + v0.2.77 T3 L4 #94 B 路径实战验证 ✅ + **v0.2.78 P0-3 caffeinate 1h 观察撞坑 #95 完全修复 ✅**(`commit 74d1d65` 拆 menu-bar + Dashboard 为 2 独立 LaunchAgent · `ProcessType=Standard` + `KeepAlive=true` · caffeinate -i -t 3600 · menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · 清理退役 digital-employee plist) + **撞坑 #97 NEW**(`SQLCipher` 跨线程 close 报错 · dashboard 30→60min +38 traceback · close-time 报错但非 fatal · 路径 A `check_same_thread=False` + `StaticPool` 推荐) · outbox 2 条仍 `cancelled` · **项目**:我的AI员工 · **HEAD** 以 `git rev-parse --short HEAD` 为准 · **工作区**以 `git status --short` 为准

@@ -24,7 +24,9 @@ acceptance_commands:
     data=yaml.safe_load(task.read_text());
     assert data['task_id']=='TASK-20260812-001-p3-recovery-status';
     assert data['scope']=='docs-only';
-    assert data['status']=='ready_to_merge';
+    assert data['status']=='done';
+    assert data['integration']['method']=='fast-forward';
+    assert data['integration']['pushed'] is False;
     assert data['result']['decision']=='PASS';
     assert data['result']['v11a']=='NOT_UNLOCKED';
     print('task-contract OK')"
@@ -41,10 +43,17 @@ risk_level: low
 requires_approval: false
 max_attempts: 1
 max_runtime_minutes: 30
-status: ready_to_merge
+status: done
 date: 2026-08-12
 scope: docs-only
 base_commit: cfae507c7a95c772b77f04939e1741301565cb7d
+integration:
+  method: fast-forward
+  integrated_at: "2026-08-12T15:37:54+08:00"
+  local_main_commit: dd05d0836c42987f4eff27b2cf205f4029ba47e2
+  pushed: false
+  remote_main_verified_at: "2026-08-13T11:33:00+08:00"
+  remote_main_commit: cfae507c7a95c772b77f04939e1741301565cb7d
 inputs:
   - 2026-08-11 固定验收窗口 2026-08-10T05:21:20.671725Z 至 2026-08-11T05:26:14.466Z
   - health 144 条、unhealthy=0、最大含边界间隔 635.001684s
@@ -69,8 +78,7 @@ non_goals:
   - 不修改主工作树的 13 项用户未跟踪 WIP
   - 不 merge、push 或 tag
 next_actions:
-  - SOL 对本任务两文件执行提交前只读终审
-  - SOL PASS 后仅提交任务分支，不合并、不 push
+  - 本任务已完成本地 main 集成；如需 push，必须取得用户单独授权
   - 如需 rollover，等待用户基于本次 PASS 重新明确授权
 result:
   decision: PASS
@@ -103,4 +111,4 @@ result:
   unresolved:
     - 门槛 #1 的当前 epoch attention 仍存在
     - 门槛 #2 尚未形成通过证据
-  next_agent: sol
+  next_agent: none（本地集成已完成；push / rollover 均需用户单独授权）

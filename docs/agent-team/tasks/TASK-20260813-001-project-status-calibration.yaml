@@ -1,0 +1,165 @@
+task_id: TASK-20260813-001-project-status-calibration
+objective: |
+  以 2026-08-13 只读证据校准项目状态：更新 SESSION-STATE 顶部当前状态，
+  将已 fast-forward 进入本地 main 的 2026-08-12 任务标记为 done，
+  固化 P3 实时只读快照与 worktree 元数据维护结果。
+task_type: docs
+owner: codex
+reviewers:
+  - sol
+  - luna
+context_files:
+  - SESSION-STATE.md
+  - docs/v1.1-a-readiness-2026-08-05.md
+  - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+  - tests/eval/audit/p3-7d-window-watch-20260808.md
+writable_paths:
+  - SESSION-STATE.md
+  - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+  - docs/agent-team/tasks/TASK-20260813-001-project-status-calibration.yaml
+  - tests/eval/audit/p3-project-status-20260813.md
+acceptance_commands:
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/node_modules/.bin/markdownlint-cli2
+    SESSION-STATE.md tests/eval/audit/p3-project-status-20260813.md
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c
+    "import yaml; from pathlib import Path;
+    root=Path('.');
+    old=yaml.safe_load((root/'docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml').read_text());
+    new=yaml.safe_load((root/'docs/agent-team/tasks/TASK-20260813-001-project-status-calibration.yaml').read_text());
+    assert old['status']=='done';
+    assert old['integration']['local_main_commit']=='dd05d0836c42987f4eff27b2cf205f4029ba47e2';
+    assert old['integration']['pushed'] is False;
+    assert new['scope']=='docs-only';
+    assert new['status']=='ready_to_merge';
+    print('task-contracts OK')"
+  - git diff --check
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m pytest
+    tests/eval/test_eval_fixtures_schema.py -q --no-cov
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -m ruff check tests/eval
+  - >-
+    git -C /Users/wei/Documents/DesktopOrganizer/我的AI员工 worktree list --porcelain
+    | /usr/bin/awk '/^worktree/{w++} /^prunable/{p++} END{exit !(w==3 && p==0)}'
+  - >-
+    cmp /private/tmp/my-ai-employee-main-status-before-prune-20260813.txt
+    /private/tmp/my-ai-employee-main-status-after-prune-20260813.txt
+    && cmp /private/tmp/my-ai-employee-secondary-status-before-prune-20260813.txt
+    /private/tmp/my-ai-employee-secondary-status-after-prune-20260813.txt
+    && cmp /private/tmp/my-ai-employee-task-status-before-prune-20260813.txt
+    /private/tmp/my-ai-employee-task-status-after-prune-20260813.txt
+    && cmp /private/tmp/my-ai-employee-branches-before-prune-20260813.txt
+    /private/tmp/my-ai-employee-branches-after-prune-20260813.txt
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c
+    "import subprocess;
+    expected=['SESSION-STATE.md',
+    'docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml',
+    'docs/agent-team/tasks/TASK-20260813-001-project-status-calibration.yaml',
+    'tests/eval/audit/p3-project-status-20260813.md'];
+    lines=subprocess.check_output(['git','status','--porcelain=v1','-uall'],text=True).splitlines();
+    actual=sorted(line[3:] for line in lines);
+    assert actual==sorted(expected),(actual,expected); print('four-file whitelist OK')"
+  - >-
+    /Users/wei/Documents/DesktopOrganizer/我的AI员工/.venv/bin/python -c
+    "from pathlib import Path;
+    log=Path('/private/tmp/my-ai-employee-prune-executed-20260813.txt').read_text().splitlines();
+    assert len(log)==123,len(log);
+    assert all(line.startswith('Removing ') and
+    line.endswith(': gitdir file points to non-existent location') for line in log);
+    print('prune log OK')"
+risk_level: medium
+requires_approval: true
+approval:
+  granted_by: user
+  granted_at: "2026-08-13"
+  source: 本轮用户指令“按照建议执行”
+  scope: |
+    对 123 条经 dry-run 证明 gitdir 路径不存在的失效 worktree 管理元数据执行
+    普通 git worktree prune；不删除分支、现存 worktree、文件或 WIP。
+max_attempts: 1
+max_runtime_minutes: 45
+depends_on:
+  - TASK-20260812-001-p3-recovery-status
+status: ready_to_merge
+date: 2026-08-13
+scope: docs-only
+maintenance_scope: git-worktree-metadata-only
+base_commit: dd05d0836c42987f4eff27b2cf205f4029ba47e2
+non_goals:
+  - 不修改业务代码、LaunchAgent、SMTP、Feature Flag 或真实数据
+  - 不执行 rollover、restart、kickstart、push、tag 或 main 合并
+  - 不删除分支、现存 worktree 或任何 WIP 文件
+  - 不修复 MODIFICATION-LOG.md 的 Markdown 格式问题
+worktree_maintenance:
+  before:
+    registered: 126
+    linked_admin_directories: 125
+    prunable: 123
+    active: 3
+    protected: 3
+    dry_run_count: 123
+    dry_run_reason: gitdir file points to non-existent location
+    dry_run_log_persisted: false
+    dry_run_log_note: 首次持久化只捕获 stdout，Git 信息位于 stderr，文件为空
+  backup:
+    path: /private/tmp/my-ai-employee-git-worktrees-metadata-20260813.tar.gz
+    size_bytes: 4900580
+  after:
+    registered: 3
+    linked_admin_directories: 2
+    prunable: 0
+    active: 3
+    protected: 3
+    prune_output_lines: 123
+    branches_unchanged: true
+    worktree_statuses_unchanged: true
+result:
+  summary: |
+    项目状态校准完成：更新 SESSION-STATE 顶部权威状态，将已进入本地 main 的
+    TASK-20260812-001 标记为 done，固化 P3 实时/固定窗口/历史日报三层证据，
+    并在用户授权下安全移除 123 条失效 worktree 管理元数据。
+  changed_files:
+    - SESSION-STATE.md
+    - docs/agent-team/tasks/TASK-20260812-001-p3-recovery-status.yaml
+    - docs/agent-team/tasks/TASK-20260813-001-project-status-calibration.yaml
+    - tests/eval/audit/p3-project-status-20260813.md
+  verification:
+    - command: markdownlint-cli2 SESSION-STATE.md tests/eval/audit/p3-project-status-20260813.md
+      exit_code: 0
+      result: 0 errors
+    - command: pytest tests/eval/test_eval_fixtures_schema.py -q --no-cov
+      exit_code: 0
+      result: 169 passed
+    - command: ruff check tests/eval
+      exit_code: 0
+      result: All checks passed
+    - command: git diff --check + exact four-file whitelist
+      exit_code: 0
+      result: PASS
+    - command: worktree count + four before/after cmp checks
+      exit_code: 0
+      result: worktrees=3, prunable=0, branches and all protected statuses unchanged
+    - command: validate 123-line prune output
+      exit_code: 0
+      result: every line is a non-existent gitdir metadata removal
+    - command: verify_launchd_intervals.py --wait-seconds 0
+      exit_code: 1
+      result: health PASS; news interval FAIL (99.33m > 90m)
+    - command: full Markdown lint (323 files)
+      exit_code: 1
+      result: 25 existing MD012/MD022 errors, all in MODIFICATION-LOG.md
+  risks:
+    - v1.1-A remains NOT_UNLOCKED at 2 PASS / 2 FAIL
+    - current news interval gate fails at 99.33m despite successful non-degraded runs
+    - initial dry-run persistence file is empty; it is not used as evidence
+    - full Markdown lint remains blocked by 25 existing MODIFICATION-LOG.md errors
+    - local main is one commit ahead of origin/main; no push was performed
+  unresolved:
+    - current epoch attention still has no formal clearing evidence
+    - 30d gate is not eligible before 2026-08-29 if Day0 remains unchanged
+    - the surviving codex/d6102-stash-playbook worktree retains 9 WIP status lines
+    - MODIFICATION-LOG.md formatting needs a separate docs-only task
+  next_agent: sol（只读终审）→ codex（仅终审 PASS 后提交任务分支；不 merge/push）
