@@ -6997,3 +6997,21 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 实施 Agent:本任务为 docs-only 原子任务,`minimax-cn/MiniMax-M3`(max 档位)主执行;TERRA/LUNA 待命;按用户澄清 owner 字段填 `claude`,已在任务包 `result.summary` 注明 M3 实际身份。
 * SOL 提交前终审硬门:**首轮 FAIL**,本次集中修订后等待只读复审;仅当 SOL 复审 PASS 后,才允许 `codex` 在任务分支提交本任务 3 文件;复审 FAIL 则继续回退修订;任何状态下均不 merge/push/tag;当前不得声称 PASS。
 * 报告时点 `2026-08-09T11:18:00Z` 相对 Day0 `2026-07-30T07:04:45.527698Z` 的 P3 elapsed ≈ **10.18d**(已过 7d,未到 30d);8/29 P3 30d 入口(若 Day0 未重置)。
+
+## 2026-08-13 12:30
+
+- 产物：P3 rollover 决策包 — docs-only 只读审计与 GO/NO-GO 输出（不执行 rollover）。
+- 范围：仅文档（`docs/eval/audit/`、`docs/agent-team/tasks/`、`MODIFICATION-LOG.md`）；不修改 `scripts/`、`tests/`、`src/`；不写 `~/Library/Application Support/MyAIEmployee/burn-in/` 或 `burn-in-archive/`。
+- 文件：
+  - `docs/eval/audit/p3-rollover-decision-package-20260813.md`（新增；237 行；§0 TL;DR + §1 上下文 + §2 资格汇总详解 + §3 rollover 脚本行为 + §4 归档目录 + §5 备份/回滚 SOP + §6 GO/NO-GO + §7 已验证/未验证 + §8 下一步 + §9 签名）
+  - `docs/agent-team/tasks/TASK-20260813-001-p3-rollover-decision.yaml`（新增；docs-only 任务契约；status=`ready_to_merge`；risk=low）
+  - `MODIFICATION-LOG.md`（本条）
+- 核心结论：`CONDITIONAL GO`。直接执行不可，须先满足 §6.1 五个前置条件（脚本入仓 + 测试补全 + 预演 + 备份落地 + 回滚 SOP）。
+- 关键依据：`scripts/p3_burn_in_report.py:run_report` 资格汇总（line 956 起）扫描整个 epoch 的 health/news journal，`2026-08-11.json` 等历史日报含 `health_sample_gap / news_run_gap / news_failure`，故整个 epoch 标 `attention`；实时 interval PASS（health `max_gap=10.0m`、news `max_gap=60.2m`）不会反向改写历史；30d 时间门（`2026-08-29T07:04:45.527698Z`）不消除 attention。
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-rollover-decision-package-20260813.md` 0 issues；`git diff --check` 0 errors；YAML 结构合法（无 tab 缩进）。
+- 分支：`codex/p3-rollover-decision-20260813`；基线 `main=25789cc`；`origin/main=cfae507`；ahead 提交后 +1（任务包 +1、审计 +1、日志 +1 = ahead 5）。
+- 工作树：`/tmp/wt-p3-rollover-decision-20260813`；用户未跟踪 WIP 未触碰；未 push；未合并；未跨人工审批门。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用，未触发 external bridge。
+- 风险：low；纯文档 + 决策分析，不修改任何业务脚本；§6.1 前置条件 1-3（脚本入仓 / 测试补全 / 预演）须另开 code/tests-only worktree 并经用户单独授权；前置条件 4-5（备份 / 回滚 SOP）须在执行前由用户/执行人复核。
+- 上一候选（`codex/md-lint-fix-20260813`, `88b3bec`）SOL NO-GO 后已丢弃；本候选仅 docs-only 文档，无脚本入仓，结构合规。
+- 下一棒：等待用户决定 ff-only 合入 main 与否；§6.2 / §6.3 已明确不可行；CONDITIONAL GO 须用户单独以"授权 rollover"关键词触发 §6.1 前置流程。

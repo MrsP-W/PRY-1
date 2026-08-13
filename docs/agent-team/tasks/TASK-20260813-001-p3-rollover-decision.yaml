@@ -1,0 +1,46 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-20260813-001
+objective: "P3 rollover 决策包 — docs-only 只读审计与 GO/NO-GO 输出，不执行 rollover"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "SESSION-STATE.md"
+  - "scripts/p3_rollover_epoch.py"
+  - "scripts/p3_burn_in_report.py"
+  - "scripts/verify_p3_first_daily.py"
+  - "tests/scripts/test_p3_rollover_epoch.py"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/p3-rollover-decision-package-20260813.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on: []
+status: ready_to_merge
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "docs-only 只读审计 P3 epoch rollover 决策；输出 CONDITIONAL GO + 5 前置条件 + 备份/回滚 SOP；不执行 rollover、不修改脚本、不写状态目录"
+  changed_files:
+    - "docs/eval/audit/p3-rollover-decision-package-20260813.md"
+    - "docs/agent-team/tasks/TASK-20260813-001-p3-rollover-decision.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "markdownlint-cli2 docs/eval/audit/p3-rollover-decision-package-20260813.md → 0 issues"
+    - "git diff --check → 0 errors"
+    - "git diff main --stat → 仅 3 文件（docs-only 严格成立）"
+  risks:
+    - "未跟踪脚本 ruff/mypy 未在本审计范围内验证（§7.2）"
+    - "fail_attention / source_missing / archived_start_failed 路径未跑实际测试（§3.1）"
+  unresolved:
+    - "脚本入仓（前置条件 1）需另开常规 code worktree，不在本 docs-only 范围"
+    - "测试补全（前置条件 2）需另开 tests-only worktree，不在本 docs-only 范围"
+    - "执行授权（前置条件 4-5）需用户单独以'授权 rollover'关键词触发"
+  next_agent: "用户决定后：(A) ff-only 合入 main → push readiness 复核；(B) 保留分支待人工复审"
