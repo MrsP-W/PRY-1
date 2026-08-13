@@ -6724,18 +6724,20 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；本前置清单不构成任何 active 切换的实施授权；切 active 必须新开任务包并经集成审批 + push 单独明确。
 - 下一棒：等待用户在 P3 7d 通过时点另开 SLO active 实施任务；或单独批准集成既有候选 `11f92ef` / `eba1050` / `69cbb2f`。
 
-
 ### 2026-08-04 [集成批准] D6.13.3 SLO active 前置清单 — 收口
 
 #### 1. 本次修改内容
+
 - 用户批准后 `git merge --ff-only ce975f5` 合入 main；三文件 docs-only（前置清单 + 任务包 + MODIFICATION-LOG）
 - 跟进：MD lint 307→310 入口同步；pytest 仍 3200/1（撞坑 #107）
 
 #### 2. 风险点
+
 - 不构成 SLO active；其余候选 11f92ef/eba1050/69cbb2f 未合入
 - 工作区 untracked P3 tests 仍会使 collect > snapshot（已知）
 
 #### 3. 当前项目整体总结
+
 - HEAD=`ce975f5` ahead origin 1；未 push
 
 ---
@@ -6789,71 +6791,78 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；核验结果支持用户下一轮单独批准集成 `11f92ef`，不构成越权集成。
 - 下一棒：等待用户在下一轮单独批准"集成 `11f92ef`"或维持 PENDING；候选集成后 main 会 ahead=1，需要再次 push 明确。
 
-
 ### 2026-08-04 [集成批准] Feedback 三候选 docs-only — 收口
 
 #### 1. 本次修改内容
+
 - 用户「继续」后 cherry-pick：`11f92ef` → `eba1050` → `69cbb2f`（仅 MODIFICATION-LOG 追加冲突，双方保留）
 - MD lint 310→313；pytest 基线仍 3200/1（#107）
 
 #### 2. 风险点
+
 - 仍为只读审计/评估，不实施 Feedback 写库、密钥接入或 Feature Flag
 - 未 push
 
 #### 3. 当前项目整体总结
-- HEAD 以 `git rev-parse --short HEAD` 为准；ahead origin 累计增加；SLO 仍 inactive
 
+- HEAD 以 `git rev-parse --short HEAD` 为准；ahead origin 累计增加；SLO 仍 inactive
 
 ### 2026-08-04 [继续] v1.1-A readiness + 任务状态收口 — 收口
 
 #### 1. 本次修改内容
+
 - cherry-pick `a46fe02`：`docs/v1.1-a-readiness-2026-08-03.md`（4 门 2 PASS/2 FAIL，不可解锁）
 - 已合入的 feedback/FF readiness 任务包 `ready_to_merge` → `done`；MD lint 313→314
 
 #### 2. 风险点
+
 - 当前 P3 Day0=`2026-07-30T07:04:45Z` 仍 `attention`/`fail_attention`，7d/30d 不 eligible
 - 不切 SLO active；不实施 Feature Flag；fixture 15→30 候选仍待单独批准
 
 #### 3. 当前项目整体总结
-- HEAD 以 `git rev-parse` 为准；默认不 push
 
+- HEAD 以 `git rev-parse` 为准；默认不 push
 
 ### 2026-08-05 [重启] D6.18.1 评测样本 30→40 覆盖矩阵计划 — 收口
 
 #### 1. 本次修改内容
+
 - 新增 `docs/eval-fixture-coverage-30-to-40-plan.md`：30→40 选题维度 + 配比设计 + 2 轮节奏 + 与 guards 兼容性
 - 新增 `docs/agent-team/tasks/TASK-20260805-001-d6181-fixture-30-to-40-plan.yaml`：任务契约
 - 独立 worktree `/private/tmp/my-ai-employee-ai-agent-d6181-fixture-30-40-plan-20260805`，分支 `codex/ai-agent-d6181-fixture-30-40-plan-20260805`
 
 #### 2. 风险点
+
 - 仅 docs-only 计划文档；不落 JSON fixture；不实施轮 1/轮 2 落地
 - 不触碰 src/、scripts/、.cursor/、plugins/、ops/、ENABLE_*、LaunchAgent
 - 不集成到 main；不 push；不发起 v1.1-A 解锁
 - 现有 30 条 fixture 在 main `2f698802` 下仍 `129 passed`；新计划任务包 `ready_to_merge`
 
 #### 3. 当前项目整体总结
+
 - HEAD `2f698802`；ahead origin/main 2；自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
 - 协调主 Agent `gpt-5.6-luna`（max）；SOL/TERRA 未唤醒；M3 原生通道不可用未触发 external bridge
 - v1.1-A readiness 仍 `NOT_UNLOCKED`（4 门 2 PASS/2 FAIL，7d/30d 时间未到 + attention 未消）
 
-
 ### 2026-08-05 [按建议执行] D6.15.1 v1.1-A readiness 4 门槛重核 — 收口
 
 #### 1. 本次修改内容
+
 - 新增 `docs/v1.1-a-readiness-2026-08-05.md`:基于 main `2f698802` 的 4 门槛重核报告
 - 新增 `docs/agent-team/tasks/TASK-20260805-002-d6151-v11-a-readiness-current.yaml`:任务契约
 - 独立 worktree `/private/tmp/my-ai-employee-ai-agent-v11-a-readiness-current-20260805`,分支 `codex/ai-agent-v11-a-readiness-current-20260805`
 
 #### 2. 风险点
+
 - 仅 docs-only 重核,不修改 `src/`、`scripts/`、LaunchAgent、`ENABLE_*`
 - 不集成 30→40 计划 `0bb7fba`(上一轮候选);不发起 push
 - 不修改 13 项用户未跟踪 WIP
 - 硬卡点 `com.myaiemployee.agent` 根因仍 `needs_human`,不解锁 v1.1-A
 
 #### 3. 当前项目整体总结
+
 - HEAD `2f698802`;ahead origin/main 2;自动化 `ACTIVE`/`THREE_AGENT_OFF`/`GPT_0`
 - v1.1-A readiness:2 PASS / 2 FAIL(30-fixture + 5 docs-only 已集成;7d/30d 时间未到 + attention 未消)
-
 
 ### 2026-08-05 [按建议执行] D6.18.1 30→40 扩样轮 1 任务包 — 收口
 
@@ -6875,7 +6884,6 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 候选清单:0bb7fba(30→40 计划)+ 1a7dec1(readiness 重核)+ 后续 1a7dec1+ task pack(本次)
 - 协调主 Agent `gpt-5.6-luna`(max);SOL/TERRA 未唤醒;M3 原生通道不可用未触发 external bridge
 
-
 ### 2026-08-05 [上线 plan] D6.15.5 v1.1-A 端到端路线图 — 收口
 
 #### 1. 本次修改内容
@@ -6890,7 +6898,6 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不集成候选链 `0bb7fba / 1a7dec1 / 6272eb8`;不发起 push
 * 不修改 13 项用户未跟踪 WIP
 * 阶段 C SOL 审核依赖 GPT 额度恢复(预计 8/8);阶段 B 解封依赖用户处理 com.myaiemployee.agent 根因
-
 
 ### 2026-08-05 [执行建议] D6.18.2 P3 epoch rollover 脚本只读审计 — 收口
 
@@ -6907,7 +6914,6 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不修改 13 项用户未跟踪 WIP;不修改既有 tests/eval/test_eval_fixtures_schema.py
 * 集成阻断:R1 异常类型白名单 + R2 watch payload 脱敏 + R3 invalid_epoch 细分(均为可选补强,非阻断)
 
-
 ### 2026-08-05 [按计划和建议推进] D6.18.1 30→40 扩样轮 2 任务包 — 收口
 
 #### 1. 本次修改内容
@@ -6921,7 +6927,6 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 * 不集成候选链 0bb7fba / 6272eb8;不发起 push
 * 不修改 13 项用户未跟踪 WIP
 * 任务包 depends_on 0bb7fba + 6272eb8(均 ready_to_merge,需先集成);三段链式依赖
-
 
 ### 2026-08-05 [批准 A4 8/6] D6.15.6 P3 7d 时间窗进入观察任务准备 — 收口
 
