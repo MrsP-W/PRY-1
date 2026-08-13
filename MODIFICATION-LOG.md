@@ -6724,6 +6724,20 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；本前置清单不构成任何 active 切换的实施授权；切 active 必须新开任务包并经集成审批 + push 单独明确。
 - 下一棒：等待用户在 P3 7d 通过时点另开 SLO active 实施任务；或单独批准集成既有候选 `11f92ef` / `eba1050` / `69cbb2f`。
 
+## 2026-08-13 12:20
+
+- 产物：MODIFICATION-LOG.md 历史积累的 25 条 markdownlint 错误修复（docs-only；纯文档改动）。
+- 范围：仅 MODIFICATION-LOG.md 末尾段落（行号 6727–6925 范围）的空行；非空行内容字节级一致（`diff <(grep -v '^$' before) <(grep -v '^$' after)` 0 差异）；不引入任何新文件，不修改 scripts/、tests/、src/。
+- 错误分布：MD012（no-multiple-blanks）× 10 + MD022（blanks-around-headings）× 15。
+- 验证：`markdownlint-cli2 MODIFICATION-LOG.md` 0 issues；`git ls-files -z '*.md' | xargs -0 markdownlint-cli2` 322 文件 0 issues；`git diff --check` 0 errors。
+- 修复脚本：`/tmp/fix_lint_inline.py`（一次性工具，未纳入提交；复现用，不沉淀到仓库）。
+- 分支：codex/md-lint-fix-20260813-r2；基线 main=c2ee261；ahead=1（修复 commit）+1（条目 commit）=2。
+- 工作树：/tmp/wt-md-lint-fix-r2-20260813；用户未跟踪 WIP 未触碰；未 push；未合并；未跨 SOL 终审门。
+- 模型：M3（MiniMax-M3）主执行；SOL 终审为合并前置门（按全局 v2 路由 HARD/CRITICAL 收口原则），未通过 SOL 前不得 ff-only 合入 main。
+- 风险：low；纯空白变化 + 1 条日志条目，不影响任何历史段落语义。
+- 上一候选（codex/md-lint-fix-20260813,88b3bec）已 SOL NO-GO：含 scripts/fix_md_lint.py 违反 P3 docs/tests-only 边界；本候选重做，仅 MODIFICATION-LOG.md，丢弃上一候选。
+- 下一棒：等待 SOL 终审 PASS 后 `git merge --ff-only <sha>` 合入 main；或用户单独批准以 docs-only 例外跳过 SOL 门（须用户显式声明）。
+
 ### 2026-08-04 [集成批准] D6.13.3 SLO active 前置清单 — 收口
 
 #### 1. 本次修改内容
