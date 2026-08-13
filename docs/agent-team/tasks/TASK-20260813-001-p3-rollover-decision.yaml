@@ -23,7 +23,7 @@ requires_approval: false
 max_attempts: 1
 max_runtime_minutes: 30
 depends_on: []
-status: ready_to_merge
+status: done
 
 # 实施完成后回填；不得省略验证证据。
 result:

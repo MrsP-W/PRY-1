@@ -117,7 +117,7 @@
 | **上上上一阶段** | ✅ `v0.2.38` P1-1 mypy 严格模式 9 errors 修复已关闭(commit `a057ad9` · 沿 v0.2.23 cast 范本 + isinstance 守卫 · 严格模式 mypy 双 0)|
 | **当前 HEAD** | 以 `git rev-parse --short HEAD` 为准(不写精确 hash,避免自引用漂移) |
 | **v0.1.0 tag** | `2af775f` 锚定不动(沿 D5.7.2 范本) |
-| **质量基线** | **3200 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **314 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
+| **质量基线** | **3200 passed / 1 skipped** / **90.29%** / mypy --strict 0 / **294 files** / MD lint **323 files** 0 errors(撞坑 #107 P1#1 baseline drift 撤回 · Path B 保守 revert 3182→3179 · working tree 仍 collect 3 个 untracked `test_p3_rollover_epoch.py` tests 但不计入 baseline · 以 `make test` / `make coverage` / `make lint` 实测为准 · `make check-snapshot` 防漂移 · v1.1 进化底座 docs-only + AgentRun + P3 + 撞坑 #95 修复回归 + 撞坑 #97 NullPool 接入 + 撞坑 #98 launchd legacy retirement 收口 + 撞坑 #102 cli too_early test 时序修复 + 撞坑 #103 stash-collected-drift 沉淀 + 撞坑 #104 docs-only MD 同步 + **D6.10.1 评测样本 4→15 + 撞坑 #105 NEW docs+fixture 复合漂移待沉淀 + 撞坑 #106 二修 3 子进程 sys.executable + 重复 import 唯一化 + Makefile ruff scripts/ scope + 4 新回归测试 + 撞坑 #106 baseline post-merge untracked 3 tests sync 3179→3182 → 撞坑 #107 P1#1 drift 撤回 3182→3179**) |
 | **下一棒** | **P3 新 Day0 观察期**(Day0=`2026-07-27T05:34:24Z` `collecting` · 首份日报门槛 2026-07-29T00:00Z · 7d 2026-08-03 · 30d 2026-08-26)· 旧 epoch `fail_attention` 已归档;扩评测样本至 30+ 脱敏;**不改 LaunchAgent/调度**;不做 SMTP / Mac 重启 / v1.0 |
 | **下一棒** | Day 12 checkpoint 已补齐 · 8/1 readiness 预热(7/20 启动) |
 | **撞坑 #95 修复 1h 验证** | ✅ **P0-3 caffeinate 1h 观察完成**(2026-07-10 12:29→13:29)· menu-bar PID 11404 + dashboard PID 11406 持续 1h 1min 23s 零重启 · 127.0.0.1:8765 LISTEN · HTTP 404 4ms · caffeinate PID 11601 退出 · `docs/v0.2.78-#95-1h-verify.md` · 撞坑 #95 完全修复(拆 2 独立 LaunchAgent + ProcessType=Standard + KeepAlive=true)· **🚨 撞坑 #97 新暴露**(SQLCipher 跨线程 close 报错,30→60min +38 traceback,服务仍可用)· **P1-1 #97 修复** 已落地(`sqlcipher_compat.py` 长生命周期 db_path 改用 NullPool,**不** StaticPool · 2 回归测试 5 passed)· **P1-2 #98 修复** 已落地(`launchd_install.sh` 5.5 legacy retirement 段 · K1-K4 4 回归测试 4 passed)· `memory/pitfall-97` + `memory/pitfall-98` 同步沉淀 |
@@ -7015,3 +7015,19 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；纯文档 + 决策分析，不修改任何业务脚本；§6.1 前置条件 1-3（脚本入仓 / 测试补全 / 预演）须另开 code/tests-only worktree 并经用户单独授权；前置条件 4-5（备份 / 回滚 SOP）须在执行前由用户/执行人复核。
 - 上一候选（`codex/md-lint-fix-20260813`, `88b3bec`）SOL NO-GO 后已丢弃；本候选仅 docs-only 文档，无脚本入仓，结构合规。
 - 下一棒：等待用户决定 ff-only 合入 main 与否；§6.2 / §6.3 已明确不可行；CONDITIONAL GO 须用户单独以"授权 rollover"关键词触发 §6.1 前置流程。
+
+### 2026-08-13 [集成批准 A] P3 rollover 决策包合入
+
+#### 1. 本次修改内容
+
+- 用户选 A：`git merge --ff-only codex/p3-rollover-decision-20260813` → `f97f217`
+- 跟进：任务 `done`；MD lint 基线同步 tracked **323**；未 push；未执行 rollover
+
+#### 2. 风险点
+
+- 仍为 CONDITIONAL GO；§6.1 五前置未满足前禁止 `p3_rollover_epoch.py`
+- 真实 burn-in 路径未写入
+
+#### 3. 当前项目整体总结
+
+- 本地 `main` ahead origin；说 `push` 才推

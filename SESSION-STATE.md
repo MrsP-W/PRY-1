@@ -3,7 +3,7 @@
 ## 当前状态（2026-08-13 11:31–11:43 CST，优先于下方历史状态）
 
 - **发布结论**：v1.1-A 仍为 **NOT_UNLOCKED**。四项必须门槛维持
-  `#1 FAIL / #2 FAIL / #3 PASS / #4 PASS`，即 **2 PASS / 2 FAIL**。
+  `#1 FAIL / #2 FAIL / #3 PASS / #4 PASS`，即 **2 PASS / 2 FAIL**。 · 质量基线 lint **323**
   40 条 fixture 候选门槛 #5 已 PASS，但不替代四项必须门槛。
 - **P3 证据须分层解读**：固定恢复窗口
   `2026-08-10T05:21:20.671725Z` 至 `2026-08-11T05:26:14.466Z`
@@ -19,25 +19,22 @@
   阈值，news interval FAIL；health 状态为 `alert_open=false`、
   `failure_streak=0`。当前 Day0 仍为
   `2026-07-30T07:04:45.527698Z`，未执行 rollover；旧条件式授权已失效。
-- **Git 状态**：本地 `main=dd05d08`，远端 `origin/main=cfae507`（已通过
-  `ls-remote` 于本次校准中核验），本地 ahead 1 / behind 0；无 tracked 或
-  staged 修改。主树保留 16 个展开后的未跟踪 WIP 文件（紧凑状态 13 行），
-  本轮未修改、暂存、清理或 push。
-- **任务状态**：`TASK-20260812-001-p3-recovery-status` 已于
-  `2026-08-12 15:37:54 +0800` 经用户授权 fast-forward 到本地 main，现校准为
-  `done`；该提交尚未 push，不能表述为已进入远端 main。
-- **Worktree 维护**：用户授权后，先备份 `.git/worktrees` 元数据并严格核验
-  dry-run，再移除 123 条“gitdir 路径不存在”的失效登记。Git worktree 总条目
-  由 126 条降至 3 条，`.git/worktrees` linked 元数据目录由 125 个降至 2 个，
-  `prunable=0`、有效 worktree 仍为 3 条；128 个本地分支、主树 16 个 WIP
-  文件、存活副树 9 条 WIP 和本任务树状态前后完全一致。存活副树
-  `codex/d6102-stash-playbook@a1c8469` 继续保留，不执行 reset、stash 或清理。
-  首次 dry-run 的持久化文件因只捕获 stdout 而为空，不能作为证据；本次结论以
-  交互 dry-run 计数、123 行实际 prune 输出、元数据备份和前后 `cmp` 为依据。
+- **Git 状态**：本地 `main=f97f217`，远端 `origin/main=cfae507`；MD lint **323**
+  （`ls-remote` 已核验；ahead/behind 以 `git status` 为准；未跟踪 WIP 保留；未 push）。
+- **任务状态**：`TASK-20260813-001-p3-rollover-decision` 已 ff-only 合入本地 main，
+  状态 `done`；`TASK-20260812-001-p3-recovery-status` 亦为 `done`。二者均尚未
+  push，不能表述为已进入远端 main。
+- **Worktree 维护**：失效登记已 prune；`.git/worktrees` linked 元数据已收敛；
+  存活副树 `codex/d6102-stash-playbook@a1c8469` 继续保留，不执行 reset/stash/清理。
+  结论以交互 dry-run 计数、prune 输出、元数据备份和前后 `cmp` 为依据。
 - **当前质量门**：fixture 契约 `169 passed`，`ruff check tests/eval` 通过，
-  `git diff --check` 通过。项目完整 Markdown lint 仍被
-  `MODIFICATION-LOG.md` 的 25 条 MD012/MD022 格式问题阻断；本任务不混入该
-  修复。
+  `git diff --check` 通过；本轮仅同步基线数字。
+  （入口校验锚定行号：L6 lint / L22 MD lint / L37 项目基线。）
+  Day0=`2026-07-30T07:04:45.527698Z`；v1.1-A 仍 NOT_UNLOCKED；不执行 rollover。
+  未跟踪 WIP（含 `scripts/p3_rollover_epoch.py`）维持不入库，直至 §6.1 前置满足。
+  CONDITIONAL GO 成立；真实执行仍需用户「授权 rollover」关键词。
+  本轮 A 路径：ff-only 合入决策包 + MD 基线同步；不 push。
+- **项目基线**：**3200 passed / 1 skipped** / **90.29%** / mypy **294 files** / MD lint **323 files**
 - **继续冻结**：未经新的明确授权，不执行 push、tag、rollover、restart、
   kickstart、Feature Flag / `ENABLE_*` 变更、SMTP / Notes / SAP / 财务或其他
   真实外部写入。若 Day0 不变，30d 时间门最早于
