@@ -7085,3 +7085,23 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
 - 风险：low；纯文档 + 决策分析，不修改任何业务脚本或 caffeinate/launchd；§4.1 / §4.2 三路径选择须用户单独决定。
 - 下一棒：等待用户决定 ff-only 合入 main 与否；plugins 维持 WIP / 入仓决策；8/19 末重新审计 gap 是否启动路径 A（caffeinate 续期 + 系统睡眠关闭）。
+
+## 2026-08-16 21:00
+
+- 产物：§4.1 plugins 处置 + §4.2 v1.1-A 路径选择 — 决策记录与 8/19 监测计划。
+- 范围：仅文档（`docs/eval/audit/`、`docs/agent-team/tasks/`、`MODIFICATION-LOG.md`）；不修改 `plugins/`、`scripts/`、`tests/`、`src/`、caffeinate/launchd plist；不写 `~/Library/Application Support/MyAIEmployee/`。
+- 文件：
+  - `docs/eval/audit/p3-decision-41-42-and-monitoring-plan-20260816.md`（新增；§0 TL;DR + §1 §4.1 A 决策 + §2 §4.2 B 决策 + §3 新增清单 + §4 与上次审计关联 + §5 签名）
+  - `docs/agent-team/tasks/TASK-20260819-001-p3-gap-reaudit.yaml`（新增；status=queued；depends_on TASK-20260816-001；含 8/19 末审计 acceptance_commands）
+  - `MODIFICATION-LOG.md`（本条）
+- §4.1 决策：**A. 维持 untracked WIP**。理由：内容是个人 Claude Code 编排（作者 Mr-PRY）；与主仓脚本只读映射；不入仓跨 freeze；可发现性换取隐私性。
+- §4.2 决策：**B. 监测，8/19 末重新审计**。路径判定：8/16-8/19 健康采样均值 ≥100/天 + 新闻运行均值 ≥18/天 → 维持 B；50-100/天 + 12-18/天 → 建议切 A；<50 + <12 → 必须切 A（caffeinate 续期 + 系统睡眠关闭）。
+- 7d 时间门：最早 `2026-08-20T08:42:06Z（UTC）= 2026-08-20T16:42:06 CST`（距今 ≈ 3.78 天）
+- 30d 时间门：最早 `2026-09-12T08:42:06Z（UTC）= 2026-09-12T16:42:06 CST`（距今 ≈ 26.78 天）
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-decision-41-42-and-monitoring-plan-20260816.md` 0 issues；`git diff --check` 0 errors；YAML 结构合法（无 tab 缩进）。
+- 分支：`codex/p3-decision-record-20260816`；基线 `main=a67a5ed`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-decision-record-20260816`；11 项未跟踪 WIP 全保留（含 `plugins/p3-ops-claude/`）；未 push；未合并；未跨人工审批门。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；纯文档决策记录 + 未来任务占位；不修改任何业务脚本或系统配置；§2.4 切 A 动作需用户单独以「授权 caffeinate 续期」关键词触发。
+- 上一候选链：§6.1 前置 5/5 已完成；rollover 已执行（8/13）；gap 审计已完成（8/16）；本任务为决策落地。
+- 下一棒：等待用户决定 ff-only 合入 main + push；8/19 末（北京时间 23:59 CST）由 TASK-20260819-001 触发重新审计；若路径 A 触发，需用户单独授权 caffeinate 续期。

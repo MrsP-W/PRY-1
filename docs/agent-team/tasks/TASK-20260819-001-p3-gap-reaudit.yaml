@@ -1,0 +1,39 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-20260819-001
+objective: "P3 8/19 末重新审计 — gap 监测与路径 B/A 切换判定"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md"
+  - "docs/eval/audit/p3-decision-41-42-and-monitoring-plan-20260816.md"
+  - "~/Library/Application Support/MyAIEmployee/burn-in/state.json"
+  - "~/Library/Application Support/MyAIEmployee/health/samples.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/news/runs.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/health/alerts.jsonl"
+  - "~/Library/LaunchAgents/com.myaiemployee.p3-awake.plist"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "python3 -c "import json; from collections import Counter; samples = [json.loads(l) for l in open('$HOME/Library/Application Support/MyAIEmployee/health/samples.jsonl') if l.strip()]; days = Counter(); [days.update([s.get('sample', {}).get('captured_at', '')[:10]]) for s in samples if s.get('sample', {}).get('captured_at', '')[:10] in {'2026-08-16','2026-08-17','2026-08-18','2026-08-19'}]""
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/p3-gap-reaudit-2026-08-19.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260816-001-p3-gap-and-plugins-audit"
+status: queued
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "占位：8/19 末执行后回填"
+  changed_files: []
+  verification: []
+  risks: []
+  unresolved: []
+  next_agent: ""
