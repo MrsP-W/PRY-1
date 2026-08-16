@@ -1,0 +1,45 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-needs_human-20260816-001
+objective: "ops/claude-p3-watch-launchd.plist 入仓审批（needs_human）"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "ops/claude-p3-watch-launchd.plist.example"
+  - "docs/eval/audit/wip-inventory-2026-08-16.md"
+  - "docs/eval/audit/needs-human-tracking-2026-08-16.md"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/needs-human-tracking-2026-08-16.md"
+  - "git diff --check"
+risk_level: medium
+requires_approval: true
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260816-002-wip-inventory"
+status: needs_human
+
+# needs_human 跟踪字段（继承 wip-inventory §2 B 类）
+needs_human:
+  trigger_keyword: "「批准 ops/claude-p3-watch 入仓」"
+  risk_summary: "LaunchAgent RunAtLoad=true 一旦复制到 ~/Library/LaunchAgents/ 立即生效；与 P3 主路径冲突"
+  blocking_reason: "沿 wip-inventory-2026-08-16 §1.2/§2.3 B 类判定；当前不满足单独授权条件"
+  unlock_steps:
+    - "用户单独以触发关键词批准"
+    - "开常规 code worktree（非常规 docs-only）实施"
+    - "通过 SOL 终审"
+    - "ff-only 合入 main 后单独 push"
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "占位：等待用户单独授权触发"
+  changed_files: []
+  verification: []
+  risks: []
+  unresolved: []
+  next_agent: "用户授权后开常规 code worktree"

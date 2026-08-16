@@ -7146,3 +7146,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；纯 docs 入仓；B/C 类 5 项未触碰；副树未触碰；不入 ops/、不启 Feature Flag。
 - 后续路径：B 类 3 项（`ops/claude-p3-watch-*` × 2 + 副树 `quality_snapshot.py`）仍标 needs_human，待用户单独决定；副树 `codex/d6102-stash-playbook` 9 条 WIP 待用户单独决定（维持 / rebase+cherry-pick / 归档）。
 - 下一棒：等待用户决定 ff-only 合入 main + push。
+
+## 2026-08-16 22:30
+
+- 产物：needs_human 跟踪审计 — B 类 3 项（docs-only 跟踪文档）。
+- 范围：仅文档（`docs/eval/audit/`、`docs/agent-team/tasks/`、`MODIFICATION-LOG.md`）；**不动 B 类 3 项脚本本身**。
+- 文件（5 + 本条）：
+  - `docs/eval/audit/needs-human-tracking-2026-08-16.md`（新增；§0 TL;DR + §1 上下文 + §2 -001 plist + §3 -002 script + §4 -003 snapshot + §5 跟踪机制 + §6 状态表 + §7 边界 + §8 下一步 + §9 签名）
+  - `docs/agent-team/tasks/TASK-needs_human-20260816-001-claude-p3-watch-plist.yaml`（新增；status=needs_human；risk=medium；requires_approval=true）
+  - `docs/agent-team/tasks/TASK-needs_human-20260816-002-claude-p3-watch-script.yaml`（新增；同上结构）
+  - `docs/agent-team/tasks/TASK-needs_human-20260816-003-quality-snapshot-d6102.yaml`（新增；同上结构）
+  - `MODIFICATION-LOG.md`（本条）
+- B 类 3 项状态（沿用 wip-inventory-2026-08-16 §1.2 / §2.3）：
+  - `-001 plist`：LaunchAgent RunAtLoad=true；触发「批准 ops/claude-p3-watch 入仓」
+  - `-002 script`：`--permission-mode dontAsk` + `--max-budget-usd 1`；触发「批准 run-claude-p3-watch 入仓」
+  - `-003 snapshot`：副树 HEAD a1c8469 落后 4 周；触发「批准 d6102 quality_snapshot 集成」
+- 跟踪机制：3 任务包 status=`needs_human`；requires_approval=true；risk=medium；depends_on TASK-20260816-002。
+- 验证：`markdownlint-cli2 docs/eval/audit/needs-human-tracking-2026-08-16.md` 0 issues；3 YAML 合法（无 tab 缩进）。
+- 分支：`codex/needs-human-tracking-20260816`；基线 `main=99f3832`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-tracking-20260816`；主树 5 项未跟踪 WIP + 副树 9 条 WIP 全保留；未 push；未合并。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low（跟踪文档）；B 类 3 项脚本本身风险沿用 wip-inventory 记录。
+- 上一候选链：WIP 盘点（ee66713）→ A 类 6 项入仓（99f3832）→ B 类 3 项 needs_human 跟踪（本任务）。
+- 下一棒：等待用户决定 ff-only 合入 main + push；3 项 needs_human 等用户单独授权触发。
