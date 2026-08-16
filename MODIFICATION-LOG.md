@@ -7105,3 +7105,22 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low；纯文档决策记录 + 未来任务占位；不修改任何业务脚本或系统配置；§2.4 切 A 动作需用户单独以「授权 caffeinate 续期」关键词触发。
 - 上一候选链：§6.1 前置 5/5 已完成；rollover 已执行（8/13）；gap 审计已完成（8/16）；本任务为决策落地。
 - 下一棒：等待用户决定 ff-only 合入 main + push；8/19 末（北京时间 23:59 CST）由 TASK-20260819-001 触发重新审计；若路径 A 触发，需用户单独授权 caffeinate 续期。
+
+## 2026-08-16 21:30
+
+- 产物：WIP 盘点审计 — 主树 11 项 + 副树 9 条分类（docs-only 只读盘点）。
+- 范围：仅文档（`docs/eval/audit/`、`docs/agent-team/tasks/`、`MODIFICATION-LOG.md`）；**不 add 任何 WIP、不修复、不清理**。
+- 文件：
+  - `docs/eval/audit/wip-inventory-2026-08-16.md`（新增；181 行；§0 TL;DR + §1 主树 11 项分类 + §2 副树 9 条分类 + §3 汇总 + §4 §4.1 A 复核 + §5 已/未验证 + §6 下一步 + §7 签名）
+  - `docs/agent-team/tasks/TASK-20260816-002-wip-inventory.yaml`（新增；status=ready_to_merge；depends_on TASK-20260816-001）
+  - `MODIFICATION-LOG.md`（本条）
+- 分类汇总：A 可独立沉淀 docs/tests（主 6 + 副 3 = 9 项）；B P3 高风险 → needs_human（主 2 + 副 1 = 3 项）；C 用户私有 / 历史 WIP（主 3 含 plugins/ 5 文件 + 副 5 = 8 项）。
+- §4.1 A 决策复核：`plugins/p3-ops-claude/` 时间戳仍 2026-08-04 16:09，无新变更；维持 WIP 决策不变。
+- 副树 `codex/d6102-stash-playbook` HEAD `a1c8469` 落后 main ≈ 4 周（`108 files changed, 7494 deletions` vs main）；不 cherry-pick、不 reset、不 merge、不 stash drop。
+- 关键发现：`docs/eval-fixture-coverage-15-to-30-plan.md` 已被 main 的 `30-to-40-plan.md` 覆盖；保留为 WIP 不入仓。
+- 验证：`markdownlint-cli2 docs/eval/audit/wip-inventory-2026-08-16.md` 0 issues；`git diff --check` 0 errors；YAML 结构合法。
+- 分支：`codex/wip-inventory-20260816`；基线 `main=089815e`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-wip-inventory-20260816`；用户 11 项未跟踪 WIP + 副树 9 条 WIP 全保留；未 push；未合并。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；纯文档盘点 + 分类建议；A/B/C 三类处置建议均需用户单独批准才执行。
+- 下一棒：等待用户决定 ff-only 合入 main + push；A 类是否合并入仓、B 类 needs_human 跟踪、副树整体处置三项决策待用户回复。

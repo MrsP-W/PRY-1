@@ -1,0 +1,47 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-20260816-002
+objective: "WIP 盘点审计 — 主树 11 项 + 副树 9 条分类（docs-only 只读）"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "docs/eval/audit/wip-inventory-2026-08-16.md"
+  - "/Users/wei/Documents/DesktopOrganizer/worktrees/my-ai-employee-d6102/.git"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/wip-inventory-2026-08-16.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260816-001-p3-gap-and-plugins-audit"
+status: ready_to_merge
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "docs-only 只读盘点主树 11 项 + 副树 9 条 WIP；3 分类：A 可沉淀（9 项）/ B P3 高风险 needs_human（3 项）/ C 维持 WIP（8 项）；不动任何文件、不入仓、不清理副 worktree"
+  changed_files:
+    - "docs/eval/audit/wip-inventory-2026-08-16.md"
+    - "docs/agent-team/tasks/TASK-20260816-002-wip-inventory.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "markdownlint-cli2 docs/eval/audit/wip-inventory-2026-08-16.md → 0 issues"
+    - "git diff --check → 0 errors"
+    - "git diff main --stat → 仅 3 文件（docs-only 严格成立）"
+  risks:
+    - "A 类 9 项是否入仓需用户单独批准（不自动执行）"
+    - "副树 d6102 落后 main ≈ 4 周，任何 cherry-pick 风险高"
+    - "15→30 plan 已被 30→40 plan 覆盖；保留 WIP 不入仓"
+  unresolved:
+    - "A 类 6 项主树是否合并入仓（待用户单独决定）"
+    - "副树 9 条 WIP 整体处置（维持 / rebase+cherry-pick / 归档）"
+    - "B 类 3 项 needs_human 任务跟踪是否单独建任务包"
+  next_agent: "用户决定后：(A) ff-only 合入 main → push；(B) 保留分支待人工复审"
