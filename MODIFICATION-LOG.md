@@ -7067,3 +7067,21 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 #### 3. 当前项目整体总结
 
 - 新 7d/30d 从 `2026-08-13T08:42:06Z` 起算；首份日报门 `2026-08-15T00:00:00Z`；默认不 push
+
+## 2026-08-16 20:50
+
+- 产物：P3 gap 根因与 plugins 盘点审计（docs-only 只读分析）。
+- 范围：仅文档（`docs/eval/audit/`、`docs/agent-team/tasks/`、`MODIFICATION-LOG.md`）；不修改 `scripts/`、`tests/`、`src/`、`plugins/`、`ops/`；不写 `~/Library/Application Support/MyAIEmployee/`。
+- 文件：
+  - `docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md`（新增；263 行；§0 TL;DR + §1 上下文 + §2 plugins 盘点 + §3 gap 根因 + §4 路径建议 + §5 已验证/未验证 + §6 下一步 + §7 签名）
+  - `docs/agent-team/tasks/TASK-20260816-001-p3-gap-and-plugins-audit.yaml`（新增；docs-only 任务契约；status=`ready_to_merge`；risk=low）
+  - `MODIFICATION-LOG.md`（本条）
+- 核心发现 (A) `plugins/p3-ops-claude/` 时间戳为 `2026-08-04 16:09`，**非新增**；是 Claude Code 安全编排命令（`/p3-watch` 默认仅诊断、`/p3-rollover` 仅首份日报门槛后执行），与主仓脚本一一对应；建议**维持 untracked WIP**。
+- 核心发现 (B) 8/14 health 6h gap + news 6h gap、8/15 全天 9 health samples + 1 news run、8/16 仍 5 health + 1 news；30 天每日趋势显示 8/4-8/8、8/11、8/14-8/16 持续低谷，与 macOS 睡眠周期高度吻合；gap 窗口内 daemon 状态 `healthy=true, reasons=[]` → **停的是采样器，不是被监控对象**；最可能假设：H1 macOS 睡眠 + H2 caffeinate `-t 9d` 已到期（撞坑 #95 修复 8/3 起算）。
+- v1.1-A 含义：attention 触发是运营层（机器睡眠）而非 epoch 标记层；7d 时间门最早 `2026-08-20T08:42:06Z`，但只要睡眠继续复发 attention 不会自动消除；路径 A（caffeinate 续期 + 系统睡眠关闭）治本但需用户显式决定电源策略。
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md` 0 issues；`git diff --check` 0 errors；YAML 结构合法（无 tab 缩进）。
+- 分支：`codex/p3-gap-and-plugins-audit-20260816`；基线 `main=431f2f3`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-gap-plugins-audit-20260816`；用户 11 项未跟踪 WIP 全保留（含 `plugins/p3-ops-claude/`）；未 push；未合并。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；纯文档 + 决策分析，不修改任何业务脚本或 caffeinate/launchd；§4.1 / §4.2 三路径选择须用户单独决定。
+- 下一棒：等待用户决定 ff-only 合入 main 与否；plugins 维持 WIP / 入仓决策；8/19 末重新审计 gap 是否启动路径 A（caffeinate 续期 + 系统睡眠关闭）。

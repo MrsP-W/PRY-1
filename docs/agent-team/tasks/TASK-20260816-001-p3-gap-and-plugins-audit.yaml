@@ -1,0 +1,52 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-20260816-001
+objective: "P3 gap 根因与 plugins 盘点审计 — docs-only 只读分析"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "~/Library/Application Support/MyAIEmployee/burn-in/daily/2026-08-14.json"
+  - "~/Library/Application Support/MyAIEmployee/health/samples.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/news/runs.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/health/alerts.jsonl"
+  - "plugins/p3-ops-claude/README.md"
+  - "plugins/p3-ops-claude/.claude-plugin/plugin.json"
+  - "plugins/p3-ops-claude/commands/p3-rollover.md"
+  - "plugins/p3-ops-claude/commands/p3-watch.md"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on: []
+status: ready_to_merge
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "docs-only 只读审计 (A) plugins/p3-ops-claude 8/4 起 WIP 性质 + (B) 8/14-8/15 gap 根因(疑似 macOS 睡眠 + caffeinate -t 到期)；输出 3 路径建议：A 维持 WIP / B 监测 / C caffeinate 续期；不修改脚本/状态/caffeinate"
+  changed_files:
+    - "docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md"
+    - "docs/agent-team/tasks/TASK-20260816-001-p3-gap-and-plugins-audit.yaml"
+    - "MODIFICATION-LOG.md"
+  verification:
+    - "markdownlint-cli2 docs/eval/audit/p3-gap-root-cause-and-plugins-inventory-20260816.md → 0 issues"
+    - "git diff --check → 0 errors"
+    - "git diff main --stat → 仅 3 文件（docs-only 严格成立）"
+  risks:
+    - "plugins/p3-ops-claude 未跑 ruff/mypy 验证（§2.5）"
+    - "caffeinate -t 实际到期时间未直接读取（plist 内参数，需另查）"
+    - "8/15-8/16 完整停摆的 macOS 系统日志未读（需 sudo，超出只读范围）"
+  unresolved:
+    - "plugins/p3-ops-claude 入仓 vs 维持 WIP 决策（§4.1）"
+    - "v1.1-A 短期路径 A/B/C 选择（§4.2）"
+    - "8/19 末重新审计 gap 是否需要启动路径 A（caffeinate 续期 + 系统睡眠关闭）"
+  next_agent: "用户决定后：(A) ff-only 合入 main → push readiness 复核；(B) 保留分支待人工复审"
