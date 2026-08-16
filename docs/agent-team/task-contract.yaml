@@ -1,0 +1,28 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-YYYYMMDD-001
+objective: "明确、可验收的目标"
+task_type: docs | tests | feature | bugfix | review
+owner: codex | cursor | claude
+reviewers:
+  - codex
+context_files:
+  - "README.md"
+writable_paths:
+  - "docs/"
+acceptance_commands:
+  - "make lint"
+risk_level: low # low | medium | high
+requires_approval: false
+max_attempts: 2
+max_runtime_minutes: 45
+depends_on: []
+status: queued
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: ""
+  changed_files: []
+  verification: []
+  risks: []
+  unresolved: []
+  next_agent: ""

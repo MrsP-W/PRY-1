@@ -7124,3 +7124,25 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
 - 风险：low；纯文档盘点 + 分类建议；A/B/C 三类处置建议均需用户单独批准才执行。
 - 下一棒：等待用户决定 ff-only 合入 main + push；A 类是否合并入仓、B 类 needs_human 跟踪、副树整体处置三项决策待用户回复。
+
+## 2026-08-16 22:00
+
+- 产物：A 类 6 项主树 WIP 入仓（docs-only；用户「A」批准）。
+- 范围：仅 docs/、.cursor/rules/、memory/；不动 scripts/、tests/、src/、ops/、plugins/。
+- 文件（6 + 本条）：
+  - `.cursor/rules/agent-team-worktree.mdc`（新增 tracked；26 行；Cursor 规则 alwaysApply=true）
+  - `AGENTS.md`（新增 tracked；35 行；Codex 三 Agent 协作入口）
+  - `docs/agent-team/README.md`（新增 tracked；53 行；三 Agent Phase 0 协议）
+  - `docs/agent-team/task-contract.yaml`（新增 tracked；28 行；任务契约模板）
+  - `docs/v0.2-D6.11.2-feature-flag-design-outline.md`（新增 tracked；201 行；design-only）
+  - `memory/pitfall-106-fix-v2-task-package.md`（新增 tracked；294 行；撞坑 #106 二修任务包）
+  - `MODIFICATION-LOG.md`（本条 + 修复 pitfall-106 lint MD010）
+- 修改（pitfall-106 修复 MD010）：Makefile 代码块内合法 tab 字符被 MD010 误报；插入 `<!-- markdownlint-disable/enable MD010 -->` 注释对，**非语义修改**，仅抑制 lint 误报。
+- 复制方式：从主工作树 `cp -p` 至新 docs-only worktree；md5 6/6 字节一致；主工作树 WIP 文件保持原位不动。
+- 验证：`markdownlint-cli2` 全量 327 文件 0 issues；`git diff --check` 0 errors；YAML 合法（无 tab）。
+- 分支：`codex/wip-a-class-promote-20260816`；基线 `main=ee66713`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-wip-a-class-promote-20260816`；主树原 11 项未跟踪 → 减至 5 项（去掉 6 个 A 类）；B/C 类 5 项仍 untracked（`PR_BODY_*`、`docs/eval-fixture-coverage-15-to-30-plan.md`、`ops/claude-p3-watch-*`、`plugins/`）；副树 9 条 WIP 全保留；未 push；未合并。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒；M3 原生通道不可用未触发 external bridge。
+- 风险：low；纯 docs 入仓；B/C 类 5 项未触碰；副树未触碰；不入 ops/、不启 Feature Flag。
+- 后续路径：B 类 3 项（`ops/claude-p3-watch-*` × 2 + 副树 `quality_snapshot.py`）仍标 needs_human，待用户单独决定；副树 `codex/d6102-stash-playbook` 9 条 WIP 待用户单独决定（维持 / rebase+cherry-pick / 归档）。
+- 下一棒：等待用户决定 ff-only 合入 main + push。

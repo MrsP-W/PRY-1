@@ -1,0 +1,26 @@
+---
+description: 三 Agent 联动的 worktree、任务边界与审批规则
+alwaysApply: true
+---
+
+# 三 Agent 协作规则
+
+三方共享协议：`docs/agent-team/README.md` 与
+`docs/agent-team/task-contract.yaml`。
+
+## 执行边界
+
+- 当前主工作树含用户 WIP；不得在主工作树修改、暂存、提交、stash、清理或重置既有改动。
+- 接到联动任务时，必须使用任务专属 worktree；同一任务仅一个实施 Agent，其他 Agent 只审查 diff。
+- 先读取任务包的 `writable_paths`、`acceptance_commands`、`risk_level` 与 `requires_approval`，不得扩大范围。
+- 本项目 P3 观察期只允许 docs-only / tests-only；不得改业务代码、LaunchAgent、SMTP、Feature Flag、真实数据或生产配置。
+
+## 提交与审批
+
+- 本规则优先于自动 commit 规则中的工作树选择：仅可提交当前任务 worktree 内、且与任务包相关的文件。
+- 默认禁止 push、合并 `main`、打 tag、安装依赖、删除文件、运行迁移或对外写入。
+- 触及外部写入、凭据、OAuth、生产数据、调度、两次修复失败或架构分歧时，状态设为 `needs_human` 并停止该任务。
+
+## 交付格式
+
+输出：完成内容、修改文件、验收命令及结果、风险、未解决事项、建议下一棒。
