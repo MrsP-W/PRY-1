@@ -7169,3 +7169,22 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（跟踪文档）；B 类 3 项脚本本身风险沿用 wip-inventory 记录。
 - 上一候选链：WIP 盘点（ee66713）→ A 类 6 项入仓（99f3832）→ B 类 3 项 needs_human 跟踪（本任务）。
 - 下一棒：等待用户决定 ff-only 合入 main + push；3 项 needs_human 等用户单独授权触发。
+
+## 2026-08-17 09:30
+
+- 产物：副树 d6102 处置 + 副 worktree 清理审计（docs-only 决策）。
+- 范围：仅文档（`docs/eval/audit/`、`MODIFICATION-LOG.md`）；不动副树 9 条 WIP；不动主树 5 项未跟踪 WIP；不动分支。
+- 文件：
+  - `docs/eval/audit/d6102-disposition-and-worktree-cleanup-2026-08-17.md`（新增；§0 TL;DR + §1 副树 d6102 决策（维持）+ §2 副 worktree 清理决策（7 清理 1 保留）+ §3 与 8/13 基线偏差说明 + §4 已/未验证 + §5 执行步骤 + §6 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 决策 1：副树 d6102 维持（按 8/13 用户基线"存活副 worktree 全保留"）；WIP 持续挂账；需要时另开 worktree。
+- 决策 2：清理 8 个 docs-only 临时 worktree（commit 均已 ff-only 合入 main；本任务 own worktree 在 commit 落地后一并清理）；保留主工作树 + d6102 副树。
+- 与 8/13 基线偏差说明：8/13 基线针对当时 3 个存活副 worktree（`project-status-calibration`、`d6102-stash-playbook`、`wt-md-lint-fix-r2`），不针对"未来所有 worktree 都不可清理"；d6102 仍按基线保留；本任务清理的是 docs-only 临时 worktree。
+- 清理动作（待用户 A 触发后）：`git worktree remove --force` × 8；不动分支。
+- 验证：`markdownlint-cli2 docs/eval/audit/d6102-disposition-and-worktree-cleanup-2026-08-17.md` 0 issues。
+- 分支：`codex/d6102-disposition-and-cleanup-20260817`；基线 `main=931b74e`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-d6102-cleanup-20260817`；主树 5 项未跟踪 + 副树 9 条 WIP 全保留；未 push；未合并。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（决策文档）；实际清理为 `git worktree remove` 原生命令，影响 `/tmp/wt-*` 目录和 `.git/worktrees/<name>` 元数据，不影响 commit 历史。
+- 上一候选链：WIP 盘点（ee66713）→ A 类 6 项入仓（99f3832）→ needs_human 跟踪（931b74e）→ 副树 + 清理决策（本任务）。
+- 下一棒：等待用户决定 ff-only 合入 main + push；push 后执行 8 个 worktree 清理。
