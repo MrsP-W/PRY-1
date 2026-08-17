@@ -7341,3 +7341,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（归档保留全部数据；仅移 worktree + 删分支指针）。
 - 上一候选链：wip-inventory-2026-08-16（ee66713）→ 副树 + 清理决策（e87f04a）→ 本任务最终归档。
 - 下一棒：commit + ff-only + push → 实际 mv + prune + branch -D。
+
+## 2026-08-17 13:30
+
+- 产物：P3 Gap 重新审计 — 8/19 末任务提前触发（用户「立即手动触发」）。
+- 范围：仅 docs-only 审计报告；不实际执行 caffeinate 续期（待用户授权）；不动 P3 状态目录；不 load plist。
+- 文件：
+  - `docs/eval/audit/p3-gap-reaudit-2026-08-17.md`（新增；§0 TL;DR + §1 数据证据 + §2 3 档判定 + §3 路径 A 实施细节 + §4 与 8/16 决策一致性 + §5 边界 + §6 已/未验证 + §7 推荐下一步 + §8 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 数据窗口：8/16-8/17（部分；8/19 末计划触发提前）
+- 实测数据：
+  - 8/16 健康=72 / 8/17=11 → 均值 41.5 / 天（目标 ≥100；❌ <50）
+  - 8/16 新闻=12 / 8/17=2 → 均值 7.0 / 天（目标 ≥18；❌ <12）
+  - 最新日报 2026-08-15.json：attention=[health_sample_gap, news_run_gap]
+  - launchd：p3-awake PID 1708 运行（caffeinate -i -t 时间到期）；其他 plist 注册但未运行
+- 3 档判定：❌ **必须切路径 A**（caffeinate 续期 + 系统睡眠关闭）
+- 触发路径 A 条件：用户单独以「授权 caffeinate 续期」关键词触发
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-gap-reaudit-2026-08-17.md` 0 issues；前置读取完成（state.json / 8/13-8/17 samples.jsonl / 8/13-8/17 runs.jsonl / latest daily / launchctl / p3-awake plist）。
+- 分支：`codex/p3-gap-reaudit-20260817`；基线 `main=a64e68e`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-gap-reaudit-20260817`；主树 2 项未跟踪 WIP + 副树 archive 不动。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档）；路径 A 触发需用户单独授权。
+- 上一候选链：4 决策记录（a30b9ca）→ 全部批准记录（b9fa370）→ SOL FAIL #1（a30b9ca）→ v2 修复（d444236）→ d6102 最终处置（a64e68e）→ 8/19 re-audit 提前触发（本任务）。
+- 下一棒：commit + ff-only + push；用户决定路径 A 触发与否。
