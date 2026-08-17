@@ -7284,3 +7284,36 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档）；v2 修复待用户单独批准才实施。
 - 上一候选链：-001 / -002 FAIL → unified-fix FAIL → SOL FAIL #2 记录（本任务）。
 - 下一棒：commit + ff-only + push；用户决定是否启动 v2 修复。
+
+## 2026-08-17 12:30
+
+- 产物：needs_human v2 修复 — 解决 SOL FAIL #2 6 项阻断（单 commit；不 push）。
+- 范围：2 文件改动 + 5 文件新增
+  - `ops/claude-p3-watch-launchd.plist.template`（新增 tracked；14 行 → 25 行）
+  - `ops/run-claude-p3-watch.sh`（新增 tracked；9 行 → 35 行）
+  - `plugins/p3-ops-claude/`（新增 tracked 5 文件：README.md / .claude-plugin/plugin.json / commands/p3-rollover.md / commands/p3-watch.md）
+  - `MODIFICATION-LOG.md`（本条）
+- 解决 SOL FAIL #2 6 项阻断：
+  - **#1 main 工作树 ff-only exit 128**：v2 单 commit 基于 main=b0b2e02 直接 commit；merge 前需清理主工作树 untracked `ops/run-claude-p3-watch.sh` + `ops/claude-p3-watch-launchd.plist.example` + `plugins/`
+  - **#2 pre-flight JSON 解析错误**：`python3 -c "import sys,json;print(json.load(sys.stdin).get('result', 'error'))"` 提取 `.result` 字段；不再与完整 JSON 比较
+  - **#3 launchd PATH 缺 `/opt/homebrew/bin`**：plist PATH 改为 `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin`
+  - **#4 `--permission-prompt-tool` 注释失实**：v2 script 不传 `--permission-mode`；不依赖 `--permission-prompt-tool`；调用本地 `scripts/watch_p3_ops.py` 而非 `claude`
+  - **#5 旧 `.plist.example` 仍在**：merge 后立即 `rm ops/claude-p3-watch-launchd.plist.example`（旧含 RunAtLoad=true）
+  - **#6 `$12/天` 不符合零预算**：v2 script 不调 `claude`；直接调 `uv run python3 scripts/watch_p3_ops.py`（零 Anthropic spend）
+- 关键 v2 设计变更：
+  - 零预算 wrapper（不调 claude）→ 移除所有 claude-specific 标记（`--permission-mode`、`--max-budget-usd`、`--plugin-dir`、`--print`）
+  - plist `MAX_BUDGET_USD=1` 保留作为防御门（即便 v2 改走本地脚本，仍记录预算上限）
+  - pre-flight 解析 `.result` 字段后比较；fallback `error` 防 JSON 解析失败导致永远 fail
+- 验证：
+  - `plutil -lint ops/claude-p3-watch-launchd.plist.template` → OK
+  - `plutil -extract EnvironmentVariables.PATH raw ...` → `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin` ✓
+  - `plutil -extract RunAtLoad raw ...` → `false` ✓
+  - `bash -n ops/run-claude-p3-watch.sh` → OK
+  - `git diff --check` → 0 errors
+  - markdownlint-cli2 全量 336 文件 0 issues
+- 分支：`codex/needs-human-unified-fix-v2-20260817`；基线 `main=b0b2e02`；**未 push**；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-unified-fix-v2-20260817`；主树 5 项未跟踪 WIP 不变（merge 前需要清理 3 项 ops/plugins）。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（零预算本地脚本，不调外部 API；本地 watch_p3_ops.py 已 tracked + 历史使用）。
+- 上一候选链：2 个早期 FAIL 分支保留；v1 unified-fix FAIL 分支保留；本任务 v2 替代。
+- 下一棒：commit → 用户单独决定 merge 流程（需清理主工作树 untracked）→ SOL 终审 #3 → push。

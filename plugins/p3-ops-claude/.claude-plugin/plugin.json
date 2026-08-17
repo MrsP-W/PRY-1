@@ -1,0 +1,8 @@
+{
+  "name": "p3-ops-claude",
+  "version": "0.1.0",
+  "description": "P3 长稳观察的 Claude Code 安全编排命令",
+  "author": {
+    "name": "Mr-PRY"
+  }
+}

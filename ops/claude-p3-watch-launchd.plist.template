@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  模板：复制并确认后才可安装；本仓库不会自动 load。
+  沿用 needs-human-sol-fail2-record-2026-08-17 §2.1 v2 修复设计：
+  - RunAtLoad=false：手动 load 验证后才生效；防误自动触发
+  - 文件后缀 .plist.example → .plist.template：明示未安装
+  - PATH 修复：包含 /opt/homebrew/bin（Apple Silicon uv 路径）
+  - MAX_BUDGET_USD=1：保留费用上限门（即便改走零预算 wrapper，保留作为防御）
+  - 依赖 ops/run-claude-p3-watch.sh（v2 版：零预算 wrapper + P3 pre-flight JSON 解析）
+-->
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.myaiemployee.claude-p3-watch</string>
+  <key>ProgramArguments</key><array>
+    <string>/bin/bash</string>
+    <string>/Users/wei/Documents/DesktopOrganizer/我的AI员工/ops/run-claude-p3-watch.sh</string>
+  </array>
+  <key>StartInterval</key><integer>7200</integer>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/wei/Library/Logs/MyAIEmployee/claude-p3-watch.out.log</string>
+  <key>StandardErrorPath</key><string>/Users/wei/Library/Logs/MyAIEmployee/claude-p3-watch.err.log</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>MAX_BUDGET_USD</key><string>1</string>
+  </dict>
+</dict></plist>
