@@ -7364,3 +7364,30 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档）；路径 A 触发需用户单独授权。
 - 上一候选链：4 决策记录（a30b9ca）→ 全部批准记录（b9fa370）→ SOL FAIL #1（a30b9ca）→ v2 修复（d444236）→ d6102 最终处置（a64e68e）→ 8/19 re-audit 提前触发（本任务）。
 - 下一棒：commit + ff-only + push；用户决定路径 A 触发与否。
+
+## 2026-08-17 14:00
+
+- 产物：P3 re-audit 用户覆盖决策（用户纠正原 `37809f8` 路径 A 触发依据；选 B 监测）。
+- 范围：仅 docs-only 决策记录 + 纠正；**不动任何系统、仓库、P3 状态**。
+- 文件：
+  - `docs/eval/audit/p3-reaudit-user-override-2026-08-17.md`（新增；§0 TL;DR + §1 用户反馈原始结论 + §2 纠正原分析错误 + §3 决策与时间窗 + §4 不做项 + §5 现有状态维持 + §6 已/未验证 + §7 推荐下一步 + §8 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 用户决策：**B（继续监测）**，暂不执行路径 A
+- 关键纠正（`37809f8` 原分析错误）：
+  - **caffeinate `-i -t` 未过期**：PID 1708 assertion 剩余 ≈4.3 天；可覆盖 8/20 16:42 CST 7d 时间点
+  - **8/17 不完整**：仅 2.7h 数据（health=12、news=2）；折算 ≈106/天、18/天（≥阈值）
+  - **8/16 完整日 = ⚠️ 部分恢复**：72/12；非"必须 A"档
+  - **真因**：电池合盖睡眠（macOS）；caffeinate `-i` 和 `pmset -c` 均不覆盖电池场景
+  - **续期不解决问题**：当前 epoch 已产生 attention；续期不会反向清除；需新干净 epoch
+- 窗口维持：
+  - 8/19 23:59 CST：完整 UTC 日判定（原计划）
+  - **8/21 18:34 CST**：A1 路径最晚审批截止（30d 续期）
+- 不做项（硬边界）：`sudo pmset` / 无限期 caffeinate / 第二个 caffeinate / 二次 rollover / 系统电源策略修改 / plist 修改 / load unload
+- 现有状态维持：`main=37809f8` / ahead=0 / lint 342 文件 0 issues / 工作树 1 个 + archive 1 个 / 任务包 `TASK-20260819-001-p3-gap-reaudit` status=`queued`（不变）
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-reaudit-user-override-2026-08-17.md` 0 issues。
+- 分支：`codex/p3-reaudit-user-override-20260817`；基线 `main=37809f8`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-reaudit-user-override-20260817`；主树 2 项未跟踪 WIP + 副树 archive 不动。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档 + 纠正）。
+- 上一候选链：8/19 re-audit 提前触发（37809f8）→ 用户纠正（本任务）。
+- 下一棒：commit + ff-only + push；维持 B 监测；8/19 23:59 CST 重评。
