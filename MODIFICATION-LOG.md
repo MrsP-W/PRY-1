@@ -7423,3 +7423,35 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档 + 任务包替换）。
 - 上一候选链：8/19 re-audit 提前触发（37809f8）→ 用户覆盖决策（42d51e0）→ 时间表调整（本任务）。
 - 下一棒：commit + ff-only + push；维持 B 监测；等 8/20 08:05 CST 用户手动触发重评。
+
+## 2026-08-17 14:45
+
+- 产物：8/20 08:05 CST 重评提前触发（用户「立即手动触发」授权；窗口不完整 8/13-8/17）。
+- 范围：docs-only 审计报告 + MODIFICATION-LOG；**不动任何系统、仓库、P3 状态**。
+- 文件：
+  - `docs/eval/audit/p3-reaudit-2026-08-17.md`（新增；§0 TL;DR + §1 数据证据 + §2 7 项扩展判定 + §3 综合判定 + §4 与 8/16 一致性 + §5 边界 + §6 已/未验证 + §7 推荐下一步 + §8 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 实测数据（沿用 §4.2 + 7 项扩展判定）：
+  - **8/13-8/16 完成 4 日均值**：health 79.75 / news 13.25（⚠️ 部分恢复）
+  - **health gap max**：22041s (6.12h) on 8/15 → ❌ 超阈 1800s **12 倍**
+  - **news gap max**：94747s (26.32h) 8/15→8/16 → ❌ 超阈 7200s **13 倍**
+  - **17 个 health gap > 1800s；10 个 > 7200s；4 个 news gap > 7200s**
+- 7 项扩展判定结果：
+  - ✅ caffeinate 单实例（1 进程，PID 1708）
+  - ✅ launchd 9 plist 状态（7 enabled，3 running，无异常 exit）
+  - ⚠️ health 4 日均值 79.75（部分）
+  - ⚠️ news 4 日均值 13.25（部分）
+  - ⚠️ Battery/Clamshell Sleep 关联（8/15 严重停摆与 sleep 模式吻合）
+  - ❌ health gap max 22041s
+  - ❌ news gap max 94747s
+- caffeinate 倒计时：**372999s ≈ 4.31 天剩余**（与用户实测一致）
+- 8/15 关键异常：health=9、news=1（撞坑 #107 复现）；与 Battery/Clamshell Sleep 模式吻合
+- 8/17 部分日数据（14 health、2 news）不计入完整日判定
+- **综合判定**：窗口不完整；gaps 数据已涵盖 8/15 严重停摆；**维持 B 监测**（与 8/16 决策一致）
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-reaudit-2026-08-17.md` 0 issues。
+- 分支：`codex/p3-reaudit-20260817`；基线 `main=a6559b5`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-reaudit-20260817`；主树 2 项未跟踪 WIP + 副树 archive 不动。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档审计）；判定未触发路径 A。
+- 上一候选链：时间表调整（a6559b5）→ 本任务提前触发。
+- 下一棒：commit + ff-only + push；维持 B 监测；等 8/20 08:05 CST 完整窗口重评。
