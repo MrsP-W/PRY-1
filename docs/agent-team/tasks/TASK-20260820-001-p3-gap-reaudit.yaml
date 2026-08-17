@@ -1,0 +1,79 @@
+# 联动任务的人工可读模板；P3 后可由调度器按同名字段写入 SQLite 队列。
+task_id: TASK-20260820-001
+objective: "P3 8/20 08:05 CST 重评 — gap 完整窗口 [8/16, 8/20) + 扩展判定（health/news gap 阈值 + Battery Sleep 关联 + launchd exit + caffeinate 单实例）"
+task_type: docs
+owner: codex
+reviewers:
+  - codex
+context_files:
+  - "SESSION-STATE.md"
+  - "MODIFICATION-LOG.md"
+  - "docs/eval/audit/p3-reaudit-schedule-adjustment-2026-08-17.md"
+  - "docs/eval/audit/p3-reaudit-user-override-2026-08-17.md"
+  - "docs/eval/audit/p3-decision-41-42-and-monitoring-plan-20260816.md"
+  - "docs/eval/audit/p3-gap-reaudit-2026-08-17.md"
+  - "~/Library/Application Support/MyAIEmployee/burn-in/state.json"
+  - "~/Library/Application Support/MyAIEmployee/health/samples.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/news/runs.jsonl"
+  - "~/Library/Application Support/MyAIEmployee/health/alerts.jsonl"
+writable_paths:
+  - "docs/eval/audit/"
+  - "docs/agent-team/tasks/"
+  - "MODIFICATION-LOG.md"
+acceptance_commands:
+  - "cat ~/Library/Application Support/MyAIEmployee/burn-in/state.json"
+  - "python3 -c \"import json; from collections import Counter; samples=[json.loads(l) for l in open('$HOME/Library/Application Support/MyAIEmployee/health/samples.jsonl') if l.strip()]; days=Counter(); [days.update([s.get('sample',{}).get('captured_at','')[:10]]) for s in samples if s.get('sample',{}).get('captured_at','')[:10] in {'2026-08-16','2026-08-17','2026-08-18','2026-08-19'}]; print(days)\""
+  - "python3 -c \"import json; from collections import Counter; runs=[json.loads(l) for l in open('$HOME/Library/Application Support/MyAIEmployee/news/runs.jsonl') if l.strip()]; days=Counter(); [days.update([r.get('at','')[:10]]) for r in runs if r.get('at','')[:10] in {'2026-08-16','2026-08-17','2026-08-18','2026-08-19'}]; print(days)\""
+  - "pmset -g log | head -100"
+  - "launchctl print user/$(id -u) 2>&1 | grep -A3 'com.myaiemployee'"
+  - "pgrep caffeinate | wc -l"
+  - "npx --no-install markdownlint-cli2 docs/eval/audit/p3-reaudit-2026-08-20.md"
+  - "git diff --check"
+risk_level: low
+requires_approval: false
+max_attempts: 1
+max_runtime_minutes: 30
+depends_on:
+  - "TASK-20260816-001-p3-gap-and-plugins-audit"
+  - "TASK-20260817-001-p3-reaudit-schedule-adjustment"
+status: queued
+
+# 沿用 needs-human-tracking 模板约定
+audit_schedule:
+  trigger_at: "2026-08-20T08:05:00+08:00"  # 8/20 08:05 CST = 8/20 00:05 UTC
+  window: "[2026-08-16T00:00:00Z, 2026-08-20T00:00:00Z)"
+  auto_trigger: false  # 任务包状态不等于自动调度；需用户手动触发或单独创建调度
+  fallback_at: "2026-08-20T16:42:00+08:00"  # 7d 时间门（用户单独核验）
+  deadline_at: "2026-08-21T18:34:00+08:00"  # A1 路径最晚审批截止
+
+audit_checklist:
+  - name: "health 4 日均值"
+    threshold: "≥100 / day"
+    required: true
+  - name: "news 4 日均值"
+    threshold: "≥18 / day"
+    required: true
+  - name: "health gap 最大值"
+    threshold: "≤1800 秒"
+    required: true
+  - name: "news gap 最大值"
+    threshold: "≤7200 秒"
+    required: true
+  - name: "Battery/Clamshell Sleep 关联"
+    threshold: "无 gap 与 sleep 重合"
+    required: true
+  - name: "launchd runs/last exit code"
+    threshold: "exit 0 或非 0 异常标识"
+    required: true
+  - name: "caffeinate 单实例"
+    threshold: "pgrep caffeinate | wc -l = 1"
+    required: true
+
+# 实施完成后回填；不得省略验证证据。
+result:
+  summary: "占位：8/20 08:05 CST 用户手动触发后回填"
+  changed_files: []
+  verification: []
+  risks: []
+  unresolved: []
+  next_agent: "用户手动触发后由 docs-only 报告回填"

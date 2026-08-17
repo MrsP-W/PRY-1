@@ -7391,3 +7391,35 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档 + 纠正）。
 - 上一候选链：8/19 re-audit 提前触发（37809f8）→ 用户纠正（本任务）。
 - 下一棒：commit + ff-only + push；维持 B 监测；8/19 23:59 CST 重评。
+
+## 2026-08-17 14:30
+
+- 产物：P3 re-audit 时间表调整 + 任务包重建（用户纠正 `42d51e0` 重评时间 + 扩展判定指标）。
+- 范围：仅 docs-only 文档 + 任务包替换；**不动任何系统、仓库、P3 状态**。
+- 文件：
+  - `docs/eval/audit/p3-reaudit-schedule-adjustment-2026-08-17.md`（新增；§0 TL;DR + §1 用户决策原始结论 + §2 纠正 `42d51e0` 原设定 + §3 时间线详细规划 + §4 重评扩展判定清单 + §5 执行清单 + §6 不做项 + §7 任务包重建 + §8 自动调度声明 + §9 已/未验证 + §10 推荐下一步 + §11 签名）
+  - `docs/agent-team/tasks/TASK-20260820-001-p3-gap-reaudit.yaml`（新增；替代 `TASK-20260819-001`）
+  - `docs/agent-team/tasks/TASK-20260819-001-p3-gap-reaudit.yaml`（删除；避免双任务包混淆）
+  - `MODIFICATION-LOG.md`（本条）
+- 重评时间调整：`8/19 23:59 CST`（仅到 8/19 15:59 UTC；非完整 UTC 日）→ **`8/20 08:05 CST`（完整窗口 [8/16 00:00Z, 8/20 00:00Z)）**
+- 扩展判定清单（用户新增 5 项）：
+  - health gap ≤ 1800 秒
+  - news gap ≤ 7200 秒
+  - Battery/Clamshell Sleep 关联
+  - launchd runs/last exit code
+  - caffeinate 单实例（pgrep | wc -l = 1）
+- 时间线规划：
+  - 现在—8/20 08:05 CST：只监测，不提前审计
+  - 8/20 08:05 CST：重评完整窗口 + 扩展判定
+  - 8/20 16:42 CST：7d 时间门核验（PID 1708 可覆盖）
+  - 8/20 17:00—8/21 18:34 CST：A1 路径决策窗口
+- 自动调度声明（关键）：**`TASK-... queued` 只是任务包状态，不等于已存在自动调度**；8/20 08:05 CST 需用户手动触发或单独创建调度
+- 不做项：8/18-8/19 提前审计 / A1 / `sudo pmset` / rollover
+- 现有状态维持：`main=42d51e0` / ahead=0 / lint 343 文件 0 issues / 工作树 1 + archive 1
+- 验证：`markdownlint-cli2 docs/eval/audit/p3-reaudit-schedule-adjustment-2026-08-17.md` 0 issues；新 task YAML 合法（无 tab）；删除旧 task 文件存在。
+- 分支：`codex/p3-reaudit-schedule-20260817`；基线 `main=42d51e0`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-p3-reaudit-schedule-20260817`；主树 2 项未跟踪 WIP + 副树 archive 不动。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档 + 任务包替换）。
+- 上一候选链：8/19 re-audit 提前触发（37809f8）→ 用户覆盖决策（42d51e0）→ 时间表调整（本任务）。
+- 下一棒：commit + ff-only + push；维持 B 监测；等 8/20 08:05 CST 用户手动触发重评。
