@@ -7230,3 +7230,29 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档）；3 项 needs_human 已完成 2 项（-001 plist、-002 script 在独立分支 commit）+ 1 项 NO-GO（-003 snapshot）。
 - 上一候选链：needs-human-tracking（931b74e）→ d6102+清理决策（e87f04a）→ 全部批准记录（b9fa370）→ -003 NO-GO 审计（本任务）。
 - 下一棒：commit + ff-only + push；2 项 needs_human 已 commit 待 SOL 终审 + push；1 项已关闭。
+
+## 2026-08-17 11:30
+
+- 产物：needs_human SOL FAIL 记录（docs-only；用户外部运行 `gpt-5.6-sol` 提供结论）。
+- 范围：仅文档（`docs/eval/audit/`、`MODIFICATION-LOG.md`）；**不 merge 任何 FAIL commit；不 push ahead**。
+- 文件：
+  - `docs/eval/audit/needs-human-sol-fail-record-2026-08-17.md`（新增；§0 TL;DR + §1 SOL 终审结论 + §2 集成阻断详解 + §3 阻断修复设计 + §4 当前状态保留 + §5 边界 + §6 已/未验证 + §7 下一步 + §8 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- SOL 结论：
+  - `9055389` (-001 plist)：**FAIL** — 缺 P3 result=pass 前置门、预算门、依赖闭环
+  - `188de4a` (-002 script)：**FAIL** — default 非交互、移除 budget、插件未入仓
+- 集成阻断（关键）：
+  - 2 commit 都是 `b9fa370` 的兄弟分支
+  - 当前 `main=dd527e7`，相对每个候选均为 1/1 分叉
+  - `git merge --ff-only` 不可能直接成功
+- 修复路径设计（待用户批准）：
+  - 基于 `main=dd527e7` 新建单一分支 `codex/needs-human-unified-fix-20260817`
+  - 单 commit 解决 6 项 SOL 阻断
+  - 完成后重新 SOL 终审（PASS 后 ff-only + push）
+- 验证：`markdownlint-cli2 docs/eval/audit/needs-human-sol-fail-record-2026-08-17.md` 0 issues。
+- 分支：`codex/needs-human-sol-fail-record-20260817`；基线 `main=dd527e7`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-sol-fail-record-20260817`；2 FAIL 分支保留为历史快照；主树 5 项未跟踪 WIP + 副树 9 条 WIP 全保留；未 push ahead。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档）；2 FAIL commit 永久作为历史快照，不主动删除。
+- 上一候选链：needs-human-tracking（931b74e）→ d6102+清理（e87f04a）→ 全部批准记录（b9fa370）→ -003 NO-GO（dd527e7）→ SOL FAIL 记录（本任务）。
+- 下一棒：用户单独决定是否启动统一修复分支（选项 B）；如不启动，2 FAIL commit 永久保留。
