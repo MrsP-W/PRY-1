@@ -7188,3 +7188,22 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（决策文档）；实际清理为 `git worktree remove` 原生命令，影响 `/tmp/wt-*` 目录和 `.git/worktrees/<name>` 元数据，不影响 commit 历史。
 - 上一候选链：WIP 盘点（ee66713）→ A 类 6 项入仓（99f3832）→ needs_human 跟踪（931b74e）→ 副树 + 清理决策（本任务）。
 - 下一棒：等待用户决定 ff-only 合入 main + push；push 后执行 8 个 worktree 清理。
+
+## 2026-08-17 10:00
+
+- 产物：needs_human 全部批准记录（docs-only；用户「全部批准」）。
+- 范围：仅文档（`docs/eval/audit/`、`MODIFICATION-LOG.md`）；**不动脚本本身**。
+- 文件：
+  - `docs/eval/audit/needs-human-approval-record-2026-08-17.md`（新增；§0 TL;DR + §1 上下文 + §2 3 项批准状态 + §3 实施规范 + §4 边界 + §5 已/未验证 + §6 下一步 + §7 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 批准范围：3 项 needs_human 任务包
+  - `TASK-needs_human-20260816-001-claude-p3-watch-plist.yaml`（plist）
+  - `TASK-needs_human-20260816-002-claude-p3-watch-script.yaml`（script）
+  - `TASK-needs_human-20260816-003-quality-snapshot-d6102.yaml`（snapshot）
+- unlock_steps 进度：step 1「用户单独以触发关键词批准」完成（全部批准隐含）；step 2「开常规 code worktree 实施」下一步；step 3 SOL 终审待用户；step 4 ff-only + push 待显式 push 关键词。
+- 验证：`markdownlint-cli2 docs/eval/audit/needs-human-approval-record-2026-08-17.md` 0 issues。
+- 分支：`codex/needs-human-approval-record-20260817`；基线 `main=e87f04a`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-approval-record-20260817`；主树 5 项未跟踪 WIP + 副树 9 条 WIP 全保留；未 push ahead。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档）；3 项实施阶段为 HARD 风险，需 SOL 终审 + push 显式确认。
+- 下一棒：阶段 2（3 个 code worktree 实施）；阶段 3（暂停待 SOL 终审 + push）。
