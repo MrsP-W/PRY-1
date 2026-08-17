@@ -7317,3 +7317,27 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（零预算本地脚本，不调外部 API；本地 watch_p3_ops.py 已 tracked + 历史使用）。
 - 上一候选链：2 个早期 FAIL 分支保留；v1 unified-fix FAIL 分支保留；本任务 v2 替代。
 - 下一棒：commit → 用户单独决定 merge 流程（需清理主工作树 untracked）→ SOL 终审 #3 → push。
+
+## 2026-08-17 13:00
+
+- 产物：副树 d6102 最终处置（docs-only 决策 + 实际归档）。
+- 范围：docs-only + 副树 worktree 归档 + d6102 分支删除。
+- 文件：
+  - `docs/eval/audit/d6102-final-disposition-2026-08-17.md`（新增；§0 TL;DR + §1 重新审计 + §2 三选项 + §3 执行步骤 + §4 历史摘要 + §5 与基线一致性 + §6 边界 + §7 已/未验证 + §8 下一步 + §9 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 关键发现：副树 9 条 WIP 全部 [DIFF] 或 [NEW]（main 全部有更新版或命名冲突）
+  - A 类 2 项（superpowers/d6 + memory/pitfall-103）→ main 有更新版；不 cherry-pick
+  - B 类 1 项（quality_snapshot.py）→ SOL NO-GO（cherry-pick 回退基线）；不 cherry-pick
+  - C 类 6 项 → main 全部有更新版；不 cherry-pick
+  - **结论**：零 cherry-pick 必要；全部丢弃
+- 决策：选项 C（归档）
+  - mv 副树 worktree 到 `.archive/my-ai-employee-d6102-20260817/`
+  - `git worktree prune`
+  - `git branch -D codex/d6102-stash-playbook`（commit 历史保留在 git reflog）
+- 验证：`markdownlint-cli2 docs/eval/audit/d6102-final-disposition-2026-08-17.md` 0 issues。
+- 分支：`codex/d6102-disposition-final-20260817`；基线 `main=d444236`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-d6102-disposition-final-20260817`；副树归档后剩 5 个 worktree（main + 4 副树 docs-only + d6102 moved）。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（归档保留全部数据；仅移 worktree + 删分支指针）。
+- 上一候选链：wip-inventory-2026-08-16（ee66713）→ 副树 + 清理决策（e87f04a）→ 本任务最终归档。
+- 下一棒：commit + ff-only + push → 实际 mv + prune + branch -D。
