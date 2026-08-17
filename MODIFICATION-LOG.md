@@ -7207,3 +7207,26 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
 - 风险：low（纯文档）；3 项实施阶段为 HARD 风险，需 SOL 终审 + push 显式确认。
 - 下一棒：阶段 2（3 个 code worktree 实施）；阶段 3（暂停待 SOL 终审 + push）。
+
+## 2026-08-17 10:30
+
+- 产物：needs_human-003 snapshot cherry-pick NO-GO 审计（docs-only；关键发现 + 状态关闭）。
+- 范围：仅文档（`docs/eval/audit/`、`MODIFICATION-LOG.md`）；不动 `src/my_ai_employee/quality_snapshot.py`；不 cherry-pick 副树。
+- 文件：
+  - `docs/eval/audit/needs-human-003-snapshot-no-go-2026-08-17.md`（新增；§0 TL;DR + §1 实际 diff + §2 风险分析 + §3 替代方案 + §4 决策依据 + §5 状态更新 + §6 边界 + §7 已/未验证 + §8 下一步 + §9 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- 关键发现（实施前验证）：
+  - 副树 d6102 `a1c8469` (7/28) 的 `quality_snapshot.py` 8 行 diff 实为**历史快照值**
+  - 副树 pytest=3178 vs main 当前=3360（**-182 tests**）
+  - 副树 mypy=292 vs main=294（-2 files）
+  - 副树 lint=304 vs main=324（-20 files）
+  - Cherry-pick 会**回退 3 周测试覆盖** + **重引入撞坑 #107 baseline drift**
+- needs_human-003 状态：needs_human → **no_go**
+- 决策：选项 A（推荐）副树 WIP 维持现状；不创建 -003 code worktree；main 当前基线（3360 / 90.29% / 294 / 324）保持正确。
+- 验证：`markdownlint-cli2 docs/eval/audit/needs-human-003-snapshot-no-go-2026-08-17.md` 0 issues。
+- 分支：`codex/needs-human-003-snapshot-no-go-20260817`；基线 `main=b9fa370`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-003-snapshot-no-go-20260817`；主树 5 项未跟踪 WIP + 副树 9 条 WIP 全保留；未 push ahead。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档）；3 项 needs_human 已完成 2 项（-001 plist、-002 script 在独立分支 commit）+ 1 项 NO-GO（-003 snapshot）。
+- 上一候选链：needs-human-tracking（931b74e）→ d6102+清理决策（e87f04a）→ 全部批准记录（b9fa370）→ -003 NO-GO 审计（本任务）。
+- 下一棒：commit + ff-only + push；2 项 needs_human 已 commit 待 SOL 终审 + push；1 项已关闭。
