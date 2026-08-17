@@ -7256,3 +7256,31 @@ v0.2.53.48 暴露 0.02pp coverage 漂移(88.83% → 88.81%):
 - 风险：low（纯文档）；2 FAIL commit 永久作为历史快照，不主动删除。
 - 上一候选链：needs-human-tracking（931b74e）→ d6102+清理（e87f04a）→ 全部批准记录（b9fa370）→ -003 NO-GO（dd527e7）→ SOL FAIL 记录（本任务）。
 - 下一棒：用户单独决定是否启动统一修复分支（选项 B）；如不启动，2 FAIL commit 永久保留。
+
+## 2026-08-17 12:00
+
+- 产物：needs_human SOL FAIL #2 记录 + v2 修复设计（docs-only；用户外部运行 `gpt-5.6-sol`）。
+- 范围：仅文档（`docs/eval/audit/`、`MODIFICATION-LOG.md`）；**不 merge 任何 FAIL commit；不 push ahead**。
+- 文件：
+  - `docs/eval/audit/needs-human-sol-fail2-record-2026-08-17.md`（新增；§0 TL;DR + §1 SOL 6 项新阻断 + §2 v2 修复设计 + §3 commit 设计 + §4 pending 3 分支 + §5 状态矩阵 + §6 边界 + §7 已/未验证 + §8 下一步 + §9 签名）
+  - `MODIFICATION-LOG.md`（本条）
+- SOL #2 阻断 6 项（v1 缺陷）：
+  1. **main 工作树 ff-only exit 128**：untracked `ops/run-claude-p3-watch.sh` 等会 overwrite
+  2. **pre-flight JSON 解析错误**：`VERIFY_RESULT=$(...)` 捕获完整 JSON；`!= "pass"` 永远 != pass
+  3. **launchd PATH 缺 `/opt/homebrew/bin`**：Apple Silicon 上 uv 在 `/opt/homebrew/bin`
+  4. **`--permission-prompt-tool` 注释失实**：注释声称，CLI 不支持
+  5. **旧 `.plist.example` 仍在**：含 `RunAtLoad=true`；未真重命名
+  6. **`$12/天` 不符合零预算**：--max-budget-usd 1 × 12 runs/day
+- v2 修复方向：
+  - PATH: `/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin`
+  - pre-flight JSON 解析：`python3 -c "import sys,json;print(json.load(sys.stdin).get('result', 'error'))"`
+  - 零预算：直接调 `scripts/watch_p3_ops.py` 而非 `claude --print "/p3-watch"`
+  - merge 前清理主工作树 untracked → /tmp/ 临时目录
+  - merge 后 `rm ops/claude-p3-watch-launchd.plist.example`
+- 验证：`markdownlint-cli2 docs/eval/audit/needs-human-sol-fail2-record-2026-08-17.md` 0 issues。
+- 分支：`codex/needs-human-sol-fail2-record-20260817`；基线 `main=a30b9ca`=origin/main；ahead 提交后 +1。
+- 工作树：`/tmp/wt-needs-human-sol-fail2-record-20260817`；3 FAIL 分支保留为历史快照；主树 5 项未跟踪 WIP + 副树 9 条 WIP 全保留。
+- 模型：M3（MiniMax-M3）主执行；TERRA/LUNA 未唤醒。
+- 风险：low（纯文档）；v2 修复待用户单独批准才实施。
+- 上一候选链：-001 / -002 FAIL → unified-fix FAIL → SOL FAIL #2 记录（本任务）。
+- 下一棒：commit + ff-only + push；用户决定是否启动 v2 修复。
